@@ -57,6 +57,24 @@ class SnapshotRh(Base):
     dt_criacao = Column(DateTime, default=datetime.now)
 
 
+class AcessoSistema(Base):
+    __tablename__ = "acessos_sistemas"
+
+    sistema = Column(String, primary_key=True)
+    usuario = Column(String, primary_key=True)
+    nome_usuario = Column(String)
+    cpf = Column(String, index=True)
+    email = Column(String)
+    perfil = Column(String)
+    situacao = Column(String)
+    data_criacao = Column(Date)
+    ultimo_acesso = Column(DateTime)
+    filial = Column(String)
+    matricula_vinculada = Column(String, index=True)
+    arquivo_origem = Column(String)
+    dt_importacao = Column(DateTime, default=datetime.now)
+
+
 class LogImportacao(Base):
     __tablename__ = "log_importacoes"
 

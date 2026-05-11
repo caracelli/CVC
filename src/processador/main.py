@@ -1,5 +1,4 @@
 import sys
-import os
 from pathlib import Path
 
 from loguru import logger
@@ -9,6 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from infraestrutura.configuracao.leitor_config import LeitorConfig
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from aplicacao.casos_de_uso.importar_rh import ImportarRh
+from aplicacao.casos_de_uso.padronizar_rh import PadronizarRh
+from aplicacao.casos_de_uso.importar_sistema import ImportarSistema
+from dominio.objetos_valor.sistema import Sistema
 
 
 def configurar_log(pasta_logs: str):
@@ -27,27 +29,39 @@ def main():
     caminho_config = raiz / "CVC_IAM_ANALYTICS" / "02_CONFIGURACAO" / "config.xml"
 
     if not caminho_config.exists():
-        logger.error(f"config.xml não encontrado em: {caminho_config}")
+        logger.error(f"config.xml não encontrado: {caminho_config}")
         sys.exit(1)
 
     cfg = LeitorConfig(str(caminho_config)).carregar()
-
-    # base de todos os caminhos relativos = pasta CVC_IAM_ANALYTICS/
     app_raiz = caminho_config.parent.parent
 
     configurar_log(str(app_raiz / cfg.saida_logs))
-
     logger.info(f"IAM Analytics — {cfg.cliente} v{cfg.versao}")
 
     conexao = ConexaoBancoDados(str(app_raiz / cfg.banco_dados))
     conexao.inicializar()
 
+    # Card 3 — Importação RH
     ImportarRh(
         conexao=conexao,
         pasta_ativos=str(app_raiz / cfg.rh_ativos_caminho),
         pasta_desligados=str(app_raiz / cfg.rh_desligados_caminho),
         pasta_parquet_rh=str(app_raiz / cfg.parquet_rh),
     ).executar()
+
+    # Card 4 — Padronização e snapshot
+    PadronizarRh(conexao).executar()
+
+    # Card 6 — SYSTUR
+    sis_cfg = cfg.sistemas.get("SYSTUR")
+    if sis_cfg:
+        parquet_acessos = str(app_raiz / "06_DADOS_PROJETO" / "PARQUET" / "ACESSOS")
+        ImportarSistema(
+            conexao=conexao,
+            sistema=Sistema.SYSTUR,
+            pasta_entrada=str(app_raiz / sis_cfg.caminho_entrada),
+            pasta_parquet=parquet_acessos,
+        ).executar()
 
     logger.info("Processamento finalizado.")
 
