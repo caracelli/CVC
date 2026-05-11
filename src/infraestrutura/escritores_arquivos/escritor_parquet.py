@@ -1,4 +1,3 @@
-from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -17,6 +16,5 @@ class EscritorParquet:
         pq.write_table(table, str(arquivo))
         logger.info(f"Parquet salvo: {arquivo} ({len(df)} registros)")
 
-    def salvar_com_data(self, df: pd.DataFrame, caminho: str, prefixo: str):
-        hoje = date.today().strftime("%Y%m%d")
-        self.salvar(df, caminho, f"{prefixo}_{hoje}.parquet")
+    def salvar_fixo(self, df: pd.DataFrame, caminho: str, nome: str):
+        self.salvar(df, caminho, f"{nome}.parquet")

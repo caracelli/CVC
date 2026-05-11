@@ -43,7 +43,7 @@ class ImportarRh:
                 "email": f.email,
                 "situacao": f.situacao,
             } for f in ativos])
-            self._parquet.salvar_com_data(df, self._pasta_parquet, "rh_ativos")
+            self._parquet.salvar_fixo(df, self._pasta_parquet, "rh_ativos")
 
         desligados, arq_desligados = self._leitor.ler_desligados(self._pasta_desligados)
         if desligados:
@@ -57,7 +57,7 @@ class ImportarRh:
                 "data_admissao": str(f.data_admissao) if f.data_admissao else None,
                 "data_desligamento": str(f.data_desligamento) if f.data_desligamento else None,
             } for f in desligados])
-            self._parquet.salvar_com_data(df, self._pasta_parquet, "rh_desligados")
+            self._parquet.salvar_fixo(df, self._pasta_parquet, "rh_desligados")
 
         logger.info(f"=== Importação RH concluída: {len(ativos)} ativos, {len(desligados)} desligados ===")
         return len(ativos), len(desligados)
