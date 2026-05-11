@@ -1,0 +1,8 @@
+from enum import Enum
+
+
+class NivelAcesso(Enum):
+    SOMENTE_LEITURA = "SOMENTE_LEITURA"
+    OPERADOR = "OPERADOR"
+    SUPERVISOR = "SUPERVISOR"
+    ADMINISTRADOR = "ADMINISTRADOR"

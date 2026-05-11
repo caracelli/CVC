@@ -1,4 +1,148 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<config>
-    <version>1.0</version>
-</config>
+<configuracao>
+    <versao>1.0.0</versao>
+    <cliente>CVC</cliente>
+    <projeto>IAM Analytics</projeto>
+
+    <caminhos>
+        <raiz>.</raiz>
+        <entrada>03_ENTRADA_ARQUIVOS</entrada>
+        <saidas>05_SAIDAS</saidas>
+        <banco_dados>06_DADOS_PROJETO/BANCO_DADOS/iam_analytics.db</banco_dados>
+        <parquet>06_DADOS_PROJETO/PARQUET</parquet>
+        <processados>06_DADOS_PROJETO/ARQUIVOS_PROCESSADOS</processados>
+        <erros>06_DADOS_PROJETO/ARQUIVOS_ERRO</erros>
+        <logs>05_SAIDAS/LOGS</logs>
+    </caminhos>
+
+    <rh>
+        <ativos>
+            <caminho>03_ENTRADA_ARQUIVOS/RH_ATIVOS</caminho>
+            <colunas>
+                <matricula>MATRICULA</matricula>
+                <nome>NOME</nome>
+                <cpf>CPF</cpf>
+                <cargo_codigo>CARGO_CODIGO</cargo_codigo>
+                <cargo_descricao>CARGO_DESCRICAO</cargo_descricao>
+                <departamento>DEPARTAMENTO</departamento>
+                <centro_custo>CENTRO_CUSTO</centro_custo>
+                <data_admissao>DATA_ADMISSAO</data_admissao>
+                <email>EMAIL</email>
+                <situacao>SITUACAO</situacao>
+            </colunas>
+        </ativos>
+        <desligados>
+            <caminho>03_ENTRADA_ARQUIVOS/RH_DESLIGADOS</caminho>
+            <colunas>
+                <matricula>MATRICULA</matricula>
+                <nome>NOME</nome>
+                <cpf>CPF</cpf>
+                <data_desligamento>DATA_DESLIGAMENTO</data_desligamento>
+                <motivo>MOTIVO</motivo>
+            </colunas>
+        </desligados>
+    </rh>
+
+    <sistemas>
+        <sistema id="SIGOT">
+            <nome>SIGOT</nome>
+            <descricao>Sistema de Gestão de Operações e Turismo</descricao>
+            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/SIGOT</caminho_entrada>
+            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/SIGOT</caminho_parquet>
+            <colunas>
+                <usuario>USUARIO</usuario>
+                <nome>NOME</nome>
+                <perfil>PERFIL</perfil>
+                <situacao>SITUACAO</situacao>
+                <data_criacao>DATA_CRIACAO</data_criacao>
+                <ultimo_acesso>ULTIMO_ACESSO</ultimo_acesso>
+            </colunas>
+        </sistema>
+
+        <sistema id="SICA_RA">
+            <nome>SICA_RA</nome>
+            <descricao>Sistema de Controle de Acesso - Rede Agência</descricao>
+            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/SICA_RA</caminho_entrada>
+            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/SICA_RA</caminho_parquet>
+            <colunas>
+                <usuario>USUARIO</usuario>
+                <nome>NOME</nome>
+                <perfil>PERFIL</perfil>
+                <situacao>SITUACAO</situacao>
+                <data_criacao>DATA_CRIACAO</data_criacao>
+                <ultimo_acesso>ULTIMO_ACESSO</ultimo_acesso>
+            </colunas>
+        </sistema>
+
+        <sistema id="SICA_ESFERA">
+            <nome>SICA_ESFERA</nome>
+            <descricao>Sistema de Controle de Acesso - Esfera</descricao>
+            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/SICA_ESFERA</caminho_entrada>
+            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/SICA_ESFERA</caminho_parquet>
+            <colunas>
+                <usuario>USUARIO</usuario>
+                <nome>NOME</nome>
+                <perfil>PERFIL</perfil>
+                <situacao>SITUACAO</situacao>
+                <data_criacao>DATA_CRIACAO</data_criacao>
+                <ultimo_acesso>ULTIMO_ACESSO</ultimo_acesso>
+            </colunas>
+        </sistema>
+
+        <sistema id="SYSTUR">
+            <nome>SYSTUR</nome>
+            <descricao>Sistema de Turismo</descricao>
+            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/SYSTUR</caminho_entrada>
+            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/SYSTUR</caminho_parquet>
+            <colunas>
+                <usuario>USUARIO</usuario>
+                <nome>NOME</nome>
+                <perfil>PERFIL</perfil>
+                <situacao>SITUACAO</situacao>
+                <data_criacao>DATA_CRIACAO</data_criacao>
+                <ultimo_acesso>ULTIMO_ACESSO</ultimo_acesso>
+            </colunas>
+        </sistema>
+
+        <sistema id="IC">
+            <nome>IC_INTEGRADOR_CONTABIL</nome>
+            <descricao>Integrador Contábil</descricao>
+            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/IC_INTEGRADOR_CONTABIL</caminho_entrada>
+            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/IC</caminho_parquet>
+            <colunas>
+                <usuario>USUARIO</usuario>
+                <nome>NOME</nome>
+                <perfil>PERFIL</perfil>
+                <situacao>SITUACAO</situacao>
+                <data_criacao>DATA_CRIACAO</data_criacao>
+                <ultimo_acesso>ULTIMO_ACESSO</ultimo_acesso>
+            </colunas>
+        </sistema>
+    </sistemas>
+
+    <matrizes>
+        <organizacional>
+            <caminho>03_ENTRADA_ARQUIVOS/MATRIZES/ORGANIZACIONAL</caminho>
+        </organizacional>
+        <perfis_sistemas>
+            <caminho>03_ENTRADA_ARQUIVOS/MATRIZES/PERFIS_SISTEMAS</caminho>
+        </perfis_sistemas>
+    </matrizes>
+
+    <processamento>
+        <encoding_padrao>utf-8</encoding_padrao>
+        <separador_csv>;</separador_csv>
+        <formato_data>%d/%m/%Y</formato_data>
+        <mover_processados>true</mover_processados>
+        <gerar_parquet>true</gerar_parquet>
+        <gerar_relatorio>true</gerar_relatorio>
+    </processamento>
+
+    <saidas>
+        <divergencias>05_SAIDAS/DIVERGENCIAS</divergencias>
+        <desligados>05_SAIDAS/DESLIGADOS</desligados>
+        <transferidos>05_SAIDAS/TRANSFERIDOS</transferidos>
+        <auditoria>05_SAIDAS/AUDITORIA</auditoria>
+        <logs>05_SAIDAS/LOGS</logs>
+    </saidas>
+</configuracao>
