@@ -1,4 +1,48 @@
-pandas>=2.0.0
-pyarrow>=12.0.0
-openpyxl>=3.1.0
-python-dateutil>=2.8.0
+# Dados e processamento
+pandas
+numpy
+polars
+
+# Excel / planilhas
+openpyxl
+xlrd
+xlsxwriter
+
+# Parquet e banco colunar
+pyarrow
+fastparquet
+duckdb
+
+# Banco de dados
+sqlalchemy
+sqlite-utils
+
+# Utilitários
+loguru
+python-dotenv
+orjson
+lxml
+
+# HTTP e integrações
+requests
+jira
+tenacity
+
+# Agendamento
+schedule
+
+# Criptografia
+cryptography
+
+# Interface de terminal
+rich
+tabulate
+
+# Sistema
+filelock
+psutil
+pendulum
+
+# Visualização
+matplotlib
+seaborn

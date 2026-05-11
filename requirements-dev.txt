@@ -1,0 +1,6 @@
+# Empacotamento
+pyinstaller
+
+# Testes
+pytest
+pytest-cov
