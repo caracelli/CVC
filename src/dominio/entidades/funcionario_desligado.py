@@ -6,5 +6,6 @@ from .funcionario import Funcionario
 
 @dataclass
 class FuncionarioDesligado(Funcionario):
+    data_admissao: Optional[date] = None
     data_desligamento: Optional[date] = None
     motivo_desligamento: Optional[str] = None
