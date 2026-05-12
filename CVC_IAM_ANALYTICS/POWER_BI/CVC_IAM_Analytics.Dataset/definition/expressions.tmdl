@@ -1,0 +1,5 @@
+expression CaminhoBase
+	lineageTag: ce6cc774-c8b4-4d08-b929-335f8036b5f7
+
+	= "" meta [IsParameterQuery=true, IsParameterQueryRequired=true, Type="Text"]
+

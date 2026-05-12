@@ -1,0 +1,66 @@
+table RH_Desligados
+	lineageTag: ba774991-49c3-49ea-bb79-326634db804e
+
+	partition RH_Desligados = m
+		mode: import
+		source
+			let
+				Fonte = Parquet.Feed(CaminhoBase & "DADOS\PARQUET\RH\rh_desligados.parquet")
+			in
+				Fonte
+
+	column matricula
+		dataType: string
+		lineageTag: 691e7327-9bbd-4928-94d8-403185159363
+		summarizeBy: none
+		sourceColumn: matricula
+
+		annotation SummarizationSetBy = Automatic
+
+	column nome
+		dataType: string
+		lineageTag: 5446ccc5-42d6-44ad-9bd1-a52d604e8d3c
+		summarizeBy: none
+		sourceColumn: nome
+
+		annotation SummarizationSetBy = Automatic
+
+	column cpf
+		dataType: string
+		lineageTag: 992ff3e7-6278-4b43-b096-53c123632794
+		summarizeBy: none
+		sourceColumn: cpf
+
+		annotation SummarizationSetBy = Automatic
+
+	column cargo_codigo
+		dataType: string
+		lineageTag: 8c038149-8bff-4610-bf4e-1adc0b84b6b6
+		summarizeBy: none
+		sourceColumn: cargo_codigo
+
+		annotation SummarizationSetBy = Automatic
+
+	column cargo_descricao
+		dataType: string
+		lineageTag: 65c0eb4c-5cec-4988-9c79-33f90aebc9d0
+		summarizeBy: none
+		sourceColumn: cargo_descricao
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_desligamento
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 3825130a-2637-4021-bac7-9934bc0f97a3
+		summarizeBy: none
+		sourceColumn: data_desligamento
+
+		annotation SummarizationSetBy = Automatic
+
+	measure 'Total Desligados' = COUNTROWS(RH_Desligados)
+		lineageTag: 9e19ae62-5964-4c94-ba4d-46e2b3415220
+		formatString: #,0
+
+	annotation PBI_ResultType = Table
+

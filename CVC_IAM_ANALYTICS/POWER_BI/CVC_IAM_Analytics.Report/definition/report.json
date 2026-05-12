@@ -1,0 +1,15 @@
+{
+  "id": "cvc-iam-analytics-report",
+  "resourcePackages": [],
+  "settings": {
+    "isPasteAcrossPages": true,
+    "useNewFilterPaneExperience": true,
+    "allowChangeFilterTypes": true,
+    "useStylableVisualContainerHeader": true
+  },
+  "layoutOptimization": 0,
+  "publicCustomVisuals": [],
+  "dataTransforms": {
+    "selects": []
+  }
+}

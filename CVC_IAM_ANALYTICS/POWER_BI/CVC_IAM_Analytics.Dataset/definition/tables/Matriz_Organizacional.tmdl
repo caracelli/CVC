@@ -1,0 +1,45 @@
+table Matriz_Organizacional
+	lineageTag: 7732eb81-8885-4f24-be9f-40c353b15329
+
+	partition Matriz_Organizacional = m
+		mode: import
+		source
+			let
+				Fonte = Parquet.Feed(CaminhoBase & "DADOS\PARQUET\MATRIZES\matriz_organizacional.parquet")
+			in
+				Fonte
+
+	column cargo_codigo
+		dataType: string
+		lineageTag: 8a63fa4d-8b0d-4681-bf86-9ef3c5f284b7
+		summarizeBy: none
+		sourceColumn: cargo_codigo
+
+		annotation SummarizationSetBy = Automatic
+
+	column cargo_descricao
+		dataType: string
+		lineageTag: bf5c2927-047f-4319-b0ac-726ea57041f7
+		summarizeBy: none
+		sourceColumn: cargo_descricao
+
+		annotation SummarizationSetBy = Automatic
+
+	column departamento
+		dataType: string
+		lineageTag: a64abe34-33be-4751-99de-9a5242af69a3
+		summarizeBy: none
+		sourceColumn: departamento
+
+		annotation SummarizationSetBy = Automatic
+
+	column centro_custo
+		dataType: string
+		lineageTag: 6b6fda2a-4434-4efc-af08-61dd4fd89cf5
+		summarizeBy: none
+		sourceColumn: centro_custo
+
+		annotation SummarizationSetBy = Automatic
+
+	annotation PBI_ResultType = Table
+

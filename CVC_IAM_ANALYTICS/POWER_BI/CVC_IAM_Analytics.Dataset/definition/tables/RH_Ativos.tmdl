@@ -1,0 +1,89 @@
+table RH_Ativos
+	lineageTag: 9532135d-cf35-433c-8637-94a31f7fb1a9
+
+	partition RH_Ativos = m
+		mode: import
+		source
+			let
+				Fonte = Parquet.Feed(CaminhoBase & "DADOS\PARQUET\RH\rh_ativos.parquet")
+			in
+				Fonte
+
+	column matricula
+		dataType: string
+		lineageTag: 9a5f4e80-58be-4cb9-8a1c-ef295eebfb73
+		summarizeBy: none
+		sourceColumn: matricula
+
+		annotation SummarizationSetBy = Automatic
+
+	column nome
+		dataType: string
+		lineageTag: 63e208ce-c770-41ed-b55e-952f6886ff89
+		summarizeBy: none
+		sourceColumn: nome
+
+		annotation SummarizationSetBy = Automatic
+
+	column cpf
+		dataType: string
+		lineageTag: 2ef21232-b449-4275-a0fe-dd90c92174e2
+		summarizeBy: none
+		sourceColumn: cpf
+
+		annotation SummarizationSetBy = Automatic
+
+	column cargo_codigo
+		dataType: string
+		lineageTag: 7a4c4c0d-0f19-42a6-8103-717d34f4967a
+		summarizeBy: none
+		sourceColumn: cargo_codigo
+
+		annotation SummarizationSetBy = Automatic
+
+	column cargo_descricao
+		dataType: string
+		lineageTag: 3de17b3b-406d-41f5-ae0c-aab0a48f7186
+		summarizeBy: none
+		sourceColumn: cargo_descricao
+
+		annotation SummarizationSetBy = Automatic
+
+	column departamento
+		dataType: string
+		lineageTag: fa98e0d3-573a-45dd-a947-d698ed9c8968
+		summarizeBy: none
+		sourceColumn: departamento
+
+		annotation SummarizationSetBy = Automatic
+
+	column centro_custo
+		dataType: string
+		lineageTag: b93f7af3-5cc9-4fe1-acfa-b06ce2f99218
+		summarizeBy: none
+		sourceColumn: centro_custo
+
+		annotation SummarizationSetBy = Automatic
+
+	column email
+		dataType: string
+		lineageTag: 67d156f8-65ad-43f4-bf5a-9a9c24b8c6bf
+		summarizeBy: none
+		sourceColumn: email
+
+		annotation SummarizationSetBy = Automatic
+
+	column situacao
+		dataType: string
+		lineageTag: 2134b65b-c3a1-4951-85b0-881cd82f17eb
+		summarizeBy: none
+		sourceColumn: situacao
+
+		annotation SummarizationSetBy = Automatic
+
+	measure 'Total Funcionários Ativos' = COUNTROWS(RH_Ativos)
+		lineageTag: 0758e3bf-6e60-4f96-bae7-e4299c4972f9
+		formatString: #,0
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,73 @@
+table SYSTUR
+	lineageTag: a251474a-8a8b-4064-9ab0-cd49398f1de7
+
+	partition SYSTUR = m
+		mode: import
+		source
+			let
+				Fonte = Parquet.Feed(CaminhoBase & "DADOS\PARQUET\ACESSOS\SYSTUR\systur.parquet")
+			in
+				Fonte
+
+	column sistema
+		dataType: string
+		lineageTag: 12dc4427-ed4f-43b2-971f-4d7a2c12ef82
+		summarizeBy: none
+		sourceColumn: sistema
+
+		annotation SummarizationSetBy = Automatic
+
+	column usuario
+		dataType: string
+		lineageTag: b1c36d2a-905d-4c28-ad90-c1767bbd5a83
+		summarizeBy: none
+		sourceColumn: usuario
+
+		annotation SummarizationSetBy = Automatic
+
+	column nome
+		dataType: string
+		lineageTag: 75980a7b-4774-4181-b4dc-492b6f70d3cc
+		summarizeBy: none
+		sourceColumn: nome
+
+		annotation SummarizationSetBy = Automatic
+
+	column perfil
+		dataType: string
+		lineageTag: bfc886c9-1952-480a-b754-6f5dd01b39ae
+		summarizeBy: none
+		sourceColumn: perfil
+
+		annotation SummarizationSetBy = Automatic
+
+	column situacao
+		dataType: string
+		lineageTag: c342e731-64c5-4806-984b-b37f36f8faa3
+		summarizeBy: none
+		sourceColumn: situacao
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_criacao
+		dataType: dateTime
+		lineageTag: be94ac05-2a3f-42b8-9af1-2428f03664bb
+		summarizeBy: none
+		sourceColumn: data_criacao
+
+		annotation SummarizationSetBy = Automatic
+
+	column ultimo_acesso
+		dataType: dateTime
+		lineageTag: 333ccc3f-e71a-4b01-8edf-13dbd9c44b4a
+		summarizeBy: none
+		sourceColumn: ultimo_acesso
+
+		annotation SummarizationSetBy = Automatic
+
+	measure 'Total Usuários SYSTUR' = COUNTROWS(SYSTUR)
+		lineageTag: 8ad80977-9315-486f-bde8-ee7263a2301e
+		formatString: #,0
+
+	annotation PBI_ResultType = Table
+

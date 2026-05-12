@@ -1,0 +1,139 @@
+table Divergencias
+	lineageTag: bcc218e7-b879-49bb-b60b-de2c18eed309
+
+	partition Divergencias = m
+		mode: import
+		source
+			let
+				Fonte = Parquet.Feed(CaminhoBase & "DADOS\PARQUET\DIVERGENCIAS\divergencias.parquet")
+			in
+				Fonte
+
+	column id
+		dataType: string
+		lineageTag: efbdd1d4-843b-4f3d-bc17-05446eab38af
+		summarizeBy: none
+		sourceColumn: id
+
+		annotation SummarizationSetBy = Automatic
+
+	column tipo
+		dataType: string
+		lineageTag: 2bbd4b34-d4b3-4d90-ba9a-1b7ea38ccbf9
+		summarizeBy: none
+		sourceColumn: tipo
+
+		annotation SummarizationSetBy = Automatic
+
+	column sistema
+		dataType: string
+		lineageTag: 6d12432e-e15c-46aa-a103-3f67b4ad677e
+		summarizeBy: none
+		sourceColumn: sistema
+
+		annotation SummarizationSetBy = Automatic
+
+	column usuario
+		dataType: string
+		lineageTag: 2b20462f-8851-47cb-be8a-6c399ae3172d
+		summarizeBy: none
+		sourceColumn: usuario
+
+		annotation SummarizationSetBy = Automatic
+
+	column nome_usuario
+		dataType: string
+		lineageTag: 55de13b3-b516-4a8c-a2c6-7e2b70ba769c
+		summarizeBy: none
+		sourceColumn: nome_usuario
+
+		annotation SummarizationSetBy = Automatic
+
+	column matricula
+		dataType: string
+		lineageTag: 9ace62e8-012a-4d16-a4b8-d1376c4bb8cc
+		summarizeBy: none
+		sourceColumn: matricula
+
+		annotation SummarizationSetBy = Automatic
+
+	column perfil_encontrado
+		dataType: string
+		lineageTag: a53d8aa4-506e-466b-8993-96532ce2986b
+		summarizeBy: none
+		sourceColumn: perfil_encontrado
+
+		annotation SummarizationSetBy = Automatic
+
+	column perfil_esperado
+		dataType: string
+		lineageTag: acab966b-c696-407d-a0e5-5efcea0860ed
+		summarizeBy: none
+		sourceColumn: perfil_esperado
+
+		annotation SummarizationSetBy = Automatic
+
+	column descricao
+		dataType: string
+		lineageTag: 9aadb71a-6312-4ad9-b557-9e2c16de94e7
+		summarizeBy: none
+		sourceColumn: descricao
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_identificacao
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 88120f25-6f71-4344-8504-e9ba2a8b385e
+		summarizeBy: none
+		sourceColumn: data_identificacao
+
+		annotation SummarizationSetBy = Automatic
+
+	column resolvida
+		dataType: boolean
+		lineageTag: 1e3ffd33-8a00-4624-9a3c-502a2bf83951
+		summarizeBy: none
+		sourceColumn: resolvida
+
+		annotation SummarizationSetBy = Automatic
+
+	measure 'Total Divergências' = COUNTROWS(Divergencias)
+		lineageTag: 5799c990-ca4f-4906-b744-219c019d10d8
+		formatString: #,0
+
+	measure 'Desligados c/ Acesso' =
+			CALCULATE(
+			    COUNTROWS(Divergencias),
+			    Divergencias[tipo] = "ACESSO_DESLIGADO"
+			)
+		lineageTag: 082b0c70-5e19-4bea-9ad5-ff9425a6c285
+		formatString: #,0
+
+	measure 'Perfis Inválidos' =
+			CALCULATE(
+			    COUNTROWS(Divergencias),
+			    Divergencias[tipo] = "PERFIL_INVALIDO"
+			)
+		lineageTag: cf48445c-0dbb-4f92-9fe2-23ee1203dab7
+		formatString: #,0
+
+	measure 'Sem Vínculo RH' =
+			CALCULATE(
+			    COUNTROWS(Divergencias),
+			    Divergencias[tipo] = "ACESSO_SEM_VINCULO_RH"
+			)
+		lineageTag: 29d41639-3241-44e3-993a-2442906aeca2
+		formatString: #,0
+
+	measure '% Resolvidas' =
+			DIVIDE(
+			    CALCULATE(COUNTROWS(Divergencias), Divergencias[resolvida] = TRUE()),
+			    COUNTROWS(Divergencias),
+			    0
+			)
+		lineageTag: dffa7e5b-00ce-4544-8eb2-37bd5e491bb5
+		formatString: 0.0%
+
+	annotation PBI_ResultType = Table
+
