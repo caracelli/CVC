@@ -19,9 +19,11 @@ class ImportarSistema:
         sistema: Sistema,
         pasta_entrada: str,
         pasta_parquet: str,
+        pasta_processados: str = None,
+        pasta_erros: str = None,
     ):
         cfg = CONFIGS_SISTEMAS[sistema]
-        self._leitor = LeitorSistema(cfg)
+        self._leitor = LeitorSistema(cfg, pasta_processados=pasta_processados, pasta_erros=pasta_erros)
         self._repositorio = RepositorioAcessoSqlite(conexao)
         self._parquet = EscritorParquet()
         self._sistema = sistema

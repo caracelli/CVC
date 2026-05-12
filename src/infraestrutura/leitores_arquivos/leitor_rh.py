@@ -68,7 +68,8 @@ def _ler_df(arquivo: Path, encoding: str, separador: str = ";") -> pd.DataFrame:
 
 class LeitorRh(LeitorArquivoBase):
 
-    def __init__(self, separador: str = ";"):
+    def __init__(self, separador: str = ";", pasta_processados: str = None, pasta_erros: str = None):
+        super().__init__(pasta_processados, pasta_erros)
         self._separador = separador
 
     def ler_ativos(self, pasta: str) -> Tuple[List[FuncionarioAtivo], List[str]]:

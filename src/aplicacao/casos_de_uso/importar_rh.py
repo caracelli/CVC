@@ -17,8 +17,10 @@ class ImportarRh:
         pasta_ativos: str,
         pasta_desligados: str,
         pasta_parquet_rh: str,
+        pasta_processados: str = None,
+        pasta_erros: str = None,
     ):
-        self._leitor = LeitorRh()
+        self._leitor = LeitorRh(pasta_processados=pasta_processados, pasta_erros=pasta_erros)
         self._repositorio = RepositorioFuncionarioSqlite(conexao)
         self._parquet = EscritorParquet()
         self._pasta_ativos = pasta_ativos

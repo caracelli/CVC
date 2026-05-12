@@ -33,7 +33,8 @@ def _parse_datetime(valor: Optional[str]) -> Optional[datetime]:
 
 class LeitorSistema(LeitorArquivoBase):
 
-    def __init__(self, config: ConfigLeitorSistema):
+    def __init__(self, config: ConfigLeitorSistema, pasta_processados: str = None, pasta_erros: str = None):
+        super().__init__(pasta_processados, pasta_erros)
         self._cfg = config
         self._pad = ServicoPadronizacao()
 
@@ -85,6 +86,7 @@ class LeitorSistema(LeitorArquivoBase):
                         data_criacao=_parse_data(self._valor(row, "data_criacao")),
                         ultimo_acesso=_parse_datetime(self._valor(row, "ultimo_acesso")),
                         matricula_vinculada=None,
+                        cpf=self._pad.normalizar_cpf(self._valor(row, "cpf")),
                     ))
 
                 self.mover_para_processados(arquivo)

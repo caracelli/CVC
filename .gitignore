@@ -53,5 +53,8 @@ desktop.ini
 # Executáveis gerados
 CVC_IAM_ANALYTICS/EXECUTAVEIS/*.exe
 
+# Artefatos de build PyInstaller
+deploy/_build/
+
 # Configurações locais do Claude
 .claude/

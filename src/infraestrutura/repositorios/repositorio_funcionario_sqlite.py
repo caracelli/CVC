@@ -74,6 +74,11 @@ class RepositorioFuncionarioSqlite(IRepositorioFuncionario):
             r = sessao.query(RhAtivo).filter_by(cpf=cpf).first()
             return self._para_ativo(r) if r else None
 
+    def buscar_desligado_por_cpf(self, cpf: str) -> Optional[FuncionarioDesligado]:
+        with self._conexao.sessao() as sessao:
+            r = sessao.query(RhDesligado).filter_by(cpf=cpf).first()
+            return self._para_desligado(r) if r else None
+
     def _para_ativo(self, r: RhAtivo) -> FuncionarioAtivo:
         return FuncionarioAtivo(
             matricula=r.matricula,

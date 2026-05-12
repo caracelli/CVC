@@ -14,3 +14,4 @@ class PerfilAcesso:
     data_criacao: Optional[date] = None
     ultimo_acesso: Optional[datetime] = None
     matricula_vinculada: Optional[str] = None
+    cpf: Optional[str] = None

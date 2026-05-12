@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Date, DateTime, Integer, Text
+from sqlalchemy import Boolean, Column, String, Date, DateTime, Integer, Text
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -84,4 +84,44 @@ class LogImportacao(Base):
     total_registros = Column(Integer)
     status = Column(String)  # SUCESSO / ERRO
     mensagem_erro = Column(Text)
+    dt_importacao = Column(DateTime, default=datetime.now)
+
+
+class PerfilEsperadoModel(Base):
+    __tablename__ = "perfis_esperados"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cargo_codigo = Column(String, nullable=False, index=True)
+    cargo_descricao = Column(String)
+    sistema = Column(String, nullable=False)
+    perfil = Column(String, nullable=False)
+    arquivo_origem = Column(String)
+    dt_importacao = Column(DateTime, default=datetime.now)
+
+
+class MatrizOrganizacionalModel(Base):
+    __tablename__ = "matriz_organizacional"
+
+    cargo_codigo = Column(String, primary_key=True)
+    cargo_descricao = Column(String)
+    departamento = Column(String)
+    centro_custo = Column(String)
+    arquivo_origem = Column(String)
+    dt_importacao = Column(DateTime, default=datetime.now)
+
+
+class DivergenciaModel(Base):
+    __tablename__ = "divergencias"
+
+    id = Column(String, primary_key=True)
+    tipo = Column(String, nullable=False, index=True)
+    sistema = Column(String, nullable=False)
+    usuario = Column(String, nullable=False)
+    nome_usuario = Column(String)
+    matricula = Column(String, index=True)
+    perfil_encontrado = Column(String)
+    perfil_esperado = Column(String)
+    descricao = Column(Text)
+    data_identificacao = Column(DateTime)
+    resolvida = Column(Boolean, default=False)
     dt_importacao = Column(DateTime, default=datetime.now)

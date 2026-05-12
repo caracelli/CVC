@@ -27,6 +27,12 @@ class Configuracao:
     rh_ativos_caminho: str
     rh_desligados_caminho: str
     parquet_rh: str
+    processados: str
+    erros: str
+    matrizes_perfis_caminho: str
+    matrizes_perfis_colunas: Dict[str, str]
+    matrizes_org_caminho: str
+    matrizes_org_colunas: Dict[str, str]
     saida_divergencias: str
     saida_desligados: str
     saida_transferidos: str
@@ -61,6 +67,10 @@ class LeitorConfig:
 
         proc = root.find("processamento")
 
+        def _colunas(xpath: str) -> Dict[str, str]:
+            node = root.find(xpath)
+            return {c.tag: c.text for c in node} if node is not None else {}
+
         return Configuracao(
             versao=root.findtext("versao", "1.0.0"),
             cliente=root.findtext("cliente", ""),
@@ -73,6 +83,12 @@ class LeitorConfig:
             rh_ativos_caminho=root.findtext("rh/ativos/caminho", ""),
             rh_desligados_caminho=root.findtext("rh/desligados/caminho", ""),
             parquet_rh=str(raiz / root.findtext("caminhos/parquet", "DADOS/PARQUET") / "RH"),
+            processados=root.findtext("caminhos/processados", "DADOS/PROCESSADOS"),
+            erros=root.findtext("caminhos/erros", "DADOS/ERROS"),
+            matrizes_perfis_caminho=root.findtext("matrizes/perfis_sistemas/caminho", ""),
+            matrizes_perfis_colunas=_colunas("matrizes/perfis_sistemas/colunas"),
+            matrizes_org_caminho=root.findtext("matrizes/organizacional/caminho", ""),
+            matrizes_org_colunas=_colunas("matrizes/organizacional/colunas"),
             saida_divergencias=root.findtext("saidas/divergencias", ""),
             saida_desligados=root.findtext("saidas/desligados", ""),
             saida_transferidos=root.findtext("saidas/transferidos", ""),

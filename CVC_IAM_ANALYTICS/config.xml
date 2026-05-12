@@ -123,9 +123,20 @@
     <matrizes>
         <organizacional>
             <caminho>ENTRADA/MATRIZES/ORGANIZACIONAL</caminho>
+            <colunas>
+                <cargo_codigo>CARGO_CODIGO</cargo_codigo>
+                <cargo_descricao>CARGO_DESCRICAO</cargo_descricao>
+                <departamento>DEPARTAMENTO</departamento>
+                <centro_custo>CENTRO_CUSTO</centro_custo>
+            </colunas>
         </organizacional>
         <perfis_sistemas>
             <caminho>ENTRADA/MATRIZES/PERFIS_SISTEMAS</caminho>
+            <colunas>
+                <cargo_codigo>CARGO_CODIGO</cargo_codigo>
+                <sistema>SISTEMA</sistema>
+                <perfil>PERFIL</perfil>
+            </colunas>
         </perfis_sistemas>
     </matrizes>
 

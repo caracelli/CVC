@@ -25,11 +25,19 @@ class RegraPerfilInvalido:
             if not funcionario:
                 continue
 
+            cc_func = funcionario.cargo.centro_custo
+            cargo_func = funcionario.cargo.descricao.upper().strip()
+
             perfis_validos = {
                 pe.perfil
                 for pe in self._perfis_esperados
-                if pe.cargo_codigo == funcionario.cargo.codigo
+                if pe.cargo_codigo == cc_func
                 and pe.sistema == acesso.sistema
+                and (
+                    not pe.cargo_descricao
+                    or not cargo_func
+                    or pe.cargo_descricao.upper().strip() == cargo_func
+                )
             }
 
             if perfis_validos and acesso.perfil not in perfis_validos:
