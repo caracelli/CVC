@@ -20,21 +20,54 @@ Processar bases de RH e extratos de acesso dos sistemas corporativos, cruzar com
 
 ## Estrutura do repositório
 
-```
-CVC_IAM_ANALYTICS/          # Pasta do usuário (rede do cliente)
-  01_EXECUTAVEIS/            # Executáveis para cópia local
-  02_CONFIGURACAO/           # config.xml com parâmetros de todos os sistemas
-  03_ENTRADA_ARQUIVOS/       # Arquivos que o usuário deposita
-  04_POWER_BI/               # Arquivo .pbix para cópia local
-  05_SAIDAS/                 # Relatórios e divergências gerados
-  06_DADOS_PROJETO/          # Banco SQLite, Parquet, arquivos processados
+A pasta `CVC_IAM_ANALYTICS/` é organizada em duas fases:
 
+**Fase 1 — Cliente** (o que o usuário copia ou deposita):
+```
+CVC_IAM_ANALYTICS/
+  config.xml                 # Parâmetros de todos os sistemas (na raiz)
+  EXECUTAVEIS/               # Processador.exe e Visualizador.exe para cópia local
+  POWER_BI/                  # Arquivo .pbix para cópia local
+  ENTRADA/                   # Arquivos que o usuário deposita
+    RH/ATIVOS/               # Base de funcionários ativos
+    RH/DESLIGADOS/           # Base de desligados
+    SISTEMAS/SIGOT/          # Extratos de acesso por sistema
+    SISTEMAS/SICA_RA/
+    SISTEMAS/SICA_ESFERA/
+    SISTEMAS/SYSTUR/
+    SISTEMAS/IC/
+    MATRIZES/ORGANIZACIONAL/
+    MATRIZES/PERFIS_SISTEMAS/
+```
+
+**Fase 2 — Aplicativo** (gerenciado pelo Processador/Visualizador):
+```
+  DADOS/
+    BANCO/                   # SQLite (iam_analytics.db)
+    PARQUET/                 # Parquet para consumo do Power BI
+      ACESSOS/               # Um subdiretório por sistema
+      DIVERGENCIAS/
+      HISTORICO/
+      RH/
+    SAIDAS/                  # Relatórios gerados
+      DIVERGENCIAS/
+      DESLIGADOS/
+      TRANSFERIDOS/
+      AUDITORIA/
+    PROCESSADOS/             # Arquivos já importados (movidos após leitura)
+    ERROS/                   # Arquivos rejeitados na importação
+    LOGS/                    # Logs de execução
+    SNAPSHOTS/               # Snapshots históricos
+```
+
+**Código-fonte:**
+```
 src/                         # Código-fonte (DDD)
   dominio/                   # Entidades, objetos de valor, regras, interfaces
   aplicacao/                 # Casos de uso, DTOs
   infraestrutura/            # Leitores CSV/XLSX, repositórios SQLite, Parquet
-  processador/main.py        # Entry point do Processador
-  visualizador/main.py       # Entry point do Visualizador
+  processador/main.py        # Entry point do Processador (roda na rede)
+  visualizador/main.py       # Entry point do Visualizador (roda localmente)
 
 tests/                       # Testes automatizados
 docs/                        # Documentação técnica
@@ -52,7 +85,7 @@ deploy/                      # Empacotamento dos executáveis
 ## Configuração
 
 Todos os parâmetros de caminhos, colunas e sistemas estão em:
-`CVC_IAM_ANALYTICS/02_CONFIGURACAO/config.xml`
+`CVC_IAM_ANALYTICS/config.xml`
 
 ## Cronograma
 

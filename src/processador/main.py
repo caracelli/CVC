@@ -26,14 +26,14 @@ def configurar_log(pasta_logs: str):
 
 def main():
     raiz = Path(__file__).resolve().parent.parent.parent
-    caminho_config = raiz / "CVC_IAM_ANALYTICS" / "02_CONFIGURACAO" / "config.xml"
+    caminho_config = raiz / "CVC_IAM_ANALYTICS" / "config.xml"
 
     if not caminho_config.exists():
         logger.error(f"config.xml não encontrado: {caminho_config}")
         sys.exit(1)
 
     cfg = LeitorConfig(str(caminho_config)).carregar()
-    app_raiz = caminho_config.parent.parent
+    app_raiz = caminho_config.parent
 
     configurar_log(str(app_raiz / cfg.saida_logs))
     logger.info(f"IAM Analytics — {cfg.cliente} v{cfg.versao}")
@@ -55,12 +55,11 @@ def main():
     # Card 6 — SYSTUR
     sis_cfg = cfg.sistemas.get("SYSTUR")
     if sis_cfg:
-        parquet_acessos = str(app_raiz / "06_DADOS_PROJETO" / "PARQUET" / "ACESSOS")
         ImportarSistema(
             conexao=conexao,
             sistema=Sistema.SYSTUR,
             pasta_entrada=str(app_raiz / sis_cfg.caminho_entrada),
-            pasta_parquet=parquet_acessos,
+            pasta_parquet=str(app_raiz / sis_cfg.caminho_parquet),
         ).executar()
 
     logger.info("Processamento finalizado.")

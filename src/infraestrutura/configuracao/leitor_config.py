@@ -72,7 +72,7 @@ class LeitorConfig:
             sistemas=sistemas,
             rh_ativos_caminho=root.findtext("rh/ativos/caminho", ""),
             rh_desligados_caminho=root.findtext("rh/desligados/caminho", ""),
-            parquet_rh=str(raiz / root.findtext("caminhos/parquet", "06_DADOS_PROJETO/PARQUET") / "RH"),
+            parquet_rh=str(raiz / root.findtext("caminhos/parquet", "DADOS/PARQUET") / "RH"),
             saida_divergencias=root.findtext("saidas/divergencias", ""),
             saida_desligados=root.findtext("saidas/desligados", ""),
             saida_transferidos=root.findtext("saidas/transferidos", ""),

@@ -1,0 +1,7 @@
+2026-05-11 13:01:38.031 | INFO     | __main__:main:36 - IAM Analytics — CVC v1.0.0
+2026-05-11 13:01:38.332 | INFO     | infraestrutura.banco_dados.conexao:inicializar:17 - Banco de dados inicializado.
+2026-05-11 13:01:38.333 | INFO     | aplicacao.casos_de_uso.importar_rh:executar:29 - === Importação RH iniciada ===
+2026-05-11 13:01:38.333 | WARNING  | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:17 - Pasta não encontrada: C:\Users\user\OneDrive\Backup Note\Projetos\Antlia\cvc\CVC\03_ENTRADA_ARQUIVOS\RH_ATIVOS
+2026-05-11 13:01:38.333 | WARNING  | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:17 - Pasta não encontrada: C:\Users\user\OneDrive\Backup Note\Projetos\Antlia\cvc\CVC\03_ENTRADA_ARQUIVOS\RH_DESLIGADOS
+2026-05-11 13:01:38.334 | INFO     | aplicacao.casos_de_uso.importar_rh:executar:62 - === Importação RH concluída: 0 ativos, 0 desligados ===
+2026-05-11 13:01:38.334 | INFO     | __main__:main:49 - Processamento finalizado.

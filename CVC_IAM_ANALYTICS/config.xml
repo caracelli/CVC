@@ -6,18 +6,18 @@
 
     <caminhos>
         <raiz>.</raiz>
-        <entrada>03_ENTRADA_ARQUIVOS</entrada>
-        <saidas>05_SAIDAS</saidas>
-        <banco_dados>06_DADOS_PROJETO/BANCO_DADOS/iam_analytics.db</banco_dados>
-        <parquet>06_DADOS_PROJETO/PARQUET</parquet>
-        <processados>06_DADOS_PROJETO/ARQUIVOS_PROCESSADOS</processados>
-        <erros>06_DADOS_PROJETO/ARQUIVOS_ERRO</erros>
-        <logs>05_SAIDAS/LOGS</logs>
+        <entrada>ENTRADA</entrada>
+        <saidas>DADOS/SAIDAS</saidas>
+        <banco_dados>DADOS/BANCO/iam_analytics.db</banco_dados>
+        <parquet>DADOS/PARQUET</parquet>
+        <processados>DADOS/PROCESSADOS</processados>
+        <erros>DADOS/ERROS</erros>
+        <logs>DADOS/LOGS</logs>
     </caminhos>
 
     <rh>
         <ativos>
-            <caminho>03_ENTRADA_ARQUIVOS/RH_ATIVOS</caminho>
+            <caminho>ENTRADA/RH/ATIVOS</caminho>
             <colunas>
                 <matricula>MATRICULA</matricula>
                 <nome>NOME</nome>
@@ -32,7 +32,7 @@
             </colunas>
         </ativos>
         <desligados>
-            <caminho>03_ENTRADA_ARQUIVOS/RH_DESLIGADOS</caminho>
+            <caminho>ENTRADA/RH/DESLIGADOS</caminho>
             <colunas>
                 <matricula>MATRICULA</matricula>
                 <nome>NOME</nome>
@@ -47,8 +47,8 @@
         <sistema id="SIGOT">
             <nome>SIGOT</nome>
             <descricao>Sistema de Gestão de Operações e Turismo</descricao>
-            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/SIGOT</caminho_entrada>
-            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/SIGOT</caminho_parquet>
+            <caminho_entrada>ENTRADA/SISTEMAS/SIGOT</caminho_entrada>
+            <caminho_parquet>DADOS/PARQUET/ACESSOS/SIGOT</caminho_parquet>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -62,8 +62,8 @@
         <sistema id="SICA_RA">
             <nome>SICA_RA</nome>
             <descricao>Sistema de Controle de Acesso - Rede Agência</descricao>
-            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/SICA_RA</caminho_entrada>
-            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/SICA_RA</caminho_parquet>
+            <caminho_entrada>ENTRADA/SISTEMAS/SICA_RA</caminho_entrada>
+            <caminho_parquet>DADOS/PARQUET/ACESSOS/SICA_RA</caminho_parquet>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -77,8 +77,8 @@
         <sistema id="SICA_ESFERA">
             <nome>SICA_ESFERA</nome>
             <descricao>Sistema de Controle de Acesso - Esfera</descricao>
-            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/SICA_ESFERA</caminho_entrada>
-            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/SICA_ESFERA</caminho_parquet>
+            <caminho_entrada>ENTRADA/SISTEMAS/SICA_ESFERA</caminho_entrada>
+            <caminho_parquet>DADOS/PARQUET/ACESSOS/SICA_ESFERA</caminho_parquet>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -92,8 +92,8 @@
         <sistema id="SYSTUR">
             <nome>SYSTUR</nome>
             <descricao>Sistema de Turismo</descricao>
-            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/SYSTUR</caminho_entrada>
-            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/SYSTUR</caminho_parquet>
+            <caminho_entrada>ENTRADA/SISTEMAS/SYSTUR</caminho_entrada>
+            <caminho_parquet>DADOS/PARQUET/ACESSOS/SYSTUR</caminho_parquet>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -107,8 +107,8 @@
         <sistema id="IC">
             <nome>IC_INTEGRADOR_CONTABIL</nome>
             <descricao>Integrador Contábil</descricao>
-            <caminho_entrada>03_ENTRADA_ARQUIVOS/ACESSOS_SISTEMAS/IC_INTEGRADOR_CONTABIL</caminho_entrada>
-            <caminho_parquet>06_DADOS_PROJETO/PARQUET/ACESSOS/IC</caminho_parquet>
+            <caminho_entrada>ENTRADA/SISTEMAS/IC</caminho_entrada>
+            <caminho_parquet>DADOS/PARQUET/ACESSOS/IC</caminho_parquet>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -122,10 +122,10 @@
 
     <matrizes>
         <organizacional>
-            <caminho>03_ENTRADA_ARQUIVOS/MATRIZES/ORGANIZACIONAL</caminho>
+            <caminho>ENTRADA/MATRIZES/ORGANIZACIONAL</caminho>
         </organizacional>
         <perfis_sistemas>
-            <caminho>03_ENTRADA_ARQUIVOS/MATRIZES/PERFIS_SISTEMAS</caminho>
+            <caminho>ENTRADA/MATRIZES/PERFIS_SISTEMAS</caminho>
         </perfis_sistemas>
     </matrizes>
 
@@ -139,10 +139,16 @@
     </processamento>
 
     <saidas>
-        <divergencias>05_SAIDAS/DIVERGENCIAS</divergencias>
-        <desligados>05_SAIDAS/DESLIGADOS</desligados>
-        <transferidos>05_SAIDAS/TRANSFERIDOS</transferidos>
-        <auditoria>05_SAIDAS/AUDITORIA</auditoria>
-        <logs>05_SAIDAS/LOGS</logs>
+        <divergencias>DADOS/SAIDAS/DIVERGENCIAS</divergencias>
+        <desligados>DADOS/SAIDAS/DESLIGADOS</desligados>
+        <transferidos>DADOS/SAIDAS/TRANSFERIDOS</transferidos>
+        <auditoria>DADOS/SAIDAS/AUDITORIA</auditoria>
+        <logs>DADOS/LOGS</logs>
     </saidas>
+
+    <!-- Caminhos locais do Visualizador — a preencher quando o exe for implementado -->
+    <local>
+        <parquet_destino></parquet_destino>
+        <power_bi></power_bi>
+    </local>
 </configuracao>
