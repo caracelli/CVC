@@ -235,85 +235,64 @@ PARTE 8 — GRÁFICO "EVOLUÇÃO HISTÓRICA" (LINHA)
 
 
 ===============================================================================
-PARTE 9 — TABELA PRINCIPAL "LISTA DE DIVERGÊNCIAS"
+PARTE 9 — MATRIX "LISTA DE DIVERGÊNCIAS" (expansão nativa de linhas)
 ===============================================================================
 
-Uma linha por usuário, agrupando todas as suas divergências.
-O detalhe aparece no painel abaixo via cross-filter nativo (sem visual externo).
+Usar o visual MATRIX (não Table) — suporta expansão de linhas com "+" nativo,
+sem AppSource. A hierarquia de linhas faz o usuário virar pai e cada
+divergência virar filho expansível.
 
-1. Inserir > Tabela
-2. Colunas (uma linha = um usuário):
-   - Divergencias[usuario]          → renomear para "Usuário"
-   - RH_Ativos[nome]                → renomear para "Nome Completo"
-   - Divergencias[matricula]        → renomear para "Matrícula"
-   - RH_Ativos[departamento]        → renomear para "Departamento"
-   - RH_Ativos[cargo_descricao]     → renomear para "Cargo"
-   - Medida "Nº Divergências"       → renomear para "Divergências"
-   - Divergencias[tipo]             → renomear para "Tipos"
-   - Divergencias[sistema]          → renomear para "Sistema"
-   - Divergencias[data_identificacao] (MAX) → "Última Ident."
-   - Divergencias[resolvida]        → renomear para "Status"
+--- Configurar a hierarquia de linhas ---
+1. Inserir > Matrix
+2. Em "Linhas", arrastar nesta ordem (cria a hierarquia):
+   a) Divergencias[usuario]           → nível 1 (linha-pai: usuário)
+   b) Divergencias[id]                → nível 2 (linha-filho: divergência individual)
+   NOTA: O campo [id] só aparece nas linhas-filho; o usuário fica colapsado.
 
-3. Formato:
-   - Cabeçalho: fundo #1F2D5C, texto branco, Segoe UI Bold 10pt
+3. Em "Colunas", não adicionar nenhum campo (deixar vazio).
+
+4. Em "Valores", adicionar nesta ordem:
+   - RH_Ativos[nome]                  → "Nome" (via relacionamento)
+   - Divergencias[matricula]          → "Matrícula"
+   - RH_Ativos[departamento]          → "Departamento"
+   - RH_Ativos[cargo_descricao]       → "Cargo"
+   - Divergencias[tipo]               → "Tipo"
+   - Divergencias[perfil_encontrado]  → "Perfil Enc."
+   - Divergencias[perfil_esperado]    → "Perfil Esp."
+   - Divergencias[data_identificacao] → "Data" (MAX no nível pai)
+   - Coluna calculada "Status"        → "Status"
+   DICA: Para o nível-pai mostrar "Nº Divergências" na coluna Tipo em vez
+   do valor bruto, usar: Tipos = IF(HASONEVALUE(Divergencias[id]),
+       Divergencias[tipo], [Nº Divergências] & " diverg.")
+
+5. Formato:
+   - Cabeçalho de linha: fundo #1F2D5C, texto branco, Segoe UI Bold 10pt
    - Linhas alternadas: #FFFFFF / #F8F9FA
-   - Linha selecionada: fundo #EBF5FB (azul claro — Power BI aplica automaticamente)
-   - Bordas: 1px #E0E0E0
+   - Linha-filho: fundo #F4F8FF (azul muito claro)
+   - Ícone de expansão: ativar em Formato > Cabeçalhos de linha > Ícone de expansão
+     * Cor do ícone: #F5B800 sobre fundo #1F2D5C (linha colapsada)
+     * Cor aberto: #1F2D5C sobre fundo #F5B800
+   - Bordas: 1px #E0E0E0 | Arredondamento: 6px
    - Título: "Divergências — Detalhamento" | Segoe UI Bold 12pt | cor #1F2D5C
 
-4. Formatação condicional na coluna "Tipos":
-   - Regra de cor de fundo por valor:
-     * "PERFIL_INVALIDO"       → fundo #FEF3E2, texto #E67E22
-     * "ACESSO_SEM_VINCULO_RH" → fundo #F5EEF8, texto #7D3C98
+6. Formatação condicional na coluna "Tipo":
+   - "PERFIL_INVALIDO"       → fundo #FEF3E2, texto #E67E22
+   - "ACESSO_SEM_VINCULO_RH" → fundo #F5EEF8, texto #7D3C98
    (Configurar em: Formato visual > Formatação condicional > Cor do plano de fundo)
 
-5. Formatação condicional na coluna "Status":
-   - "FALSE" (não resolvida) → fundo #FDECEA, texto #C0392B, rótulo "Pendente"
-   - "TRUE"  (resolvida)     → fundo #EAFAF1, texto #1E8449, rótulo "Resolvida"
-   DICA: Criar coluna calculada: Status = IF(Divergencias[resolvida], "Resolvida", "Pendente")
+7. Formatação condicional na coluna "Status":
+   - "Pendente"  → fundo #FDECEA, texto #C0392B
+   - "Resolvida" → fundo #EAFAF1, texto #1E8449
+   Coluna calculada necessária:
+     Status = IF(Divergencias[resolvida], "Resolvida", "Pendente")
 
-6. Posição: X=230, Y=170 | Tamanho: L=1190, A=560
+8. Comportamento de expansão (nativo, sem configuração extra):
+   - Linha colapsada: mostra dados agregados do usuário + ícone "+"
+   - Clique em "+": expande mostrando cada divergência individual
+   - Clique em "−": recolhe de volta
+   - Botão "Expandir tudo" na barra do visual expande todos de uma vez
 
-
-===============================================================================
-PARTE 9B — PAINEL DE DETALHE (CROSS-FILTER NATIVO)
-===============================================================================
-
-Ao clicar em qualquer linha da tabela principal, este painel filtra
-automaticamente para mostrar TODAS as divergências daquele usuário.
-Nenhum visual externo necessário — é o cross-filter padrão do Power BI.
-
---- Tabela de detalhe ---
-1. Inserir > Tabela (segunda tabela, abaixo da principal)
-2. Colunas (uma linha = uma divergência individual):
-   - Divergencias[tipo]              → "Tipo"
-   - Divergencias[perfil_encontrado] → "Perfil Encontrado"
-   - Divergencias[perfil_esperado]   → "Perfil Esperado"
-   - Divergencias[descricao]         → "Descrição"
-   - Divergencias[data_identificacao]→ "Data"
-   - Divergencias[resolvida]         → "Status" (com formatação condicional igual acima)
-3. Formato:
-   - Cabeçalho: fundo #2C3E6B (azul ligeiramente mais claro que o header)
-   - Título: "Detalhe do Usuário Selecionado" | Segoe UI Bold 11pt | cor #1F2D5C
-   - Fundo: #F8FBFF (azul muito claro para distinguir do painel principal)
-   - Borda superior: retângulo fino 3px #F5B800 (acento amarelo)
-4. Posição: X=230, Y=740 | Tamanho: L=1190, A=130
-
---- Configurar o cross-filter ---
-5. Selecionar a tabela principal > Formato > Editar interações
-6. Garantir que a tabela principal afeta (filtra) a tabela de detalhe
-7. Garantir que os slicers (sistema, tipo, departamento) afetam AMBAS as tabelas
-8. DICA: Adicionar caixa de texto dinâmica acima da tabela de detalhe:
-   - Medida DAX: Usuário Selecionado =
-       IF(
-           HASONEVALUE(Divergencias[usuario]),
-           "Detalhe — " & SELECTEDVALUE(Divergencias[usuario])
-               & " · " & SELECTEDVALUE(RH_Ativos[nome])
-               & "   (" & [Nº Divergências] & " divergências)",
-           "Selecione um usuário na tabela acima"
-       )
-   - Exibir via visual Cartão ou caixa de texto com medida
-   - Fonte: Segoe UI Bold 11pt, cor #1F2D5C
+9. Posição: X=230, Y=170 | Tamanho: L=1190, A=680
 
 
 ===============================================================================
