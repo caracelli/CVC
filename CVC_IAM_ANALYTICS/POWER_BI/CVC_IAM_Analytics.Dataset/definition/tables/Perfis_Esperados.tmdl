@@ -1,14 +1,6 @@
 table Perfis_Esperados
 	lineageTag: 66d0dc01-92e2-448c-a78b-b2779abd623a
 
-	partition Perfis_Esperados = m
-		mode: import
-		source
-			let
-				Fonte = Parquet.Feed(CaminhoBase & "DADOS\PARQUET\MATRIZES\perfis_esperados.parquet")
-			in
-				Fonte
-
 	column centro_custo
 		dataType: string
 		lineageTag: ec256cdc-e53b-48f2-bf27-8ff185eac655
@@ -32,6 +24,10 @@ table Perfis_Esperados
 		sourceColumn: perfil
 
 		annotation SummarizationSetBy = Automatic
+
+	partition Perfis_Esperados = m
+		mode: import
+		source = Parquet.Document(File.Contents(CaminhoBase & "DADOS\PARQUET\MATRIZES\perfis_esperados.parquet"))
 
 	annotation PBI_ResultType = Table
 

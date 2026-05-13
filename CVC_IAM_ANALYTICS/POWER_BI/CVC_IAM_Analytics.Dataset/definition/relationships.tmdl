@@ -1,26 +1,14 @@
 relationship d_systur
-	fromTable: Divergencias
-	fromColumn: usuario
-	toTable: SYSTUR
-	toColumn: usuario
 	crossFilteringBehavior: bothDirections
+	fromColumn: Divergencias.usuario
+	toColumn: SYSTUR.usuario
 
 relationship d_rh_ativos
-	fromTable: Divergencias
-	fromColumn: matricula
-	toTable: RH_Ativos
-	toColumn: matricula
 	crossFilteringBehavior: bothDirections
+	fromColumn: Divergencias.matricula
+	toColumn: RH_Ativos.matricula
 
-relationship rh_ativos_matriz_org
-	fromTable: RH_Ativos
-	fromColumn: cargo_codigo
-	toTable: Matriz_Organizacional
-	toColumn: cargo_codigo
-
-relationship rh_ativos_perfis
-	fromTable: RH_Ativos
-	fromColumn: centro_custo
-	toTable: Perfis_Esperados
-	toColumn: centro_custo
+relationship rh_ativos_matriz
+	fromColumn: RH_Ativos.cargo_codigo
+	toColumn: Matriz_Organizacional.cargo_codigo
 

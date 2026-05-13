@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>CVC IAM Analytics — Mockup Fase 1</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #F2F4F7; width: 1440px; }
+
+  /* ── HEADER ── */
+  .header {
+    background: #1F2D5C;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    position: relative;
+  }
+  .header-accent { width: 6px; height: 70px; background: #F5B800; position: absolute; left: 0; top: 0; }
+  .header-titles { margin-left: 18px; }
+  .header-titles h1 { color: #FFFFFF; font-size: 22px; font-weight: 700; line-height: 1.2; }
+  .header-titles p  { color: #B0BEC5; font-size: 11px; margin-top: 2px; }
+  .header-right { margin-left: auto; text-align: right; }
+  .header-right .ref { color: #F5B800; font-size: 12px; font-weight: 700; }
+  .header-right .upd { color: #B0BEC5; font-size: 9px; margin-top: 4px; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; padding: 0 20px; background: #F2F4F7; border-bottom: 1px solid #D8DCE6; }
+  .tab { padding: 8px 22px; font-size: 11px; cursor: pointer; border-radius: 4px 4px 0 0; margin-top: 6px; color: #555; background: #EAECF0; margin-right: 4px; }
+  .tab.active { background: #F5B800; color: #1F2D5C; font-weight: 700; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar { display: flex; align-items: center; padding: 10px 20px; gap: 10px; background: #F2F4F7; border-bottom: 1px solid #E0E0E0; }
+  .filter-label { font-size: 10px; font-weight: 700; color: #333; white-space: nowrap; }
+  .filter-btn { padding: 5px 14px; border-radius: 4px; font-size: 10px; border: 1px solid #CCC; background: #FFF; color: #555; cursor: pointer; }
+  .filter-btn.active { background: #F5B800; color: #1F2D5C; font-weight: 700; border-color: #F5B800; }
+  .filter-divider { width: 1px; height: 20px; background: #CCC; margin: 0 6px; }
+  .filter-select { padding: 5px 12px; border-radius: 4px; font-size: 10px; border: 1px solid #CCC; background: #FFF; color: #333; }
+
+  /* ── BODY ── */
+  .body { display: flex; height: calc(900px - 70px - 50px - 46px); }
+
+  /* ── SIDEBAR ── */
+  .sidebar { width: 210px; min-width: 210px; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; background: #F2F4F7; border-right: 1px solid #E0E0E0; }
+  .kpi-card { border-radius: 6px; padding: 10px 14px; border: 1px solid transparent; position: relative; }
+  .kpi-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 6px 0 0 6px; }
+  .kpi-card.blue   { background: #EBF5FB; border-color: #D5E8F5; }
+  .kpi-card.blue::before   { background: #2980B9; }
+  .kpi-card.blue2  { background: #EBF5FB; border-color: #D5E8F5; }
+  .kpi-card.blue2::before  { background: #2471A3; }
+  .kpi-card.orange { background: #FEF3E2; border-color: #F9D5A7; }
+  .kpi-card.orange::before { background: #E67E22; }
+  .kpi-card.purple { background: #F5EEF8; border-color: #D7BDE2; }
+  .kpi-card.purple::before { background: #7D3C98; }
+  .kpi-card.green  { background: #EAFAF1; border-color: #A9DFBF; }
+  .kpi-card.green::before  { background: #1E8449; }
+  .kpi-value { font-size: 28px; font-weight: 900; line-height: 1; }
+  .kpi-card.blue   .kpi-value { color: #2980B9; }
+  .kpi-card.blue2  .kpi-value { color: #2471A3; }
+  .kpi-card.orange .kpi-value { color: #E67E22; }
+  .kpi-card.purple .kpi-value { color: #7D3C98; }
+  .kpi-card.green  .kpi-value { color: #1E8449; }
+  .kpi-label { font-size: 10px; color: #555; margin-top: 3px; }
+
+  .mini-chart { background: #FFF; border-radius: 6px; border: 1px solid #E0E0E0; padding: 10px 12px; margin-top: 2px; }
+  .mini-chart-title { font-size: 10px; font-weight: 700; color: #1F2D5C; margin-bottom: 8px; }
+  .bar-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .bar-dept { font-size: 9px; color: #555; width: 52px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; background: #F0F0F0; border-radius: 3px; height: 10px; }
+  .bar-fill  { height: 10px; border-radius: 3px; background: #2980B9; }
+  .bar-val   { font-size: 9px; color: #333; font-weight: 700; width: 18px; text-align: right; }
+
+  /* ── MAIN PANEL ── */
+  .main-panel { flex: 1; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; }
+  .table-title { font-size: 13px; font-weight: 700; color: #1F2D5C; }
+  .tfilter-label { font-size: 10px; color: #888; }
+
+  .div-table { background: #FFF; border-radius: 6px; border: 1px solid #E0E0E0; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead tr { background: #1F2D5C; }
+  thead th { color: #FFF; font-weight: 700; font-size: 10px; padding: 9px 12px; text-align: left; white-space: nowrap; }
+  tbody td { padding: 7px 12px; color: #333; font-size: 11px; border-bottom: 1px solid #EEEEEE; }
+
+  /* ── ROW: PARENT (usuário agrupado) ── */
+  tr.row-parent { background: #FFFFFF; cursor: pointer; }
+  tr.row-parent:hover { background: #F0F4FF; }
+  tr.row-parent.expanded { background: #EBF5FB; }
+
+  /* ── EXPAND BUTTON ── */
+  .expand-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    background: #1F2D5C;
+    color: #F5B800;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .expand-btn.open { background: #F5B800; color: #1F2D5C; }
+  .expand-btn.single { background: #E0E0E0; color: #888; cursor: default; font-size: 10px; }
+
+  /* ── ROW: CHILD (cada divergência) ── */
+  tr.row-child { display: none; background: #F8FBFF; }
+  tr.row-child.visible { display: table-row; }
+  tr.row-child td { border-bottom: 1px solid #E8EEFF; font-size: 10.5px; }
+  tr.row-child td:first-child { padding-left: 0; }
+
+  .child-indent {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 8px;
+  }
+  .child-line {
+    width: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .child-line-v { width: 1px; background: #C0CCE8; flex: 1; }
+  .child-line-h { display: flex; align-items: center; gap: 0; }
+  .child-corner { width: 10px; height: 10px; border-left: 1px solid #C0CCE8; border-bottom: 1px solid #C0CCE8; border-radius: 0 0 0 4px; margin-right: 4px; }
+
+  /* last child: cut the vertical line */
+  tr.row-child.last-child .child-line-v { display: none; }
+
+  /* ── BADGES ── */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 700; white-space: nowrap; }
+  .badge-orange { background: #FEF3E2; color: #E67E22; border: 1px solid #F9D5A7; }
+  .badge-purple { background: #F5EEF8; color: #7D3C98; border: 1px solid #D7BDE2; }
+  .badge-green  { background: #EAFAF1; color: #1E8449; border: 1px solid #A9DFBF; }
+  .badge-red    { background: #FDECEA; color: #C0392B; border: 1px solid #F5C6C2; }
+  .badge-count  { background: #1F2D5C; color: #F5B800; border: none; font-size: 9px; padding: 2px 7px; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel { background: #FFF; border-radius: 6px; border: 1px solid #E0E0E0; padding: 12px 16px; }
+  .detail-title { font-size: 11px; font-weight: 700; color: #1F2D5C; margin-bottom: 8px; border-bottom: 2px solid #F5B800; padding-bottom: 5px; display: inline-block; }
+  .detail-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .detail-item label { font-size: 9px; color: #888; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+  .detail-item span  { font-size: 11px; color: #1F2D5C; font-weight: 600; display: block; margin-top: 2px; }
+
+  /* ── PAGINATION ── */
+  .pagination { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid #EEE; background: #FAFAFA; }
+  .page-info { font-size: 10px; color: #888; }
+  .page-btns { display: flex; gap: 4px; }
+  .page-btn { width: 26px; height: 26px; border-radius: 4px; font-size: 10px; border: 1px solid #DDD; background: #FFF; color: #555; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .page-btn.active { background: #F5B800; color: #1F2D5C; font-weight: 700; border-color: #F5B800; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-accent"></div>
+  <div class="header-titles">
+    <h1>IAM Analytics</h1>
+    <p>Governança de Acessos — CVC Corp</p>
+  </div>
+  <div class="header-right">
+    <div class="ref">Referência: Maio / 2026</div>
+    <div class="upd">Última atualização: 13/05/2026 09:42</div>
+  </div>
+</div>
+
+<!-- NAVIGATION TABS -->
+<div class="tabs">
+  <div class="tab">Visão Geral</div>
+  <div class="tab active">Lista de Divergências</div>
+  <div class="tab">Perfis Inválidos</div>
+  <div class="tab">Sem Vínculo RH</div>
+</div>
+
+<!-- SYSTEM FILTER BAR -->
+<div class="filter-bar">
+  <span class="filter-label">Filtrar por Sistema:</span>
+  <div class="filter-btn active">Todos</div>
+  <div class="filter-btn">SYSTUR</div>
+  <div class="filter-divider"></div>
+  <span class="filter-label">Tipo:</span>
+  <select class="filter-select"><option>Todos os tipos</option><option>Perfil Inválido</option><option>Sem Vínculo RH</option></select>
+  <span class="filter-label">Departamento:</span>
+  <select class="filter-select"><option>Todos</option><option>Vendas</option><option>TI</option><option>Operações</option></select>
+  <span class="filter-label">Status:</span>
+  <select class="filter-select"><option>Todos</option><option>Pendente</option><option>Resolvida</option></select>
+</div>
+
+<!-- MAIN BODY -->
+<div class="body">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="kpi-card blue">
+      <div class="kpi-value">847</div>
+      <div class="kpi-label">Funcionários Ativos</div>
+    </div>
+    <div class="kpi-card blue2">
+      <div class="kpi-value">312</div>
+      <div class="kpi-label">Usuários SYSTUR</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-value">34</div>
+      <div class="kpi-label">Perfis Inválidos</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-value">24</div>
+      <div class="kpi-label">Sem Vínculo RH</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-value">41%</div>
+      <div class="kpi-label">Resolvidas</div>
+    </div>
+    <div class="mini-chart">
+      <div class="mini-chart-title">Por Departamento</div>
+      <div class="bar-row"><span class="bar-dept">Vendas</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bar-val">21</span></div>
+      <div class="bar-row"><span class="bar-dept">TI</span><div class="bar-track"><div class="bar-fill" style="width:71%"></div></div><span class="bar-val">15</span></div>
+      <div class="bar-row"><span class="bar-dept">Operações</span><div class="bar-track"><div class="bar-fill" style="width:48%"></div></div><span class="bar-val">10</span></div>
+      <div class="bar-row"><span class="bar-dept">Financeiro</span><div class="bar-track"><div class="bar-fill" style="width:38%"></div></div><span class="bar-val">8</span></div>
+      <div class="bar-row"><span class="bar-dept">RH</span><div class="bar-track"><div class="bar-fill" style="width:19%"></div></div><span class="bar-val">4</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN PANEL -->
+  <div class="main-panel">
+
+    <div class="table-header">
+      <span class="table-title">Divergências — Detalhamento</span>
+      <span class="tfilter-label">42 usuários · 58 divergências encontradas</span>
+    </div>
+
+    <div class="div-table">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Usuário</th>
+            <th>Nome Completo</th>
+            <th>Matrícula</th>
+            <th>Departamento</th>
+            <th>Cargo</th>
+            <th>Divergências</th>
+            <th>Tipos</th>
+            <th>Sistema</th>
+            <th>Última Ident.</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+
+          <!-- ═══ usr0042 — Ana Medeiros — 3 divergências ═══ -->
+          <tr class="row-parent" onclick="toggle('u42')">
+            <td style="padding:7px 6px 7px 12px"><span class="expand-btn" id="btn-u42">+</span></td>
+            <td>usr0042</td>
+            <td><strong>Ana Medeiros</strong></td>
+            <td>M-00042</td>
+            <td>TI</td>
+            <td>Analista TI</td>
+            <td><span class="badge badge-count">3</span></td>
+            <td>
+              <span class="badge badge-orange">PERFIL_INVALIDO</span>
+              <span class="badge badge-purple" style="margin-left:3px">ACESSO_S/RH</span>
+            </td>
+            <td>SYSTUR</td>
+            <td>10/05/2026</td>
+            <td><span class="badge badge-red">Pendente</span></td>
+          </tr>
+          <tr class="row-child" data-group="u42">
+            <td></td>
+            <td colspan="2">
+              <div class="child-indent">
+                <div class="child-line"><div class="child-line-v"></div></div>
+                <div class="child-corner"></div>
+                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #1
+              </div>
+            </td>
+            <td>M-00042</td><td>TI</td><td>Analista TI</td>
+            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
+            <td>Enc: <strong style="color:#E67E22">ADMIN</strong> → Esp: <strong style="color:#1E8449">CONSULTA</strong></td>
+            <td>SYSTUR</td><td>10/05/2026</td>
+            <td><span class="badge badge-red">Pendente</span></td>
+          </tr>
+          <tr class="row-child" data-group="u42">
+            <td></td>
+            <td colspan="2">
+              <div class="child-indent">
+                <div class="child-line"><div class="child-line-v"></div></div>
+                <div class="child-corner"></div>
+                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #2
+              </div>
+            </td>
+            <td>M-00042</td><td>TI</td><td>Analista TI</td>
+            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
+            <td>Enc: <strong style="color:#7D3C98">OPERADOR</strong> → Esp: <strong style="color:#888">—</strong></td>
+            <td>SYSTUR</td><td>09/05/2026</td>
+            <td><span class="badge badge-red">Pendente</span></td>
+          </tr>
+          <tr class="row-child last-child" data-group="u42">
+            <td></td>
+            <td colspan="2">
+              <div class="child-indent">
+                <div class="child-line"><div class="child-line-v" style="visibility:hidden"></div></div>
+                <div class="child-corner"></div>
+                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #3
+              </div>
+            </td>
+            <td>M-00042</td><td>TI</td><td>Analista TI</td>
+            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
+            <td>Enc: <strong style="color:#E67E22">GESTOR</strong> → Esp: <strong style="color:#1E8449">CONSULTA</strong></td>
+            <td>SYSTUR</td><td>08/05/2026</td>
+            <td><span class="badge badge-red">Pendente</span></td>
+          </tr>
+
+          <!-- ═══ usr0078 — Bruno Soares — 1 divergência ═══ -->
+          <tr class="row-parent" onclick="toggle('u78')">
+            <td style="padding:7px 6px 7px 12px"><span class="expand-btn single" id="btn-u78">—</span></td>
+            <td>usr0078</td>
+            <td>Bruno Soares</td>
+            <td>—</td><td>—</td><td>—</td>
+            <td><span class="badge badge-count">1</span></td>
+            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
+            <td>SYSTUR</td><td>10/05/2026</td>
+            <td><span class="badge badge-red">Pendente</span></td>
+          </tr>
+
+          <!-- ═══ usr0091 — Carla Fonseca — 2 divergências ═══ -->
+          <tr class="row-parent" onclick="toggle('u91')">
+            <td style="padding:7px 6px 7px 12px"><span class="expand-btn" id="btn-u91">+</span></td>
+            <td>usr0091</td>
+            <td><strong>Carla Fonseca</strong></td>
+            <td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
+            <td><span class="badge badge-count">2</span></td>
+            <td>
+              <span class="badge badge-orange">PERFIL_INVALIDO</span>
+              <span class="badge badge-orange" style="margin-left:3px">PERFIL_INVALIDO</span>
+            </td>
+            <td>SYSTUR</td><td>09/05/2026</td>
+            <td><span class="badge badge-green">Resolvida</span></td>
+          </tr>
+          <tr class="row-child" data-group="u91">
+            <td></td>
+            <td colspan="2">
+              <div class="child-indent">
+                <div class="child-corner"></div>
+                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #1
+              </div>
+            </td>
+            <td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
+            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
+            <td>Enc: <strong style="color:#E67E22">GESTOR</strong> → Esp: <strong style="color:#1E8449">CONSULTA</strong></td>
+            <td>SYSTUR</td><td>09/05/2026</td>
+            <td><span class="badge badge-green">Resolvida</span></td>
+          </tr>
+          <tr class="row-child last-child" data-group="u91">
+            <td></td>
+            <td colspan="2">
+              <div class="child-indent">
+                <div class="child-corner"></div>
+                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #2
+              </div>
+            </td>
+            <td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
+            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
+            <td>Enc: <strong style="color:#E67E22">ADMIN</strong> → Esp: <strong style="color:#1E8449">OPERADOR</strong></td>
+            <td>SYSTUR</td><td>08/05/2026</td>
+            <td><span class="badge badge-green">Resolvida</span></td>
+          </tr>
+
+          <!-- ═══ usr0103 — Diego Ramos — 1 divergência ═══ -->
+          <tr class="row-parent" onclick="toggle('u103')">
+            <td style="padding:7px 6px 7px 12px"><span class="expand-btn single" id="btn-u103">—</span></td>
+            <td>usr0103</td>
+            <td>Diego Ramos</td>
+            <td>—</td><td>—</td><td>—</td>
+            <td><span class="badge badge-count">1</span></td>
+            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
+            <td>SYSTUR</td><td>09/05/2026</td>
+            <td><span class="badge badge-red">Pendente</span></td>
+          </tr>
+
+          <!-- ═══ usr0117 — Elisa Teixeira — 2 divergências ═══ -->
+          <tr class="row-parent" onclick="toggle('u117')">
+            <td style="padding:7px 6px 7px 12px"><span class="expand-btn" id="btn-u117">+</span></td>
+            <td>usr0117</td>
+            <td><strong>Elisa Teixeira</strong></td>
+            <td>M-00117</td><td>Operações</td><td>Coordenadora Ops</td>
+            <td><span class="badge badge-count">2</span></td>
+            <td>
+              <span class="badge badge-orange">PERFIL_INVALIDO</span>
+              <span class="badge badge-purple" style="margin-left:3px">ACESSO_S/RH</span>
+            </td>
+            <td>SYSTUR</td><td>08/05/2026</td>
+            <td><span class="badge badge-green">Resolvida</span></td>
+          </tr>
+          <tr class="row-child" data-group="u117">
+            <td></td>
+            <td colspan="2">
+              <div class="child-indent">
+                <div class="child-corner"></div>
+                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #1
+              </div>
+            </td>
+            <td>M-00117</td><td>Operações</td><td>Coordenadora Ops</td>
+            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
+            <td>Enc: <strong style="color:#E67E22">OPERADOR</strong> → Esp: <strong style="color:#1E8449">CONSULTA</strong></td>
+            <td>SYSTUR</td><td>08/05/2026</td>
+            <td><span class="badge badge-green">Resolvida</span></td>
+          </tr>
+          <tr class="row-child last-child" data-group="u117">
+            <td></td>
+            <td colspan="2">
+              <div class="child-indent">
+                <div class="child-corner"></div>
+                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #2
+              </div>
+            </td>
+            <td>—</td><td>—</td><td>—</td>
+            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
+            <td>Enc: <strong style="color:#7D3C98">CONSULTA</strong> → Esp: <strong style="color:#888">—</strong></td>
+            <td>SYSTUR</td><td>07/05/2026</td>
+            <td><span class="badge badge-green">Resolvida</span></td>
+          </tr>
+
+          <!-- ═══ usr0134 — Fábio Lins — 1 divergência ═══ -->
+          <tr class="row-parent" onclick="toggle('u134')">
+            <td style="padding:7px 6px 7px 12px"><span class="expand-btn single" id="btn-u134">—</span></td>
+            <td>usr0134</td>
+            <td>Fábio Lins</td>
+            <td>—</td><td>—</td><td>—</td>
+            <td><span class="badge badge-count">1</span></td>
+            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
+            <td>SYSTUR</td><td>08/05/2026</td>
+            <td><span class="badge badge-red">Pendente</span></td>
+          </tr>
+
+          <!-- ═══ usr0155 — Gisele Nunes — 1 divergência ═══ -->
+          <tr class="row-parent" onclick="toggle('u155')">
+            <td style="padding:7px 6px 7px 12px"><span class="expand-btn single" id="btn-u155">—</span></td>
+            <td>usr0155</td>
+            <td>Gisele Nunes</td>
+            <td>M-00155</td><td>Financeiro</td><td>Analista Fin.</td>
+            <td><span class="badge badge-count">1</span></td>
+            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
+            <td>SYSTUR</td><td>07/05/2026</td>
+            <td><span class="badge badge-red">Pendente</span></td>
+          </tr>
+
+        </tbody>
+      </table>
+
+      <div class="pagination">
+        <span class="page-info">Exibindo 1–8 de 42 usuários</span>
+        <div class="page-btns">
+          <div class="page-btn">‹</div>
+          <div class="page-btn active">1</div>
+          <div class="page-btn">2</div>
+          <div class="page-btn">3</div>
+          <div class="page-btn">…</div>
+          <div class="page-btn">6</div>
+          <div class="page-btn">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="detail-panel">
+      <div class="detail-title">Detalhe — usr0042 · Ana Medeiros &nbsp;<span style="color:#E67E22;font-weight:400;font-size:10px">3 divergências</span></div>
+      <div class="detail-grid">
+        <div class="detail-item"><label>Matrícula</label><span>M-00042</span></div>
+        <div class="detail-item"><label>Cargo</label><span>Analista TI</span></div>
+        <div class="detail-item"><label>Departamento</label><span>TI</span></div>
+        <div class="detail-item"><label>Centro de Custo</label><span>CC-0012</span></div>
+        <div class="detail-item"><label>E-mail</label><span>ana.medeiros@cvc.com.br</span></div>
+        <div class="detail-item"><label>Sistema</label><span>SYSTUR</span></div>
+        <div class="detail-item"><label>Tipo Principal</label><span style="color:#E67E22">PERFIL_INVALIDO</span></div>
+        <div class="detail-item"><label>Perfis Encontrados</label><span style="color:#E67E22">ADMIN, OPERADOR, GESTOR</span></div>
+        <div class="detail-item"><label>Perfil Esperado</label><span style="color:#1E8449">CONSULTA</span></div>
+        <div class="detail-item"><label>Última Identificação</label><span>10/05/2026</span></div>
+        <div class="detail-item"><label>Resolvidas</label><span style="color:#C0392B">0 de 3</span></div>
+        <div class="detail-item"><label>Perfil Canônico (Matriz)</label><span>Analista → CONSULTA</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function toggle(group) {
+    const btn = document.getElementById('btn-' + group);
+    if (!btn || btn.classList.contains('single')) return;
+
+    const rows = document.querySelectorAll('[data-group="' + group + '"]');
+    const isOpen = btn.classList.contains('open');
+
+    if (isOpen) {
+      btn.classList.remove('open');
+      btn.textContent = '+';
+      rows.forEach(r => r.classList.remove('visible'));
+    } else {
+      btn.classList.add('open');
+      btn.textContent = '−';
+      rows.forEach(r => r.classList.add('visible'));
+    }
+  }
+</script>
+</body>
+</html>

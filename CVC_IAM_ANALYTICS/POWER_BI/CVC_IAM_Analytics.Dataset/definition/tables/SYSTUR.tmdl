@@ -1,13 +1,9 @@
 table SYSTUR
 	lineageTag: a251474a-8a8b-4064-9ab0-cd49398f1de7
 
-	partition SYSTUR = m
-		mode: import
-		source
-			let
-				Fonte = Parquet.Feed(CaminhoBase & "DADOS\PARQUET\ACESSOS\SYSTUR\systur.parquet")
-			in
-				Fonte
+	measure 'Total Usuários SYSTUR' = COUNTROWS(SYSTUR)
+		formatString: #,0
+		lineageTag: 8ad80977-9315-486f-bde8-ee7263a2301e
 
 	column sistema
 		dataType: string
@@ -65,9 +61,9 @@ table SYSTUR
 
 		annotation SummarizationSetBy = Automatic
 
-	measure 'Total Usuários SYSTUR' = COUNTROWS(SYSTUR)
-		lineageTag: 8ad80977-9315-486f-bde8-ee7263a2301e
-		formatString: #,0
+	partition SYSTUR = m
+		mode: import
+		source = Parquet.Document(File.Contents(CaminhoBase & "DADOS\PARQUET\ACESSOS\SYSTUR\systur.parquet"))
 
 	annotation PBI_ResultType = Table
 

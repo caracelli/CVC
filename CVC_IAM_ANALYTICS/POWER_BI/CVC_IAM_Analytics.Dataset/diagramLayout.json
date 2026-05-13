@@ -1,0 +1,100 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 334.1847511806298,
+            "y": -31.065109177344652
+          },
+          "nodeIndex": "Divergencias",
+          "nodeLineageTag": "bcc218e7-b879-49bb-b60b-de2c18eed309",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 852.36163941535983,
+            "y": 71.467445411327674
+          },
+          "nodeIndex": "Matriz_Organizacional",
+          "nodeLineageTag": "7732eb81-8885-4f24-be9f-40c353b15329",
+          "size": {
+            "height": 176,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1136.3616394153598,
+            "y": 83.467445411327674
+          },
+          "nodeIndex": "Perfis_Esperados",
+          "nodeLineageTag": "66d0dc01-92e2-448c-a78b-b2779abd623a",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 49.999999999999986,
+            "y": -50.000000000000028
+          },
+          "nodeIndex": "RH_Ativos",
+          "nodeLineageTag": "9532135d-cf35-433c-8637-94a31f7fb1a9",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1420.3616394153598,
+            "y": 35.467445411327674
+          },
+          "nodeIndex": "RH_Desligados",
+          "nodeLineageTag": "ba774991-49c3-49ea-bb79-326634db804e",
+          "size": {
+            "height": 248,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 618.36163941535983,
+            "y": -3.7401165449073233
+          },
+          "nodeIndex": "SYSTUR",
+          "nodeLineageTag": "a251474a-8a8b-4064-9ab0-cd49398f1de7",
+          "size": {
+            "height": 272,
+            "width": 234
+          },
+          "zIndex": 0
+        }
+      ],
+      "name": "Todas as tabelas",
+      "zoomValue": 100,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "Todas as tabelas",
+  "defaultDiagram": "Todas as tabelas"
+}

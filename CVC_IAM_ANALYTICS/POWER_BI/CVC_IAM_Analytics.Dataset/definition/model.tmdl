@@ -1,0 +1,18 @@
+model Model
+	culture: pt-BR
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: pt-BR
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation PBI_QueryOrder = ["Divergencias","Matriz_Organizacional","Perfis_Esperados","RH_Ativos","SYSTUR","CaminhoBase"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table Divergencias
+ref table Matriz_Organizacional
+ref table Perfis_Esperados
+ref table RH_Ativos
+ref table SYSTUR
+

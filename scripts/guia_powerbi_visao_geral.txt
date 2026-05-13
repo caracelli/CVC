@@ -1,0 +1,366 @@
+===============================================================================
+  GUIA DE CONSTRUÇÃO — DASHBOARD "VISÃO GERAL"
+  Projeto: IAM Analytics — CVC Corp
+  Página: Visão Geral (página 1 de 5)
+===============================================================================
+
+PALETA DE CORES USADA NO MOCKUP
+---------------------------------
+  Azul escuro (header/tabela)  : #1F2D5C
+  Amarelo/dourado (destaque)   : #F5B800
+  Vermelho (Desligados)        : #C0392B  / fundo cartão: #FDECEA
+  Laranja (Perfis Inválidos)   : #E67E22  / fundo cartão: #FEF3E2
+  Roxo (Sem Vínculo RH)        : #7D3C98  / fundo cartão: #F5EEF8
+  Verde (Total Divergências)   : #1E8449  / fundo cartão: #EAFAF1
+  Azul claro (KPI Analisados)  : #2980B9  / fundo cartão: #EBF5FB
+  Fundo geral da página        : #F2F4F7
+
+
+===============================================================================
+PARTE 1 — CONFIGURAÇÕES GERAIS DA PÁGINA
+===============================================================================
+
+1. No Power BI Desktop, vá em "Exibição" > "Configurações da página".
+2. Defina:
+   - Tipo: Personalizado
+   - Largura: 1440 px
+   - Altura: 900 px
+3. Em "Plano de fundo da página":
+   - Cor: #F2F4F7
+   - Transparência: 0%
+4. Renomeie a aba da página para: "Visão Geral"
+
+
+===============================================================================
+PARTE 2 — CABEÇALHO (HEADER)
+===============================================================================
+
+--- Retângulo de fundo do header ---
+1. Inserir > Formas > Retângulo
+2. Posição: X=0, Y=0 | Tamanho: L=1440, A=70
+3. Cor de preenchimento: #1F2D5C
+4. Sem borda
+
+--- Título principal ---
+5. Inserir > Caixa de texto
+6. Texto: "IAM Analytics"
+7. Fonte: Segoe UI Bold, 22pt, cor branca (#FFFFFF)
+8. Posição: X=20, Y=10
+
+--- Subtítulo ---
+9. Inserir > Caixa de texto
+10. Texto: "Governança de Acessos — CVC Corp"
+11. Fonte: Segoe UI, 11pt, cor: #B0BEC5 (cinza claro)
+12. Posição: X=20, Y=38
+
+--- Referência (canto direito) ---
+13. Inserir > Caixa de texto
+14. Texto: "Referência: Abril / 2026"
+    (Para tornar dinâmico: use uma Medida DAX com FORMAT(MAX(Divergencias[data_identificacao]),"MMMM / YYYY"))
+15. Fonte: Segoe UI Bold, 12pt, cor: #F5B800 (amarelo)
+16. Posição: X=1250, Y=10, alinhado à direita
+
+--- Última atualização ---
+17. Inserir > Caixa de texto
+18. Texto: "Última atualização: " & FORMAT(NOW(),"dd/mm/yyyy hh:mm")
+    (Ou usar medida: "Última atualização: " & FORMAT(MAX(Divergencias[data_identificacao]),"dd/mm/yyyy") )
+19. Fonte: Segoe UI, 9pt, cor: #B0BEC5
+20. Posição: X=1250, Y=35
+
+--- Barra amarela decorativa (acento esquerdo do título) ---
+21. Inserir > Formas > Retângulo
+22. Posição: X=0, Y=0 | Tamanho: L=6, A=70
+23. Cor de preenchimento: #F5B800
+24. Sem borda
+
+
+===============================================================================
+PARTE 3 — BARRA DE NAVEGAÇÃO (ABAS DE PÁGINAS)
+===============================================================================
+
+Criar 5 botões de navegação simulando abas:
+
+--- Aba ativa: "Visão Geral" ---
+1. Inserir > Botão > Em branco
+2. Texto: "Visão Geral" | Fonte: Segoe UI Bold, 11pt, cor: #1F2D5C
+3. Cor de preenchimento: #F5B800 (amarelo = ativo)
+4. Sem borda | Borda inferior: 3px #F5B800
+5. Posição: X=20, Y=75 | Tamanho: L=160, A=36
+6. Ação: Nenhuma (é a página atual)
+
+--- Abas inativas (repetir para cada uma) ---
+7. Criar botão para cada aba:
+   - "Lista de Divergências"    → X=190, Y=75
+   - "Desligados c/ Acesso"    → X=360, Y=75
+   - "Perfis Inválidos"        → X=530, Y=75
+   - "Sem Vínculo RH"          → X=700, Y=75
+8. Para cada aba inativa:
+   - Cor de fundo: #EAECF0 (cinza claro)
+   - Fonte: Segoe UI, 11pt, cor: #555555
+   - Tamanho: L=160, A=36
+9. Configurar Ação > Tipo: Navegação de página > selecionar a página correspondente
+
+
+===============================================================================
+PARTE 4 — FILTRO POR SISTEMA (SLICER BOTÕES)
+===============================================================================
+
+1. Inserir > Segmentação de dados
+2. Campo: SYSTUR[sistema] (ou criar tabela auxiliar de sistemas)
+3. No painel Formato > Estilo: "Mosaico" (Tile)
+4. Configurações:
+   - Orientação: Horizontal
+   - Cor de fundo selecionado: #F5B800
+   - Cor de texto selecionado: #1F2D5C (negrito)
+   - Cor de fundo não selecionado: #FFFFFF
+   - Cor de texto não selecionado: #555555
+   - Borda: 1px #CCCCCC
+   - Arredondamento: 4px
+5. Adicionar opção "Todos" habilitando "Selecionar tudo" no slicer
+6. Posição: X=120, Y=118 | Tamanho: L=1100, A=40
+7. Inserir label "Filtrar por Sistema:" à esquerda do slicer
+   - Caixa de texto, Segoe UI Bold 10pt, cor #333333, X=20, Y=128
+
+
+===============================================================================
+PARTE 5 — CARTÕES KPI (5 CARDS NA LINHA SUPERIOR)
+===============================================================================
+
+Criar 5 cartões seguindo o padrão abaixo.
+Posição inicial X=20, espaçamento entre cartões: 10px
+Tamanho de cada cartão: L=270, A=90
+
+--- Cartão 1: Usuários Analisados ---
+1. Inserir > Cartão
+2. Campo: Medida "Total Funcionários Ativos"
+3. Formato:
+   - Rótulo de dados: Segoe UI Black, 36pt, cor: #2980B9
+   - Categoria (rótulo): "Usuários Analisados", Segoe UI, 11pt, cor: #555555
+   - Fundo: #EBF5FB
+   - Borda esquerda: 4px sólida #2980B9 (usar retângulo auxiliar)
+   - Sem sombra | Borda geral: 1px #D5E8F5
+4. Posição: X=20, Y=170
+
+--- Cartão 2: Desligados c/ Acesso ---
+5. Campo: Medida "Desligados c/ Acesso"
+6. Formato:
+   - Número: Segoe UI Black, 36pt, cor: #C0392B
+   - Rótulo: "Desligados c/ Acesso", 11pt, cor: #555555
+   - Fundo: #FDECEA
+   - Borda: 1px #F5C6C2
+7. Posição: X=300, Y=170
+
+--- Cartão 3: Perfis Inválidos ---
+8. Campo: Medida "Perfis Inválidos"
+9. Formato:
+   - Número: cor #E67E22 | Fundo: #FEF3E2 | Borda: #F9D5A7
+10. Posição: X=580, Y=170
+
+--- Cartão 4: Sem Vínculo RH ---
+11. Campo: Medida "Sem Vínculo RH"
+12. Formato:
+    - Número: cor #7D3C98 | Fundo: #F5EEF8 | Borda: #D7BDE2
+13. Posição: X=860, Y=170
+
+--- Cartão 5: Total Divergências ---
+14. Campo: Medida "Total Divergências"
+15. Formato:
+    - Número: cor #1E8449 | Fundo: #EAFAF1 | Borda: #A9DFBF
+16. Posição: X=1140, Y=170
+
+
+===============================================================================
+PARTE 6 — GRÁFICO "DIVERGÊNCIAS POR TIPO" (BARRAS HORIZONTAIS)
+===============================================================================
+
+1. Inserir > Gráfico de barras clusterizado
+2. Eixo Y (categoria): Divergencias[tipo]
+3. Eixo X (valor): Medida "Total Divergências" (com filtro por tipo)
+   Ou usar: COUNTROWS com filtro no visual
+4. Formato:
+   - Título: "Divergências por Tipo" | Segoe UI Bold 12pt | cor #1F2D5C
+   - Fundo: #FFFFFF | Borda: 1px #E0E0E0 | Arredondamento: 6px
+   - Eixo X: visível, cor #888888
+   - Eixo Y: visível, cor #333333
+   - Linhas de grade: horizontal, cor #F0F0F0
+   - Rótulos de dados: habilitados, Segoe UI Bold 10pt
+5. Cores das barras (por valor de Divergencias[tipo]):
+   - ACESSO_DESLIGADO      → #C0392B (vermelho)
+   - PERFIL_INVALIDO       → #E67E22 (laranja)
+   - ACESSO_SEM_VINCULO_RH → #7D3C98 (roxo)
+6. Posição: X=20, Y=280 | Tamanho: L=430, A=200
+
+DICA: Para colorir barras individualmente por categoria, use
+"Cor padrão condicional" em Formato > Colunas de dados, com regras
+baseadas no campo tipo.
+
+
+===============================================================================
+PARTE 7 — GRÁFICO "POR SISTEMA" (ROSCA/DONUT)
+===============================================================================
+
+1. Inserir > Gráfico de rosca
+2. Legenda: Divergencias[sistema] (ou SYSTUR[sistema])
+3. Valores: Medida "Total Divergências"
+4. Formato:
+   - Título: "Por Sistema" | Segoe UI Bold 12pt | cor #1F2D5C
+   - Fundo: #FFFFFF | Borda: 1px #E0E0E0 | Arredondamento: 6px
+   - Espessura interna (buraco): 60%
+   - Cor do arco SYSTUR: #2980B9 (azul)
+   - Rótulo central: Medida "Total Divergências" | Segoe UI Black 22pt
+5. Rótulo de detalhe: habilitado, mostrar percentual
+6. Posição: X=470, Y=280 | Tamanho: L=300, A=200
+
+
+===============================================================================
+PARTE 8 — GRÁFICO "EVOLUÇÃO HISTÓRICA" (LINHA)
+===============================================================================
+
+1. Inserir > Gráfico de linhas
+2. Eixo X: coluna de data (ex: Divergencias[data_identificacao] agrupada por mês)
+   - Usar hierarquia de data ou coluna calculada de mês
+3. Valores: Medida "Total Divergências" (acumulado por mês)
+4. Formato:
+   - Título: "Evolução Histórica" | Segoe UI Bold 12pt | cor #1F2D5C
+   - Fundo: #FFFFFF | Borda: 1px #E0E0E0 | Arredondamento: 6px
+   - Linha: cor #2980B9, espessura 2px
+   - Área sob a linha: habilitada, cor #2980B9 com transparência 80%
+   - Marcadores: habilitados, círculo, cor #2980B9
+   - Eixo X: mostrar rótulos curtos (Jan, Fev, Mar, Abr)
+   - Eixo Y: grade horizontal #F0F0F0, valores de 0 a 7000
+5. Rodapé do visual (caixa de texto abaixo):
+   - Texto: "Exibindo: " & [Total Divergências] & " registros"
+   - Fonte: Segoe UI 9pt, cor: #888888, alinhado à direita
+6. Posição: X=790, Y=280 | Tamanho: L=630, A=200
+
+
+===============================================================================
+PARTE 9 — TABELA "LISTA DE DIVERGÊNCIAS"
+===============================================================================
+
+Esta tabela tem linhas expansíveis (pai/filho). Requer estrutura específica.
+
+--- Opção A: Tabela simples com formatação condicional ---
+
+1. Inserir > Tabela
+2. Colunas:
+   - Divergencias[usuario]          → renomear para "Usuário"
+   - RH_Ativos[nome]                → renomear para "Nome Completo"
+   - Divergencias[matricula]        → renomear para "Matrícula"
+   - Medida "Nº Divergências"       → COUNTROWS agrupado por usuário
+   - Divergencias[tipo]             → renomear para "Tipos Encontrados"
+   - Divergencias[sistema]          → renomear para "Sistema"
+
+3. Formato:
+   - Cabeçalho: fundo #1F2D5C, texto branco, Segoe UI Bold 10pt
+   - Linhas alternadas: #FFFFFF / #F8F9FA
+   - Bordas: 1px #E0E0E0
+   - Título: "Lista de Divergências" | Segoe UI Bold 12pt | cor #1F2D5C
+
+4. Formatação condicional na coluna "Tipos Encontrados":
+   - Regra de cor de fundo por valor:
+     * "ACESSO_DESLIGADO"      → fundo #FDECEA, texto #C0392B
+     * "PERFIL_INVALIDO"       → fundo #FEF3E2, texto #E67E22
+     * "ACESSO_SEM_VINCULO_RH" → fundo #F5EEF8, texto #7D3C98
+   (Configurar em: Formato visual > Formatação condicional > Cor do plano de fundo)
+
+5. Posição: X=20, Y=500 | Tamanho: L=1400, A=360
+
+--- Opção B: Tabela expansível (avançado) ---
+Para o comportamento de linhas com "+" expansível (pai/filho):
+- Requer visual customizado do AppSource: "Expandable Table" ou "Drill-down Table"
+- Ou usar hierarquia: criar coluna chave de agrupamento por usuário
+  e habilitar drill-down na tabela
+
+
+===============================================================================
+PARTE 10 — PAGINAÇÃO DA TABELA
+===============================================================================
+
+1. O Power BI pagina automaticamente tabelas grandes.
+2. Para simular o rodapé "← Anterior 1 2 3 ... 47 Próxima →":
+   - Habilite em Formato > Opções da tabela > "Mostrar paginação"
+   - O número de páginas é calculado automaticamente
+
+Alternativa visual (rodapé decorativo):
+3. Inserir caixa de texto abaixo da tabela:
+   - Texto: "← Anterior   1   2   3  ...  47   Próxima →"
+   - Fonte: Segoe UI 10pt, cor #2980B9
+   - Centralizado, Y=870
+
+
+===============================================================================
+PARTE 11 — MEDIDAS DAX NECESSÁRIAS
+===============================================================================
+
+Criar as seguintes medidas na tabela Divergencias:
+
+-- Total Divergências
+Total Divergências = COUNTROWS(Divergencias)
+
+-- Desligados c/ Acesso
+Desligados c/ Acesso =
+    CALCULATE(
+        COUNTROWS(Divergencias),
+        Divergencias[tipo] = "ACESSO_DESLIGADO"
+    )
+
+-- Perfis Inválidos
+Perfis Inválidos =
+    CALCULATE(
+        COUNTROWS(Divergencias),
+        Divergencias[tipo] = "PERFIL_INVALIDO"
+    )
+
+-- Sem Vínculo RH
+Sem Vínculo RH =
+    CALCULATE(
+        COUNTROWS(Divergencias),
+        Divergencias[tipo] = "ACESSO_SEM_VINCULO_RH"
+    )
+
+-- Total Funcionários Ativos
+Total Funcionários Ativos = COUNTROWS(RH_Ativos)
+
+-- Nº Divergências por Usuário (para a tabela)
+Nº Divergências Usuário =
+    COUNTROWS(
+        RELATEDTABLE(Divergencias)
+    )
+
+
+===============================================================================
+PARTE 12 — ORDEM FINAL DOS VISUAIS (CAMADAS)
+===============================================================================
+
+De baixo para cima (Z-order):
+1. Retângulo de fundo da página
+2. Retângulo do header (#1F2D5C)
+3. Barra amarela do acento
+4. Todos os textos do header
+5. Botões de aba
+6. Label "Filtrar por Sistema"
+7. Slicer de sistemas
+8. Cartões KPI (5)
+9. Gráfico de barras horizontais
+10. Gráfico de rosca
+11. Gráfico de linha
+12. Títulos de seção dos gráficos
+13. Tabela de divergências
+14. Rodapé de paginação
+
+
+===============================================================================
+OBSERVAÇÕES FINAIS
+===============================================================================
+
+- Todas as medidas já estão criadas no modelo (arquivo TMDL).
+- O filtro por sistema deve ser conectado a todos os visuais da página
+  via "Editar interações" — garantir que o slicer filtre todos.
+- Para replicar o comportamento de drill-down da tabela (linhas expansíveis
+  com detalhe de cada tipo de divergência por usuário), considere usar
+  o visual "Matrix" do Power BI com hierarquia usuário > tipo.
+- Fonte recomendada: Segoe UI (nativa do Windows, compatível com Power BI).
+- Exportar o relatório finalizado como .pbix antes de converter para .pbip.
+
+===============================================================================

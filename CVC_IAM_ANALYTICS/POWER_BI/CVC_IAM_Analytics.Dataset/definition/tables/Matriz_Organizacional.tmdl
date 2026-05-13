@@ -1,14 +1,6 @@
 table Matriz_Organizacional
 	lineageTag: 7732eb81-8885-4f24-be9f-40c353b15329
 
-	partition Matriz_Organizacional = m
-		mode: import
-		source
-			let
-				Fonte = Parquet.Feed(CaminhoBase & "DADOS\PARQUET\MATRIZES\matriz_organizacional.parquet")
-			in
-				Fonte
-
 	column cargo_codigo
 		dataType: string
 		lineageTag: 8a63fa4d-8b0d-4681-bf86-9ef3c5f284b7
@@ -40,6 +32,10 @@ table Matriz_Organizacional
 		sourceColumn: centro_custo
 
 		annotation SummarizationSetBy = Automatic
+
+	partition Matriz_Organizacional = m
+		mode: import
+		source = Parquet.Document(File.Contents(CaminhoBase & "DADOS\PARQUET\MATRIZES\matriz_organizacional.parquet"))
 
 	annotation PBI_ResultType = Table
 

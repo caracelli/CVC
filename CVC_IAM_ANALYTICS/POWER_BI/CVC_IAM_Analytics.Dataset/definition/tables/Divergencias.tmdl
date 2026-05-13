@@ -1,13 +1,34 @@
 table Divergencias
 	lineageTag: bcc218e7-b879-49bb-b60b-de2c18eed309
 
-	partition Divergencias = m
-		mode: import
-		source
-			let
-				Fonte = Parquet.Feed(CaminhoBase & "DADOS\PARQUET\DIVERGENCIAS\divergencias.parquet")
-			in
-				Fonte
+	measure 'Total Divergências' = COUNTROWS(Divergencias)
+		formatString: #,0
+		lineageTag: 5799c990-ca4f-4906-b744-219c019d10d8
+
+	measure 'Perfis Inválidos' =
+			CALCULATE(
+			    COUNTROWS(Divergencias),
+			    Divergencias[tipo] = "PERFIL_INVALIDO"
+			)
+		formatString: #,0
+		lineageTag: cf48445c-0dbb-4f92-9fe2-23ee1203dab7
+
+	measure 'Sem Vínculo RH' =
+			CALCULATE(
+			    COUNTROWS(Divergencias),
+			    Divergencias[tipo] = "ACESSO_SEM_VINCULO_RH"
+			)
+		formatString: #,0
+		lineageTag: 29d41639-3241-44e3-993a-2442906aeca2
+
+	measure '% Resolvidas' =
+			DIVIDE(
+			    CALCULATE(COUNTROWS(Divergencias), Divergencias[resolvida] = TRUE()),
+			    COUNTROWS(Divergencias),
+			    0
+			)
+		formatString: 0.0%
+		lineageTag: dffa7e5b-00ce-4544-8eb2-37bd5e491bb5
 
 	column id
 		dataType: string
@@ -98,42 +119,9 @@ table Divergencias
 
 		annotation SummarizationSetBy = Automatic
 
-	measure 'Total Divergências' = COUNTROWS(Divergencias)
-		lineageTag: 5799c990-ca4f-4906-b744-219c019d10d8
-		formatString: #,0
-
-	measure 'Desligados c/ Acesso' =
-			CALCULATE(
-			    COUNTROWS(Divergencias),
-			    Divergencias[tipo] = "ACESSO_DESLIGADO"
-			)
-		lineageTag: 082b0c70-5e19-4bea-9ad5-ff9425a6c285
-		formatString: #,0
-
-	measure 'Perfis Inválidos' =
-			CALCULATE(
-			    COUNTROWS(Divergencias),
-			    Divergencias[tipo] = "PERFIL_INVALIDO"
-			)
-		lineageTag: cf48445c-0dbb-4f92-9fe2-23ee1203dab7
-		formatString: #,0
-
-	measure 'Sem Vínculo RH' =
-			CALCULATE(
-			    COUNTROWS(Divergencias),
-			    Divergencias[tipo] = "ACESSO_SEM_VINCULO_RH"
-			)
-		lineageTag: 29d41639-3241-44e3-993a-2442906aeca2
-		formatString: #,0
-
-	measure '% Resolvidas' =
-			DIVIDE(
-			    CALCULATE(COUNTROWS(Divergencias), Divergencias[resolvida] = TRUE()),
-			    COUNTROWS(Divergencias),
-			    0
-			)
-		lineageTag: dffa7e5b-00ce-4544-8eb2-37bd5e491bb5
-		formatString: 0.0%
+	partition Divergencias = m
+		mode: import
+		source = Parquet.Document(File.Contents(CaminhoBase & "DADOS\PARQUET\DIVERGENCIAS\divergencias.parquet"))
 
 	annotation PBI_ResultType = Table
 

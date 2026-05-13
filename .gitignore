@@ -58,3 +58,7 @@ deploy/_build/
 
 # Configurações locais do Claude
 .claude/
+
+# Power BI — arquivos locais e cache (não versionados)
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
