@@ -1,6 +1,803 @@
 {
-  "config": "{\"version\":\"5.37\",\"themeCollection\":{},\"activeSectionIndex\":0,\"linguisticSchemaSyncVersion\":2}",
+  "config": "{\"version\": \"5.37\", \"themeCollection\": {}, \"activeSectionIndex\": 1, \"linguisticSchemaSyncVersion\": 2}",
   "layoutOptimization": 0,
   "report": {},
-  "sections": []
+  "sections": [
+    {
+      "name": "ReportSection_VisaoGeral",
+      "displayName": "Visão Geral",
+      "config": "{\"defaultDrillFilterOtherVisuals\": true}",
+      "displayOption": 0,
+      "width": 1440,
+      "height": 900,
+      "visualContainers": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": 100,
+          "width": 1440,
+          "height": 900,
+          "config": "{\"name\": \"AHGR1K59S23I48QJIUI8\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 100, \"width\": 1440, \"height\": 900, \"tabOrder\": 100}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F2F4F7'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 200,
+          "width": 1440,
+          "height": 70,
+          "config": "{\"name\": \"U9GWXIFKMNK97OBP1JMP\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 200, \"width\": 1440, \"height\": 70, \"tabOrder\": 200}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 300,
+          "width": 6,
+          "height": 70,
+          "config": "{\"name\": \"8FCRN4ORF5AT9ANZC1XP\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 300, \"width\": 6, \"height\": 70, \"tabOrder\": 300}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 26,
+          "y": 8,
+          "z": 400,
+          "width": 340,
+          "height": 30,
+          "config": "{\"name\": \"SK39RCYZN1Y6R2SATPPO\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 26, \"y\": 8, \"z\": 400, \"width\": 340, \"height\": 30, \"tabOrder\": 400}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"IAM Analytics\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"22\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#FFFFFF\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 26,
+          "y": 38,
+          "z": 410,
+          "width": 500,
+          "height": 22,
+          "config": "{\"name\": \"DYBLQ1CLNODKFKTB6NQB\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 26, \"y\": 38, \"z\": 410, \"width\": 500, \"height\": 22, \"tabOrder\": 410}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Governança de Acessos — CVC Corp\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"11\\\", \\\"bold\\\": false, \\\"italic\\\": false, \\\"color\\\": \\\"#B0BEC5\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1080,
+          "y": 8,
+          "z": 420,
+          "width": 350,
+          "height": 22,
+          "config": "{\"name\": \"YVNWYQF456PUE7TU8PXW\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1080, \"y\": 8, \"z\": 420, \"width\": 350, \"height\": 22, \"tabOrder\": 420}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Referência: Maio / 2026\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"12\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#F5B800\\\"}}], \\\"horizontalTextAlignment\\\": \\\"right\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1080,
+          "y": 34,
+          "z": 421,
+          "width": 350,
+          "height": 18,
+          "config": "{\"name\": \"U1HROSGQU779UYWOMHRC\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1080, \"y\": 34, \"z\": 421, \"width\": 350, \"height\": 18, \"tabOrder\": 421}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Última atualização: 13/05/2026\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"9\\\", \\\"bold\\\": false, \\\"italic\\\": false, \\\"color\\\": \\\"#B0BEC5\\\"}}], \\\"horizontalTextAlignment\\\": \\\"right\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"COPQRSS1P9F3UMJJCFZG\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Visão Geral'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_VisaoGeral'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 182,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"GEG9LEJBCBX9XWL7FNUH\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 182, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Lista de Divergências'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_ListaDiv'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 344,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"BT3PVM7W656V5YNJ3OBQ\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 344, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Perfis Inválidos'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_PerfisInv'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 506,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"8F7UQDISZ7LWLDUZWDIC\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 506, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Sem Vínculo RH'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_SemVinculo'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 111,
+          "z": 590,
+          "width": 1440,
+          "height": 42,
+          "config": "{\"name\": \"R261B7VERJYR8MVT5945\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 111, \"z\": 590, \"width\": 1440, \"height\": 42, \"tabOrder\": 590}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EBEBEB'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 118,
+          "z": 700,
+          "width": 130,
+          "height": 28,
+          "config": "{\"name\": \"R4NC27VNCX76DFDF9YW3\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 118, \"z\": 700, \"width\": 130, \"height\": 28, \"tabOrder\": 700}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Filtrar por Sistema:\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"10\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#333333\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 152,
+          "y": 115,
+          "z": 800,
+          "width": 560,
+          "height": 36,
+          "config": "{\"name\": \"N13H0MS9GLXA3UE6QI3R\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 152, \"y\": 115, \"z\": 800, \"width\": 560, \"height\": 36, \"tabOrder\": 800}}], \"singleVisual\": {\"visualType\": \"slicer\", \"projections\": {\"Values\": [{\"queryRef\": \"SYSTUR.sistema\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"s\", \"Entity\": \"SYSTUR\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"s\"}}, \"Property\": \"sistema\"}, \"Name\": \"SYSTUR.sistema\"}]}, \"objects\": {\"general\": [{\"properties\": {\"orientation\": {\"expr\": {\"Literal\": {\"Value\": \"'Horizontal'\"}}}}}], \"selection\": [{\"properties\": {\"selectAllCheckboxEnabled\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"singleSelect\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"items\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"background\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}, \"selectedColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}, \"selectedFontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 162,
+          "z": 900,
+          "width": 270,
+          "height": 90,
+          "config": "{\"name\": \"9IW1UBI6Q1A3MDBGXG5M\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 162, \"z\": 900, \"width\": 270, \"height\": 90, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"RH_Ativos.Total Funcionários Ativos\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"r\", \"Entity\": \"RH_Ativos\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"Total Funcionários Ativos\"}, \"Name\": \"RH_Ativos.Total Funcionários Ativos\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#2980B9'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EBF5FB'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 162,
+          "z": 901,
+          "width": 4,
+          "height": 90,
+          "config": "{\"name\": \"WC7OI8C5J5EH5S7QW3CR\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 162, \"z\": 901, \"width\": 4, \"height\": 90, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#2980B9'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 300,
+          "y": 162,
+          "z": 900,
+          "width": 270,
+          "height": 90,
+          "config": "{\"name\": \"3KQEJPFZWHRMF6LVU4Y6\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 300, \"y\": 162, \"z\": 900, \"width\": 270, \"height\": 90, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"SYSTUR.Total Usuários SYSTUR\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"s\", \"Entity\": \"SYSTUR\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"s\"}}, \"Property\": \"Total Usuários SYSTUR\"}, \"Name\": \"SYSTUR.Total Usuários SYSTUR\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#2471A3'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EBF5FB'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 300,
+          "y": 162,
+          "z": 901,
+          "width": 4,
+          "height": 90,
+          "config": "{\"name\": \"RE4C42NLOGFX1SW5EXBP\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 300, \"y\": 162, \"z\": 901, \"width\": 4, \"height\": 90, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#2471A3'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 580,
+          "y": 162,
+          "z": 900,
+          "width": 270,
+          "height": 90,
+          "config": "{\"name\": \"JK3QADRAUDD3LJHAW1K1\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 580, \"y\": 162, \"z\": 900, \"width\": 270, \"height\": 90, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Divergencias.Perfis Inválidos\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"Perfis Inválidos\"}, \"Name\": \"Divergencias.Perfis Inválidos\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E67E22'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FEF3E2'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 580,
+          "y": 162,
+          "z": 901,
+          "width": 4,
+          "height": 90,
+          "config": "{\"name\": \"ZWFAFRMZ1A3KL93UXWUR\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 580, \"y\": 162, \"z\": 901, \"width\": 4, \"height\": 90, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E67E22'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 860,
+          "y": 162,
+          "z": 900,
+          "width": 270,
+          "height": 90,
+          "config": "{\"name\": \"HIUPVV4R8Q1XJFFTEFPR\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 860, \"y\": 162, \"z\": 900, \"width\": 270, \"height\": 90, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Divergencias.Sem Vínculo RH\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"Sem Vínculo RH\"}, \"Name\": \"Divergencias.Sem Vínculo RH\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#7D3C98'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5EEF8'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 860,
+          "y": 162,
+          "z": 901,
+          "width": 4,
+          "height": 90,
+          "config": "{\"name\": \"HW679241UURB9DGHRF7R\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 860, \"y\": 162, \"z\": 901, \"width\": 4, \"height\": 90, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#7D3C98'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1140,
+          "y": 162,
+          "z": 900,
+          "width": 270,
+          "height": 90,
+          "config": "{\"name\": \"LYTYA39P2M67QKNSE26K\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1140, \"y\": 162, \"z\": 900, \"width\": 270, \"height\": 90, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Divergencias.% Resolvidas\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"% Resolvidas\"}, \"Name\": \"Divergencias.% Resolvidas\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1E8449'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAFAF1'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1140,
+          "y": 162,
+          "z": 901,
+          "width": 4,
+          "height": 90,
+          "config": "{\"name\": \"UWPS8EJN54053L03KABO\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1140, \"y\": 162, \"z\": 901, \"width\": 4, \"height\": 90, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1E8449'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 270,
+          "z": 950,
+          "width": 430,
+          "height": 300,
+          "config": "{\"name\": \"2Z4921PACYH09TRZCL9G\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 270, \"z\": 950, \"width\": 430, \"height\": 300, \"tabOrder\": 950}}], \"singleVisual\": {\"visualType\": \"clusteredBarChart\", \"projections\": {\"Category\": [{\"queryRef\": \"RH_Ativos.departamento\", \"active\": true}], \"Y\": [{\"queryRef\": \"Divergencias.Total Divergências\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"r\", \"Entity\": \"RH_Ativos\", \"Type\": 0}, {\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"departamento\"}, \"Name\": \"RH_Ativos.departamento\"}, {\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"Total Divergências\"}, \"Name\": \"Divergencias.Total Divergências\"}], \"OrderBy\": [{\"Direction\": 2, \"Expression\": {\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"Total Divergências\"}}}]}, \"objects\": {\"dataPoint\": [{\"properties\": {\"defaultColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#2980B9'\"}}}}}}}], \"categoryAxis\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"9D\"}}}}}], \"valueAxis\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"labels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"9D\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#333333'\"}}}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"titleText\": {\"expr\": {\"Literal\": {\"Value\": \"'Por Departamento'\"}}}, \"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}]}}}",
+          "filters": "[]"
+        }
+      ]
+    },
+    {
+      "name": "ReportSection_ListaDiv",
+      "displayName": "Lista de Divergências",
+      "config": "{\"defaultDrillFilterOtherVisuals\": true}",
+      "displayOption": 0,
+      "width": 1440,
+      "height": 900,
+      "visualContainers": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": 100,
+          "width": 1440,
+          "height": 900,
+          "config": "{\"name\": \"PY5QG345E6L3A5B7CIX3\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 100, \"width\": 1440, \"height\": 900, \"tabOrder\": 100}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F2F4F7'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 200,
+          "width": 1440,
+          "height": 70,
+          "config": "{\"name\": \"BVT4I5BFNDFEXG01C3IJ\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 200, \"width\": 1440, \"height\": 70, \"tabOrder\": 200}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 300,
+          "width": 6,
+          "height": 70,
+          "config": "{\"name\": \"FY8AXBBSL2M0FK8TDII2\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 300, \"width\": 6, \"height\": 70, \"tabOrder\": 300}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 26,
+          "y": 8,
+          "z": 400,
+          "width": 340,
+          "height": 30,
+          "config": "{\"name\": \"41UIIZ0CM6WKBJAFJL7R\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 26, \"y\": 8, \"z\": 400, \"width\": 340, \"height\": 30, \"tabOrder\": 400}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"IAM Analytics\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"22\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#FFFFFF\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 26,
+          "y": 38,
+          "z": 410,
+          "width": 500,
+          "height": 22,
+          "config": "{\"name\": \"IQQOQL1T4Z9BRMNP4MPM\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 26, \"y\": 38, \"z\": 410, \"width\": 500, \"height\": 22, \"tabOrder\": 410}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Governança de Acessos — CVC Corp\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"11\\\", \\\"bold\\\": false, \\\"italic\\\": false, \\\"color\\\": \\\"#B0BEC5\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1080,
+          "y": 8,
+          "z": 420,
+          "width": 350,
+          "height": 22,
+          "config": "{\"name\": \"TX04LNVR7UZOA4VY4MPX\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1080, \"y\": 8, \"z\": 420, \"width\": 350, \"height\": 22, \"tabOrder\": 420}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Referência: Maio / 2026\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"12\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#F5B800\\\"}}], \\\"horizontalTextAlignment\\\": \\\"right\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1080,
+          "y": 34,
+          "z": 421,
+          "width": 350,
+          "height": 18,
+          "config": "{\"name\": \"HTCJP2406UVMLGW0NQQK\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1080, \"y\": 34, \"z\": 421, \"width\": 350, \"height\": 18, \"tabOrder\": 421}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Última atualização: 13/05/2026\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"9\\\", \\\"bold\\\": false, \\\"italic\\\": false, \\\"color\\\": \\\"#B0BEC5\\\"}}], \\\"horizontalTextAlignment\\\": \\\"right\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"EGDBVWQCHFVKUU95GR8T\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Visão Geral'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_VisaoGeral'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 182,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"YCQ8RCWV1HD6372V8DL9\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 182, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Lista de Divergências'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_ListaDiv'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 344,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"IPDHCNL8Z2QM5XGO3Y1L\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 344, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Perfis Inválidos'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_PerfisInv'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 506,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"37Z1193RHJS9VIL19G23\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 506, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Sem Vínculo RH'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_SemVinculo'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 111,
+          "z": 590,
+          "width": 1440,
+          "height": 42,
+          "config": "{\"name\": \"YDURKKQOD72CLYNHM59C\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 111, \"z\": 590, \"width\": 1440, \"height\": 42, \"tabOrder\": 590}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EBEBEB'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 118,
+          "z": 700,
+          "width": 130,
+          "height": 28,
+          "config": "{\"name\": \"3CTRXRKZ28O1ZI1TEKPS\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 118, \"z\": 700, \"width\": 130, \"height\": 28, \"tabOrder\": 700}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Filtrar por Sistema:\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"10\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#333333\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 152,
+          "y": 115,
+          "z": 800,
+          "width": 560,
+          "height": 36,
+          "config": "{\"name\": \"UDDNV0AO83SGTNX4WGQ1\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 152, \"y\": 115, \"z\": 800, \"width\": 560, \"height\": 36, \"tabOrder\": 800}}], \"singleVisual\": {\"visualType\": \"slicer\", \"projections\": {\"Values\": [{\"queryRef\": \"SYSTUR.sistema\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"s\", \"Entity\": \"SYSTUR\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"s\"}}, \"Property\": \"sistema\"}, \"Name\": \"SYSTUR.sistema\"}]}, \"objects\": {\"general\": [{\"properties\": {\"orientation\": {\"expr\": {\"Literal\": {\"Value\": \"'Horizontal'\"}}}}}], \"selection\": [{\"properties\": {\"selectAllCheckboxEnabled\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"singleSelect\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"items\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"background\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}, \"selectedColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}, \"selectedFontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 160,
+          "z": 900,
+          "width": 196,
+          "height": 76,
+          "config": "{\"name\": \"1K8L83ERSIIWTYMN08Z0\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 160, \"z\": 900, \"width\": 196, \"height\": 76, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"RH_Ativos.Total Funcionários Ativos\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"r\", \"Entity\": \"RH_Ativos\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"Total Funcionários Ativos\"}, \"Name\": \"RH_Ativos.Total Funcionários Ativos\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#2980B9'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EBF5FB'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 244,
+          "z": 900,
+          "width": 196,
+          "height": 76,
+          "config": "{\"name\": \"O0AGZWU1EB3NU54BWO39\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 244, \"z\": 900, \"width\": 196, \"height\": 76, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"SYSTUR.Total Usuários SYSTUR\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"s\", \"Entity\": \"SYSTUR\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"s\"}}, \"Property\": \"Total Usuários SYSTUR\"}, \"Name\": \"SYSTUR.Total Usuários SYSTUR\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#2471A3'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EBF5FB'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 328,
+          "z": 900,
+          "width": 196,
+          "height": 76,
+          "config": "{\"name\": \"42CNCCARUWHSLJQ1HKER\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 328, \"z\": 900, \"width\": 196, \"height\": 76, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Divergencias.Perfis Inválidos\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"Perfis Inválidos\"}, \"Name\": \"Divergencias.Perfis Inválidos\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E67E22'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FEF3E2'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 412,
+          "z": 900,
+          "width": 196,
+          "height": 76,
+          "config": "{\"name\": \"CRE81CIR3ZEDY5QLSUJL\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 412, \"z\": 900, \"width\": 196, \"height\": 76, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Divergencias.Sem Vínculo RH\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"Sem Vínculo RH\"}, \"Name\": \"Divergencias.Sem Vínculo RH\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#7D3C98'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5EEF8'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 496,
+          "z": 900,
+          "width": 196,
+          "height": 76,
+          "config": "{\"name\": \"MP9M05KOP1D0VE0NDYJ7\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 496, \"z\": 900, \"width\": 196, \"height\": 76, \"tabOrder\": 900}}], \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Divergencias.% Resolvidas\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Select\": [{\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"% Resolvidas\"}, \"Name\": \"Divergencias.% Resolvidas\"}]}, \"objects\": {\"labels\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1E8449'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"28D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"categoryLabels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAFAF1'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 160,
+          "z": 901,
+          "width": 4,
+          "height": 76,
+          "config": "{\"name\": \"YG2NVBKJMU3LH6SWREQ2\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 160, \"z\": 901, \"width\": 4, \"height\": 76, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 244,
+          "z": 901,
+          "width": 4,
+          "height": 76,
+          "config": "{\"name\": \"4MX01DE4R9V1JQSSIID8\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 244, \"z\": 901, \"width\": 4, \"height\": 76, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 328,
+          "z": 901,
+          "width": 4,
+          "height": 76,
+          "config": "{\"name\": \"5AJ21E5ONFH509FNIO3Y\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 328, \"z\": 901, \"width\": 4, \"height\": 76, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 412,
+          "z": 901,
+          "width": 4,
+          "height": 76,
+          "config": "{\"name\": \"O76UHTUROQAIZ7BQUHAE\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 412, \"z\": 901, \"width\": 4, \"height\": 76, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 496,
+          "z": 901,
+          "width": 4,
+          "height": 76,
+          "config": "{\"name\": \"VJS1NQ1MSV9YAMVBW0AX\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 496, \"z\": 901, \"width\": 4, \"height\": 76, \"tabOrder\": 901}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 584,
+          "z": 910,
+          "width": 196,
+          "height": 300,
+          "config": "{\"name\": \"JX41LLU57SK11A6VUCKI\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 584, \"z\": 910, \"width\": 196, \"height\": 300, \"tabOrder\": 910}}], \"singleVisual\": {\"visualType\": \"clusteredBarChart\", \"projections\": {\"Category\": [{\"queryRef\": \"RH_Ativos.departamento\", \"active\": true}], \"Y\": [{\"queryRef\": \"Divergencias.Total Divergências\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"r\", \"Entity\": \"RH_Ativos\", \"Type\": 0}, {\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"departamento\"}, \"Name\": \"RH_Ativos.departamento\"}, {\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"Total Divergências\"}, \"Name\": \"Divergencias.Total Divergências\"}], \"OrderBy\": [{\"Direction\": 2, \"Expression\": {\"Measure\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"Total Divergências\"}}}]}, \"objects\": {\"dataPoint\": [{\"properties\": {\"defaultColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#2980B9'\"}}}}}}}], \"categoryAxis\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"9D\"}}}}}], \"valueAxis\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"labels\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"9D\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#333333'\"}}}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"titleText\": {\"expr\": {\"Literal\": {\"Value\": \"'Por Departamento'\"}}}, \"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 228,
+          "y": 156,
+          "z": 950,
+          "width": 400,
+          "height": 20,
+          "config": "{\"name\": \"HX5I8K00LCCNV8DG25AX\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 228, \"y\": 156, \"z\": 950, \"width\": 400, \"height\": 20, \"tabOrder\": 950}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Divergências — Detalhamento\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"13\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#1F2D5C\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 228,
+          "y": 178,
+          "z": 1000,
+          "width": 1192,
+          "height": 530,
+          "config": "{\"name\": \"XDIP8R8T1R2RF7IMW8JO\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 228, \"y\": 178, \"z\": 1000, \"width\": 1192, \"height\": 530, \"tabOrder\": 1000}}], \"singleVisual\": {\"visualType\": \"matrix\", \"projections\": {\"Rows\": [{\"queryRef\": \"Divergencias.usuario\", \"active\": true}, {\"queryRef\": \"Divergencias.id\", \"active\": true}], \"Values\": [{\"queryRef\": \"RH_Ativos.nome\", \"active\": true}, {\"queryRef\": \"Divergencias.matricula\", \"active\": true}, {\"queryRef\": \"RH_Ativos.departamento\", \"active\": true}, {\"queryRef\": \"RH_Ativos.cargo_descricao\", \"active\": true}, {\"queryRef\": \"Divergencias.tipo\", \"active\": true}, {\"queryRef\": \"Divergencias.perfil_encontrado\", \"active\": true}, {\"queryRef\": \"Divergencias.perfil_esperado\", \"active\": true}, {\"queryRef\": \"Divergencias.data_identificacao\", \"active\": true}, {\"queryRef\": \"Divergencias.resolvida\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}, {\"Name\": \"r\", \"Entity\": \"RH_Ativos\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"usuario\"}, \"Name\": \"Divergencias.usuario\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"id\"}, \"Name\": \"Divergencias.id\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"nome\"}, \"Name\": \"RH_Ativos.nome\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"matricula\"}, \"Name\": \"Divergencias.matricula\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"departamento\"}, \"Name\": \"RH_Ativos.departamento\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"cargo_descricao\"}, \"Name\": \"RH_Ativos.cargo_descricao\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"tipo\"}, \"Name\": \"Divergencias.tipo\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"perfil_encontrado\"}, \"Name\": \"Divergencias.perfil_encontrado\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"perfil_esperado\"}, \"Name\": \"Divergencias.perfil_esperado\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"data_identificacao\"}, \"Name\": \"Divergencias.data_identificacao\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"resolvida\"}, \"Name\": \"Divergencias.resolvida\"}]}, \"objects\": {\"grid\": [{\"properties\": {\"gridVertical\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"gridHorizontalWeight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}, \"outlineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"outlineWeight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}, \"rowPadding\": {\"expr\": {\"Literal\": {\"Value\": \"3D\"}}}}}], \"columnHeaders\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}, \"backColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"rowHeaders\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#333333'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"stepped\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"steppedLayoutIndentation\": {\"expr\": {\"Literal\": {\"Value\": \"20D\"}}}}}], \"values\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#333333'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}], \"subTotals\": [{\"properties\": {\"rowSubtotals\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"columnSubtotals\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"titleText\": {\"expr\": {\"Literal\": {\"Value\": \"'Divergências — Detalhamento'\"}}}, \"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"12D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 228,
+          "y": 714,
+          "z": 1090,
+          "width": 1192,
+          "height": 3,
+          "config": "{\"name\": \"94MUPOWUMC6QHMO49KX9\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 228, \"y\": 714, \"z\": 1090, \"width\": 1192, \"height\": 3, \"tabOrder\": 1090}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 228,
+          "y": 718,
+          "z": 1100,
+          "width": 1192,
+          "height": 164,
+          "config": "{\"name\": \"5LWT5CLJCTW6887Q5F0K\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 228, \"y\": 718, \"z\": 1100, \"width\": 1192, \"height\": 164, \"tabOrder\": 1100}}], \"singleVisual\": {\"visualType\": \"tableEx\", \"projections\": {\"Values\": [{\"queryRef\": \"Divergencias.tipo\", \"active\": true}, {\"queryRef\": \"Divergencias.perfil_encontrado\", \"active\": true}, {\"queryRef\": \"Divergencias.perfil_esperado\", \"active\": true}, {\"queryRef\": \"Divergencias.descricao\", \"active\": true}, {\"queryRef\": \"Divergencias.data_identificacao\", \"active\": true}, {\"queryRef\": \"Divergencias.resolvida\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"tipo\"}, \"Name\": \"Divergencias.tipo\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"perfil_encontrado\"}, \"Name\": \"Divergencias.perfil_encontrado\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"perfil_esperado\"}, \"Name\": \"Divergencias.perfil_esperado\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"descricao\"}, \"Name\": \"Divergencias.descricao\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"data_identificacao\"}, \"Name\": \"Divergencias.data_identificacao\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"resolvida\"}, \"Name\": \"Divergencias.resolvida\"}]}, \"objects\": {\"grid\": [{\"properties\": {\"gridVertical\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"outlineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}}}], \"columnHeaders\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}, \"backColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#2C3E6B'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"9D\"}}}}}], \"values\": [{\"properties\": {\"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}, \"backColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F8FBFF'\"}}}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F8FBFF'\"}}}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"title\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"titleText\": {\"expr\": {\"Literal\": {\"Value\": \"'Detalhe do Usuário Selecionado'\"}}}, \"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}}}]}}}",
+          "filters": "[]"
+        }
+      ]
+    },
+    {
+      "name": "ReportSection_PerfisInv",
+      "displayName": "Perfis Inválidos",
+      "config": "{\"defaultDrillFilterOtherVisuals\": true}",
+      "displayOption": 0,
+      "width": 1440,
+      "height": 900,
+      "visualContainers": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": 100,
+          "width": 1440,
+          "height": 900,
+          "config": "{\"name\": \"L5EGGLFNM0Q7UZKX9M0R\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 100, \"width\": 1440, \"height\": 900, \"tabOrder\": 100}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F2F4F7'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 200,
+          "width": 1440,
+          "height": 70,
+          "config": "{\"name\": \"YG788KZIKWCJA7PIGMO7\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 200, \"width\": 1440, \"height\": 70, \"tabOrder\": 200}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 300,
+          "width": 6,
+          "height": 70,
+          "config": "{\"name\": \"WNW5OBKD8V17ATMDV2NI\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 300, \"width\": 6, \"height\": 70, \"tabOrder\": 300}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 26,
+          "y": 8,
+          "z": 400,
+          "width": 340,
+          "height": 30,
+          "config": "{\"name\": \"LB5X5IGZNU8Y7HTCI358\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 26, \"y\": 8, \"z\": 400, \"width\": 340, \"height\": 30, \"tabOrder\": 400}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"IAM Analytics\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"22\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#FFFFFF\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 26,
+          "y": 38,
+          "z": 410,
+          "width": 500,
+          "height": 22,
+          "config": "{\"name\": \"CAUNQC6R8CPGYSYYZNFT\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 26, \"y\": 38, \"z\": 410, \"width\": 500, \"height\": 22, \"tabOrder\": 410}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Governança de Acessos — CVC Corp\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"11\\\", \\\"bold\\\": false, \\\"italic\\\": false, \\\"color\\\": \\\"#B0BEC5\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1080,
+          "y": 8,
+          "z": 420,
+          "width": 350,
+          "height": 22,
+          "config": "{\"name\": \"KDM304GSUV2KIYBFWPWD\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1080, \"y\": 8, \"z\": 420, \"width\": 350, \"height\": 22, \"tabOrder\": 420}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Referência: Maio / 2026\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"12\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#F5B800\\\"}}], \\\"horizontalTextAlignment\\\": \\\"right\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1080,
+          "y": 34,
+          "z": 421,
+          "width": 350,
+          "height": 18,
+          "config": "{\"name\": \"981CNYCH40MARKOD1FCI\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1080, \"y\": 34, \"z\": 421, \"width\": 350, \"height\": 18, \"tabOrder\": 421}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Última atualização: 13/05/2026\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"9\\\", \\\"bold\\\": false, \\\"italic\\\": false, \\\"color\\\": \\\"#B0BEC5\\\"}}], \\\"horizontalTextAlignment\\\": \\\"right\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"Q9CSFQCQ2HJSC7RQ86ZS\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Visão Geral'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_VisaoGeral'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 182,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"BGY0XBUHGY461DAPDV9D\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 182, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Lista de Divergências'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_ListaDiv'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 344,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"0ZJMIPQPXSJHS4RK303S\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 344, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Perfis Inválidos'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_PerfisInv'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 506,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"VH24V9N4TVYJJWYE3H63\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 506, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Sem Vínculo RH'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_SemVinculo'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 111,
+          "z": 590,
+          "width": 1440,
+          "height": 42,
+          "config": "{\"name\": \"45LG1Z0W09WL4LZP27XX\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 111, \"z\": 590, \"width\": 1440, \"height\": 42, \"tabOrder\": 590}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EBEBEB'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 118,
+          "z": 700,
+          "width": 130,
+          "height": 28,
+          "config": "{\"name\": \"OA9CGHD72UF395HK83Q2\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 118, \"z\": 700, \"width\": 130, \"height\": 28, \"tabOrder\": 700}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Filtrar por Sistema:\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"10\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#333333\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 152,
+          "y": 115,
+          "z": 800,
+          "width": 560,
+          "height": 36,
+          "config": "{\"name\": \"LWORPTK48UT7O0H5C6WC\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 152, \"y\": 115, \"z\": 800, \"width\": 560, \"height\": 36, \"tabOrder\": 800}}], \"singleVisual\": {\"visualType\": \"slicer\", \"projections\": {\"Values\": [{\"queryRef\": \"SYSTUR.sistema\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"s\", \"Entity\": \"SYSTUR\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"s\"}}, \"Property\": \"sistema\"}, \"Name\": \"SYSTUR.sistema\"}]}, \"objects\": {\"general\": [{\"properties\": {\"orientation\": {\"expr\": {\"Literal\": {\"Value\": \"'Horizontal'\"}}}}}], \"selection\": [{\"properties\": {\"selectAllCheckboxEnabled\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"singleSelect\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"items\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"background\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}, \"selectedColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}, \"selectedFontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 228,
+          "y": 162,
+          "z": 1000,
+          "width": 1192,
+          "height": 560,
+          "config": "{\"name\": \"UKVJYT3GZ54SDKLFZY7E\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 228, \"y\": 162, \"z\": 1000, \"width\": 1192, \"height\": 560, \"tabOrder\": 1000}}], \"singleVisual\": {\"visualType\": \"matrix\", \"projections\": {\"Rows\": [{\"queryRef\": \"Divergencias.usuario\", \"active\": true}, {\"queryRef\": \"Divergencias.id\", \"active\": true}], \"Values\": [{\"queryRef\": \"RH_Ativos.nome\", \"active\": true}, {\"queryRef\": \"Divergencias.matricula\", \"active\": true}, {\"queryRef\": \"RH_Ativos.departamento\", \"active\": true}, {\"queryRef\": \"Divergencias.tipo\", \"active\": true}, {\"queryRef\": \"Divergencias.perfil_encontrado\", \"active\": true}, {\"queryRef\": \"Divergencias.perfil_esperado\", \"active\": true}, {\"queryRef\": \"Divergencias.data_identificacao\", \"active\": true}, {\"queryRef\": \"Divergencias.resolvida\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}, {\"Name\": \"r\", \"Entity\": \"RH_Ativos\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"usuario\"}, \"Name\": \"Divergencias.usuario\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"id\"}, \"Name\": \"Divergencias.id\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"nome\"}, \"Name\": \"RH_Ativos.nome\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"matricula\"}, \"Name\": \"Divergencias.matricula\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"departamento\"}, \"Name\": \"RH_Ativos.departamento\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"tipo\"}, \"Name\": \"Divergencias.tipo\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"perfil_encontrado\"}, \"Name\": \"Divergencias.perfil_encontrado\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"perfil_esperado\"}, \"Name\": \"Divergencias.perfil_esperado\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"data_identificacao\"}, \"Name\": \"Divergencias.data_identificacao\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"resolvida\"}, \"Name\": \"Divergencias.resolvida\"}]}, \"objects\": {\"columnHeaders\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}, \"backColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"rowHeaders\": [{\"properties\": {\"stepped\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"steppedLayoutIndentation\": {\"expr\": {\"Literal\": {\"Value\": \"20D\"}}}}}], \"subTotals\": [{\"properties\": {\"rowSubtotals\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"columnSubtotals\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}}}]}}}",
+          "filters": "[{\"name\": \"LKSTOVOGLFRE12LOGYXJ\", \"type\": \"Categorical\", \"expression\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Table\": \"Divergencias\"}}, \"Property\": \"tipo\"}}, \"filter\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Where\": [{\"Condition\": {\"In\": {\"Expressions\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"tipo\"}}], \"Values\": [[{\"Literal\": {\"Value\": \"'PERFIL_INVALIDO'\"}}]]}}}]}}]"
+        }
+      ]
+    },
+    {
+      "name": "ReportSection_SemVinculo",
+      "displayName": "Sem Vínculo RH",
+      "config": "{\"defaultDrillFilterOtherVisuals\": true}",
+      "displayOption": 0,
+      "width": 1440,
+      "height": 900,
+      "visualContainers": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": 100,
+          "width": 1440,
+          "height": 900,
+          "config": "{\"name\": \"E6HXF94M1DENDQ780IN4\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 100, \"width\": 1440, \"height\": 900, \"tabOrder\": 100}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F2F4F7'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 200,
+          "width": 1440,
+          "height": 70,
+          "config": "{\"name\": \"SYSD3OHKE67G1L7RBZA0\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 200, \"width\": 1440, \"height\": 70, \"tabOrder\": 200}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 300,
+          "width": 6,
+          "height": 70,
+          "config": "{\"name\": \"UYGI4OMQJLZMYXM4767O\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 0, \"z\": 300, \"width\": 6, \"height\": 70, \"tabOrder\": 300}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 26,
+          "y": 8,
+          "z": 400,
+          "width": 340,
+          "height": 30,
+          "config": "{\"name\": \"F6U6PQ749VKF5219U5T9\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 26, \"y\": 8, \"z\": 400, \"width\": 340, \"height\": 30, \"tabOrder\": 400}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"IAM Analytics\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"22\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#FFFFFF\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 26,
+          "y": 38,
+          "z": 410,
+          "width": 500,
+          "height": 22,
+          "config": "{\"name\": \"YHX7MK0XFT3W3JNA5RAP\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 26, \"y\": 38, \"z\": 410, \"width\": 500, \"height\": 22, \"tabOrder\": 410}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Governança de Acessos — CVC Corp\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"11\\\", \\\"bold\\\": false, \\\"italic\\\": false, \\\"color\\\": \\\"#B0BEC5\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1080,
+          "y": 8,
+          "z": 420,
+          "width": 350,
+          "height": 22,
+          "config": "{\"name\": \"F0NJHZ0L7BMQZKVZACOH\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1080, \"y\": 8, \"z\": 420, \"width\": 350, \"height\": 22, \"tabOrder\": 420}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Referência: Maio / 2026\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"12\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#F5B800\\\"}}], \\\"horizontalTextAlignment\\\": \\\"right\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 1080,
+          "y": 34,
+          "z": 421,
+          "width": 350,
+          "height": 18,
+          "config": "{\"name\": \"4UYCCZLDGDP5SKW3UYF7\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 1080, \"y\": 34, \"z\": 421, \"width\": 350, \"height\": 18, \"tabOrder\": 421}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Última atualização: 13/05/2026\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"9\\\", \\\"bold\\\": false, \\\"italic\\\": false, \\\"color\\\": \\\"#B0BEC5\\\"}}], \\\"horizontalTextAlignment\\\": \\\"right\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"GJUTEXP5Y0HOJXBBIAPH\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Visão Geral'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_VisaoGeral'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 182,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"KC1ALO8TSP4VI7O3J6IW\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 182, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Lista de Divergências'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_ListaDiv'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 344,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"CYW1NRU3A1ZCDWT1O9FI\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 344, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Perfis Inválidos'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EAECF0'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_PerfisInv'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 506,
+          "y": 75,
+          "z": 500,
+          "width": 158,
+          "height": 36,
+          "config": "{\"name\": \"RZKS2HL07U5WZ9WYGREW\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 506, \"y\": 75, \"z\": 500, \"width\": 158, \"height\": 36, \"tabOrder\": 500}}], \"singleVisual\": {\"visualType\": \"actionButton\", \"objects\": {\"general\": [{\"properties\": {\"text\": {\"expr\": {\"Literal\": {\"Value\": \"'Sem Vínculo RH'\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}}}], \"fontSettings\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"11D\"}}}, \"fontFamily\": {\"expr\": {\"Literal\": {\"Value\": \"'Segoe UI'\"}}}, \"bold\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}}}], \"action\": [{\"properties\": {\"enable\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"type\": {\"expr\": {\"Literal\": {\"Value\": \"'PageNavigation'\"}}}, \"navigationPage\": {\"expr\": {\"Literal\": {\"Value\": \"'ReportSection_SemVinculo'\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 0,
+          "y": 111,
+          "z": 590,
+          "width": 1440,
+          "height": 42,
+          "config": "{\"name\": \"MJVV2BINB3SJVYEQQD0C\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 0, \"y\": 111, \"z\": 590, \"width\": 1440, \"height\": 42, \"tabOrder\": 590}}], \"singleVisual\": {\"visualType\": \"shape\", \"objects\": {\"fill\": [{\"properties\": {\"fillColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#EBEBEB'\"}}}}}}}], \"line\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"lineColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#E0E0E0'\"}}}}}, \"weight\": {\"expr\": {\"Literal\": {\"Value\": \"1D\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 20,
+          "y": 118,
+          "z": 700,
+          "width": 130,
+          "height": 28,
+          "config": "{\"name\": \"SGI2E9J18P6PRFGFSSQC\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 20, \"y\": 118, \"z\": 700, \"width\": 130, \"height\": 28, \"tabOrder\": 700}}], \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": \"[{\\\"textRuns\\\": [{\\\"value\\\": \\\"Filtrar por Sistema:\\\", \\\"textStyle\\\": {\\\"fontFamily\\\": \\\"Segoe UI\\\", \\\"fontSize\\\": \\\"10\\\", \\\"bold\\\": true, \\\"italic\\\": false, \\\"color\\\": \\\"#333333\\\"}}], \\\"horizontalTextAlignment\\\": \\\"left\\\"}]\"}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 152,
+          "y": 115,
+          "z": 800,
+          "width": 560,
+          "height": 36,
+          "config": "{\"name\": \"J2B0ZTECV9QD73S3D3LO\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 152, \"y\": 115, \"z\": 800, \"width\": 560, \"height\": 36, \"tabOrder\": 800}}], \"singleVisual\": {\"visualType\": \"slicer\", \"projections\": {\"Values\": [{\"queryRef\": \"SYSTUR.sistema\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"s\", \"Entity\": \"SYSTUR\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"s\"}}, \"Property\": \"sistema\"}, \"Name\": \"SYSTUR.sistema\"}]}, \"objects\": {\"general\": [{\"properties\": {\"orientation\": {\"expr\": {\"Literal\": {\"Value\": \"'Horizontal'\"}}}}}], \"selection\": [{\"properties\": {\"selectAllCheckboxEnabled\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"singleSelect\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"items\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#555555'\"}}}}}, \"background\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}, \"selectedColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#F5B800'\"}}}}}, \"selectedFontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"border\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}]}}}",
+          "filters": "[]"
+        },
+        {
+          "x": 228,
+          "y": 162,
+          "z": 1000,
+          "width": 1192,
+          "height": 560,
+          "config": "{\"name\": \"OZDXSUWWW7BAXU46DCNI\", \"layouts\": [{\"id\": 0, \"position\": {\"x\": 228, \"y\": 162, \"z\": 1000, \"width\": 1192, \"height\": 560, \"tabOrder\": 1000}}], \"singleVisual\": {\"visualType\": \"matrix\", \"projections\": {\"Rows\": [{\"queryRef\": \"Divergencias.usuario\", \"active\": true}, {\"queryRef\": \"Divergencias.id\", \"active\": true}], \"Values\": [{\"queryRef\": \"RH_Ativos.nome\", \"active\": true}, {\"queryRef\": \"Divergencias.matricula\", \"active\": true}, {\"queryRef\": \"RH_Ativos.departamento\", \"active\": true}, {\"queryRef\": \"Divergencias.tipo\", \"active\": true}, {\"queryRef\": \"Divergencias.perfil_encontrado\", \"active\": true}, {\"queryRef\": \"Divergencias.perfil_esperado\", \"active\": true}, {\"queryRef\": \"Divergencias.data_identificacao\", \"active\": true}, {\"queryRef\": \"Divergencias.resolvida\", \"active\": true}]}, \"prototypeQuery\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}, {\"Name\": \"r\", \"Entity\": \"RH_Ativos\", \"Type\": 0}], \"Select\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"usuario\"}, \"Name\": \"Divergencias.usuario\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"id\"}, \"Name\": \"Divergencias.id\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"nome\"}, \"Name\": \"RH_Ativos.nome\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"matricula\"}, \"Name\": \"Divergencias.matricula\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"r\"}}, \"Property\": \"departamento\"}, \"Name\": \"RH_Ativos.departamento\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"tipo\"}, \"Name\": \"Divergencias.tipo\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"perfil_encontrado\"}, \"Name\": \"Divergencias.perfil_encontrado\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"perfil_esperado\"}, \"Name\": \"Divergencias.perfil_esperado\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"data_identificacao\"}, \"Name\": \"Divergencias.data_identificacao\"}, {\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"resolvida\"}, \"Name\": \"Divergencias.resolvida\"}]}, \"objects\": {\"columnHeaders\": [{\"properties\": {\"fontColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}, \"backColor\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#1F2D5C'\"}}}}}, \"fontSize\": {\"expr\": {\"Literal\": {\"Value\": \"10D\"}}}}}], \"rowHeaders\": [{\"properties\": {\"stepped\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"steppedLayoutIndentation\": {\"expr\": {\"Literal\": {\"Value\": \"20D\"}}}}}], \"subTotals\": [{\"properties\": {\"rowSubtotals\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}, \"columnSubtotals\": {\"expr\": {\"Literal\": {\"Value\": \"false\"}}}}}], \"background\": [{\"properties\": {\"show\": {\"expr\": {\"Literal\": {\"Value\": \"true\"}}}, \"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#FFFFFF'\"}}}}}}}]}}}",
+          "filters": "[{\"name\": \"JN8LVX5Z4NKOSU4N1JJX\", \"type\": \"Categorical\", \"expression\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Table\": \"Divergencias\"}}, \"Property\": \"tipo\"}}, \"filter\": {\"Version\": 2, \"From\": [{\"Name\": \"d\", \"Entity\": \"Divergencias\", \"Type\": 0}], \"Where\": [{\"Condition\": {\"In\": {\"Expressions\": [{\"Column\": {\"Expression\": {\"SourceRef\": {\"Source\": \"d\"}}, \"Property\": \"tipo\"}}], \"Values\": [[{\"Literal\": {\"Value\": \"'ACESSO_SEM_VINCULO_RH'\"}}]]}}}]}}]"
+        }
+      ]
+    }
+  ]
 }
