@@ -82,37 +82,57 @@
   thead th { color: #FFF; font-weight: 700; font-size: 10px; padding: 9px 12px; text-align: left; white-space: nowrap; }
   tbody td { padding: 7px 12px; color: #333; font-size: 11px; border-bottom: 1px solid #EEEEEE; }
 
-  /* ── ROW: PARENT (usuário) ── */
+  /* ══ MATRIX VISUAL — estilo fiel ao Power BI ══ */
+
+  /* Linha-pai (usuário colapsado/expandido) */
   tr.row-parent { background: #FFFFFF; cursor: pointer; }
-  tr.row-parent:hover { background: #F0F4FF; }
-  tr.row-parent.open { background: #EBF5FB; }
+  tr.row-parent:nth-child(even) { background: #FAFAFA; }
+  tr.row-parent:hover { background: #DEECF9; }
+  tr.row-parent.open  { background: #DEECF9; }
+  tr.row-parent td    { padding: 6px 8px; font-size: 11px; border-bottom: 1px solid #E0E0E0; }
 
-  /* ── EXPAND BUTTON ── */
-  .expand-btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 18px; height: 18px; border-radius: 4px;
-    background: #1F2D5C; color: #F5B800;
-    font-size: 14px; font-weight: 900; line-height: 1;
-    cursor: pointer; user-select: none; flex-shrink: 0;
-    transition: background 0.15s;
+  /* Seta nativa do Matrix — triângulo cinza-escuro, vira ▼ ao expandir */
+  .pbi-arrow {
+    display: inline-block;
+    width: 0; height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 7px solid #605E5C;   /* cor padrão da seta no Power BI */
+    margin-right: 6px;
+    vertical-align: middle;
+    transition: transform 0.15s;
+    flex-shrink: 0;
   }
-  .expand-btn.open { background: #F5B800; color: #1F2D5C; }
-  .expand-btn.single { background: #E8E8E8; color: #AAA; cursor: default; font-size: 10px; }
+  .pbi-arrow.open {
+    transform: rotate(90deg);
+  }
+  .pbi-arrow.hidden { visibility: hidden; }   /* usuário sem filhos */
 
-  /* ── ROW: CHILD (divergência individual) ── */
-  tr.row-child { display: none; background: #F4F8FF; }
+  /* Célula da linha-pai que contém a seta + texto */
+  .cell-expand { display: flex; align-items: center; white-space: nowrap; }
+
+  /* Linha-filho (divergência individual) */
+  tr.row-child { display: none; background: #F8F8F8; }
   tr.row-child.visible { display: table-row; }
-  tr.row-child td { border-bottom: 1px solid #E4EAFF; font-size: 10.5px; color: #444; }
-  .child-pad { padding-left: 36px !important; display: flex; align-items: center; gap: 6px; }
-  .child-bullet { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  tr.row-child td { padding: 5px 8px; font-size: 10.5px; color: #333; border-bottom: 1px solid #EDEDEE; }
 
-  /* ── BADGES ── */
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 700; white-space: nowrap; }
-  .badge-orange { background: #FEF3E2; color: #E67E22; border: 1px solid #F9D5A7; }
-  .badge-purple { background: #F5EEF8; color: #7D3C98; border: 1px solid #D7BDE2; }
-  .badge-green  { background: #EAFAF1; color: #1E8449; border: 1px solid #A9DFBF; }
-  .badge-red    { background: #FDECEA; color: #C0392B; border: 1px solid #F5C6C2; }
-  .badge-count  { background: #1F2D5C; color: #F5B800; border: none; font-size: 9px; padding: 2px 7px; }
+  /* Indentação do filho — barra cinza vertical à esquerda (igual Power BI) */
+  .cell-child {
+    display: flex; align-items: center;
+    padding-left: 22px;
+    border-left: 3px solid #C8C6C4;   /* barra cinza do nível 2 no Matrix */
+    margin-left: 2px;
+  }
+
+  /* Formatação condicional — células planas, sem border-radius (igual Power BI) */
+  .cc-orange { background: #FEF3E2; color: #833C00; font-weight: 600; padding: 0 6px; }
+  .cc-purple { background: #F0E6F6; color: #5C2D91; font-weight: 600; padding: 0 6px; }
+  .cc-green  { background: #DFF6DD; color: #107C10; font-weight: 600; padding: 0 6px; }
+  .cc-red    { background: #FDE7E9; color: #A4262C; font-weight: 600; padding: 0 6px; }
+  .cc-blue   { background: #DEECF9; color: #004578; font-weight: 600; padding: 0 6px; }
+
+  /* Subtotal / contagem no nível-pai */
+  .cell-subtotal { color: #605E5C; font-style: italic; font-size: 10.5px; }
 
   /* ── DETAIL PANEL ── */
   .detail-panel { background: #FFF; border-radius: 6px; border: 1px solid #E0E0E0; padding: 12px 16px; }
@@ -206,15 +226,14 @@
 
     <div class="table-header">
       <span class="table-title">Divergências — Detalhamento</span>
-      <span class="tfilter-label">42 usuários · 58 divergências &nbsp;·&nbsp; <em>clique no <strong style="color:#1F2D5C">+</strong> para expandir acessos do usuário</em></span>
+      <span class="tfilter-label">42 usuários · 58 divergências</span>
     </div>
 
-    <!-- Matrix: 1 linha-pai por usuário, N linhas-filho por divergência -->
+    <!-- Matrix Power BI — fiel ao visual nativo -->
     <div class="div-table">
       <table>
         <thead>
           <tr>
-            <th style="width:30px"></th>
             <th>Usuário / Acesso</th>
             <th>Nome</th>
             <th>Matrícula</th>
@@ -231,135 +250,114 @@
 
           <!-- usr0042 — Ana Medeiros — 3 divergências -->
           <tr class="row-parent" onclick="toggle(this,'g42')">
-            <td style="padding:7px 8px"><span class="expand-btn" id="g42">+</span></td>
-            <td><strong>usr0042</strong></td>
-            <td>Ana Medeiros</td>
-            <td>M-00042</td><td>TI</td><td>Analista TI</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span> <span class="badge badge-purple" style="margin-left:2px">ACESSO_S/RH</span></td>
-            <td>—</td><td>—</td><td>10/05/2026</td>
-            <td><span class="badge badge-count">3 diverg.</span></td>
+            <td><div class="cell-expand"><span class="pbi-arrow" id="g42"></span>usr0042</div></td>
+            <td>Ana Medeiros</td><td>M-00042</td><td>TI</td><td>Analista TI</td>
+            <td class="cell-subtotal">3 divergências</td>
+            <td class="cell-subtotal">—</td><td class="cell-subtotal">—</td>
+            <td>10/05/2026</td><td class="cell-subtotal">—</td>
           </tr>
           <tr class="row-child" data-g="g42">
-            <td></td>
-            <td><span class="child-pad"><span class="child-bullet" style="background:#E67E22"></span>Acesso #1</span></td>
-            <td colspan="3" style="color:#888">—</td><td style="color:#888">—</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td style="color:#E67E22;font-weight:600">ADMIN</td><td style="color:#1E8449;font-weight:600">CONSULTA</td>
-            <td>10/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
+            <td><div class="cell-child">div-001</div></td>
+            <td>Ana Medeiros</td><td>M-00042</td><td>TI</td><td>Analista TI</td>
+            <td class="cc-orange">PERFIL_INVALIDO</td>
+            <td class="cc-orange">ADMIN</td><td>CONSULTA</td>
+            <td>10/05/2026</td><td class="cc-red">Pendente</td>
           </tr>
           <tr class="row-child" data-g="g42">
-            <td></td>
-            <td><span class="child-pad"><span class="child-bullet" style="background:#7D3C98"></span>Acesso #2</span></td>
-            <td colspan="3" style="color:#888">—</td><td style="color:#888">—</td>
-            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td style="color:#7D3C98;font-weight:600">OPERADOR</td><td style="color:#888">—</td>
-            <td>09/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
+            <td><div class="cell-child">div-002</div></td>
+            <td>Ana Medeiros</td><td>—</td><td>—</td><td>—</td>
+            <td class="cc-purple">ACESSO_S/RH</td>
+            <td class="cc-purple">OPERADOR</td><td>—</td>
+            <td>09/05/2026</td><td class="cc-red">Pendente</td>
           </tr>
           <tr class="row-child" data-g="g42">
-            <td></td>
-            <td><span class="child-pad"><span class="child-bullet" style="background:#E67E22"></span>Acesso #3</span></td>
-            <td colspan="3" style="color:#888">—</td><td style="color:#888">—</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td style="color:#E67E22;font-weight:600">GESTOR</td><td style="color:#1E8449;font-weight:600">CONSULTA</td>
-            <td>08/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
+            <td><div class="cell-child">div-003</div></td>
+            <td>Ana Medeiros</td><td>M-00042</td><td>TI</td><td>Analista TI</td>
+            <td class="cc-orange">PERFIL_INVALIDO</td>
+            <td class="cc-orange">GESTOR</td><td>CONSULTA</td>
+            <td>08/05/2026</td><td class="cc-red">Pendente</td>
           </tr>
 
-          <!-- usr0078 — Bruno Soares — 1 divergência -->
+          <!-- usr0078 — Bruno Soares — 1 divergência (sem filho) -->
           <tr class="row-parent" onclick="toggle(this,'g78')">
-            <td style="padding:7px 8px"><span class="expand-btn single" id="g78">—</span></td>
-            <td><strong>usr0078</strong></td>
-            <td>Bruno Soares</td>
-            <td>—</td><td>—</td><td>—</td>
-            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td style="color:#7D3C98;font-weight:600">OPERADOR</td><td style="color:#888">—</td>
-            <td>10/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
+            <td><div class="cell-expand"><span class="pbi-arrow hidden" id="g78"></span>usr0078</div></td>
+            <td>Bruno Soares</td><td>—</td><td>—</td><td>—</td>
+            <td class="cc-purple">ACESSO_S/RH</td>
+            <td class="cc-purple">OPERADOR</td><td>—</td>
+            <td>10/05/2026</td><td class="cc-red">Pendente</td>
           </tr>
 
           <!-- usr0091 — Carla Fonseca — 2 divergências -->
           <tr class="row-parent" onclick="toggle(this,'g91')">
-            <td style="padding:7px 8px"><span class="expand-btn" id="g91">+</span></td>
-            <td><strong>usr0091</strong></td>
-            <td>Carla Fonseca</td>
-            <td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td>—</td><td>—</td><td>09/05/2026</td>
-            <td><span class="badge badge-count">2 diverg.</span></td>
+            <td><div class="cell-expand"><span class="pbi-arrow" id="g91"></span>usr0091</div></td>
+            <td>Carla Fonseca</td><td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
+            <td class="cell-subtotal">2 divergências</td>
+            <td class="cell-subtotal">—</td><td class="cell-subtotal">—</td>
+            <td>09/05/2026</td><td class="cell-subtotal">—</td>
           </tr>
           <tr class="row-child" data-g="g91">
-            <td></td>
-            <td><span class="child-pad"><span class="child-bullet" style="background:#E67E22"></span>Acesso #1</span></td>
+            <td><div class="cell-child">div-011</div></td>
             <td>Carla Fonseca</td><td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td style="color:#E67E22;font-weight:600">GESTOR</td><td style="color:#1E8449;font-weight:600">CONSULTA</td>
-            <td>09/05/2026</td><td><span class="badge badge-green">Resolvida</span></td>
+            <td class="cc-orange">PERFIL_INVALIDO</td>
+            <td class="cc-orange">GESTOR</td><td>CONSULTA</td>
+            <td>09/05/2026</td><td class="cc-green">Resolvida</td>
           </tr>
           <tr class="row-child" data-g="g91">
-            <td></td>
-            <td><span class="child-pad"><span class="child-bullet" style="background:#E67E22"></span>Acesso #2</span></td>
+            <td><div class="cell-child">div-012</div></td>
             <td>Carla Fonseca</td><td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td style="color:#E67E22;font-weight:600">ADMIN</td><td style="color:#1E8449;font-weight:600">OPERADOR</td>
-            <td>08/05/2026</td><td><span class="badge badge-green">Resolvida</span></td>
+            <td class="cc-orange">PERFIL_INVALIDO</td>
+            <td class="cc-orange">ADMIN</td><td>OPERADOR</td>
+            <td>08/05/2026</td><td class="cc-green">Resolvida</td>
           </tr>
 
           <!-- usr0103 — Diego Ramos — 1 divergência -->
           <tr class="row-parent" onclick="toggle(this,'g103')">
-            <td style="padding:7px 8px"><span class="expand-btn single" id="g103">—</span></td>
-            <td><strong>usr0103</strong></td>
-            <td>Diego Ramos</td>
-            <td>—</td><td>—</td><td>—</td>
-            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td style="color:#7D3C98;font-weight:600">CONSULTA</td><td style="color:#888">—</td>
-            <td>09/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
+            <td><div class="cell-expand"><span class="pbi-arrow hidden" id="g103"></span>usr0103</div></td>
+            <td>Diego Ramos</td><td>—</td><td>—</td><td>—</td>
+            <td class="cc-purple">ACESSO_S/RH</td>
+            <td class="cc-purple">CONSULTA</td><td>—</td>
+            <td>09/05/2026</td><td class="cc-red">Pendente</td>
           </tr>
 
           <!-- usr0117 — Elisa Teixeira — 2 divergências -->
           <tr class="row-parent" onclick="toggle(this,'g117')">
-            <td style="padding:7px 8px"><span class="expand-btn" id="g117">+</span></td>
-            <td><strong>usr0117</strong></td>
-            <td>Elisa Teixeira</td>
-            <td>M-00117</td><td>Operações</td><td>Coordenadora Ops</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span> <span class="badge badge-purple" style="margin-left:2px">ACESSO_S/RH</span></td>
-            <td>—</td><td>—</td><td>08/05/2026</td>
-            <td><span class="badge badge-count">2 diverg.</span></td>
-          </tr>
-          <tr class="row-child" data-g="g117">
-            <td></td>
-            <td><span class="child-pad"><span class="child-bullet" style="background:#E67E22"></span>Acesso #1</span></td>
+            <td><div class="cell-expand"><span class="pbi-arrow" id="g117"></span>usr0117</div></td>
             <td>Elisa Teixeira</td><td>M-00117</td><td>Operações</td><td>Coordenadora Ops</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td style="color:#E67E22;font-weight:600">OPERADOR</td><td style="color:#1E8449;font-weight:600">CONSULTA</td>
-            <td>08/05/2026</td><td><span class="badge badge-green">Resolvida</span></td>
+            <td class="cell-subtotal">2 divergências</td>
+            <td class="cell-subtotal">—</td><td class="cell-subtotal">—</td>
+            <td>08/05/2026</td><td class="cell-subtotal">—</td>
           </tr>
           <tr class="row-child" data-g="g117">
-            <td></td>
-            <td><span class="child-pad"><span class="child-bullet" style="background:#7D3C98"></span>Acesso #2</span></td>
-            <td colspan="3" style="color:#888">—</td><td style="color:#888">—</td>
-            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td style="color:#7D3C98;font-weight:600">CONSULTA</td><td style="color:#888">—</td>
-            <td>07/05/2026</td><td><span class="badge badge-green">Resolvida</span></td>
+            <td><div class="cell-child">div-021</div></td>
+            <td>Elisa Teixeira</td><td>M-00117</td><td>Operações</td><td>Coordenadora Ops</td>
+            <td class="cc-orange">PERFIL_INVALIDO</td>
+            <td class="cc-orange">OPERADOR</td><td>CONSULTA</td>
+            <td>08/05/2026</td><td class="cc-green">Resolvida</td>
+          </tr>
+          <tr class="row-child" data-g="g117">
+            <td><div class="cell-child">div-022</div></td>
+            <td>Elisa Teixeira</td><td>—</td><td>—</td><td>—</td>
+            <td class="cc-purple">ACESSO_S/RH</td>
+            <td class="cc-purple">CONSULTA</td><td>—</td>
+            <td>07/05/2026</td><td class="cc-green">Resolvida</td>
           </tr>
 
           <!-- usr0134 — Fábio Lins — 1 divergência -->
           <tr class="row-parent" onclick="toggle(this,'g134')">
-            <td style="padding:7px 8px"><span class="expand-btn single" id="g134">—</span></td>
-            <td><strong>usr0134</strong></td>
-            <td>Fábio Lins</td>
-            <td>—</td><td>—</td><td>—</td>
-            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td style="color:#7D3C98;font-weight:600">ADMIN</td><td style="color:#888">—</td>
-            <td>08/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
+            <td><div class="cell-expand"><span class="pbi-arrow hidden" id="g134"></span>usr0134</div></td>
+            <td>Fábio Lins</td><td>—</td><td>—</td><td>—</td>
+            <td class="cc-purple">ACESSO_S/RH</td>
+            <td class="cc-purple">ADMIN</td><td>—</td>
+            <td>08/05/2026</td><td class="cc-red">Pendente</td>
           </tr>
 
           <!-- usr0155 — Gisele Nunes — 1 divergência -->
           <tr class="row-parent" onclick="toggle(this,'g155')">
-            <td style="padding:7px 8px"><span class="expand-btn single" id="g155">—</span></td>
-            <td><strong>usr0155</strong></td>
-            <td>Gisele Nunes</td>
-            <td>M-00155</td><td>Financeiro</td><td>Analista Fin.</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td style="color:#E67E22;font-weight:600">GESTOR</td><td style="color:#1E8449;font-weight:600">CONSULTA</td>
-            <td>07/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
+            <td><div class="cell-expand"><span class="pbi-arrow hidden" id="g155"></span>usr0155</div></td>
+            <td>Gisele Nunes</td><td>M-00155</td><td>Financeiro</td><td>Analista Fin.</td>
+            <td class="cc-orange">PERFIL_INVALIDO</td>
+            <td class="cc-orange">GESTOR</td><td>CONSULTA</td>
+            <td>07/05/2026</td><td class="cc-red">Pendente</td>
           </tr>
 
         </tbody>
@@ -378,9 +376,13 @@
       </div>
     </div>
 
-    <!-- Nota de implementação -->
-    <div style="background:#EBF5FB;border:1px solid #D5E8F5;border-radius:6px;padding:8px 14px;font-size:10px;color:#2471A3;">
-      <strong>Power BI — Matrix visual:</strong> este comportamento é nativo. Configurar Linhas com hierarquia <code>usuario → id</code>, habilitar "Expandir/Recolher" no cabeçalho de linha. Sem AppSource necessário.
+    <!-- Legenda de cores -->
+    <div style="display:flex;gap:16px;padding:6px 2px;font-size:10px;color:#555;flex-wrap:wrap;">
+      <span><span style="display:inline-block;width:12px;height:12px;background:#FEF3E2;border:1px solid #ccc;vertical-align:middle;margin-right:4px"></span>PERFIL_INVALIDO</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#F0E6F6;border:1px solid #ccc;vertical-align:middle;margin-right:4px"></span>ACESSO_SEM_VINCULO_RH</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#DFF6DD;border:1px solid #ccc;vertical-align:middle;margin-right:4px"></span>Resolvida</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#FDE7E9;border:1px solid #ccc;vertical-align:middle;margin-right:4px"></span>Pendente</span>
+      <span style="margin-left:auto;color:#888;font-style:italic">Visual: Matrix nativo Power BI — hierarquia usuario → id</span>
     </div>
 
   </div>
@@ -388,10 +390,9 @@
 
 <script>
   function toggle(tr, id) {
-    const btn = document.getElementById(id);
-    if (!btn || btn.classList.contains('single')) return;
-    const open = btn.classList.toggle('open');
-    btn.textContent = open ? '−' : '+';
+    const arrow = document.getElementById(id);
+    if (!arrow || arrow.classList.contains('hidden')) return;
+    const open = arrow.classList.toggle('open');
     tr.classList.toggle('open', open);
     document.querySelectorAll('[data-g="' + id + '"]').forEach(r => r.classList.toggle('visible', open));
   }
