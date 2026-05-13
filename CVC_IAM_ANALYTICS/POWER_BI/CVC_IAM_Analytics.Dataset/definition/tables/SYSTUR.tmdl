@@ -51,6 +51,11 @@ table SYSTUR
 		summarizeBy: none
 		sourceColumn: data_criacao
 
+		variation Variation
+			isDefault
+			relationship: c10709b1-3b35-4795-a7e0-a9bdb73c9dc7
+			defaultHierarchy: LocalDateTable_b1557029-40b9-495a-8587-2b6b164b6248.'Hierarquia de datas'
+
 		annotation SummarizationSetBy = Automatic
 
 	column ultimo_acesso
@@ -58,6 +63,11 @@ table SYSTUR
 		lineageTag: 333ccc3f-e71a-4b01-8edf-13dbd9c44b4a
 		summarizeBy: none
 		sourceColumn: ultimo_acesso
+
+		variation Variation
+			isDefault
+			relationship: 93b4aaf5-ebfb-4556-9542-bbaaabb7f7b6
+			defaultHierarchy: LocalDateTable_372f1c96-8535-48a0-89fc-f75de50e0f5c.'Hierarquia de datas'
 
 		annotation SummarizationSetBy = Automatic
 

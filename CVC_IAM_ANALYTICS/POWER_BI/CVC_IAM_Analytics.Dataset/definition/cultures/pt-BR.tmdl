@@ -1,0 +1,5947 @@
+cultureInfo pt-BR
+
+	linguisticMetadata =
+			{
+			  "Version": "4.1.0",
+			  "Language": "en-US",
+			  "Entities": {
+			    "divergencia": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "divergencia": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.id": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "id"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "id": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "identification": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.736
+			          }
+			        },
+			        {
+			          "identity": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.736
+			          }
+			        },
+			        {
+			          "credential": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.714
+			          }
+			        }
+			      ],
+			      "NameType": "Identifier"
+			    },
+			    "divergencia.tipo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "tipo"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "tipo": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.sistema": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "sistema"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "sistema": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.usuario": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "usuario"
+			        }
+			      },
+			      "State": "Generated",
+			      "Visibility": {
+			        "Value": "Hidden"
+			      },
+			      "Terms": [
+			        {
+			          "usuario": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "Usuário/Acesso": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.nome_usuario": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "nome_usuario"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "nome usuario": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "nome_usuario": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.matricula": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "matricula"
+			        }
+			      },
+			      "State": "Generated",
+			      "Visibility": {
+			        "Value": "Hidden"
+			      },
+			      "Terms": [
+			        {
+			          "matricula": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.perfil_encontrado": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "perfil_encontrado"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "perfil encontrado": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "perfil_encontrado": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.perfil_esperado": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "perfil_esperado"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "perfil esperado": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "perfil_esperado": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.descricao": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "descricao"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "descricao": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.data_identificacao": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "data_identificacao"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "data identificacao": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data_identificacao": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        },
+			        {
+			          "date": {
+			            "State": "Generated",
+			            "Weight": 0.7
+			          }
+			        },
+			        {
+			          "information identificacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "fact identificacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "info identificacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "statistic identificacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "document identificacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        },
+			        {
+			          "figure identificacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        },
+			        {
+			          "record identificacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        }
+			      ],
+			      "SemanticType": "Time"
+			    },
+			    "divergencia.data_identificacao.hierarquia_de_data": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "VariationSource": "data_identificacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "hierarquia de data": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "hierarquia de information": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de fact": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de info": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de statistic": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de document": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        },
+			        {
+			          "hierarquia de figure": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        },
+			        {
+			          "hierarquia de record": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.data_identificacao.ano": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "VariationSource": "data_identificacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Ano"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "ano": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data identificacao ano": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information identificacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact identificacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info identificacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic identificacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document identificacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure identificacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record identificacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.data_identificacao.trimestre": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "VariationSource": "data_identificacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Trimestre"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "trimestre": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data identificacao trimestre": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information identificacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact identificacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info identificacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic identificacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document identificacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure identificacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record identificacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.data_identificacao.mê": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "VariationSource": "data_identificacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Mês"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "mê": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data identificacao mê": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information identificacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact identificacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info identificacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic identificacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document identificacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure identificacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record identificacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.data_identificacao.dia": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "VariationSource": "data_identificacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Dia"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "dia": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data identificacao dia": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information identificacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact identificacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info identificacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic identificacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document identificacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure identificacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record identificacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.resolvida": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "resolvida"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "resolvida": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.total_divergências": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "Total Divergências"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "total divergências": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "aggregate divergência": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        },
+			        {
+			          "overall divergência": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.perfis_inválidos": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "Perfis Inválidos"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "perfis inválidos": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.sem_vínculo_RH": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "Sem Vínculo RH"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "sem vínculo RH": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.resolvidas": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "% Resolvidas"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "% resolvidas": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "percentage resolvida": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "pct resolvida": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        }
+			      ]
+			    },
+			    "matriz_organizacional": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Matriz_Organizacional"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "matriz organizacional": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "Matriz_Organizacional": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "matriz_organizacional.cargo_codigo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Matriz_Organizacional",
+			          "ConceptualProperty": "cargo_codigo"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "cargo codigo": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "cargo_codigo": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "matriz_organizacional.cargo_descricao": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Matriz_Organizacional",
+			          "ConceptualProperty": "cargo_descricao"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "cargo descricao": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "cargo_descricao": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "matriz_organizacional.departamento": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Matriz_Organizacional",
+			          "ConceptualProperty": "departamento"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "departamento": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "matriz_organizacional.centro_custo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Matriz_Organizacional",
+			          "ConceptualProperty": "centro_custo"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "centro custo": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "centro_custo": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "perfis_esperado": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Perfis_Esperados"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "perfis esperado": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "Perfis_Esperados": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "perfis_esperado.centro_custo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Perfis_Esperados",
+			          "ConceptualProperty": "centro_custo"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "centro custo": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "centro_custo": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "perfis_esperado.sistema": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Perfis_Esperados",
+			          "ConceptualProperty": "sistema"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "sistema": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "perfis_esperado.perfil": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Perfis_Esperados",
+			          "ConceptualProperty": "perfil"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "perfil": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "RH ativo": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "RH_Ativos": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.matricula": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "matricula"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "matricula": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.nome": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "nome"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "nome": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.cpf": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "cpf"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "cpf": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.cargo_codigo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "cargo_codigo"
+			        }
+			      },
+			      "State": "Generated",
+			      "Visibility": {
+			        "Value": "Hidden"
+			      },
+			      "Terms": [
+			        {
+			          "cargo codigo": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "cargo_codigo": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.cargo_descricao": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "cargo_descricao"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "cargo descricao": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "cargo_descricao": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.departamento": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "departamento"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "departamento": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.centro_custo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "centro_custo"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "centro custo": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "centro_custo": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.email": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "email"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "email": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "correspondence": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.476
+			          }
+			        },
+			        {
+			          "message": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.452
+			          }
+			        },
+			        {
+			          "communication": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.452
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.situacao": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "situacao"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "situacao": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.data_admissao": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "data_admissao"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "data admissao": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data_admissao": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        },
+			        {
+			          "date": {
+			            "State": "Generated",
+			            "Weight": 0.7
+			          }
+			        },
+			        {
+			          "information admissao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "fact admissao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "info admissao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "statistic admissao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "document admissao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        },
+			        {
+			          "figure admissao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        },
+			        {
+			          "record admissao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        }
+			      ],
+			      "SemanticType": "Time"
+			    },
+			    "RH_ativo.data_admissao.hierarquia_de_data": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "VariationSource": "data_admissao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "hierarquia de data": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "hierarquia de information": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de fact": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de info": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de statistic": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de document": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        },
+			        {
+			          "hierarquia de figure": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        },
+			        {
+			          "hierarquia de record": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.data_admissao.ano": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "VariationSource": "data_admissao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Ano"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "ano": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data admissao ano": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information admissao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact admissao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info admissao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic admissao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document admissao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure admissao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record admissao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.data_admissao.trimestre": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "VariationSource": "data_admissao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Trimestre"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "trimestre": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data admissao trimestre": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information admissao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact admissao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info admissao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic admissao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document admissao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure admissao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record admissao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.data_admissao.mê": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "VariationSource": "data_admissao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Mês"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "mê": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data admissao mê": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information admissao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact admissao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info admissao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic admissao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document admissao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure admissao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record admissao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.data_admissao.dia": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "VariationSource": "data_admissao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Dia"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "dia": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data admissao dia": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information admissao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact admissao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info admissao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic admissao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document admissao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure admissao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record admissao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "RH_ativo.total_funcionários_ativos": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "RH_Ativos",
+			          "ConceptualProperty": "Total Funcionários Ativos"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "total funcionários ativos": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "aggregate funcionário ativo": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "overall funcionário ativo": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "systur": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "systur": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.sistema": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "ConceptualProperty": "sistema"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "sistema": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.usuario": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "ConceptualProperty": "usuario"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "usuario": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.nome": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "ConceptualProperty": "nome"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "nome": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.perfil": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "ConceptualProperty": "perfil"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "perfil": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.situacao": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "ConceptualProperty": "situacao"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "situacao": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.data_criacao": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "ConceptualProperty": "data_criacao"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "data criacao": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data_criacao": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        },
+			        {
+			          "date": {
+			            "State": "Generated",
+			            "Weight": 0.7
+			          }
+			        },
+			        {
+			          "information criacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "fact criacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "info criacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "statistic criacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.6
+			          }
+			        },
+			        {
+			          "document criacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        },
+			        {
+			          "figure criacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        },
+			        {
+			          "record criacao": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.582
+			          }
+			        }
+			      ],
+			      "SemanticType": "Time"
+			    },
+			    "systur.data_criacao.hierarquia_de_data": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "data_criacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "hierarquia de data": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "hierarquia de information": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de fact": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de info": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de statistic": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de document": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        },
+			        {
+			          "hierarquia de figure": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        },
+			        {
+			          "hierarquia de record": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        }
+			      ]
+			    },
+			    "systur.data_criacao.ano": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "data_criacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Ano"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "ano": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data criacao ano": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information criacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact criacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info criacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic criacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document criacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure criacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record criacao ano": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "systur.data_criacao.trimestre": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "data_criacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Trimestre"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "trimestre": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data criacao trimestre": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information criacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact criacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info criacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic criacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document criacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure criacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record criacao trimestre": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "systur.data_criacao.mê": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "data_criacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Mês"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "mê": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data criacao mê": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information criacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact criacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info criacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic criacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document criacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure criacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record criacao mê": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "systur.data_criacao.dia": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "data_criacao",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Dia"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "dia": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "data criacao dia": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "information criacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "fact criacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "info criacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "statistic criacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.609
+			          }
+			        },
+			        {
+			          "document criacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "figure criacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "record criacao dia": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "systur.ultimo_acesso": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "ConceptualProperty": "ultimo_acesso"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "ultimo acesso": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "ultimo_acesso": {
+			            "Type": "Noun",
+			            "State": "Generated",
+			            "Weight": 0.99
+			          }
+			        },
+			        {
+			          "date": {
+			            "State": "Generated",
+			            "Weight": 0.7
+			          }
+			        }
+			      ],
+			      "SemanticType": "Time"
+			    },
+			    "systur.ultimo_acesso.hierarquia_de_data": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "ultimo_acesso",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "hierarquia de data": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "hierarquia de information": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de fact": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de info": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de statistic": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.762
+			          }
+			        },
+			        {
+			          "hierarquia de document": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        },
+			        {
+			          "hierarquia de figure": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        },
+			        {
+			          "hierarquia de record": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.739
+			          }
+			        }
+			      ]
+			    },
+			    "systur.ultimo_acesso.ano": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "ultimo_acesso",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Ano"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "ano": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "ultimo acesso ano": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.ultimo_acesso.trimestre": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "ultimo_acesso",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Trimestre"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "trimestre": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "ultimo acesso trimestre": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.ultimo_acesso.mê": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "ultimo_acesso",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Mês"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "mê": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "ultimo acesso mê": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.ultimo_acesso.dia": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "VariationSource": "ultimo_acesso",
+			          "VariationSet": "Variation",
+			          "Hierarchy": "Hierarquia de datas",
+			          "HierarchyLevel": "Dia"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "dia": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "ultimo acesso dia": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "systur.total_usuários_SYSTUR": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "SYSTUR",
+			          "ConceptualProperty": "Total Usuários SYSTUR"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "total usuários SYSTUR": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "aggregate usuário systur": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        },
+			        {
+			          "overall usuário systur": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.591
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.departamento": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "Departamento"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "departamento": {
+			            "State": "Generated"
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.cargo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "Cargo"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "cargo": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "consignment": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.491
+			          }
+			        },
+			        {
+			          "shipment": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.491
+			          }
+			        },
+			        {
+			          "payload": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.491
+			          }
+			        },
+			        {
+			          "load": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.476
+			          }
+			        },
+			        {
+			          "freight": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.476
+			          }
+			        }
+			      ]
+			    },
+			    "divergencia.status": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Divergencias",
+			          "ConceptualProperty": "Status"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "status": {
+			            "State": "Generated"
+			          }
+			        },
+			        {
+			          "category": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.736
+			          }
+			        },
+			        {
+			          "importance": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.736
+			          }
+			        },
+			        {
+			          "prestige": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.736
+			          }
+			        },
+			        {
+			          "prominence": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.736
+			          }
+			        },
+			        {
+			          "condition": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.714
+			          }
+			        },
+			        {
+			          "class": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.714
+			          }
+			        },
+			        {
+			          "grade": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.714
+			          }
+			        },
+			        {
+			          "level": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.714
+			          }
+			        },
+			        {
+			          "position": {
+			            "Type": "Noun",
+			            "State": "Suggested",
+			            "Source": {
+			              "Agent": "Thesaurus"
+			            },
+			            "Weight": 0.714
+			          }
+			        }
+			      ]
+			    }
+			  },
+			  "Relationships": {
+			    "systur_ultimo_acesso_ano_has_systur_ultimo_acesso_trimestre": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.ultimo_acesso.ano": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.ano"
+			          }
+			        },
+			        "systur.ultimo_acesso.trimestre": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.trimestre"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.ano"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "anos_have_trimestres"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.trimestre"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_have_anos"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.trimestre"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_are_in_anos3"
+			        }
+			      ]
+			    },
+			    "systur_ultimo_acesso_hierarquia_de_data_has_systur_ultimo_acesso_dia": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.ultimo_acesso.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.hierarquia_de_data"
+			          }
+			        },
+			        "systur.ultimo_acesso.dia": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.dia"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.dia"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_dias"
+			        }
+			      ]
+			    },
+			    "systur_ultimo_acesso_hierarquia_de_data_has_systur_ultimo_acesso_mê": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.ultimo_acesso.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.hierarquia_de_data"
+			          }
+			        },
+			        "systur.ultimo_acesso.mê": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.mê"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_mê"
+			        }
+			      ]
+			    },
+			    "systur_ultimo_acesso_hierarquia_de_data_has_systur_ultimo_acesso_trimestre": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.ultimo_acesso.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.hierarquia_de_data"
+			          }
+			        },
+			        "systur.ultimo_acesso.trimestre": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.trimestre"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_trimestres"
+			        }
+			      ]
+			    },
+			    "systur_ultimo_acesso_hierarquia_de_data_has_systur_ultimo_acesso_ano": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.ultimo_acesso.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.hierarquia_de_data"
+			          }
+			        },
+			        "systur.ultimo_acesso.ano": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.ano"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_anos"
+			        }
+			      ]
+			    },
+			    "systur_ultimo_acesso_has_hierarquia_de_data": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.ultimo_acesso": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso"
+			          }
+			        },
+			        "systur.ultimo_acesso.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.hierarquia_de_data"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.hierarquia_de_data"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "ultimo_acessos_have_hierarquia_de_data"
+			        }
+			      ]
+			    },
+			    "systur_data_criacao_mê_has_systur_data_criacao_dia": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.data_criacao.mê": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.mê"
+			          }
+			        },
+			        "systur.data_criacao.dia": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.dia"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.mê"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.dia"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_have_dias"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.dia"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "dias_have_mê"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.dia"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "systur.data_criacao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "dias_are_in_mê2"
+			        }
+			      ]
+			    },
+			    "systur_data_criacao_trimestre_has_systur_data_criacao_mê": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.data_criacao.trimestre": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.trimestre"
+			          }
+			        },
+			        "systur.data_criacao.mê": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.mê"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.trimestre"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_have_mê"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.mê"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_have_trimestres"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.mê"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "systur.data_criacao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_are_in_trimestres2"
+			        }
+			      ]
+			    },
+			    "systur_data_criacao_ano_has_systur_data_criacao_trimestre": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.data_criacao.ano": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.ano"
+			          }
+			        },
+			        "systur.data_criacao.trimestre": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.trimestre"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.ano"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "anos_have_trimestres1"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.trimestre"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_have_anos1"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.trimestre"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "systur.data_criacao.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_are_in_anos2"
+			        }
+			      ]
+			    },
+			    "systur_data_criacao_hierarquia_de_data_has_systur_data_criacao_dia": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.data_criacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.hierarquia_de_data"
+			          }
+			        },
+			        "systur.data_criacao.dia": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.dia"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.dia"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_dias1"
+			        }
+			      ]
+			    },
+			    "systur_data_criacao_hierarquia_de_data_has_systur_data_criacao_mê": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.data_criacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.hierarquia_de_data"
+			          }
+			        },
+			        "systur.data_criacao.mê": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.mê"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_mê1"
+			        }
+			      ]
+			    },
+			    "systur_data_criacao_hierarquia_de_data_has_systur_data_criacao_trimestre": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.data_criacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.hierarquia_de_data"
+			          }
+			        },
+			        "systur.data_criacao.trimestre": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.trimestre"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_trimestres1"
+			        }
+			      ]
+			    },
+			    "systur_data_criacao_hierarquia_de_data_has_systur_data_criacao_ano": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.data_criacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.hierarquia_de_data"
+			          }
+			        },
+			        "systur.data_criacao.ano": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.ano"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_anos1"
+			        }
+			      ]
+			    },
+			    "systur_data_criacao_has_hierarquia_de_data": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.data_criacao": {
+			          "Target": {
+			            "Entity": "systur.data_criacao"
+			          }
+			        },
+			        "systur.data_criacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "systur.data_criacao.hierarquia_de_data"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.data_criacao"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao.hierarquia_de_data"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "data_criacaos_have_hierarquia_de_data"
+			        }
+			      ]
+			    },
+			    "RH_ativo_data_admissao_mê_has_RH_ativo_data_admissao_dia": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo.data_admissao.mê": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.mê"
+			          }
+			        },
+			        "RH_ativo.data_admissao.dia": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.dia"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.mê"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.dia"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_have_dias1"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.dia"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "dias_have_mê1"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.dia"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "dias_are_in_mê1"
+			        }
+			      ]
+			    },
+			    "RH_ativo_data_admissao_trimestre_has_RH_ativo_data_admissao_mê": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo.data_admissao.trimestre": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.trimestre"
+			          }
+			        },
+			        "RH_ativo.data_admissao.mê": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.mê"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.trimestre"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_have_mê1"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.mê"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_have_trimestres1"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.mê"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_are_in_trimestres1"
+			        }
+			      ]
+			    },
+			    "RH_ativo_data_admissao_ano_has_RH_ativo_data_admissao_trimestre": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo.data_admissao.ano": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.ano"
+			          }
+			        },
+			        "RH_ativo.data_admissao.trimestre": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.trimestre"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.ano"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "anos_have_trimestres2"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.trimestre"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_have_anos2"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.trimestre"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_are_in_anos1"
+			        }
+			      ]
+			    },
+			    "RH_ativo_data_admissao_hierarquia_de_data_has_RH_ativo_data_admissao_dia": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo.data_admissao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.hierarquia_de_data"
+			          }
+			        },
+			        "RH_ativo.data_admissao.dia": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.dia"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.dia"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_dias2"
+			        }
+			      ]
+			    },
+			    "RH_ativo_data_admissao_hierarquia_de_data_has_RH_ativo_data_admissao_mê": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo.data_admissao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.hierarquia_de_data"
+			          }
+			        },
+			        "RH_ativo.data_admissao.mê": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.mê"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_mê2"
+			        }
+			      ]
+			    },
+			    "RH_ativo_data_admissao_hierarquia_de_data_has_RH_ativo_data_admissao_trimestre": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo.data_admissao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.hierarquia_de_data"
+			          }
+			        },
+			        "RH_ativo.data_admissao.trimestre": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.trimestre"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_trimestres2"
+			        }
+			      ]
+			    },
+			    "RH_ativo_data_admissao_hierarquia_de_data_has_RH_ativo_data_admissao_ano": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo.data_admissao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.hierarquia_de_data"
+			          }
+			        },
+			        "RH_ativo.data_admissao.ano": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.ano"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_anos2"
+			        }
+			      ]
+			    },
+			    "RH_ativo_data_admissao_has_hierarquia_de_data": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo.data_admissao": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao"
+			          }
+			        },
+			        "RH_ativo.data_admissao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao.hierarquia_de_data"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo.data_admissao"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao.hierarquia_de_data"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "data_admissaos_have_hierarquia_de_data"
+			        }
+			      ]
+			    },
+			    "divergencia_data_identificacao_mê_has_divergencia_data_identificacao_dia": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia.data_identificacao.mê": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.mê"
+			          }
+			        },
+			        "divergencia.data_identificacao.dia": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.dia"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.mê"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.dia"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_have_dias2"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.dia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "dias_have_mê2"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.dia"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "dias_are_in_mê"
+			        }
+			      ]
+			    },
+			    "divergencia_data_identificacao_trimestre_has_divergencia_data_identificacao_mê": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia.data_identificacao.trimestre": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.trimestre"
+			          }
+			        },
+			        "divergencia.data_identificacao.mê": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.mê"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.trimestre"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_have_mê2"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.mê"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_have_trimestres2"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.mê"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_are_in_trimestres"
+			        }
+			      ]
+			    },
+			    "divergencia_data_identificacao_ano_has_divergencia_data_identificacao_trimestre": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia.data_identificacao.ano": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.ano"
+			          }
+			        },
+			        "divergencia.data_identificacao.trimestre": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.trimestre"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.ano"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "anos_have_trimestres3"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.trimestre"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_have_anos3"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.trimestre"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_are_in_anos"
+			        }
+			      ]
+			    },
+			    "divergencia_data_identificacao_hierarquia_de_data_has_divergencia_data_identificacao_dia": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia.data_identificacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.hierarquia_de_data"
+			          }
+			        },
+			        "divergencia.data_identificacao.dia": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.dia"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.dia"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_dias3"
+			        }
+			      ]
+			    },
+			    "divergencia_data_identificacao_hierarquia_de_data_has_divergencia_data_identificacao_mê": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia.data_identificacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.hierarquia_de_data"
+			          }
+			        },
+			        "divergencia.data_identificacao.mê": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.mê"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_mê3"
+			        }
+			      ]
+			    },
+			    "divergencia_data_identificacao_hierarquia_de_data_has_divergencia_data_identificacao_trimestre": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia.data_identificacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.hierarquia_de_data"
+			          }
+			        },
+			        "divergencia.data_identificacao.trimestre": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.trimestre"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_trimestres3"
+			        }
+			      ]
+			    },
+			    "divergencia_data_identificacao_hierarquia_de_data_has_divergencia_data_identificacao_ano": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia.data_identificacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.hierarquia_de_data"
+			          }
+			        },
+			        "divergencia.data_identificacao.ano": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.ano"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao.hierarquia_de_data"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.ano"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "hierarquia_de_data_have_anos3"
+			        }
+			      ]
+			    },
+			    "divergencia_data_identificacao_has_hierarquia_de_data": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia.data_identificacao": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao"
+			          }
+			        },
+			        "divergencia.data_identificacao.hierarquia_de_data": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao.hierarquia_de_data"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia.data_identificacao"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao.hierarquia_de_data"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "data_identificacaos_have_hierarquia_de_data"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_matriz_organizacional": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "matriz_organizacional": {
+			          "Target": {
+			            "Entity": "matriz_organizacional"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "matriz_organizacional"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_matriz_organizacionals"
+			        }
+			      ]
+			    },
+			    "divergencia_has_RH_ativo": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_RH_ativos"
+			        }
+			      ]
+			    },
+			    "divergencia_has_systur": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "systur": {
+			          "Target": {
+			            "Entity": "systur"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "systur"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_systurs"
+			        }
+			      ]
+			    },
+			    "divergencia_has_status": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.status": {
+			          "Target": {
+			            "Entity": "divergencia.status"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.status"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_statuses"
+			        }
+			      ]
+			    },
+			    "divergencia_has_cargo": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.cargo": {
+			          "Target": {
+			            "Entity": "divergencia.cargo"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.cargo"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_cargoes"
+			        }
+			      ]
+			    },
+			    "divergencia_has_departamento": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.departamento": {
+			          "Target": {
+			            "Entity": "divergencia.departamento"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.departamento"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_departamentos"
+			        }
+			      ]
+			    },
+			    "systur_has_total_usuários_SYSTUR": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur": {
+			          "Target": {
+			            "Entity": "systur"
+			          }
+			        },
+			        "systur.total_usuários_SYSTUR": {
+			          "Target": {
+			            "Entity": "systur.total_usuários_SYSTUR"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur"
+			            },
+			            "Object": {
+			              "Role": "systur.total_usuários_SYSTUR"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "systurs_have_total_usuários_SYSTUR"
+			        }
+			      ]
+			    },
+			    "systur_has_ultimo_acesso": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur": {
+			          "Target": {
+			            "Entity": "systur"
+			          }
+			        },
+			        "systur.ultimo_acesso": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "systurs_have_ultimo_acessos"
+			        }
+			      ]
+			    },
+			    "systur_has_data_criacao": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur": {
+			          "Target": {
+			            "Entity": "systur"
+			          }
+			        },
+			        "systur.data_criacao": {
+			          "Target": {
+			            "Entity": "systur.data_criacao"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur"
+			            },
+			            "Object": {
+			              "Role": "systur.data_criacao"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "systurs_have_data_criacaos"
+			        }
+			      ]
+			    },
+			    "systur_has_situacao": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur": {
+			          "Target": {
+			            "Entity": "systur"
+			          }
+			        },
+			        "systur.situacao": {
+			          "Target": {
+			            "Entity": "systur.situacao"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur"
+			            },
+			            "Object": {
+			              "Role": "systur.situacao"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "systurs_have_situacaos"
+			        }
+			      ]
+			    },
+			    "systur_has_perfil": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur": {
+			          "Target": {
+			            "Entity": "systur"
+			          }
+			        },
+			        "systur.perfil": {
+			          "Target": {
+			            "Entity": "systur.perfil"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur"
+			            },
+			            "Object": {
+			              "Role": "systur.perfil"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "systurs_have_perfils"
+			        }
+			      ]
+			    },
+			    "systur_has_nome": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur": {
+			          "Target": {
+			            "Entity": "systur"
+			          }
+			        },
+			        "systur.nome": {
+			          "Target": {
+			            "Entity": "systur.nome"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur"
+			            },
+			            "Object": {
+			              "Role": "systur.nome"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "systurs_have_nome"
+			        }
+			      ]
+			    },
+			    "systur_has_usuario": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur": {
+			          "Target": {
+			            "Entity": "systur"
+			          }
+			        },
+			        "systur.usuario": {
+			          "Target": {
+			            "Entity": "systur.usuario"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur"
+			            },
+			            "Object": {
+			              "Role": "systur.usuario"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "systurs_have_usuarios"
+			        }
+			      ]
+			    },
+			    "systur_has_sistema": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur": {
+			          "Target": {
+			            "Entity": "systur"
+			          }
+			        },
+			        "systur.sistema": {
+			          "Target": {
+			            "Entity": "systur.sistema"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur"
+			            },
+			            "Object": {
+			              "Role": "systur.sistema"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "systurs_have_sistemas"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_total_funcionários_ativos": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.total_funcionários_ativos": {
+			          "Target": {
+			            "Entity": "RH_ativo.total_funcionários_ativos"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.total_funcionários_ativos"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_total_funcionários_ativos"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_data_admissao": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.data_admissao": {
+			          "Target": {
+			            "Entity": "RH_ativo.data_admissao"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.data_admissao"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_data_admissaos"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_situacao": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.situacao": {
+			          "Target": {
+			            "Entity": "RH_ativo.situacao"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.situacao"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_situacaos"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_email": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.email": {
+			          "Target": {
+			            "Entity": "RH_ativo.email"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.email"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_emails"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_centro_custo": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.centro_custo": {
+			          "Target": {
+			            "Entity": "RH_ativo.centro_custo"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.centro_custo"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_centro_custos"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_departamento": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.departamento": {
+			          "Target": {
+			            "Entity": "RH_ativo.departamento"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.departamento"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_departamentos"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_cargo_descricao": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.cargo_descricao": {
+			          "Target": {
+			            "Entity": "RH_ativo.cargo_descricao"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.cargo_descricao"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_cargo_descricaos"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_cpf": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.cpf": {
+			          "Target": {
+			            "Entity": "RH_ativo.cpf"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.cpf"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_cpfs"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_nome": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.nome": {
+			          "Target": {
+			            "Entity": "RH_ativo.nome"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.nome"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_nome"
+			        }
+			      ]
+			    },
+			    "RH_ativo_has_matricula": {
+			      "Binding": {
+			        "ConceptualEntity": "RH_Ativos"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "RH_ativo": {
+			          "Target": {
+			            "Entity": "RH_ativo"
+			          }
+			        },
+			        "RH_ativo.matricula": {
+			          "Target": {
+			            "Entity": "RH_ativo.matricula"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "RH_ativo"
+			            },
+			            "Object": {
+			              "Role": "RH_ativo.matricula"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "RH_ativos_have_matriculas"
+			        }
+			      ]
+			    },
+			    "perfis_esperado_has_perfil": {
+			      "Binding": {
+			        "ConceptualEntity": "Perfis_Esperados"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "perfis_esperado": {
+			          "Target": {
+			            "Entity": "perfis_esperado"
+			          }
+			        },
+			        "perfis_esperado.perfil": {
+			          "Target": {
+			            "Entity": "perfis_esperado.perfil"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "perfis_esperado"
+			            },
+			            "Object": {
+			              "Role": "perfis_esperado.perfil"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "perfis_esperados_have_perfils"
+			        }
+			      ]
+			    },
+			    "perfis_esperado_has_sistema": {
+			      "Binding": {
+			        "ConceptualEntity": "Perfis_Esperados"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "perfis_esperado": {
+			          "Target": {
+			            "Entity": "perfis_esperado"
+			          }
+			        },
+			        "perfis_esperado.sistema": {
+			          "Target": {
+			            "Entity": "perfis_esperado.sistema"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "perfis_esperado"
+			            },
+			            "Object": {
+			              "Role": "perfis_esperado.sistema"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "perfis_esperados_have_sistemas"
+			        }
+			      ]
+			    },
+			    "perfis_esperado_has_centro_custo": {
+			      "Binding": {
+			        "ConceptualEntity": "Perfis_Esperados"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "perfis_esperado": {
+			          "Target": {
+			            "Entity": "perfis_esperado"
+			          }
+			        },
+			        "perfis_esperado.centro_custo": {
+			          "Target": {
+			            "Entity": "perfis_esperado.centro_custo"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "perfis_esperado"
+			            },
+			            "Object": {
+			              "Role": "perfis_esperado.centro_custo"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "perfis_esperados_have_centro_custos"
+			        }
+			      ]
+			    },
+			    "matriz_organizacional_has_centro_custo": {
+			      "Binding": {
+			        "ConceptualEntity": "Matriz_Organizacional"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "matriz_organizacional": {
+			          "Target": {
+			            "Entity": "matriz_organizacional"
+			          }
+			        },
+			        "matriz_organizacional.centro_custo": {
+			          "Target": {
+			            "Entity": "matriz_organizacional.centro_custo"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "matriz_organizacional"
+			            },
+			            "Object": {
+			              "Role": "matriz_organizacional.centro_custo"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "matriz_organizacionals_have_centro_custos"
+			        }
+			      ]
+			    },
+			    "matriz_organizacional_has_departamento": {
+			      "Binding": {
+			        "ConceptualEntity": "Matriz_Organizacional"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "matriz_organizacional": {
+			          "Target": {
+			            "Entity": "matriz_organizacional"
+			          }
+			        },
+			        "matriz_organizacional.departamento": {
+			          "Target": {
+			            "Entity": "matriz_organizacional.departamento"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "matriz_organizacional"
+			            },
+			            "Object": {
+			              "Role": "matriz_organizacional.departamento"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "matriz_organizacionals_have_departamentos"
+			        }
+			      ]
+			    },
+			    "matriz_organizacional_has_cargo_descricao": {
+			      "Binding": {
+			        "ConceptualEntity": "Matriz_Organizacional"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "matriz_organizacional": {
+			          "Target": {
+			            "Entity": "matriz_organizacional"
+			          }
+			        },
+			        "matriz_organizacional.cargo_descricao": {
+			          "Target": {
+			            "Entity": "matriz_organizacional.cargo_descricao"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "matriz_organizacional"
+			            },
+			            "Object": {
+			              "Role": "matriz_organizacional.cargo_descricao"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "matriz_organizacionals_have_cargo_descricaos"
+			        }
+			      ]
+			    },
+			    "matriz_organizacional_has_cargo_codigo": {
+			      "Binding": {
+			        "ConceptualEntity": "Matriz_Organizacional"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "matriz_organizacional": {
+			          "Target": {
+			            "Entity": "matriz_organizacional"
+			          }
+			        },
+			        "matriz_organizacional.cargo_codigo": {
+			          "Target": {
+			            "Entity": "matriz_organizacional.cargo_codigo"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "matriz_organizacional"
+			            },
+			            "Object": {
+			              "Role": "matriz_organizacional.cargo_codigo"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "matriz_organizacionals_have_cargo_codigos"
+			        }
+			      ]
+			    },
+			    "divergencia_has_resolvidas": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.resolvidas": {
+			          "Target": {
+			            "Entity": "divergencia.resolvidas"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.resolvidas"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have__resolvidas"
+			        }
+			      ]
+			    },
+			    "divergencia_has_sem_vínculo_RH": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.sem_vínculo_RH": {
+			          "Target": {
+			            "Entity": "divergencia.sem_vínculo_RH"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.sem_vínculo_RH"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_sem_vínculo_RH"
+			        }
+			      ]
+			    },
+			    "divergencia_has_perfis_inválidos": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.perfis_inválidos": {
+			          "Target": {
+			            "Entity": "divergencia.perfis_inválidos"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.perfis_inválidos"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_perfis_inválidos"
+			        }
+			      ]
+			    },
+			    "divergencia_has_total_divergências": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.total_divergências": {
+			          "Target": {
+			            "Entity": "divergencia.total_divergências"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.total_divergências"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_total_divergências"
+			        }
+			      ]
+			    },
+			    "divergencia_has_resolvida": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.resolvida": {
+			          "Target": {
+			            "Entity": "divergencia.resolvida"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.resolvida"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_resolvidas"
+			        }
+			      ]
+			    },
+			    "divergencia_has_data_identificacao": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.data_identificacao": {
+			          "Target": {
+			            "Entity": "divergencia.data_identificacao"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.data_identificacao"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_data_identificacaos"
+			        }
+			      ]
+			    },
+			    "divergencia_has_descricao": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.descricao": {
+			          "Target": {
+			            "Entity": "divergencia.descricao"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.descricao"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_descricaos"
+			        }
+			      ]
+			    },
+			    "divergencia_has_perfil_esperado": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.perfil_esperado": {
+			          "Target": {
+			            "Entity": "divergencia.perfil_esperado"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.perfil_esperado"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_perfil_esperados"
+			        }
+			      ]
+			    },
+			    "divergencia_has_perfil_encontrado": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.perfil_encontrado": {
+			          "Target": {
+			            "Entity": "divergencia.perfil_encontrado"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.perfil_encontrado"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_perfil_encontrados"
+			        }
+			      ]
+			    },
+			    "divergencia_has_nome_usuario": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.nome_usuario": {
+			          "Target": {
+			            "Entity": "divergencia.nome_usuario"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.nome_usuario"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_nome_usuarios"
+			        }
+			      ]
+			    },
+			    "divergencia_has_sistema": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.sistema": {
+			          "Target": {
+			            "Entity": "divergencia.sistema"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.sistema"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_sistemas"
+			        }
+			      ]
+			    },
+			    "divergencia_has_tipo": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.tipo": {
+			          "Target": {
+			            "Entity": "divergencia.tipo"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.tipo"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_tipos"
+			        }
+			      ]
+			    },
+			    "divergencia_has_id": {
+			      "Binding": {
+			        "ConceptualEntity": "Divergencias"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "divergencia": {
+			          "Target": {
+			            "Entity": "divergencia"
+			          }
+			        },
+			        "divergencia.id": {
+			          "Target": {
+			            "Entity": "divergencia.id"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Object": {
+			              "Role": "divergencia.id"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "divergencias_have_ids"
+			        },
+			        {
+			          "Name": {
+			            "Subject": {
+			              "Role": "divergencia"
+			            },
+			            "Name": {
+			              "Role": "divergencia.id"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "ids_are_names_IDs_of_divergencias"
+			        }
+			      ]
+			    },
+			    "systur_ultimo_acesso_trimestre_has_systur_ultimo_acesso_mê": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.ultimo_acesso.trimestre": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.trimestre"
+			          }
+			        },
+			        "systur.ultimo_acesso.mê": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.mê"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.trimestre"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "trimestres_have_mê3"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.mê"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_have_trimestres3"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.mê"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.trimestre"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_are_in_trimestres3"
+			        }
+			      ]
+			    },
+			    "systur_ultimo_acesso_mê_has_systur_ultimo_acesso_dia": {
+			      "Binding": {
+			        "ConceptualEntity": "SYSTUR"
+			      },
+			      "State": "Generated",
+			      "Roles": {
+			        "systur.ultimo_acesso.mê": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.mê"
+			          }
+			        },
+			        "systur.ultimo_acesso.dia": {
+			          "Target": {
+			            "Entity": "systur.ultimo_acesso.dia"
+			          }
+			        }
+			      },
+			      "Phrasings": [
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.mê"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.dia"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "mê_have_dias3"
+			        },
+			        {
+			          "Attribute": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.dia"
+			            },
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "dias_have_mê3"
+			        },
+			        {
+			          "Preposition": {
+			            "Subject": {
+			              "Role": "systur.ultimo_acesso.dia"
+			            },
+			            "Prepositions": [
+			              {
+			                "in": {
+			                  "State": "Generated"
+			                }
+			              }
+			            ],
+			            "Object": {
+			              "Role": "systur.ultimo_acesso.mê"
+			            }
+			          },
+			          "State": "Generated",
+			          "Weight": 0.99,
+			          "ID": "dias_are_in_mê3"
+			        }
+			      ]
+			    }
+			  },
+			  "Agents": {
+			    "Internal": {
+			      "Version": "1.1.0"
+			    }
+			  }
+			}
+		contentType: json
+

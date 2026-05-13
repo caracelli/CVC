@@ -1,682 +1,630 @@
 #!/usr/bin/env python3
 """
-Gera o report.json para CVC IAM Analytics — Fase 1.
+Gera o relatório CVC IAM Analytics no formato PBIR (Enhanced Report Format).
+Power BI Desktop 2.153 / PBIR schema 2.8  (abril 2026).
 Executar: python scripts/gerar_report_json.py
-Saída:    CVC_IAM_ANALYTICS/POWER_BI/CVC_IAM_Analytics.Report/report.json
 """
 
 import json
 import random
+import shutil
 import string
 from pathlib import Path
 
-# ── Helpers ────────────────────────────────────────────────────────────────
+SCHEMA_VISUAL = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json"
+SCHEMA_PAGE   = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json"
+SCHEMA_PAGES  = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/pagesMetadata/1.0.0/schema.json"
+SCHEMA_REPORT = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.2.0/schema.json"
+SCHEMA_VER    = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/versionMetadata/1.0.0/schema.json"
+
+
+# ── Primitive helpers ─────────────────────────────────────────────────────────
 
 def uid():
     chars = string.ascii_uppercase + string.digits
     return ''.join(random.choices(chars, k=20))
 
 
-def vc(x, y, z, w, h, cfg):
-    """Cria um visual container (wrapper obrigatório do PBIP)."""
+def bl(v):
+    return {"expr": {"Literal": {"Value": "true" if v else "false"}}}
+
+
+def num(n):
+    return {"expr": {"Literal": {"Value": f"{n}D"}}}
+
+
+def st(text):
+    return {"expr": {"Literal": {"Value": f"'{text}'"}}}
+
+
+def clr(hex_color):
+    # Visual-level color property: same expr/Literal pattern as strings/numbers
+    return {"expr": {"Literal": {"Value": f"'{hex_color}'"}}}
+
+
+def paint(hex_color):
+    # Page-level "paint" property (background/outspace) — PBI saves with solid.color wrapper
+    return {"solid": {"color": {"expr": {"Literal": {"Value": f"'{hex_color}'"}}}}}
+
+
+def col_field(entity, prop):
+    return {"Column": {"Expression": {"SourceRef": {"Entity": entity}}, "Property": prop}}
+
+
+def msr_field(entity, prop):
+    return {"Measure": {"Expression": {"SourceRef": {"Entity": entity}}, "Property": prop}}
+
+
+def proj(entity, prop, kind="Column"):
+    f = col_field(entity, prop) if kind == "Column" else msr_field(entity, prop)
+    return {"field": f, "queryRef": f"{entity}.{prop}", "active": True}
+
+
+def write_json(path: Path, data: dict):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def vfile(x, y, z, w, h, visual_def, filter_cfg=None):
+    name = uid()
+    v = {
+        "$schema": SCHEMA_VISUAL,
+        "name": name,
+        "position": {"x": x, "y": y, "z": z, "height": h, "width": w, "tabOrder": z},
+        "visual": visual_def,
+    }
+    if filter_cfg:
+        v["filterConfig"] = filter_cfg
+    return v
+
+
+# ── Decorative visuals ────────────────────────────────────────────────────────
+
+def shape_rect(x, y, z, w, h, fill, border=None, border_w=0):
+    bc = border or fill
+    return vfile(x, y, z, w, h, {
+        "visualType": "shape",
+        "objects": {
+            "fill": [{"properties": {
+                "show":      bl(True),
+                "fillColor": clr(fill),
+            }}],
+            "line": [{"properties": {
+                "show":      bl(True if border_w > 0 else False),
+                "lineColor": clr(bc),
+                "weight":    num(border_w),
+            }}],
+            "general": [{"properties": {"shapeType": st("rectangle")}}],
+        },
+    })
+
+
+def para(text, size_pt, bold=False, color="#000000", font="Segoe UI", align="Left"):
+    style = {"fontSize": f"{size_pt}pt", "fontFamily": font, "color": color}
+    if bold:
+        style["fontWeight"] = "Bold"
     return {
-        "x": x, "y": y, "z": z,
-        "width": w, "height": h,
-        "config": json.dumps(cfg, ensure_ascii=False),
-        "filters": "[]"
+        "textRuns": [{"value": text, "textRunStyle": style}],
+        "paragraphStyle": {"textAlignment": align},
     }
 
 
-def pos(x, y, z, w, h):
-    return [{"id": 0, "position": {
-        "x": x, "y": y, "z": z,
-        "width": w, "height": h,
-        "tabOrder": z
-    }}]
-
-
-# ── Primitivas visuais ─────────────────────────────────────────────────────
-
-def shape(x, y, z, w, h, fill, border_show=False, border_color="#E0E0E0", border_w=1):
-    return vc(x, y, z, w, h, {
-        "name": uid(),
-        "layouts": pos(x, y, z, w, h),
-        "singleVisual": {
-            "visualType": "shape",
-            "objects": {
-                "fill": [{"properties": {
-                    "fillColor": {"solid": {"color": {"expr": {"Literal": {"Value": f"'{fill}'"}}}}}
-                }}],
-                "line": [{"properties": {
-                    "show": {"expr": {"Literal": {"Value": "true" if border_show else "false"}}},
-                    "lineColor": {"solid": {"color": {"expr": {"Literal": {"Value": f"'{border_color}'"}}}}},
-                    "weight": {"expr": {"Literal": {"Value": f"{border_w}D"}}}
-                }}]
-            }
-        }
+def textbox(x, y, z, w, h, paragraphs):
+    return vfile(x, y, z, w, h, {
+        "visualType": "textbox",
+        "objects": {
+            "general": [{"properties": {"paragraphs": paragraphs}}],
+            "background": [{"properties": {"show": bl(False)}}],
+        },
     })
 
 
-def textbox(x, y, z, w, h, runs):
-    """
-    runs: lista de dicts — text, size, bold, color, italic, align
-    Cada dict vira um parágrafo independente.
-    """
-    paras = []
-    for r in runs:
-        paras.append({
-            "textRuns": [{
-                "value": r["text"],
-                "textStyle": {
-                    "fontFamily": "Segoe UI",
-                    "fontSize": str(r.get("size", 11)),
-                    "bold": r.get("bold", False),
-                    "italic": r.get("italic", False),
-                    "color": r.get("color", "#333333")
-                }
-            }],
-            "horizontalTextAlignment": r.get("align", "left")
-        })
-    return vc(x, y, z, w, h, {
-        "name": uid(),
-        "layouts": pos(x, y, z, w, h),
-        "singleVisual": {
-            "visualType": "textbox",
-            "objects": {"general": [{"properties": {
-                "paragraphs": json.dumps(paras, ensure_ascii=False)
-            }}]}
-        }
+# ── Data visuals ──────────────────────────────────────────────────────────────
+
+def card(x, y, z, w, h, entity, measure, font_color="#222222", reject_highlight=False):
+    fcfg = {"rejectHighlight": True} if reject_highlight else None
+    return vfile(x, y, z, w, h, {
+        "visualType": "card",
+        "query": {"queryState": {
+            "Values": {"projections": [proj(entity, measure, "Measure")]},
+        }},
+        "objects": {
+            "labels": [{"properties": {
+                "fontSize":   num(28),
+                "fontFamily": st("Segoe UI"),
+                "color":      clr(font_color),
+            }}],
+            "categoryLabels": [{"properties": {
+                "show":     bl(True),
+                "fontSize": num(10),
+                "color":    clr("#555555"),
+            }}],
+            "border":     [{"properties": {"show": bl(False)}}],
+            "title":      [{"properties": {"show": bl(False)}}],
+            "background": [{"properties": {"show": bl(False)}}],
+        },
+    }, fcfg)
+
+
+def slicer_tile(x, y, z, w, h, entity, column):
+    return vfile(x, y, z, w, h, {
+        "visualType": "slicer",
+        "query": {"queryState": {
+            "Values": {"projections": [proj(entity, column, "Column")]},
+        }},
+        "objects": {
+            "general":   [{"properties": {"orientation": st("Horizontal")}}],
+            "selection": [{"properties": {
+                "selectAllCheckboxEnabled": bl(True),
+                "singleSelect":            bl(False),
+            }}],
+        },
     })
 
 
-def card(x, y, z, w, h, table, measure, num_color, bg_color, label):
-    src = table[0].lower()
-    return vc(x, y, z, w, h, {
-        "name": uid(),
-        "layouts": pos(x, y, z, w, h),
-        "singleVisual": {
-            "visualType": "card",
-            "projections": {
-                "Values": [{"queryRef": f"{table}.{measure}", "active": True}]
-            },
-            "prototypeQuery": {
+def pivot_table(x, y, z, w, h, filter_type=None):
+    visual_def = {
+        "visualType": "pivotTable",
+        "query": {"queryState": {
+            "Rows": {"projections": [
+                proj("Divergencias", "usuario", "Column"),
+                proj("Divergencias", "id",      "Column"),
+            ]},
+            "Values": {"projections": [
+                proj("Divergencias", "nome_usuario",        "Column"),
+                proj("Divergencias", "matricula",           "Column"),
+                proj("Divergencias", "tipo",                "Column"),
+                proj("Divergencias", "perfil_encontrado",   "Column"),
+                proj("Divergencias", "perfil_esperado",     "Column"),
+                proj("Divergencias", "data_identificacao",  "Column"),
+                proj("Divergencias", "resolvida",           "Column"),
+            ]},
+        }},
+        "objects": {
+            "rowHeaders": [{"properties": {
+                "stepped":                  bl(True),
+                "steppedLayoutIndentation": num(20),
+                "fontColor":                clr("#FFFFFF"),
+                "background":               clr("#1F2D5C"),
+            }}],
+            "subTotals": [{"properties": {
+                "rowSubtotals":    bl(False),
+                "columnSubtotals": bl(False),
+            }}],
+            "columnHeaders": [{"properties": {
+                "fontColor":  clr("#FFFFFF"),
+                "background": clr("#1F2D5C"),
+                "fontBold":   bl(True),
+            }}],
+            "general": [{"properties": {"layout": st("Tabular")}}],
+        },
+    }
+    filter_cfg = None
+    if filter_type:
+        filter_cfg = {"filters": [{
+            "name": uid(),
+            "field": col_field("Divergencias", "tipo"),
+            "type": "Categorical",
+            "filter": {
                 "Version": 2,
-                "From": [{"Name": src, "Entity": table, "Type": 0}],
-                "Select": [{"Measure": {
-                    "Expression": {"SourceRef": {"Source": src}},
-                    "Property": measure
-                }, "Name": f"{table}.{measure}"}]
+                "From":  [{"Name": "d", "Entity": "Divergencias", "Type": 0}],
+                "Where": [{"Condition": {"In": {
+                    "Expressions": [{"Column": {
+                        "Expression": {"SourceRef": {"Source": "d"}},
+                        "Property": "tipo",
+                    }}],
+                    "Values": [[{"Literal": {"Value": f"'{filter_type}'"}}]],
+                }}}],
             },
-            "objects": {
-                "labels": [{"properties": {
-                    "color": {"solid": {"color": {"expr": {"Literal": {"Value": f"'{num_color}'"}}}}},
-                    "fontSize": {"expr": {"Literal": {"Value": "28D"}}},
-                    "fontFamily": {"expr": {"Literal": {"Value": "'Segoe UI'"}}}
-                }}],
-                "categoryLabels": [{"properties": {
-                    "show": {"expr": {"Literal": {"Value": "true"}}},
-                    "color": {"solid": {"color": {"expr": {"Literal": {"Value": "'#555555'"}}}}},
-                    "fontSize": {"expr": {"Literal": {"Value": "10D"}}}
-                }}],
-                "background": [{"properties": {
-                    "show": {"expr": {"Literal": {"Value": "true"}}},
-                    "color": {"solid": {"color": {"expr": {"Literal": {"Value": f"'{bg_color}'"}}}}}
-                }}],
-                "border": [{"properties": {"show": {"expr": {"Literal": {"Value": "false"}}}}}],
-                "title": [{"properties": {
-                    "show": {"expr": {"Literal": {"Value": "false"}}}
-                }}]
-            }
-        }
+            "howCreated": "User",
+        }]}
+    return vfile(x, y, z, w, h, visual_def, filter_cfg)
+
+
+def bar_chart_depto(x, y, z, w, h):
+    """Mini bar chart por departamento — para sidebar."""
+    return vfile(x, y, z, w, h, {
+        "visualType": "clusteredBarChart",
+        "query": {
+            "queryState": {
+                "Category": {"projections": [proj("RH_Ativos",    "departamento",      "Column")]},
+                "Y":        {"projections": [proj("Divergencias", "Total Divergências", "Measure")]},
+            },
+            "sortDefinition": {"sort": [{
+                "field":     msr_field("Divergencias", "Total Divergências"),
+                "direction": "Descending",
+            }]},
+        },
+        "objects": {
+            "title": [{"properties": {
+                "show":       bl(True),
+                "titleText":  st("Por Departamento"),
+                "fontFamily": st("Segoe UI"),
+                "fontSize":   num(10),
+                "fontBold":   bl(True),
+            }}],
+            "valueAxis":    [{"properties": {"show": bl(False)}}],
+            "categoryAxis": [{"properties": {"show": bl(True)}}],
+            "labels": [{"properties": {"show": bl(True), "fontSize": num(9)}}],
+            "background": [{"properties": {
+                "show":  bl(True),
+                "color": clr("#FFFFFF"),
+            }}],
+        },
+    }, {"rejectHighlight": True})
+
+
+def bar_chart_tipo(x, y, z, w, h):
+    return vfile(x, y, z, w, h, {
+        "visualType": "clusteredBarChart",
+        "query": {
+            "queryState": {
+                "Category": {"projections": [proj("Divergencias", "tipo",              "Column")]},
+                "Y":        {"projections": [proj("Divergencias", "Total Divergências", "Measure")]},
+            },
+            "sortDefinition": {"sort": [{
+                "field":     msr_field("Divergencias", "Total Divergências"),
+                "direction": "Descending",
+            }]},
+        },
+        "objects": {
+            "title": [{"properties": {
+                "show":       bl(True),
+                "titleText":  st("Divergencias por Tipo"),
+                "fontFamily": st("Segoe UI"),
+                "fontSize":   num(11),
+                "fontBold":   bl(True),
+            }}],
+            "valueAxis":    [{"properties": {"show": bl(True)}}],
+            "categoryAxis": [{"properties": {"show": bl(True)}}],
+            "labels": [{"properties": {"show": bl(True), "fontSize": num(9)}}],
+            "background": [{"properties": {
+                "show":  bl(True),
+                "color": clr("#FFFFFF"),
+            }}],
+        },
     })
 
 
-def slicer_tile(x, y, z, w, h, table, column):
-    src = table[0].lower()
-    return vc(x, y, z, w, h, {
-        "name": uid(),
-        "layouts": pos(x, y, z, w, h),
-        "singleVisual": {
-            "visualType": "slicer",
-            "projections": {
-                "Values": [{"queryRef": f"{table}.{column}", "active": True}]
-            },
-            "prototypeQuery": {
-                "Version": 2,
-                "From": [{"Name": src, "Entity": table, "Type": 0}],
-                "Select": [{"Column": {
-                    "Expression": {"SourceRef": {"Source": src}},
-                    "Property": column
-                }, "Name": f"{table}.{column}"}]
-            },
-            "objects": {
-                "general": [{"properties": {
-                    "orientation": {"expr": {"Literal": {"Value": "'Horizontal'"}}}
-                }}],
-                "selection": [{"properties": {
-                    "selectAllCheckboxEnabled": {"expr": {"Literal": {"Value": "true"}}},
-                    "singleSelect": {"expr": {"Literal": {"Value": "false"}}}
-                }}],
-                "items": [{"properties": {
-                    "fontColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#555555'"}}}}},
-                    "background": {"solid": {"color": {"expr": {"Literal": {"Value": "'#FFFFFF'"}}}}},
-                    "selectedColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#F5B800'"}}}}},
-                    "selectedFontColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#1F2D5C'"}}}}}
-                }}],
-                "background": [{"properties": {
-                    "show": {"expr": {"Literal": {"Value": "false"}}}
-                }}],
-                "border": [{"properties": {"show": {"expr": {"Literal": {"Value": "false"}}}}}]
-            }
-        }
+def donut_sistema(x, y, z, w, h):
+    return vfile(x, y, z, w, h, {
+        "visualType": "donutChart",
+        "query": {"queryState": {
+            "Category": {"projections": [proj("Divergencias", "sistema",            "Column")]},
+            "Y":        {"projections": [proj("Divergencias", "Total Divergências", "Measure")]},
+        }},
+        "objects": {
+            "title": [{"properties": {
+                "show":       bl(True),
+                "titleText":  st("Por Sistema"),
+                "fontFamily": st("Segoe UI"),
+                "fontSize":   num(11),
+                "fontBold":   bl(True),
+            }}],
+            "background": [{"properties": {
+                "show":  bl(True),
+                "color": clr("#FFFFFF"),
+            }}],
+            "legend": [{"properties": {"show": bl(True)}}],
+        },
     })
 
 
-def matrix_visual(x, y, z, w, h):
-    """Matrix com hierarquia usuario→id nas linhas e todos os campos nos valores."""
-    return vc(x, y, z, w, h, {
-        "name": uid(),
-        "layouts": pos(x, y, z, w, h),
-        "singleVisual": {
-            "visualType": "matrix",
-            "projections": {
-                "Rows": [
-                    {"queryRef": "Divergencias.usuario", "active": True},
-                    {"queryRef": "Divergencias.id",      "active": True}
-                ],
-                "Values": [
-                    {"queryRef": "RH_Ativos.nome",                   "active": True},
-                    {"queryRef": "Divergencias.matricula",           "active": True},
-                    {"queryRef": "RH_Ativos.departamento",           "active": True},
-                    {"queryRef": "RH_Ativos.cargo_descricao",        "active": True},
-                    {"queryRef": "Divergencias.tipo",                "active": True},
-                    {"queryRef": "Divergencias.perfil_encontrado",   "active": True},
-                    {"queryRef": "Divergencias.perfil_esperado",     "active": True},
-                    {"queryRef": "Divergencias.data_identificacao",  "active": True},
-                    {"queryRef": "Divergencias.resolvida",           "active": True}
-                ]
-            },
-            "prototypeQuery": {
-                "Version": 2,
-                "From": [
-                    {"Name": "d", "Entity": "Divergencias", "Type": 0},
-                    {"Name": "r", "Entity": "RH_Ativos",    "Type": 0}
-                ],
-                "Select": [
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "usuario"},           "Name": "Divergencias.usuario"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "id"},                "Name": "Divergencias.id"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "r"}}, "Property": "nome"},              "Name": "RH_Ativos.nome"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "matricula"},         "Name": "Divergencias.matricula"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "r"}}, "Property": "departamento"},      "Name": "RH_Ativos.departamento"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "r"}}, "Property": "cargo_descricao"},   "Name": "RH_Ativos.cargo_descricao"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "tipo"},              "Name": "Divergencias.tipo"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "perfil_encontrado"}, "Name": "Divergencias.perfil_encontrado"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "perfil_esperado"},   "Name": "Divergencias.perfil_esperado"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "data_identificacao"},"Name": "Divergencias.data_identificacao"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "resolvida"},         "Name": "Divergencias.resolvida"}
-                ]
-            },
-            "objects": {
-                "grid": [{"properties": {
-                    "gridVertical":          {"expr": {"Literal": {"Value": "false"}}},
-                    "gridHorizontalWeight":  {"expr": {"Literal": {"Value": "1D"}}},
-                    "outlineColor":          {"solid": {"color": {"expr": {"Literal": {"Value": "'#E0E0E0'"}}}}},
-                    "outlineWeight":         {"expr": {"Literal": {"Value": "1D"}}},
-                    "rowPadding":            {"expr": {"Literal": {"Value": "3D"}}}
-                }}],
-                "columnHeaders": [{"properties": {
-                    "fontColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#FFFFFF'"}}}}},
-                    "backColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#1F2D5C'"}}}}},
-                    "fontSize":  {"expr": {"Literal": {"Value": "10D"}}},
-                    "fontFamily":{"expr": {"Literal": {"Value": "'Segoe UI'"}}}
-                }}],
-                "rowHeaders": [{"properties": {
-                    "fontColor":               {"solid": {"color": {"expr": {"Literal": {"Value": "'#333333'"}}}}},
-                    "fontSize":                {"expr": {"Literal": {"Value": "11D"}}},
-                    "fontFamily":              {"expr": {"Literal": {"Value": "'Segoe UI'"}}},
-                    "stepped":                 {"expr": {"Literal": {"Value": "true"}}},
-                    "steppedLayoutIndentation":{"expr": {"Literal": {"Value": "20D"}}}
-                }}],
-                "values": [{"properties": {
-                    "fontColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#333333'"}}}}},
-                    "fontSize":  {"expr": {"Literal": {"Value": "11D"}}},
-                    "fontFamily":{"expr": {"Literal": {"Value": "'Segoe UI'"}}}
-                }}],
-                "subTotals": [{"properties": {
-                    "rowSubtotals":    {"expr": {"Literal": {"Value": "false"}}},
-                    "columnSubtotals": {"expr": {"Literal": {"Value": "false"}}}
-                }}],
-                "background": [{"properties": {
-                    "show":  {"expr": {"Literal": {"Value": "true"}}},
-                    "color": {"solid": {"color": {"expr": {"Literal": {"Value": "'#FFFFFF'"}}}}}
-                }}],
-                "border": [{"properties": {"show": {"expr": {"Literal": {"Value": "false"}}}}}],
-                "title": [{"properties": {
-                    "show":       {"expr": {"Literal": {"Value": "true"}}},
-                    "titleText":  {"expr": {"Literal": {"Value": "'Divergências — Detalhamento'"}}},
-                    "fontColor":  {"solid": {"color": {"expr": {"Literal": {"Value": "'#1F2D5C'"}}}}},
-                    "fontSize":   {"expr": {"Literal": {"Value": "12D"}}},
-                    "fontFamily": {"expr": {"Literal": {"Value": "'Segoe UI'"}}}
-                }}]
-            }
-        }
+def line_chart_evolucao(x, y, z, w, h):
+    return vfile(x, y, z, w, h, {
+        "visualType": "lineChart",
+        "query": {"queryState": {
+            "Category": {"projections": [proj("Divergencias", "data_identificacao", "Column")]},
+            "Y":        {"projections": [proj("Divergencias", "Total Divergências", "Measure")]},
+        }},
+        "objects": {
+            "title": [{"properties": {
+                "show":       bl(True),
+                "titleText":  st("Evolucao Historica"),
+                "fontFamily": st("Segoe UI"),
+                "fontSize":   num(11),
+                "fontBold":   bl(True),
+            }}],
+            "background": [{"properties": {
+                "show":  bl(True),
+                "color": clr("#FFFFFF"),
+            }}],
+        },
     })
 
 
 def table_detalhe(x, y, z, w, h):
-    """Tabela de detalhe — recebe cross-filter da Matrix."""
-    return vc(x, y, z, w, h, {
-        "name": uid(),
-        "layouts": pos(x, y, z, w, h),
-        "singleVisual": {
-            "visualType": "tableEx",
-            "projections": {
-                "Values": [
-                    {"queryRef": "Divergencias.tipo",               "active": True},
-                    {"queryRef": "Divergencias.perfil_encontrado",  "active": True},
-                    {"queryRef": "Divergencias.perfil_esperado",    "active": True},
-                    {"queryRef": "Divergencias.descricao",          "active": True},
-                    {"queryRef": "Divergencias.data_identificacao", "active": True},
-                    {"queryRef": "Divergencias.resolvida",          "active": True}
-                ]
-            },
-            "prototypeQuery": {
-                "Version": 2,
-                "From": [{"Name": "d", "Entity": "Divergencias", "Type": 0}],
-                "Select": [
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "tipo"},               "Name": "Divergencias.tipo"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "perfil_encontrado"},  "Name": "Divergencias.perfil_encontrado"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "perfil_esperado"},    "Name": "Divergencias.perfil_esperado"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "descricao"},          "Name": "Divergencias.descricao"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "data_identificacao"}, "Name": "Divergencias.data_identificacao"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "resolvida"},          "Name": "Divergencias.resolvida"}
-                ]
-            },
-            "objects": {
-                "grid": [{"properties": {
-                    "gridVertical":  {"expr": {"Literal": {"Value": "false"}}},
-                    "outlineColor":  {"solid": {"color": {"expr": {"Literal": {"Value": "'#E0E0E0'"}}}}}
-                }}],
-                "columnHeaders": [{"properties": {
-                    "fontColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#FFFFFF'"}}}}},
-                    "backColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#2C3E6B'"}}}}},
-                    "fontSize":  {"expr": {"Literal": {"Value": "9D"}}}
-                }}],
-                "values": [{"properties": {
-                    "fontSize":  {"expr": {"Literal": {"Value": "10D"}}},
-                    "backColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#F8FBFF'"}}}}}
-                }}],
-                "background": [{"properties": {
-                    "show":  {"expr": {"Literal": {"Value": "true"}}},
-                    "color": {"solid": {"color": {"expr": {"Literal": {"Value": "'#F8FBFF'"}}}}}
-                }}],
-                "border": [{"properties": {"show": {"expr": {"Literal": {"Value": "false"}}}}}],
-                "title": [{"properties": {
-                    "show":       {"expr": {"Literal": {"Value": "true"}}},
-                    "titleText":  {"expr": {"Literal": {"Value": "'Detalhe do Usuário Selecionado'"}}},
-                    "fontColor":  {"solid": {"color": {"expr": {"Literal": {"Value": "'#1F2D5C'"}}}}},
-                    "fontSize":   {"expr": {"Literal": {"Value": "11D"}}}
-                }}]
-            }
-        }
+    return vfile(x, y, z, w, h, {
+        "visualType": "tableEx",
+        "query": {"queryState": {"Values": {"projections": [
+            proj("Divergencias", "tipo",               "Column"),
+            proj("Divergencias", "perfil_encontrado",  "Column"),
+            proj("Divergencias", "perfil_esperado",    "Column"),
+            proj("Divergencias", "descricao",          "Column"),
+            proj("Divergencias", "data_identificacao", "Column"),
+            proj("Divergencias", "resolvida",          "Column"),
+        ]}}},
+        "objects": {
+            "title": [{"properties": {
+                "show":      bl(True),
+                "titleText": st("Detalhe da Divergencia Selecionada"),
+            }}],
+        },
     })
 
 
-def bar_chart_depto(x, y, z, w, h):
-    """Barras horizontais — divergências por departamento."""
-    return vc(x, y, z, w, h, {
-        "name": uid(),
-        "layouts": pos(x, y, z, w, h),
-        "singleVisual": {
-            "visualType": "clusteredBarChart",
-            "projections": {
-                "Category": [{"queryRef": "RH_Ativos.departamento",         "active": True}],
-                "Y":        [{"queryRef": "Divergencias.Total Divergências", "active": True}]
-            },
-            "prototypeQuery": {
-                "Version": 2,
-                "From": [
-                    {"Name": "r", "Entity": "RH_Ativos",    "Type": 0},
-                    {"Name": "d", "Entity": "Divergencias", "Type": 0}
-                ],
-                "Select": [
-                    {"Column":  {"Expression": {"SourceRef": {"Source": "r"}}, "Property": "departamento"},  "Name": "RH_Ativos.departamento"},
-                    {"Measure": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "Total Divergências"}, "Name": "Divergencias.Total Divergências"}
-                ],
-                "OrderBy": [{"Direction": 2, "Expression": {
-                    "Measure": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "Total Divergências"}
-                }}]
-            },
-            "objects": {
-                "dataPoint": [{"properties": {
-                    "defaultColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#2980B9'"}}}}}
-                }}],
-                "categoryAxis": [{"properties": {
-                    "show": {"expr": {"Literal": {"Value": "true"}}},
-                    "fontSize": {"expr": {"Literal": {"Value": "9D"}}}
-                }}],
-                "valueAxis": [{"properties": {"show": {"expr": {"Literal": {"Value": "false"}}}}}],
-                "labels": [{"properties": {
-                    "show": {"expr": {"Literal": {"Value": "true"}}},
-                    "fontSize": {"expr": {"Literal": {"Value": "9D"}}},
-                    "color": {"solid": {"color": {"expr": {"Literal": {"Value": "'#333333'"}}}}}
-                }}],
-                "background": [{"properties": {
-                    "show":  {"expr": {"Literal": {"Value": "true"}}},
-                    "color": {"solid": {"color": {"expr": {"Literal": {"Value": "'#FFFFFF'"}}}}}
-                }}],
-                "border": [{"properties": {"show": {"expr": {"Literal": {"Value": "false"}}}}}],
-                "title": [{"properties": {
-                    "show":       {"expr": {"Literal": {"Value": "true"}}},
-                    "titleText":  {"expr": {"Literal": {"Value": "'Por Departamento'"}}},
-                    "fontColor":  {"solid": {"color": {"expr": {"Literal": {"Value": "'#1F2D5C'"}}}}},
-                    "fontSize":   {"expr": {"Literal": {"Value": "10D"}}}
-                }}]
-            }
-        }
-    })
+# ── Layout constants ──────────────────────────────────────────────────────────
 
+# Header: Y=0, H=70
+# Nav bar: Y=70, H=40
+# Filter bar: Y=110, H=44  (label + slicer)
+# Content: Y=158 onwards
 
-def nav_button(x, y, z, w, h, label, target_page, active=False):
-    bg = '#F5B800' if active else '#EAECF0'
-    fc = '#1F2D5C' if active else '#555555'
-    return vc(x, y, z, w, h, {
-        "name": uid(),
-        "layouts": pos(x, y, z, w, h),
-        "singleVisual": {
-            "visualType": "actionButton",
-            "objects": {
-                "general": [{"properties": {
-                    "text": {"expr": {"Literal": {"Value": f"'{label}'"}}}
-                }}],
-                "background": [{"properties": {
-                    "show":  {"expr": {"Literal": {"Value": "true"}}},
-                    "color": {"solid": {"color": {"expr": {"Literal": {"Value": f"'{bg}'"}}}}}
-                }}],
-                "fontSettings": [{"properties": {
-                    "fontColor": {"solid": {"color": {"expr": {"Literal": {"Value": f"'{fc}'"}}}}},
-                    "fontSize":  {"expr": {"Literal": {"Value": "11D"}}},
-                    "fontFamily":{"expr": {"Literal": {"Value": "'Segoe UI'"}}},
-                    "bold": {"expr": {"Literal": {"Value": "true" if active else "false"}}}
-                }}],
-                "action": [{"properties": {
-                    "enable": {"expr": {"Literal": {"Value": "true"}}},
-                    "type":   {"expr": {"Literal": {"Value": "'PageNavigation'"}}},
-                    "navigationPage": {"expr": {"Literal": {"Value": f"'{target_page}'"}}}
-                }}]
-            }
-        }
-    })
+_HEADER_H  = 70
+_NAV_H     = 40
+_FILTER_H  = 44
+_CONTENT_Y = _HEADER_H + _NAV_H + _FILTER_H   # = 154
 
-
-# ── Header + abas comuns ───────────────────────────────────────────────────
-
-PAGES = [
-    ("ReportSection_VisaoGeral",    "Visão Geral"),
-    ("ReportSection_ListaDiv",      "Lista de Divergências"),
-    ("ReportSection_PerfisInv",     "Perfis Inválidos"),
-    ("ReportSection_SemVinculo",    "Sem Vínculo RH"),
+_NAV_PAGES = [
+    ("Visao Geral",         "ReportSection_VisaoGeral"),
+    ("Lista Divergencias",  "ReportSection_ListaDiv"),
+    ("Perfis Invalidos",    "ReportSection_PerfisInv"),
+    ("Sem Vinculo RH",      "ReportSection_SemVinculo"),
 ]
+_TAB_W   = 183
+_TAB_GAP = 4
+
+_SIDEBAR_W  = 210   # sidebar width
+_MAIN_X     = _SIDEBAR_W + 8   # main panel X start
+_MAIN_W     = 1440 - _MAIN_X - 8  # main panel width
 
 
-def header_visuals(active_label):
-    v = []
-    # Fundo da página
-    v.append(shape(0, 0, 100, 1440, 900, '#F2F4F7'))
-    # Header
-    v.append(shape(0, 0, 200, 1440, 70, '#1F2D5C'))
-    # Acento amarelo
-    v.append(shape(0, 0, 300, 6, 70, '#F5B800'))
-    # Título
-    v.append(textbox(26, 8, 400, 340, 30, [
-        {"text": "IAM Analytics", "size": 22, "bold": True, "color": "#FFFFFF"}
-    ]))
-    # Subtítulo
-    v.append(textbox(26, 38, 410, 500, 22, [
-        {"text": "Governança de Acessos — CVC Corp", "size": 11, "color": "#B0BEC5"}
-    ]))
-    # Referência
-    v.append(textbox(1080, 8, 420, 350, 22, [
-        {"text": "Referência: Maio / 2026", "size": 12, "bold": True, "color": "#F5B800", "align": "right"}
-    ]))
-    # Última atualização
-    v.append(textbox(1080, 34, 421, 350, 18, [
-        {"text": "Última atualização: 13/05/2026", "size": 9, "color": "#B0BEC5", "align": "right"}
-    ]))
-    # Abas de navegação
-    tab_x = 20
-    for page_name, label in PAGES:
-        v.append(nav_button(tab_x, 75, 500, 158, 36, label, page_name, label == active_label))
-        tab_x += 162
-    # Barra de filtro — fundo
-    v.append(shape(0, 111, 590, 1440, 42, '#EBEBEB'))
-    # Label filtro
-    v.append(textbox(20, 118, 700, 130, 28, [
-        {"text": "Filtrar por Sistema:", "size": 10, "bold": True, "color": "#333333"}
-    ]))
-    # Slicer de sistema
-    v.append(slicer_tile(152, 115, 800, 560, 36, 'SYSTUR', 'sistema'))
-    return v
+# ── Shared zones ──────────────────────────────────────────────────────────────
+
+def build_header(page_section):
+    title_map = {s: n for n, s in _NAV_PAGES}
+    page_label = title_map.get(page_section, "")
+    return [
+        # Blue header bar
+        shape_rect(0, 0, 100, 1440, _HEADER_H, "#1F2D5C"),
+        # Yellow left accent strip
+        shape_rect(0, 0, 110, 6, _HEADER_H, "#F5B800"),
+        # Title
+        textbox(18,  8, 120, 400, 28,
+                [para("IAM Analytics", 18, bold=True, color="#FFFFFF")]),
+        # Subtitle
+        textbox(18, 40, 120, 500, 20,
+                [para("Governanca de Acessos - CVC Corp", 10, color="#B0BEC5")]),
+        # Right: page indicator
+        textbox(1090,  8, 120, 330, 28,
+                [para(page_label, 13, bold=True, color="#F5B800", align="Right")]),
+        # Right: date ref
+        textbox(1090, 40, 120, 330, 20,
+                [para("Referencia: Abril / 2026", 9, color="#B0BEC5", align="Right")]),
+    ]
 
 
-# ── Páginas ────────────────────────────────────────────────────────────────
+def build_nav(active_section):
+    visuals = [
+        # Gray nav background
+        shape_rect(0, _HEADER_H, 200, 1440, _NAV_H, "#EAECF0"),
+    ]
+    x = 16
+    for name, section in _NAV_PAGES:
+        active = (section == active_section)
+        bg = "#F5B800" if active else "#FFFFFF"
+        fc = "#1F2D5C" if active else "#555555"
+        visuals.append(shape_rect(x, _HEADER_H + 4, 210, _TAB_W, _NAV_H - 8, bg))
+        visuals.append(textbox(
+            x, _HEADER_H + 6, 220, _TAB_W, _NAV_H - 12,
+            [para(name, 10, bold=active, color=fc, align="Center")],
+        ))
+        x += _TAB_W + _TAB_GAP
+    return visuals
+
+
+def build_filter():
+    fy = _HEADER_H + _NAV_H
+    return [
+        shape_rect(0, fy, 300, 1440, _FILTER_H, "#F2F4F7"),
+        textbox(16, fy + 12, 310, 100, 22,
+                [para("Filtrar por Sistema:", 10, bold=True, color="#333333")]),
+        slicer_tile(120, fy + 8, 320, 1100, 30, "Divergencias", "sistema"),
+    ]
+
+
+def make_page_json(name, display_name):
+    return {
+        "$schema":       SCHEMA_PAGE,
+        "name":          name,
+        "displayName":   display_name,
+        "displayOption": "ActualSize",
+        "height": 900,
+        "width":  1440,
+        "objects": {
+            "background": [{"properties": {"color": paint("#F2F4F7")}}],
+        },
+    }
+
+
+# ── Page: Lista de Divergências (primary — matches mockup) ────────────────────
 
 def page_lista_divergencias():
-    v = header_visuals("Lista de Divergências")
+    """
+    Layout fiel ao mockup:
+      Sidebar (210px): 5 KPI cards + mini bar chart departamento
+      Main panel: pivot table + detail table below
+    """
+    v = build_header("ReportSection_ListaDiv")
+    v += build_nav("ReportSection_ListaDiv")
+    v += build_filter()
 
-    # ── Sidebar ──
-    sidebar_cards = [
-        ('RH_Ativos',    'Total Funcionários Ativos', '#2980B9', '#EBF5FB', 'Funcionários Ativos'),
-        ('SYSTUR',       'Total Usuários SYSTUR',     '#2471A3', '#EBF5FB', 'Usuários SYSTUR'),
-        ('Divergencias', 'Perfis Inválidos',           '#E67E22', '#FEF3E2', 'Perfis Inválidos'),
-        ('Divergencias', 'Sem Vínculo RH',             '#7D3C98', '#F5EEF8', 'Sem Vínculo RH'),
-        ('Divergencias', '% Resolvidas',               '#1E8449', '#EAFAF1', '% Resolvidas'),
+    page_h  = 900
+    avail_h = page_h - _CONTENT_Y   # 746
+
+    # ── SIDEBAR ──────────────────────────────────────────────────────────────
+    # White background for sidebar
+    v.append(shape_rect(0, _CONTENT_Y, 350, _SIDEBAR_W, avail_h, "#FFFFFF",
+                        "#E0E0E0", 1))
+
+    cards_cfg = [
+        ("RH_Ativos",    "Total Funcionários Ativos", "#2980B9", "#EBF5FB", "#D5E8F5"),
+        ("SYSTUR",       "Total Usuários SYSTUR",     "#2471A3", "#EBF5FB", "#D5E8F5"),
+        ("Divergencias", "Perfis Inválidos",           "#E67E22", "#FEF3E2", "#F9D5A7"),
+        ("Divergencias", "Sem Vínculo RH",             "#7D3C98", "#F5EEF8", "#D7BDE2"),
+        ("Divergencias", "Total Divergências",         "#1E8449", "#EAFAF1", "#A9DFBF"),
     ]
-    card_y = 160
-    for tbl, msr, nc, bg, lbl in sidebar_cards:
-        v.append(card(20, card_y, 900, 196, 76, tbl, msr, nc, bg, lbl))
-        card_y += 84
+    cy = _CONTENT_Y + 10
+    for entity, msr, fc, bg, border in cards_cfg:
+        v.append(shape_rect(6, cy, 360, _SIDEBAR_W - 12, 72, bg, border, 1))
+        # Left colored accent bar on card
+        v.append(shape_rect(6, cy, 365, 4, 72, fc))
+        v.append(card(10, cy, 370, _SIDEBAR_W - 16, 72, entity, msr, fc, reject_highlight=True))
+        cy += 80
 
-    # Barra de acento esquerda dos cards (4px amarelo)
-    for i in range(len(sidebar_cards)):
-        v.append(shape(20, 160 + i * 84, 901, 4, 76, '#F5B800'))
+    # Mini bar chart (Por Departamento) — fills remaining sidebar space
+    chart_y = cy + 6
+    chart_h = page_h - chart_y - 10
+    if chart_h > 60:
+        v.append(shape_rect(6, chart_y, 360, _SIDEBAR_W - 12, chart_h,
+                            "#FFFFFF", "#E0E0E0", 1))
+        v.append(bar_chart_depto(6, chart_y, 370, _SIDEBAR_W - 12, chart_h))
 
-    # Gráfico de barras por departamento
-    v.append(bar_chart_depto(20, card_y + 4, 910, 196, 900 - card_y - 4 - 16))
+    # ── MAIN PANEL ───────────────────────────────────────────────────────────
+    main_top    = _CONTENT_Y
+    detail_h    = 160
+    detail_gap  = 8
+    matrix_h    = avail_h - detail_h - detail_gap - 10
+    detail_y    = main_top + matrix_h + detail_gap
+    main_w      = 1440 - _MAIN_X - 6
 
-    # ── Main panel ──
-    main_x, main_w = 228, 1192
+    # White background main panel
+    v.append(shape_rect(_MAIN_X - 2, main_top, 350, main_w + 4, avail_h - 4,
+                        "#FFFFFF", "#E0E0E0", 1))
 
-    # Título da seção (caixa de texto acima da matrix)
-    v.append(textbox(main_x, 156, 950, 400, 20, [
-        {"text": "Divergências — Detalhamento", "size": 13, "bold": True, "color": "#1F2D5C"}
-    ]))
+    # Main pivot table (expandable matrix)
+    v.append(pivot_table(_MAIN_X, main_top + 4, 400, main_w, matrix_h))
 
-    # Matrix principal (usuario → id)
-    v.append(matrix_visual(main_x, 178, 1000, main_w, 530))
+    # Detail table (cross-filter)
+    v.append(shape_rect(_MAIN_X - 2, detail_y, 350, main_w + 4, detail_h,
+                        "#FFFFFF", "#E0E0E0", 1))
+    v.append(table_detalhe(_MAIN_X, detail_y + 4, 410, main_w, detail_h - 4))
 
-    # Acento amarelo — separador do painel de detalhe
-    v.append(shape(main_x, 714, 1090, main_w, 3, '#F5B800'))
+    return "ReportSection_ListaDiv", "Lista de Divergências", v
 
-    # Tabela de detalhe
-    v.append(table_detalhe(main_x, 718, 1100, main_w, 164))
 
-    return {
-        "name":          "ReportSection_ListaDiv",
-        "displayName":   "Lista de Divergências",
-        "config":        json.dumps({"defaultDrillFilterOtherVisuals": True}, ensure_ascii=False),
-        "displayOption": 0,
-        "width":  1440,
-        "height":  900,
-        "visualContainers": v
-    }
-
+# ── Page: Visão Geral ─────────────────────────────────────────────────────────
 
 def page_visao_geral():
-    v = header_visuals("Visão Geral")
+    v = build_header("ReportSection_VisaoGeral")
+    v += build_nav("ReportSection_VisaoGeral")
+    v += build_filter()
 
-    # KPI cards em linha (5 cards)
+    avail_h = 900 - _CONTENT_Y  # 746
+
+    # 5 KPI cards row
     cards_cfg = [
-        ('RH_Ativos',    'Total Funcionários Ativos', '#2980B9', '#EBF5FB', 'Funcionários Ativos'),
-        ('SYSTUR',       'Total Usuários SYSTUR',     '#2471A3', '#EBF5FB', 'Usuários SYSTUR'),
-        ('Divergencias', 'Perfis Inválidos',           '#E67E22', '#FEF3E2', 'Perfis Inválidos'),
-        ('Divergencias', 'Sem Vínculo RH',             '#7D3C98', '#F5EEF8', 'Sem Vínculo RH'),
-        ('Divergencias', '% Resolvidas',               '#1E8449', '#EAFAF1', '% Resolvidas'),
+        ("RH_Ativos",    "Total Funcionários Ativos", "#2980B9", "#EBF5FB", "#D5E8F5"),
+        ("SYSTUR",       "Total Usuários SYSTUR",     "#2471A3", "#EBF5FB", "#D5E8F5"),
+        ("Divergencias", "Perfis Inválidos",           "#E67E22", "#FEF3E2", "#F9D5A7"),
+        ("Divergencias", "Sem Vínculo RH",             "#7D3C98", "#F5EEF8", "#D7BDE2"),
+        ("Divergencias", "Total Divergências",         "#1E8449", "#EAFAF1", "#A9DFBF"),
     ]
-    cx = 20
-    for tbl, msr, nc, bg, lbl in cards_cfg:
-        v.append(card(cx, 162, 900, 270, 90, tbl, msr, nc, bg, lbl))
-        v.append(shape(cx, 162, 901, 4, 90, {
-            '#2980B9': '#2980B9', '#2471A3': '#2471A3',
-            '#E67E22': '#E67E22', '#7D3C98': '#7D3C98', '#1E8449': '#1E8449'
-        }[nc]))
-        cx += 280
+    cw = 270
+    cx = 12
+    cy = _CONTENT_Y + 6
+    for entity, msr, fc, bg, border in cards_cfg:
+        v.append(shape_rect(cx, cy, 490, cw, 84, bg, border, 1))
+        v.append(shape_rect(cx, cy, 495, 4, 84, fc))
+        v.append(card(cx + 4, cy, 500, cw - 4, 84, entity, msr, fc, reject_highlight=True))
+        cx += cw + 8
 
-    # Gráfico de barras por departamento
-    v.append(bar_chart_depto(20, 270, 950, 430, 300))
+    # 3 charts row
+    chart_y = cy + 84 + 10
+    chart_h = 205
+    v.append(shape_rect(12,  chart_y, 590, 430, chart_h, "#FFFFFF", "#E0E0E0", 1))
+    v.append(bar_chart_tipo(  12,  chart_y, 600, 430, chart_h))
+    v.append(shape_rect(452, chart_y, 590, 300, chart_h, "#FFFFFF", "#E0E0E0", 1))
+    v.append(donut_sistema(   452, chart_y, 600, 300, chart_h))
+    v.append(shape_rect(762, chart_y, 590, 658, chart_h, "#FFFFFF", "#E0E0E0", 1))
+    v.append(line_chart_evolucao(762, chart_y, 600, 658, chart_h))
 
-    return {
-        "name":          "ReportSection_VisaoGeral",
-        "displayName":   "Visão Geral",
-        "config":        json.dumps({"defaultDrillFilterOtherVisuals": True}, ensure_ascii=False),
-        "displayOption": 0,
-        "width":  1440,
-        "height":  900,
-        "visualContainers": v
-    }
+    # Matrix fills remaining space
+    matrix_y = chart_y + chart_h + 10
+    matrix_h = 900 - matrix_y - 8
+    if matrix_h > 100:
+        v.append(pivot_table(12, matrix_y, 700, 1416, matrix_h))
+
+    return "ReportSection_VisaoGeral", "Visão Geral", v
 
 
-def page_skeleton(section_name, display_name, filter_type=None):
-    """Páginas de detalhe por tipo — header + slicer + matrix filtrada."""
-    v = header_visuals(display_name)
+# ── Page: Skeleton (pre-filtered) ────────────────────────────────────────────
 
-    # Matrix filtrada (o filtro de tipo é aplicado no campo filters do container)
-    filters = "[]"
-    if filter_type:
-        f = [{
-            "name": uid(),
-            "type": "Categorical",
-            "expression": {
-                "Column": {
-                    "Expression": {"SourceRef": {"Table": "Divergencias"}},
-                    "Property": "tipo"
-                }
-            },
-            "filter": {
-                "Version": 2,
-                "From": [{"Name": "d", "Entity": "Divergencias", "Type": 0}],
-                "Where": [{"Condition": {"In": {
-                    "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "tipo"}}],
-                    "Values": [[{"Literal": {"Value": f"'{filter_type}'"}}]]
-                }}}]
-            }
-        }]
-        filters = json.dumps(f, ensure_ascii=False)
+def page_skeleton(section_name, display_name, filter_type):
+    v = build_header(section_name)
+    v += build_nav(section_name)
+    v += build_filter()
 
-    mx = vc(228, 162, 1000, 1192, 560, {
-        "name": uid(),
-        "layouts": pos(228, 162, 1000, 1192, 560),
-        "singleVisual": {
-            "visualType": "matrix",
-            "projections": {
-                "Rows": [
-                    {"queryRef": "Divergencias.usuario", "active": True},
-                    {"queryRef": "Divergencias.id",      "active": True}
-                ],
-                "Values": [
-                    {"queryRef": "RH_Ativos.nome",                  "active": True},
-                    {"queryRef": "Divergencias.matricula",          "active": True},
-                    {"queryRef": "RH_Ativos.departamento",          "active": True},
-                    {"queryRef": "Divergencias.tipo",               "active": True},
-                    {"queryRef": "Divergencias.perfil_encontrado",  "active": True},
-                    {"queryRef": "Divergencias.perfil_esperado",    "active": True},
-                    {"queryRef": "Divergencias.data_identificacao", "active": True},
-                    {"queryRef": "Divergencias.resolvida",          "active": True}
-                ]
-            },
-            "prototypeQuery": {
-                "Version": 2,
-                "From": [
-                    {"Name": "d", "Entity": "Divergencias", "Type": 0},
-                    {"Name": "r", "Entity": "RH_Ativos",    "Type": 0}
-                ],
-                "Select": [
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "usuario"},           "Name": "Divergencias.usuario"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "id"},                "Name": "Divergencias.id"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "r"}}, "Property": "nome"},              "Name": "RH_Ativos.nome"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "matricula"},         "Name": "Divergencias.matricula"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "r"}}, "Property": "departamento"},      "Name": "RH_Ativos.departamento"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "tipo"},              "Name": "Divergencias.tipo"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "perfil_encontrado"}, "Name": "Divergencias.perfil_encontrado"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "perfil_esperado"},   "Name": "Divergencias.perfil_esperado"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "data_identificacao"},"Name": "Divergencias.data_identificacao"},
-                    {"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "resolvida"},         "Name": "Divergencias.resolvida"}
-                ]
-            },
-            "objects": {
-                "columnHeaders": [{"properties": {
-                    "fontColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#FFFFFF'"}}}}},
-                    "backColor": {"solid": {"color": {"expr": {"Literal": {"Value": "'#1F2D5C'"}}}}},
-                    "fontSize":  {"expr": {"Literal": {"Value": "10D"}}}
-                }}],
-                "rowHeaders": [{"properties": {
-                    "stepped": {"expr": {"Literal": {"Value": "true"}}},
-                    "steppedLayoutIndentation": {"expr": {"Literal": {"Value": "20D"}}}
-                }}],
-                "subTotals": [{"properties": {
-                    "rowSubtotals":    {"expr": {"Literal": {"Value": "false"}}},
-                    "columnSubtotals": {"expr": {"Literal": {"Value": "false"}}}
-                }}],
-                "background": [{"properties": {
-                    "show": {"expr": {"Literal": {"Value": "true"}}},
-                    "color": {"solid": {"color": {"expr": {"Literal": {"Value": "'#FFFFFF'"}}}}}
-                }}]
-            }
-        }
+    avail_h = 900 - _CONTENT_Y - 8
+    v.append(pivot_table(8, _CONTENT_Y + 4, 400, 1424, avail_h, filter_type))
+
+    return section_name, display_name, v
+
+
+# ── Writer ────────────────────────────────────────────────────────────────────
+
+def write_report(report_dir: Path):
+    pages_dir = report_dir / "definition" / "pages"
+
+    legacy = report_dir / "report.json"
+    if legacy.exists():
+        legacy.unlink()
+        print("  removido: report.json (PBIR-Legacy)")
+
+    if pages_dir.exists():
+        shutil.rmtree(pages_dir)
+
+    write_json(report_dir / "definition" / "report.json", {
+        "$schema": SCHEMA_REPORT,
+        "themeCollection": {},
     })
-    mx["filters"] = filters
-    v.append(mx)
+    write_json(report_dir / "definition" / "version.json", {
+        "$schema": SCHEMA_VER,
+        "version": "2.0.0",
+    })
 
-    return {
-        "name":          section_name,
-        "displayName":   display_name,
-        "config":        json.dumps({"defaultDrillFilterOtherVisuals": True}, ensure_ascii=False),
-        "displayOption": 0,
-        "width":  1440,
-        "height":  900,
-        "visualContainers": v
-    }
+    pages_data = [
+        page_lista_divergencias(),   # active page first — matches mockup
+        page_visao_geral(),
+        page_skeleton("ReportSection_PerfisInv",  "Perfis Inválidos", "PERFIL_INVALIDO"),
+        page_skeleton("ReportSection_SemVinculo", "Sem Vínculo RH",   "ACESSO_SEM_VINCULO_RH"),
+    ]
 
+    page_order = []
+    total_v = 0
+    for section_name, display_name, visuals in pages_data:
+        page_dir = pages_dir / section_name
+        write_json(page_dir / "page.json", make_page_json(section_name, display_name))
+        for vis in visuals:
+            write_json(page_dir / "visuals" / vis["name"] / "visual.json", vis)
+        page_order.append(section_name)
+        total_v += len(visuals)
+        print(f"    [{display_name}]  {len(visuals)} visuais")
 
-# ── Main ───────────────────────────────────────────────────────────────────
+    write_json(pages_dir / "pages.json", {
+        "$schema": SCHEMA_PAGES,
+        "pageOrder": page_order,
+        "activePageName": page_order[0],
+    })
+
+    print(f"\nPBIR gerado -> {report_dir / 'definition'}")
+    print(f"  {len(pages_data)} paginas  |  {total_v} visuais no total")
+
 
 def main():
-    report = {
-        "config": json.dumps({
-            "version": "5.37",
-            "themeCollection": {},
-            "activeSectionIndex": 1,
-            "linguisticSchemaSyncVersion": 2
-        }, ensure_ascii=False),
-        "layoutOptimization": 0,
-        "report": {},
-        "sections": [
-            page_visao_geral(),
-            page_lista_divergencias(),
-            page_skeleton("ReportSection_PerfisInv",  "Perfis Inválidos",  "PERFIL_INVALIDO"),
-            page_skeleton("ReportSection_SemVinculo", "Sem Vínculo RH",    "ACESSO_SEM_VINCULO_RH"),
-        ]
-    }
-
-    out = Path(__file__).parent.parent / \
-          "CVC_IAM_ANALYTICS/POWER_BI/CVC_IAM_Analytics.Report/report.json"
-    out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    total_v = sum(len(s["visualContainers"]) for s in report["sections"])
-    print(f"report.json gerado -> {out}")
-    print(f"  {len(report['sections'])} páginas  |  {total_v} visuais no total")
-    for s in report["sections"]:
-        print(f"    [{s['displayName']}]  {len(s['visualContainers'])} visuais")
+    report_dir = (Path(__file__).parent.parent /
+                  "CVC_IAM_ANALYTICS/POWER_BI/CVC_IAM_Analytics.Report")
+    write_report(report_dir)
 
 
 if __name__ == "__main__":

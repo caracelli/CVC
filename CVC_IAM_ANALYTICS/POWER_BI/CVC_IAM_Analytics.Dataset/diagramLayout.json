@@ -62,19 +62,6 @@
         },
         {
           "location": {
-            "x": 1420.3616394153598,
-            "y": 35.467445411327674
-          },
-          "nodeIndex": "RH_Desligados",
-          "nodeLineageTag": "ba774991-49c3-49ea-bb79-326634db804e",
-          "size": {
-            "height": 248,
-            "width": 234
-          },
-          "zIndex": 0
-        },
-        {
-          "location": {
             "x": 618.36163941535983,
             "y": -3.7401165449073233
           },

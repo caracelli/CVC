@@ -30,6 +30,10 @@ table Divergencias
 		formatString: 0.0%
 		lineageTag: dffa7e5b-00ce-4544-8eb2-37bd5e491bb5
 
+	measure 'Qtd Divergencias' = IF(COUNTROWS(Divergencias) > 1, COUNTROWS(Divergencias), BLANK())
+		formatString: 0
+		lineageTag: b720879a-11c8-4e73-8b67-3ea82f1c6131
+
 	column id
 		dataType: string
 		lineageTag: efbdd1d4-843b-4f3d-bc17-05446eab38af
@@ -109,6 +113,11 @@ table Divergencias
 		summarizeBy: none
 		sourceColumn: data_identificacao
 
+		variation Variation
+			isDefault
+			relationship: 714ed863-4468-4154-85c2-2336a4ef2e99
+			defaultHierarchy: LocalDateTable_bc4ba6c0-a429-4f32-b4c7-25413cee06b1.'Hierarquia de datas'
+
 		annotation SummarizationSetBy = Automatic
 
 	column resolvida
@@ -118,6 +127,31 @@ table Divergencias
 		sourceColumn: resolvida
 
 		annotation SummarizationSetBy = Automatic
+
+	column Departamento = LOOKUPVALUE(RH_Ativos[departamento], RH_Ativos[matricula], Divergencias[matricula])
+		lineageTag: d99f0aa9-9ece-4459-a96e-71cb132a5898
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column Cargo = LOOKUPVALUE(RH_Ativos[cargo_descricao], RH_Ativos[matricula], Divergencias[matricula])
+		lineageTag: 6c624489-6064-474a-8847-69a3dcaff712
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column Status = IF(Divergencias[resolvida], "Resolvida", "Pendente")
+		lineageTag: be7a013e-a47a-4e3e-8d19-8c51c0cf1df8
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy 'id Hierarquia'
+		lineageTag: 4ba6c058-f83e-428c-8f03-e984c4cf2540
+
+		level id
+			lineageTag: 5f0ee8b2-97a3-42d3-9cf0-a7ab9e71f7a8
+			column: id
 
 	partition Divergencias = m
 		mode: import

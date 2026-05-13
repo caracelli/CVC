@@ -10,9 +10,18 @@ annotation PBI_QueryOrder = ["Divergencias","Matriz_Organizacional","Perfis_Espe
 
 annotation PBI_ProTooling = ["DevMode"]
 
+annotation __PBI_TimeIntelligenceEnabled = 1
+
 ref table Divergencias
 ref table Matriz_Organizacional
 ref table Perfis_Esperados
 ref table RH_Ativos
 ref table SYSTUR
+ref table DateTableTemplate_c549ed8f-7295-46bb-9b1b-3bf6523c6f6e
+ref table LocalDateTable_bc4ba6c0-a429-4f32-b4c7-25413cee06b1
+ref table LocalDateTable_c9cb0704-30cc-4c45-bac0-34ba7e790d1a
+ref table LocalDateTable_b1557029-40b9-495a-8587-2b6b164b6248
+ref table LocalDateTable_372f1c96-8535-48a0-89fc-f75de50e0f5c
+
+ref cultureInfo pt-BR
 

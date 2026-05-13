@@ -1,0 +1,122 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "a1544b8b0f9af19d26b3",
+  "displayName": "Lista de Divergências",
+  "displayOption": "FitToPage",
+  "height": 900,
+  "width": 1440,
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "15c3cbfeeb4edd6c8c40",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Divergencias"
+              }
+            },
+            "Property": "sistema"
+          }
+        },
+        "type": "Categorical",
+        "filter": {
+          "Version": 2,
+          "From": [
+            {
+              "Name": "d",
+              "Entity": "Divergencias",
+              "Type": 0
+            }
+          ],
+          "Where": [
+            {
+              "Condition": {
+                "In": {
+                  "Expressions": [
+                    {
+                      "Column": {
+                        "Expression": {
+                          "SourceRef": {
+                            "Source": "d"
+                          }
+                        },
+                        "Property": "sistema"
+                      }
+                    }
+                  ],
+                  "Values": [
+                    [
+                      {
+                        "Literal": {
+                          "Value": "'SYSTUR'"
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "howCreated": "User"
+      }
+    ]
+  },
+  "objects": {
+    "background": [
+      {
+        "properties": {
+          "color": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "Literal": {
+                    "Value": "'#F2F4F7'"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "visualInteractions": [
+    {
+      "source": "1c9f7512464e1e037795",
+      "target": "ae6549559053b9ce9443",
+      "type": "NoFilter"
+    },
+    {
+      "source": "1c9f7512464e1e037795",
+      "target": "67479e344e601b5f34d6",
+      "type": "NoFilter"
+    },
+    {
+      "source": "1c9f7512464e1e037795",
+      "target": "c9e83554153cd29bda1c",
+      "type": "NoFilter"
+    },
+    {
+      "source": "1c9f7512464e1e037795",
+      "target": "2c7a21b845b9fb52f18b",
+      "type": "NoFilter"
+    },
+    {
+      "source": "1c9f7512464e1e037795",
+      "target": "4c8ab32dd8b593f123bd",
+      "type": "NoFilter"
+    },
+    {
+      "source": "1c9f7512464e1e037795",
+      "target": "1e2831c5ffdaf04fd466",
+      "type": "NoFilter"
+    },
+    {
+      "source": "1c9f7512464e1e037795",
+      "target": "e4e0039151e8e37b2653",
+      "type": "NoFilter"
+    }
+  ]
+}

@@ -1,14 +1,37 @@
 relationship d_systur
 	crossFilteringBehavior: bothDirections
+	toCardinality: many
 	fromColumn: Divergencias.usuario
 	toColumn: SYSTUR.usuario
 
-relationship d_rh_ativos
-	crossFilteringBehavior: bothDirections
-	fromColumn: Divergencias.matricula
-	toColumn: RH_Ativos.matricula
-
 relationship rh_ativos_matriz
+	crossFilteringBehavior: bothDirections
+	toCardinality: many
 	fromColumn: RH_Ativos.cargo_codigo
 	toColumn: Matriz_Organizacional.cargo_codigo
+
+relationship 714ed863-4468-4154-85c2-2336a4ef2e99
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Divergencias.data_identificacao
+	toColumn: LocalDateTable_bc4ba6c0-a429-4f32-b4c7-25413cee06b1.Date
+
+relationship b39cc764-279d-4342-bfeb-6ea3dade8335
+	joinOnDateBehavior: datePartOnly
+	fromColumn: RH_Ativos.data_admissao
+	toColumn: LocalDateTable_c9cb0704-30cc-4c45-bac0-34ba7e790d1a.Date
+
+relationship c10709b1-3b35-4795-a7e0-a9bdb73c9dc7
+	joinOnDateBehavior: datePartOnly
+	fromColumn: SYSTUR.data_criacao
+	toColumn: LocalDateTable_b1557029-40b9-495a-8587-2b6b164b6248.Date
+
+relationship 93b4aaf5-ebfb-4556-9542-bbaaabb7f7b6
+	joinOnDateBehavior: datePartOnly
+	fromColumn: SYSTUR.ultimo_acesso
+	toColumn: LocalDateTable_372f1c96-8535-48a0-89fc-f75de50e0f5c.Date
+
+relationship b6353e57-71d2-48b9-1a7e-8aed04d134c7
+	toCardinality: many
+	fromColumn: RH_Ativos.matricula
+	toColumn: Divergencias.matricula
 

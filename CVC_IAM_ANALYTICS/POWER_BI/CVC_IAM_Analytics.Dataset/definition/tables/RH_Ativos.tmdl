@@ -77,6 +77,20 @@ table RH_Ativos
 
 		annotation SummarizationSetBy = Automatic
 
+	column data_admissao
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 5ab2a7a1-b4f8-4b27-b1c9-9f0690b58da4
+		summarizeBy: none
+		sourceColumn: data_admissao
+
+		variation Variation
+			isDefault
+			relationship: b39cc764-279d-4342-bfeb-6ea3dade8335
+			defaultHierarchy: LocalDateTable_c9cb0704-30cc-4c45-bac0-34ba7e790d1a.'Hierarquia de datas'
+
+		annotation SummarizationSetBy = Automatic
+
 	partition RH_Ativos = m
 		mode: import
 		source = Parquet.Document(File.Contents(CaminhoBase & "DADOS\PARQUET\RH\rh_ativos.parquet"))
