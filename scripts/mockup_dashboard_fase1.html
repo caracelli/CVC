@@ -376,13 +376,31 @@
       </div>
     </div>
 
-    <!-- Legenda de cores -->
-    <div style="display:flex;gap:16px;padding:6px 2px;font-size:10px;color:#555;flex-wrap:wrap;">
-      <span><span style="display:inline-block;width:12px;height:12px;background:#FEF3E2;border:1px solid #ccc;vertical-align:middle;margin-right:4px"></span>PERFIL_INVALIDO</span>
-      <span><span style="display:inline-block;width:12px;height:12px;background:#F0E6F6;border:1px solid #ccc;vertical-align:middle;margin-right:4px"></span>ACESSO_SEM_VINCULO_RH</span>
-      <span><span style="display:inline-block;width:12px;height:12px;background:#DFF6DD;border:1px solid #ccc;vertical-align:middle;margin-right:4px"></span>Resolvida</span>
-      <span><span style="display:inline-block;width:12px;height:12px;background:#FDE7E9;border:1px solid #ccc;vertical-align:middle;margin-right:4px"></span>Pendente</span>
-      <span style="margin-left:auto;color:#888;font-style:italic">Visual: Matrix nativo Power BI — hierarquia usuario → id</span>
+    <!-- Painel de detalhe — cross-filter (clique na linha para filtrar) -->
+    <div class="detail-panel">
+      <div style="height:3px;background:#F5B800;border-radius:2px;margin-bottom:8px;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span id="detail-title" class="detail-title">Selecione um usuário na tabela acima</span>
+        <span style="font-size:9px;color:#888;font-style:italic">cross-filter nativo Power BI</span>
+      </div>
+      <div id="detail-body">
+        <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
+          <thead>
+            <tr style="background:#2C3E6B;">
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;font-weight:700;">ID</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;font-weight:700;">Tipo</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;font-weight:700;">Perfil Encontrado</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;font-weight:700;">Perfil Esperado</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;font-weight:700;">Descrição</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;font-weight:700;">Data</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;font-weight:700;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="detail-rows">
+            <tr><td colspan="7" style="padding:12px 10px;color:#AAA;font-style:italic;font-size:10px;">Nenhum usuário selecionado.</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
   </div>
@@ -390,6 +408,9 @@
 
 <script>
   function toggle(tr, id) {
+    // Atualiza painel de detalhe sempre (com ou sem filhos)
+    renderDetail(id);
+
     const arrow = document.getElementById(id);
     if (!arrow || arrow.classList.contains('hidden')) return;
     const open = arrow.classList.toggle('open');
