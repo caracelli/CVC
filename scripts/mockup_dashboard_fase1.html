@@ -82,55 +82,11 @@
   thead th { color: #FFF; font-weight: 700; font-size: 10px; padding: 9px 12px; text-align: left; white-space: nowrap; }
   tbody td { padding: 7px 12px; color: #333; font-size: 11px; border-bottom: 1px solid #EEEEEE; }
 
-  /* ── ROW: PARENT (usuário agrupado) ── */
-  tr.row-parent { background: #FFFFFF; cursor: pointer; }
-  tr.row-parent:hover { background: #F0F4FF; }
-  tr.row-parent.expanded { background: #EBF5FB; }
-
-  /* ── EXPAND BUTTON ── */
-  .expand-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px; height: 18px;
-    border-radius: 4px;
-    background: #1F2D5C;
-    color: #F5B800;
-    font-size: 13px;
-    font-weight: 900;
-    line-height: 1;
-    cursor: pointer;
-    user-select: none;
-    flex-shrink: 0;
-    transition: background 0.15s;
-  }
-  .expand-btn.open { background: #F5B800; color: #1F2D5C; }
-  .expand-btn.single { background: #E0E0E0; color: #888; cursor: default; font-size: 10px; }
-
-  /* ── ROW: CHILD (cada divergência) ── */
-  tr.row-child { display: none; background: #F8FBFF; }
-  tr.row-child.visible { display: table-row; }
-  tr.row-child td { border-bottom: 1px solid #E8EEFF; font-size: 10.5px; }
-  tr.row-child td:first-child { padding-left: 0; }
-
-  .child-indent {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding-left: 8px;
-  }
-  .child-line {
-    width: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .child-line-v { width: 1px; background: #C0CCE8; flex: 1; }
-  .child-line-h { display: flex; align-items: center; gap: 0; }
-  .child-corner { width: 10px; height: 10px; border-left: 1px solid #C0CCE8; border-bottom: 1px solid #C0CCE8; border-radius: 0 0 0 4px; margin-right: 4px; }
-
-  /* last child: cut the vertical line */
-  tr.row-child.last-child .child-line-v { display: none; }
+  /* ── ROW: USUÁRIO ── */
+  tr.row-user { background: #FFFFFF; cursor: pointer; transition: background 0.1s; }
+  tr.row-user:hover { background: #F0F4FF; }
+  tr.row-user.selected { background: #EBF5FB; outline: 2px solid #2980B9; outline-offset: -2px; }
+  tr.row-user.selected td { color: #1F2D5C; font-weight: 600; }
 
   /* ── BADGES ── */
   .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 700; white-space: nowrap; }
@@ -232,20 +188,20 @@
 
     <div class="table-header">
       <span class="table-title">Divergências — Detalhamento</span>
-      <span class="tfilter-label">42 usuários · 58 divergências encontradas</span>
+      <span class="tfilter-label">42 usuários · 58 divergências &nbsp;·&nbsp; <em>Clique em uma linha para ver o detalhe</em></span>
     </div>
 
+    <!-- Tabela principal: 1 linha por usuário -->
     <div class="div-table">
       <table>
         <thead>
           <tr>
-            <th style="width:32px"></th>
             <th>Usuário</th>
             <th>Nome Completo</th>
             <th>Matrícula</th>
             <th>Departamento</th>
             <th>Cargo</th>
-            <th>Divergências</th>
+            <th style="text-align:center">Diverg.</th>
             <th>Tipos</th>
             <th>Sistema</th>
             <th>Última Ident.</th>
@@ -253,207 +209,56 @@
           </tr>
         </thead>
         <tbody id="tbody">
-
-          <!-- ═══ usr0042 — Ana Medeiros — 3 divergências ═══ -->
-          <tr class="row-parent" onclick="toggle('u42')">
-            <td style="padding:7px 6px 7px 12px"><span class="expand-btn" id="btn-u42">+</span></td>
-            <td>usr0042</td>
-            <td><strong>Ana Medeiros</strong></td>
-            <td>M-00042</td>
-            <td>TI</td>
-            <td>Analista TI</td>
-            <td><span class="badge badge-count">3</span></td>
-            <td>
-              <span class="badge badge-orange">PERFIL_INVALIDO</span>
-              <span class="badge badge-purple" style="margin-left:3px">ACESSO_S/RH</span>
-            </td>
-            <td>SYSTUR</td>
-            <td>10/05/2026</td>
-            <td><span class="badge badge-red">Pendente</span></td>
+          <tr class="row-user selected" onclick="selectRow(this,'u42')">
+            <td>usr0042</td><td><strong>Ana Medeiros</strong></td><td>M-00042</td><td>TI</td><td>Analista TI</td>
+            <td style="text-align:center"><span class="badge badge-count">3</span></td>
+            <td><span class="badge badge-orange">PERFIL_INVALIDO</span> <span class="badge badge-purple">ACESSO_S/RH</span></td>
+            <td>SYSTUR</td><td>10/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
           </tr>
-          <tr class="row-child" data-group="u42">
-            <td></td>
-            <td colspan="2">
-              <div class="child-indent">
-                <div class="child-line"><div class="child-line-v"></div></div>
-                <div class="child-corner"></div>
-                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #1
-              </div>
-            </td>
-            <td>M-00042</td><td>TI</td><td>Analista TI</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td>Enc: <strong style="color:#E67E22">ADMIN</strong> → Esp: <strong style="color:#1E8449">CONSULTA</strong></td>
-            <td>SYSTUR</td><td>10/05/2026</td>
-            <td><span class="badge badge-red">Pendente</span></td>
-          </tr>
-          <tr class="row-child" data-group="u42">
-            <td></td>
-            <td colspan="2">
-              <div class="child-indent">
-                <div class="child-line"><div class="child-line-v"></div></div>
-                <div class="child-corner"></div>
-                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #2
-              </div>
-            </td>
-            <td>M-00042</td><td>TI</td><td>Analista TI</td>
+          <tr class="row-user" onclick="selectRow(this,'u78')">
+            <td>usr0078</td><td>Bruno Soares</td><td>—</td><td>—</td><td>—</td>
+            <td style="text-align:center"><span class="badge badge-count">1</span></td>
             <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td>Enc: <strong style="color:#7D3C98">OPERADOR</strong> → Esp: <strong style="color:#888">—</strong></td>
-            <td>SYSTUR</td><td>09/05/2026</td>
-            <td><span class="badge badge-red">Pendente</span></td>
+            <td>SYSTUR</td><td>10/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
           </tr>
-          <tr class="row-child last-child" data-group="u42">
-            <td></td>
-            <td colspan="2">
-              <div class="child-indent">
-                <div class="child-line"><div class="child-line-v" style="visibility:hidden"></div></div>
-                <div class="child-corner"></div>
-                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #3
-              </div>
-            </td>
-            <td>M-00042</td><td>TI</td><td>Analista TI</td>
+          <tr class="row-user" onclick="selectRow(this,'u91')">
+            <td>usr0091</td><td>Carla Fonseca</td><td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
+            <td style="text-align:center"><span class="badge badge-count">2</span></td>
             <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td>Enc: <strong style="color:#E67E22">GESTOR</strong> → Esp: <strong style="color:#1E8449">CONSULTA</strong></td>
-            <td>SYSTUR</td><td>08/05/2026</td>
-            <td><span class="badge badge-red">Pendente</span></td>
+            <td>SYSTUR</td><td>09/05/2026</td><td><span class="badge badge-green">Resolvida</span></td>
           </tr>
-
-          <!-- ═══ usr0078 — Bruno Soares — 1 divergência ═══ -->
-          <tr class="row-parent" onclick="toggle('u78')">
-            <td style="padding:7px 6px 7px 12px"><span class="expand-btn single" id="btn-u78">—</span></td>
-            <td>usr0078</td>
-            <td>Bruno Soares</td>
-            <td>—</td><td>—</td><td>—</td>
-            <td><span class="badge badge-count">1</span></td>
+          <tr class="row-user" onclick="selectRow(this,'u103')">
+            <td>usr0103</td><td>Diego Ramos</td><td>—</td><td>—</td><td>—</td>
+            <td style="text-align:center"><span class="badge badge-count">1</span></td>
             <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td>SYSTUR</td><td>10/05/2026</td>
-            <td><span class="badge badge-red">Pendente</span></td>
+            <td>SYSTUR</td><td>09/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
           </tr>
-
-          <!-- ═══ usr0091 — Carla Fonseca — 2 divergências ═══ -->
-          <tr class="row-parent" onclick="toggle('u91')">
-            <td style="padding:7px 6px 7px 12px"><span class="expand-btn" id="btn-u91">+</span></td>
-            <td>usr0091</td>
-            <td><strong>Carla Fonseca</strong></td>
-            <td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
-            <td><span class="badge badge-count">2</span></td>
-            <td>
-              <span class="badge badge-orange">PERFIL_INVALIDO</span>
-              <span class="badge badge-orange" style="margin-left:3px">PERFIL_INVALIDO</span>
-            </td>
-            <td>SYSTUR</td><td>09/05/2026</td>
-            <td><span class="badge badge-green">Resolvida</span></td>
+          <tr class="row-user" onclick="selectRow(this,'u117')">
+            <td>usr0117</td><td>Elisa Teixeira</td><td>M-00117</td><td>Operações</td><td>Coordenadora Ops</td>
+            <td style="text-align:center"><span class="badge badge-count">2</span></td>
+            <td><span class="badge badge-orange">PERFIL_INVALIDO</span> <span class="badge badge-purple">ACESSO_S/RH</span></td>
+            <td>SYSTUR</td><td>08/05/2026</td><td><span class="badge badge-green">Resolvida</span></td>
           </tr>
-          <tr class="row-child" data-group="u91">
-            <td></td>
-            <td colspan="2">
-              <div class="child-indent">
-                <div class="child-corner"></div>
-                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #1
-              </div>
-            </td>
-            <td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td>Enc: <strong style="color:#E67E22">GESTOR</strong> → Esp: <strong style="color:#1E8449">CONSULTA</strong></td>
-            <td>SYSTUR</td><td>09/05/2026</td>
-            <td><span class="badge badge-green">Resolvida</span></td>
-          </tr>
-          <tr class="row-child last-child" data-group="u91">
-            <td></td>
-            <td colspan="2">
-              <div class="child-indent">
-                <div class="child-corner"></div>
-                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #2
-              </div>
-            </td>
-            <td>M-00091</td><td>Vendas</td><td>Gerente Vendas</td>
-            <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td>Enc: <strong style="color:#E67E22">ADMIN</strong> → Esp: <strong style="color:#1E8449">OPERADOR</strong></td>
-            <td>SYSTUR</td><td>08/05/2026</td>
-            <td><span class="badge badge-green">Resolvida</span></td>
-          </tr>
-
-          <!-- ═══ usr0103 — Diego Ramos — 1 divergência ═══ -->
-          <tr class="row-parent" onclick="toggle('u103')">
-            <td style="padding:7px 6px 7px 12px"><span class="expand-btn single" id="btn-u103">—</span></td>
-            <td>usr0103</td>
-            <td>Diego Ramos</td>
-            <td>—</td><td>—</td><td>—</td>
-            <td><span class="badge badge-count">1</span></td>
+          <tr class="row-user" onclick="selectRow(this,'u134')">
+            <td>usr0134</td><td>Fábio Lins</td><td>—</td><td>—</td><td>—</td>
+            <td style="text-align:center"><span class="badge badge-count">1</span></td>
             <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td>SYSTUR</td><td>09/05/2026</td>
-            <td><span class="badge badge-red">Pendente</span></td>
+            <td>SYSTUR</td><td>08/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
           </tr>
-
-          <!-- ═══ usr0117 — Elisa Teixeira — 2 divergências ═══ -->
-          <tr class="row-parent" onclick="toggle('u117')">
-            <td style="padding:7px 6px 7px 12px"><span class="expand-btn" id="btn-u117">+</span></td>
-            <td>usr0117</td>
-            <td><strong>Elisa Teixeira</strong></td>
-            <td>M-00117</td><td>Operações</td><td>Coordenadora Ops</td>
-            <td><span class="badge badge-count">2</span></td>
-            <td>
-              <span class="badge badge-orange">PERFIL_INVALIDO</span>
-              <span class="badge badge-purple" style="margin-left:3px">ACESSO_S/RH</span>
-            </td>
-            <td>SYSTUR</td><td>08/05/2026</td>
-            <td><span class="badge badge-green">Resolvida</span></td>
-          </tr>
-          <tr class="row-child" data-group="u117">
-            <td></td>
-            <td colspan="2">
-              <div class="child-indent">
-                <div class="child-corner"></div>
-                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #1
-              </div>
-            </td>
-            <td>M-00117</td><td>Operações</td><td>Coordenadora Ops</td>
+          <tr class="row-user" onclick="selectRow(this,'u155')">
+            <td>usr0155</td><td>Gisele Nunes</td><td>M-00155</td><td>Financeiro</td><td>Analista Fin.</td>
+            <td style="text-align:center"><span class="badge badge-count">1</span></td>
             <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td>Enc: <strong style="color:#E67E22">OPERADOR</strong> → Esp: <strong style="color:#1E8449">CONSULTA</strong></td>
-            <td>SYSTUR</td><td>08/05/2026</td>
-            <td><span class="badge badge-green">Resolvida</span></td>
+            <td>SYSTUR</td><td>07/05/2026</td><td><span class="badge badge-red">Pendente</span></td>
           </tr>
-          <tr class="row-child last-child" data-group="u117">
-            <td></td>
-            <td colspan="2">
-              <div class="child-indent">
-                <div class="child-corner"></div>
-                <span style="color:#888;font-size:10px">↳</span>&nbsp;Acesso #2
-              </div>
-            </td>
-            <td>—</td><td>—</td><td>—</td>
-            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td>Enc: <strong style="color:#7D3C98">CONSULTA</strong> → Esp: <strong style="color:#888">—</strong></td>
-            <td>SYSTUR</td><td>07/05/2026</td>
-            <td><span class="badge badge-green">Resolvida</span></td>
-          </tr>
-
-          <!-- ═══ usr0134 — Fábio Lins — 1 divergência ═══ -->
-          <tr class="row-parent" onclick="toggle('u134')">
-            <td style="padding:7px 6px 7px 12px"><span class="expand-btn single" id="btn-u134">—</span></td>
-            <td>usr0134</td>
-            <td>Fábio Lins</td>
-            <td>—</td><td>—</td><td>—</td>
-            <td><span class="badge badge-count">1</span></td>
-            <td><span class="badge badge-purple">ACESSO_S/RH</span></td>
-            <td>SYSTUR</td><td>08/05/2026</td>
-            <td><span class="badge badge-red">Pendente</span></td>
-          </tr>
-
-          <!-- ═══ usr0155 — Gisele Nunes — 1 divergência ═══ -->
-          <tr class="row-parent" onclick="toggle('u155')">
-            <td style="padding:7px 6px 7px 12px"><span class="expand-btn single" id="btn-u155">—</span></td>
-            <td>usr0155</td>
-            <td>Gisele Nunes</td>
-            <td>M-00155</td><td>Financeiro</td><td>Analista Fin.</td>
-            <td><span class="badge badge-count">1</span></td>
+          <tr class="row-user" onclick="selectRow(this,'u162')">
+            <td>usr0162</td><td>Hugo Martins</td><td>M-00162</td><td>Vendas</td><td>Supervisor</td>
+            <td style="text-align:center"><span class="badge badge-count">1</span></td>
             <td><span class="badge badge-orange">PERFIL_INVALIDO</span></td>
-            <td>SYSTUR</td><td>07/05/2026</td>
-            <td><span class="badge badge-red">Pendente</span></td>
+            <td>SYSTUR</td><td>07/05/2026</td><td><span class="badge badge-green">Resolvida</span></td>
           </tr>
-
         </tbody>
       </table>
-
       <div class="pagination">
         <span class="page-info">Exibindo 1–8 de 42 usuários</span>
         <div class="page-btns">
@@ -468,22 +273,29 @@
       </div>
     </div>
 
-    <!-- Detail panel -->
+    <!-- Painel de detalhe: cross-filter — filtra automaticamente ao clicar na linha acima -->
     <div class="detail-panel">
-      <div class="detail-title">Detalhe — usr0042 · Ana Medeiros &nbsp;<span style="color:#E67E22;font-weight:400;font-size:10px">3 divergências</span></div>
-      <div class="detail-grid">
-        <div class="detail-item"><label>Matrícula</label><span>M-00042</span></div>
-        <div class="detail-item"><label>Cargo</label><span>Analista TI</span></div>
-        <div class="detail-item"><label>Departamento</label><span>TI</span></div>
-        <div class="detail-item"><label>Centro de Custo</label><span>CC-0012</span></div>
-        <div class="detail-item"><label>E-mail</label><span>ana.medeiros@cvc.com.br</span></div>
-        <div class="detail-item"><label>Sistema</label><span>SYSTUR</span></div>
-        <div class="detail-item"><label>Tipo Principal</label><span style="color:#E67E22">PERFIL_INVALIDO</span></div>
-        <div class="detail-item"><label>Perfis Encontrados</label><span style="color:#E67E22">ADMIN, OPERADOR, GESTOR</span></div>
-        <div class="detail-item"><label>Perfil Esperado</label><span style="color:#1E8449">CONSULTA</span></div>
-        <div class="detail-item"><label>Última Identificação</label><span>10/05/2026</span></div>
-        <div class="detail-item"><label>Resolvidas</label><span style="color:#C0392B">0 de 3</span></div>
-        <div class="detail-item"><label>Perfil Canônico (Matriz)</label><span>Analista → CONSULTA</span></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <div>
+          <div style="height:3px; background:#F5B800; border-radius:2px; width:100%; margin-bottom:6px;"></div>
+          <span id="detail-title" class="detail-title">Detalhe — usr0042 · Ana Medeiros &nbsp;<span style="color:#E67E22;font-weight:400;font-size:10px">3 divergências</span></span>
+        </div>
+        <span style="font-size:9px;color:#888">← cross-filter: clique na linha acima para filtrar</span>
+      </div>
+      <div id="detail-body">
+        <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
+          <thead>
+            <tr style="background:#2C3E6B;">
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;">Tipo</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;">Perfil Encontrado</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;">Perfil Esperado</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;">Descrição</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;">Data</th>
+              <th style="color:#fff;padding:6px 10px;text-align:left;font-size:9px;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="detail-rows"></tbody>
+        </table>
       </div>
     </div>
 
@@ -491,23 +303,102 @@
 </div>
 
 <script>
-  function toggle(group) {
-    const btn = document.getElementById('btn-' + group);
-    if (!btn || btn.classList.contains('single')) return;
+  const details = {
+    u42: {
+      title: 'Detalhe — usr0042 · Ana Medeiros',
+      count: 3,
+      rows: [
+        ['PERFIL_INVALIDO','orange', 'ADMIN',    'CONSULTA', 'Perfil acima do permitido para Analista TI', '10/05/2026', false],
+        ['ACESSO_S/RH',    'purple', 'OPERADOR', '—',        'Usuário sem vínculo ativo na base RH',        '09/05/2026', false],
+        ['PERFIL_INVALIDO','orange', 'GESTOR',   'CONSULTA', 'Perfil acima do permitido para Analista TI', '08/05/2026', false],
+      ]
+    },
+    u78: {
+      title: 'Detalhe — usr0078 · Bruno Soares',
+      count: 1,
+      rows: [
+        ['ACESSO_S/RH','purple','OPERADOR','—','Usuário sem vínculo ativo na base RH','10/05/2026', false],
+      ]
+    },
+    u91: {
+      title: 'Detalhe — usr0091 · Carla Fonseca',
+      count: 2,
+      rows: [
+        ['PERFIL_INVALIDO','orange','GESTOR',  'CONSULTA','Perfil acima do permitido para Gerente Vendas','09/05/2026', true],
+        ['PERFIL_INVALIDO','orange','ADMIN',   'OPERADOR', 'Perfil acima do nível aprovado para o cargo',  '08/05/2026', true],
+      ]
+    },
+    u103: {
+      title: 'Detalhe — usr0103 · Diego Ramos',
+      count: 1,
+      rows: [
+        ['ACESSO_S/RH','purple','CONSULTA','—','Usuário sem vínculo ativo na base RH','09/05/2026', false],
+      ]
+    },
+    u117: {
+      title: 'Detalhe — usr0117 · Elisa Teixeira',
+      count: 2,
+      rows: [
+        ['PERFIL_INVALIDO','orange','OPERADOR','CONSULTA','Perfil acima do permitido para Coordenadora Ops','08/05/2026', true],
+        ['ACESSO_S/RH',    'purple','CONSULTA','—',       'Usuário sem vínculo ativo na base RH',           '07/05/2026', true],
+      ]
+    },
+    u134: {
+      title: 'Detalhe — usr0134 · Fábio Lins',
+      count: 1,
+      rows: [
+        ['ACESSO_S/RH','purple','ADMIN','—','Usuário sem vínculo ativo na base RH','08/05/2026', false],
+      ]
+    },
+    u155: {
+      title: 'Detalhe — usr0155 · Gisele Nunes',
+      count: 1,
+      rows: [
+        ['PERFIL_INVALIDO','orange','GESTOR','CONSULTA','Perfil acima do permitido para Analista Fin.','07/05/2026', false],
+      ]
+    },
+    u162: {
+      title: 'Detalhe — usr0162 · Hugo Martins',
+      count: 1,
+      rows: [
+        ['PERFIL_INVALIDO','orange','ADMIN','OPERADOR','Perfil acima do nível aprovado para Supervisor','07/05/2026', true],
+      ]
+    },
+  };
 
-    const rows = document.querySelectorAll('[data-group="' + group + '"]');
-    const isOpen = btn.classList.contains('open');
+  const badgeColor = { orange:'badge-orange', purple:'badge-purple' };
+  const statusBadge = r => r
+    ? '<span class="badge badge-green">Resolvida</span>'
+    : '<span class="badge badge-red">Pendente</span>';
 
-    if (isOpen) {
-      btn.classList.remove('open');
-      btn.textContent = '+';
-      rows.forEach(r => r.classList.remove('visible'));
-    } else {
-      btn.classList.add('open');
-      btn.textContent = '−';
-      rows.forEach(r => r.classList.add('visible'));
-    }
+  function renderDetail(key) {
+    const d = details[key];
+    if (!d) return;
+    const countColor = d.rows.some(r => !r[6]) ? '#E67E22' : '#1E8449';
+    document.getElementById('detail-title').innerHTML =
+      d.title + ' &nbsp;<span style="color:' + countColor + ';font-weight:400;font-size:10px">' + d.count + ' divergência' + (d.count > 1 ? 's' : '') + '</span>';
+
+    document.getElementById('detail-rows').innerHTML = d.rows.map((r, i) => {
+      const bg = i % 2 === 0 ? '#F8FBFF' : '#FFFFFF';
+      return `<tr style="background:${bg}">
+        <td style="padding:5px 10px"><span class="badge ${badgeColor[r[1]]}">${r[0]}</span></td>
+        <td style="padding:5px 10px;color:#E67E22;font-weight:600">${r[2]}</td>
+        <td style="padding:5px 10px;color:#1E8449;font-weight:600">${r[3]}</td>
+        <td style="padding:5px 10px;color:#555">${r[4]}</td>
+        <td style="padding:5px 10px;color:#555">${r[5]}</td>
+        <td style="padding:5px 10px">${statusBadge(r[6])}</td>
+      </tr>`;
+    }).join('');
   }
+
+  function selectRow(tr, key) {
+    document.querySelectorAll('.row-user').forEach(r => r.classList.remove('selected'));
+    tr.classList.add('selected');
+    renderDetail(key);
+  }
+
+  // render initial state (Ana Medeiros selecionada)
+  renderDetail('u42');
 </script>
 </body>
 </html>
