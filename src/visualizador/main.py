@@ -139,27 +139,25 @@ def abrir_power_bi():
     if pbi_exe:
         print(f"  Executavel: {pbi_exe}")
 
-        # Tentativa 1: shell=True usa cmd.exe — funciona para Store e Program Files
+    # T1: os.startfile — equivale a dar duplo clique no arquivo,
+    #     usa a associacao .pbip registrada pelo Power BI na instalacao
+    try:
+        os.startfile(PBIP_FILE)
+        print("  [OK] Power BI aberto.")
+        return
+    except Exception as e:
+        print(f"  [T1] startfile falhou: {e}")
+
+    # T2: launch direto do exe (instalacao tradicional Program Files)
+    if pbi_exe and "WindowsApps" not in pbi_exe:
         try:
-            cmd_str = f'"{pbi_exe}" "{PBIP_FILE}"'
-            subprocess.Popen(cmd_str, shell=True)
-            print("  [OK] Power BI aberto (shell).")
+            subprocess.Popen([pbi_exe, PBIP_FILE])
+            print("  [OK] Power BI aberto (exe direto).")
             return
         except Exception as e:
-            print(f"  [T1] shell falhou: {e}")
+            print(f"  [T2] Popen falhou: {e}")
 
-        # Tentativa 2: cmd /c start (garante abertura via shell do Windows)
-        try:
-            subprocess.Popen(
-                ['cmd', '/c', 'start', '', pbi_exe, PBIP_FILE],
-                shell=False
-            )
-            print("  [OK] Power BI aberto (cmd start).")
-            return
-        except Exception as e:
-            print(f"  [T2] cmd start falhou: {e}")
-
-    # Tentativa 3: AppxPackage via PowerShell
+    # T3: AppxPackage via PowerShell (Store app)
     print("  Tentando via AppxPackage + PowerShell...")
     pbip_q = PBIP_FILE.replace("'", "''")
     ps_appx = (
@@ -167,7 +165,7 @@ def abrir_power_bi():
         "if ($pkg) { "
         "  $exe = Join-Path $pkg.InstallLocation 'bin\\PBIDesktop.exe'; "
         f"  Start-Process -FilePath $exe -ArgumentList '\"{pbip_q}\"'; "
-        "  exit 0 } else { Write-Error 'PBI nao instalado via Store'; exit 1 }"
+        "  exit 0 } else { Write-Error 'PBI nao encontrado via Store'; exit 1 }"
     )
     r = subprocess.run(
         ["powershell", "-NoProfile", "-Command", ps_appx],
@@ -178,27 +176,6 @@ def abrir_power_bi():
         return
     if r.stderr.strip():
         print(f"  [T3 STDERR] {r.stderr.strip()}")
-
-    # Tentativa 4: Start-Process com o .pbip (associacao de arquivo)
-    print("  Tentando abertura por associacao de arquivo (.pbip)...")
-    r = subprocess.run(
-        ["powershell", "-NoProfile", "-Command",
-         f"Start-Process -FilePath '{PBIP_FILE}'"],
-        capture_output=True, text=True, timeout=10
-    )
-    if r.returncode == 0:
-        print("  [OK] Arquivo aberto por associacao.")
-        return
-    if r.stderr.strip():
-        print(f"  [T4 STDERR] {r.stderr.strip()}")
-
-    # Tentativa 5: os.startfile
-    try:
-        os.startfile(PBIP_FILE)
-        print("  [OK] Arquivo aberto via startfile.")
-        return
-    except Exception as e:
-        print(f"  [T5] startfile falhou: {e}")
 
     print("\n  [ERRO] Nao foi possivel abrir o Power BI Desktop.")
     print("  Certifique-se de que o Power BI Desktop esta instalado.")
