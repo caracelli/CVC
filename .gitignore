@@ -62,3 +62,6 @@ deploy/_build/
 # Power BI — arquivos locais e cache (não versionados)
 **/.pbi/localSettings.json
 **/.pbi/cache.abf
+
+# Cache local do visualizador (caminho do PBIDesktop.exe por maquina)
+CVC_IAM_ANALYTICS/.pbi_local

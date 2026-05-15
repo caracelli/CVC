@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <configuracao>
     <versao>1.0.0</versao>
     <cliente>CVC</cliente>
@@ -157,9 +157,9 @@
         <logs>DADOS/LOGS</logs>
     </saidas>
 
-    <!-- Caminhos locais do Visualizador — a preencher quando o exe for implementado -->
+    
     <local>
-        <parquet_destino></parquet_destino>
+        <parquet_destino />
         <power_bi></power_bi>
     </local>
 </configuracao>
