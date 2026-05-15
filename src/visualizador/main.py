@@ -3,6 +3,7 @@ import os
 import re
 import glob
 import subprocess
+import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -10,6 +11,26 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _script_dir = os.path.dirname(os.path.abspath(__file__))
 _src_dir    = os.path.dirname(_script_dir)
 PROJECT_ROOT = os.path.dirname(_src_dir)
+
+# Log salvo na raiz do projeto para facil acesso
+_LOG_FILE = os.path.join(PROJECT_ROOT, 'visualizador_log.txt')
+_log_lines = []
+
+def _print(msg=""):
+    """Imprime no terminal e acumula para o arquivo de log."""
+    print(msg)
+    _log_lines.append(msg)
+
+def _salvar_log():
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        with open(_LOG_FILE, 'w', encoding='utf-8') as f:
+            f.write(f"=== Log gerado em {ts} ===\n\n")
+            f.write("\n".join(_log_lines))
+            f.write("\n")
+        _print(f"\nLog salvo em: {_LOG_FILE}")
+    except Exception as e:
+        print(f"Nao foi possivel salvar log: {e}")
 
 # Arquivo local (gitignored) que guarda o caminho do PBIDesktop.exe desta maquina
 _LOCAL_PBI_CACHE = os.path.join(PROJECT_ROOT, 'CVC_IAM_ANALYTICS', '.pbi_local')
@@ -43,9 +64,9 @@ def _salvar_cache_pbi(exe_path):
     try:
         with open(_LOCAL_PBI_CACHE, 'w', encoding='utf-8') as f:
             f.write(exe_path)
-        print(f"  [CACHE] Caminho salvo em .pbi_local: {exe_path}")
+        _print(f"  [CACHE] Caminho salvo em .pbi_local: {exe_path}")
     except Exception as e:
-        print(f"  [AVISO] Nao foi possivel salvar cache: {e}")
+        _print(f"  [AVISO] Nao foi possivel salvar cache: {e}")
 
 
 # ── busca do PBIDesktop.exe ───────────────────────────────────────────────────
@@ -100,7 +121,7 @@ def _buscar_pbi():
             # tenta de qualquer forma e deixa o subprocess lidar com o erro
             return exe
     except Exception as e:
-        print(f"  [DEBUG] AppxPackage falhou: {e}")
+        _print(f"  [DEBUG] AppxPackage falhou: {e}")
 
     return None
 
@@ -109,20 +130,20 @@ def _resolver_pbi_exe():
     caminho = _ler_cache_pbi()
 
     if caminho and os.path.isfile(caminho):
-        print(f"  [CACHE] Power BI Desktop: {caminho}")
+        _print(f"  [CACHE] Power BI Desktop: {caminho}")
         return caminho
 
     if caminho:
-        print(f"  [CACHE] Caminho invalido ({caminho}) — rebuscando...")
+        _print(f"  [CACHE] Caminho invalido ({caminho}) — rebuscando...")
     else:
-        print("  Power BI nao configurado — buscando no sistema...")
+        _print("  Power BI nao configurado — buscando no sistema...")
 
     exe = _buscar_pbi()
     if exe:
         _salvar_cache_pbi(exe)
         return exe
 
-    print("  [AVISO] PBIDesktop.exe nao encontrado em nenhum caminho padrao.")
+    _print("  [AVISO] PBIDesktop.exe nao encontrado em nenhum caminho padrao.")
     return None
 
 
@@ -130,14 +151,14 @@ def _resolver_pbi_exe():
 
 def abrir_power_bi():
     if not os.path.isfile(PBIP_FILE):
-        print(f"  [ERRO] .pbip nao encontrado: {PBIP_FILE}")
+        _print(f"  [ERRO] .pbip nao encontrado: {PBIP_FILE}")
         return
 
-    print(f"  Arquivo: {PBIP_FILE}")
+    _print(f"  Arquivo: {PBIP_FILE}")
     pbi_exe = _resolver_pbi_exe()
 
     if pbi_exe:
-        print(f"  Executavel: {pbi_exe}")
+        _print(f"  Executavel: {pbi_exe}")
 
     # T1: cmd /c start — ShellExecute via cmd, funciona para qualquer instalacao
     try:
@@ -146,31 +167,31 @@ def abrir_power_bi():
             capture_output=True, text=True, timeout=10
         )
         if r.returncode == 0:
-            print("  [OK] Power BI aberto (cmd start).")
+            _print("  [OK] Power BI aberto (cmd start).")
             return
-        print(f"  [T1] cmd start retornou {r.returncode}: {r.stderr.strip()}")
+        _print(f"  [T1] cmd start retornou {r.returncode}: {r.stderr.strip()}")
     except Exception as e:
-        print(f"  [T1] cmd start falhou: {e}")
+        _print(f"  [T1] cmd start falhou: {e}")
 
     # T2: os.startfile (ShellExecuteEx — equivale a duplo clique)
     try:
         os.startfile(PBIP_FILE)
-        print("  [OK] Power BI aberto (startfile).")
+        _print("  [OK] Power BI aberto (startfile).")
         return
     except Exception as e:
-        print(f"  [T2] startfile falhou: {e}")
+        _print(f"  [T2] startfile falhou: {e}")
 
     # T3: exe direto (instalacao tradicional Program Files)
     if pbi_exe and "WindowsApps" not in pbi_exe:
         try:
             subprocess.Popen([pbi_exe, PBIP_FILE])
-            print("  [OK] Power BI aberto (exe direto).")
+            _print("  [OK] Power BI aberto (exe direto).")
             return
         except Exception as e:
-            print(f"  [T3] Popen falhou: {e}")
+            _print(f"  [T3] Popen falhou: {e}")
 
     # T4: AppxPackage via PowerShell (Store app)
-    print("  Tentando via AppxPackage + PowerShell...")
+    _print("  Tentando via AppxPackage + PowerShell...")
     pbip_q = PBIP_FILE.replace("'", "''")
     ps_appx = (
         "$pkg = Get-AppxPackage *MicrosoftPowerBIDesktop* | Select-Object -First 1; "
@@ -184,13 +205,13 @@ def abrir_power_bi():
         capture_output=True, text=True, timeout=20
     )
     if r.returncode == 0:
-        print("  [OK] Power BI aberto via AppxPackage.")
+        _print("  [OK] Power BI aberto via AppxPackage.")
         return
-    print(f"  [T4 STDERR] {r.stderr.strip()}")
+    _print(f"  [T4 STDERR] {r.stderr.strip()}")
 
-    print("\n  [ERRO] Nenhuma estrategia funcionou.")
-    print("  Certifique-se de que o Power BI Desktop esta instalado.")
-    print(f"  Tente abrir manualmente: {PBIP_FILE}")
+    _print("\n  [ERRO] Nenhuma estrategia funcionou.")
+    _print("  Certifique-se de que o Power BI Desktop esta instalado.")
+    _print(f"  Tente abrir manualmente: {PBIP_FILE}")
 
 
 # ── TMDL ──────────────────────────────────────────────────────────────────────
@@ -200,7 +221,7 @@ def atualizar_caminho_base():
 
     for tmdl in EXPRESSIONS_FILES:
         if not os.path.isfile(tmdl):
-            print(f"  [AVISO] nao encontrado: {tmdl}")
+            _print(f"  [AVISO] nao encontrado: {tmdl}")
             continue
         with open(tmdl, 'r', encoding='utf-8') as f:
             original = f.read()
@@ -210,9 +231,9 @@ def atualizar_caminho_base():
         if atualizado != original:
             with open(tmdl, 'w', encoding='utf-8') as f:
                 f.write(atualizado)
-            print(f"  [ATUALIZADO] {tmdl}")
+            _print(f"  [ATUALIZADO] {tmdl}")
         else:
-            print(f"  [OK] {tmdl}")
+            _print(f"  [OK] {tmdl}")
 
     return caminho_base
 
@@ -220,19 +241,20 @@ def atualizar_caminho_base():
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    print("=" * 55)
-    print("  IAM Analytics - Visualizador CVC")
-    print("=" * 55)
-    print(f"\nRaiz do projeto: {PROJECT_ROOT}\n")
+    _print("=" * 55)
+    _print("  IAM Analytics - Visualizador CVC")
+    _print("=" * 55)
+    _print(f"\nRaiz do projeto: {PROJECT_ROOT}\n")
 
-    print("Atualizando CaminhoBase nos arquivos TMDL...")
+    _print("Atualizando CaminhoBase nos arquivos TMDL...")
     caminho_base = atualizar_caminho_base()
-    print(f"  CaminhoBase -> {caminho_base}\n")
+    _print(f"  CaminhoBase -> {caminho_base}\n")
 
-    print("Abrindo Power BI Desktop...")
+    _print("Abrindo Power BI Desktop...")
     abrir_power_bi()
 
-    print("\nConcluido.")
+    _print("\nConcluido.")
+    _salvar_log()
 
 
 if __name__ == "__main__":

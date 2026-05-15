@@ -65,3 +65,6 @@ deploy/_build/
 
 # Cache local do visualizador (caminho do PBIDesktop.exe por maquina)
 CVC_IAM_ANALYTICS/.pbi_local
+
+# Log de execucao do visualizador
+visualizador_log.txt
