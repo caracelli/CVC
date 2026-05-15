@@ -139,25 +139,37 @@ def abrir_power_bi():
     if pbi_exe:
         print(f"  Executavel: {pbi_exe}")
 
-    # T1: os.startfile — equivale a dar duplo clique no arquivo,
-    #     usa a associacao .pbip registrada pelo Power BI na instalacao
+    # T1: cmd /c start — ShellExecute via cmd, funciona para qualquer instalacao
+    try:
+        r = subprocess.run(
+            ['cmd', '/c', 'start', '', PBIP_FILE],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode == 0:
+            print("  [OK] Power BI aberto (cmd start).")
+            return
+        print(f"  [T1] cmd start retornou {r.returncode}: {r.stderr.strip()}")
+    except Exception as e:
+        print(f"  [T1] cmd start falhou: {e}")
+
+    # T2: os.startfile (ShellExecuteEx — equivale a duplo clique)
     try:
         os.startfile(PBIP_FILE)
-        print("  [OK] Power BI aberto.")
+        print("  [OK] Power BI aberto (startfile).")
         return
     except Exception as e:
-        print(f"  [T1] startfile falhou: {e}")
+        print(f"  [T2] startfile falhou: {e}")
 
-    # T2: launch direto do exe (instalacao tradicional Program Files)
+    # T3: exe direto (instalacao tradicional Program Files)
     if pbi_exe and "WindowsApps" not in pbi_exe:
         try:
             subprocess.Popen([pbi_exe, PBIP_FILE])
             print("  [OK] Power BI aberto (exe direto).")
             return
         except Exception as e:
-            print(f"  [T2] Popen falhou: {e}")
+            print(f"  [T3] Popen falhou: {e}")
 
-    # T3: AppxPackage via PowerShell (Store app)
+    # T4: AppxPackage via PowerShell (Store app)
     print("  Tentando via AppxPackage + PowerShell...")
     pbip_q = PBIP_FILE.replace("'", "''")
     ps_appx = (
@@ -174,12 +186,11 @@ def abrir_power_bi():
     if r.returncode == 0:
         print("  [OK] Power BI aberto via AppxPackage.")
         return
-    if r.stderr.strip():
-        print(f"  [T3 STDERR] {r.stderr.strip()}")
+    print(f"  [T4 STDERR] {r.stderr.strip()}")
 
-    print("\n  [ERRO] Nao foi possivel abrir o Power BI Desktop.")
+    print("\n  [ERRO] Nenhuma estrategia funcionou.")
     print("  Certifique-se de que o Power BI Desktop esta instalado.")
-    print(f"  Abra manualmente: {PBIP_FILE}")
+    print(f"  Tente abrir manualmente: {PBIP_FILE}")
 
 
 # ── TMDL ──────────────────────────────────────────────────────────────────────
