@@ -1,8 +1,6 @@
 """
 Gera o Processador.exe na pasta CVC_IAM_ANALYTICS/EXECUTAVEIS/
 
-Pré-requisito: pip install pyinstaller
-
 Uso:
     cd deploy
     python build_processador.py
@@ -10,6 +8,15 @@ Uso:
 import subprocess
 import sys
 from pathlib import Path
+
+
+def garantir_pyinstaller():
+    try:
+        import PyInstaller  # noqa: F401
+    except ImportError:
+        print("[INFO] PyInstaller nao encontrado. Instalando...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller", "-q"])
+        print("[OK] PyInstaller instalado.")
 
 DEPLOY_DIR = Path(__file__).resolve().parent
 RAIZ = DEPLOY_DIR.parent
@@ -44,4 +51,5 @@ def main():
 
 
 if __name__ == "__main__":
+    garantir_pyinstaller()
     main()
