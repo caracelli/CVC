@@ -156,13 +156,21 @@ def abrir_power_bi():
 
     _print(f"  Arquivo: {PBIP_FILE}")
 
-    # T1: startfile (duplo clique via ShellExecute — nao precisa do exe)
+    # T1: explorer.exe — equivale a duplo clique, funciona mesmo com script elevado
+    try:
+        subprocess.Popen(["explorer.exe", PBIP_FILE])
+        _print("  [OK] Power BI aberto (explorer).")
+        return
+    except Exception as e:
+        _print(f"  [T1] explorer falhou: {e}")
+
+    # T2: startfile (ShellExecute — duplo clique)
     try:
         os.startfile(PBIP_FILE)
         _print("  [OK] Power BI aberto (startfile).")
         return
     except Exception as e:
-        _print(f"  [T1] startfile falhou: {e}")
+        _print(f"  [T2] startfile falhou: {e}")
 
     # T2: exe direto (instalacao tradicional Program Files)
     pbi_exe = _resolver_pbi_exe()
