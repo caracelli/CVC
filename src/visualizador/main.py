@@ -155,49 +155,28 @@ def abrir_power_bi():
         return
 
     _print(f"  Arquivo: {PBIP_FILE}")
-    pbi_exe = _resolver_pbi_exe()
 
-    if pbi_exe:
-        _print(f"  Executavel: {pbi_exe}")
-
-    # T1: exe direto — mais confiavel para instalacao tradicional (Program Files)
-    if pbi_exe and "WindowsApps" not in pbi_exe:
-        try:
-            import time
-            proc = subprocess.Popen([pbi_exe, PBIP_FILE])
-            _print(f"  [T1] Processo iniciado. PID={proc.pid}")
-            time.sleep(4)
-            rc = proc.poll()
-            if rc is None:
-                _print("  [OK] Power BI aberto (exe direto) — processo ativo.")
-                return
-            else:
-                _print(f"  [T1] Processo encerrou rapidamente. Codigo={rc}")
-        except Exception as e:
-            _print(f"  [T1] Popen falhou: {e}")
-
-    # T2: cmd /c start (usa associacao de arquivo .pbip do Windows)
-    try:
-        r = subprocess.run(
-            ['cmd', '/c', 'start', '', PBIP_FILE],
-            capture_output=True, text=True, timeout=10
-        )
-        if r.returncode == 0:
-            _print("  [OK] Power BI aberto (cmd start).")
-            return
-        _print(f"  [T2] cmd start retornou {r.returncode}: {r.stderr.strip()}")
-    except Exception as e:
-        _print(f"  [T2] cmd start falhou: {e}")
-
-    # T3: os.startfile (ShellExecuteEx — equivale a duplo clique)
+    # T1: startfile (duplo clique via ShellExecute — nao precisa do exe)
     try:
         os.startfile(PBIP_FILE)
         _print("  [OK] Power BI aberto (startfile).")
         return
     except Exception as e:
-        _print(f"  [T3] startfile falhou: {e}")
+        _print(f"  [T1] startfile falhou: {e}")
 
-    # T4: AppxPackage via PowerShell (Store app)
+    # T2: exe direto (instalacao tradicional Program Files)
+    pbi_exe = _resolver_pbi_exe()
+    if pbi_exe:
+        _print(f"  Executavel: {pbi_exe}")
+    if pbi_exe and "WindowsApps" not in pbi_exe:
+        try:
+            subprocess.Popen([pbi_exe, PBIP_FILE])
+            _print("  [OK] Power BI aberto (exe direto).")
+            return
+        except Exception as e:
+            _print(f"  [T2] Popen falhou: {e}")
+
+    # T3: AppxPackage via PowerShell (Store app)
     _print("  Tentando via AppxPackage + PowerShell...")
     pbip_q = PBIP_FILE.replace("'", "''")
     ps_appx = (
@@ -214,7 +193,7 @@ def abrir_power_bi():
     if r.returncode == 0:
         _print("  [OK] Power BI aberto via AppxPackage.")
         return
-    _print(f"  [T4 STDERR] {r.stderr.strip()}")
+    _print(f"  [T3 STDERR] {r.stderr.strip()}")
 
     _print("\n  [ERRO] Nenhuma estrategia funcionou.")
     _print("  Certifique-se de que o Power BI Desktop esta instalado.")
