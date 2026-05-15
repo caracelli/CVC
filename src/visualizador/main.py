@@ -12,8 +12,8 @@ _script_dir = os.path.dirname(os.path.abspath(__file__))
 _src_dir    = os.path.dirname(_script_dir)
 PROJECT_ROOT = os.path.dirname(_src_dir)
 
-# Log salvo na raiz do projeto para facil acesso
-_LOG_FILE = os.path.join(PROJECT_ROOT, 'visualizador_log.txt')
+# Log salvo ao lado do proprio script para facil acesso
+_LOG_FILE = os.path.join(_script_dir, 'visualizador_log.txt')
 _log_lines = []
 
 def _print(msg=""):

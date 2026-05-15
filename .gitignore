@@ -67,4 +67,4 @@ deploy/_build/
 CVC_IAM_ANALYTICS/.pbi_local
 
 # Log de execucao do visualizador
-visualizador_log.txt
+src/visualizador/visualizador_log.txt
