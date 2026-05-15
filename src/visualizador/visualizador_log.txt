@@ -1,20 +1,18 @@
-=== Log gerado em 2026-05-15 15:28:59 ===
+=== Log gerado em 2026-05-15 15:41:28 ===
 
 =======================================================
   IAM Analytics - Visualizador CVC
 =======================================================
 
-Raiz do projeto: c:\Projetos\CVC
+Raiz do projeto: C:\Projetos\CVC
 
 Atualizando CaminhoBase nos arquivos TMDL...
-  [ATUALIZADO] c:\Projetos\CVC\CVC_IAM_ANALYTICS\POWER_BI\CVC_IAM_Analytics.Dataset\definition\expressions.tmdl
-  [ATUALIZADO] c:\Projetos\CVC\CVC_IAM_ANALYTICS\POWER_BI_DEV\CVC_IAM_Analytics.Dataset\definition\expressions.tmdl
-  CaminhoBase -> c:\Projetos\CVC\CVC_IAM_ANALYTICS\
+  [ATUALIZADO] C:\Projetos\CVC\CVC_IAM_ANALYTICS\POWER_BI\CVC_IAM_Analytics.Dataset\definition\expressions.tmdl
+  [ATUALIZADO] C:\Projetos\CVC\CVC_IAM_ANALYTICS\POWER_BI_DEV\CVC_IAM_Analytics.Dataset\definition\expressions.tmdl
+  CaminhoBase -> C:\Projetos\CVC\CVC_IAM_ANALYTICS\
 
 Abrindo Power BI Desktop...
-  Arquivo: c:\Projetos\CVC\CVC_IAM_ANALYTICS\POWER_BI\CVC_IAM_Analytics.pbip
-  [CACHE] Power BI Desktop: C:\Program Files\Microsoft Power BI Desktop\bin\PBIDesktop.exe
-  Executavel: C:\Program Files\Microsoft Power BI Desktop\bin\PBIDesktop.exe
-  [OK] Power BI aberto (exe direto).
+  Arquivo: C:\Projetos\CVC\CVC_IAM_ANALYTICS\POWER_BI\CVC_IAM_Analytics.pbip
+  [OK] Power BI aberto (startfile).
 
 Concluido.
