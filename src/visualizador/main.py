@@ -160,7 +160,16 @@ def abrir_power_bi():
     if pbi_exe:
         _print(f"  Executavel: {pbi_exe}")
 
-    # T1: cmd /c start — ShellExecute via cmd, funciona para qualquer instalacao
+    # T1: exe direto — mais confiavel para instalacao tradicional (Program Files)
+    if pbi_exe and "WindowsApps" not in pbi_exe:
+        try:
+            subprocess.Popen([pbi_exe, PBIP_FILE])
+            _print("  [OK] Power BI aberto (exe direto).")
+            return
+        except Exception as e:
+            _print(f"  [T1] Popen falhou: {e}")
+
+    # T2: cmd /c start (usa associacao de arquivo .pbip do Windows)
     try:
         r = subprocess.run(
             ['cmd', '/c', 'start', '', PBIP_FILE],
@@ -169,26 +178,17 @@ def abrir_power_bi():
         if r.returncode == 0:
             _print("  [OK] Power BI aberto (cmd start).")
             return
-        _print(f"  [T1] cmd start retornou {r.returncode}: {r.stderr.strip()}")
+        _print(f"  [T2] cmd start retornou {r.returncode}: {r.stderr.strip()}")
     except Exception as e:
-        _print(f"  [T1] cmd start falhou: {e}")
+        _print(f"  [T2] cmd start falhou: {e}")
 
-    # T2: os.startfile (ShellExecuteEx — equivale a duplo clique)
+    # T3: os.startfile (ShellExecuteEx — equivale a duplo clique)
     try:
         os.startfile(PBIP_FILE)
         _print("  [OK] Power BI aberto (startfile).")
         return
     except Exception as e:
-        _print(f"  [T2] startfile falhou: {e}")
-
-    # T3: exe direto (instalacao tradicional Program Files)
-    if pbi_exe and "WindowsApps" not in pbi_exe:
-        try:
-            subprocess.Popen([pbi_exe, PBIP_FILE])
-            _print("  [OK] Power BI aberto (exe direto).")
-            return
-        except Exception as e:
-            _print(f"  [T3] Popen falhou: {e}")
+        _print(f"  [T3] startfile falhou: {e}")
 
     # T4: AppxPackage via PowerShell (Store app)
     _print("  Tentando via AppxPackage + PowerShell...")
