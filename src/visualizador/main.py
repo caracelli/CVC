@@ -163,9 +163,16 @@ def abrir_power_bi():
     # T1: exe direto — mais confiavel para instalacao tradicional (Program Files)
     if pbi_exe and "WindowsApps" not in pbi_exe:
         try:
-            subprocess.Popen([pbi_exe, PBIP_FILE])
-            _print("  [OK] Power BI aberto (exe direto).")
-            return
+            import time
+            proc = subprocess.Popen([pbi_exe, PBIP_FILE])
+            _print(f"  [T1] Processo iniciado. PID={proc.pid}")
+            time.sleep(4)
+            rc = proc.poll()
+            if rc is None:
+                _print("  [OK] Power BI aberto (exe direto) — processo ativo.")
+                return
+            else:
+                _print(f"  [T1] Processo encerrou rapidamente. Codigo={rc}")
         except Exception as e:
             _print(f"  [T1] Popen falhou: {e}")
 
