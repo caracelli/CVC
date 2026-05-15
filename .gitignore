@@ -27,8 +27,8 @@ CVC_IAM_ANALYTICS/DADOS/SAIDAS/**/*.pdf
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.db
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.sqlite
 
-# Parquet gerado
-CVC_IAM_ANALYTICS/DADOS/PARQUET/**/*.parquet
+# Parquet gerado — versionado para sincronizar entre maquinas (dados pequenos)
+# CVC_IAM_ANALYTICS/DADOS/PARQUET/**/*.parquet
 
 # Arquivos processados e de erro
 CVC_IAM_ANALYTICS/DADOS/PROCESSADOS/
