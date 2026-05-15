@@ -75,11 +75,14 @@ def _salvar_pbi_no_xml(exe_path):
 # ── busca do PBIDesktop.exe ───────────────────────────────────────────────────
 
 def _buscar_pbi_no_sistema():
-    """Procura PBIDesktop.exe em caminhos padrao e via where.exe."""
+    """Procura PBIDesktop.exe em caminhos padrao, glob, where.exe e AppxPackage (Store)."""
+
+    # 1) caminhos fixos conhecidos
     for path in _PBI_CANDIDATOS:
         if os.path.isfile(path):
             return path
 
+    # 2) glob em Program Files (cobre versoes com sufixo)
     for padrao in [
         r"C:\Program Files\Microsoft Power BI Desktop*\bin\PBIDesktop.exe",
         r"C:\Program Files (x86)\Microsoft Power BI Desktop*\bin\PBIDesktop.exe",
@@ -88,15 +91,35 @@ def _buscar_pbi_no_sistema():
         if encontrados:
             return encontrados[0]
 
+    # 3) where.exe (PATH do sistema)
     try:
-        resultado = subprocess.run(
+        r = subprocess.run(
             ["where", "PBIDesktop.exe"],
             capture_output=True, text=True, timeout=5
         )
-        if resultado.returncode == 0:
-            linha = resultado.stdout.strip().splitlines()[0]
+        if r.returncode == 0:
+            linha = r.stdout.strip().splitlines()[0]
             if os.path.isfile(linha):
                 return linha
+    except Exception:
+        pass
+
+    # 4) Microsoft Store / AppxPackage (WindowsApps — inacessivel por glob normal)
+    try:
+        ps = (
+            "(Get-AppxPackage *MicrosoftPowerBIDesktop* | "
+            "Select-Object -First 1).InstallLocation"
+        )
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode == 0:
+            install_dir = r.stdout.strip()
+            if install_dir:
+                exe = os.path.join(install_dir, "bin", "PBIDesktop.exe")
+                if os.path.isfile(exe):
+                    return exe
     except Exception:
         pass
 
@@ -168,11 +191,40 @@ def abrir_power_bi():
     pbi_exe = _resolver_pbi_exe()
 
     if pbi_exe:
-        subprocess.Popen([pbi_exe, PBIP_FILE])
+        if "WindowsApps" in pbi_exe:
+            # Store apps nao podem ser lancados diretamente — usa PowerShell
+            pbip_escaped = PBIP_FILE.replace("'", "''")
+            subprocess.Popen(
+                ["powershell", "-NoProfile", "-Command",
+                 f"Start-Process '{pbi_exe}' -ArgumentList '{pbip_escaped}'"],
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+        else:
+            subprocess.Popen([pbi_exe, PBIP_FILE])
         return
 
-    # fallback via PowerShell
-    print("  Executavel nao localizado — abrindo via PowerShell...")
+    # fallback 1: abre via AppxPackage diretamente no PowerShell
+    print("  Executavel nao localizado — tentando via AppxPackage...")
+    pbip_escaped = PBIP_FILE.replace("'", "''")
+    ps_appx = (
+        "$pkg = Get-AppxPackage *MicrosoftPowerBIDesktop* | Select-Object -First 1; "
+        "if ($pkg) { "
+        f"  $exe = Join-Path $pkg.InstallLocation 'bin\\PBIDesktop.exe'; "
+        f"  Start-Process $exe -ArgumentList '{pbip_escaped}' "
+        "} else { exit 1 }"
+    )
+    try:
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_appx],
+            timeout=15
+        )
+        if r.returncode == 0:
+            return
+    except Exception:
+        pass
+
+    # fallback 2: Start-Process com o .pbip direto (usa associacao de arquivo)
+    print("  Tentando via Start-Process do arquivo...")
     try:
         subprocess.Popen(
             ["powershell", "-NoProfile", "-Command",
@@ -183,7 +235,7 @@ def abrir_power_bi():
     except Exception:
         pass
 
-    # ultimo recurso: associacao de arquivo do Windows
+    # fallback 3: os.startfile
     try:
         os.startfile(PBIP_FILE)
         return
