@@ -156,56 +156,12 @@ def abrir_power_bi():
 
     _print(f"  Arquivo: {PBIP_FILE}")
 
-    # T1: explorer.exe — equivale a duplo clique, funciona mesmo com script elevado
     try:
         subprocess.Popen(["explorer.exe", PBIP_FILE])
-        _print("  [OK] Power BI aberto (explorer).")
-        return
+        _print("  [OK] Power BI aberto.")
     except Exception as e:
-        _print(f"  [T1] explorer falhou: {e}")
-
-    # T2: startfile (ShellExecute — duplo clique)
-    try:
-        os.startfile(PBIP_FILE)
-        _print("  [OK] Power BI aberto (startfile).")
-        return
-    except Exception as e:
-        _print(f"  [T2] startfile falhou: {e}")
-
-    # T2: exe direto (instalacao tradicional Program Files)
-    pbi_exe = _resolver_pbi_exe()
-    if pbi_exe:
-        _print(f"  Executavel: {pbi_exe}")
-    if pbi_exe and "WindowsApps" not in pbi_exe:
-        try:
-            subprocess.Popen([pbi_exe, PBIP_FILE])
-            _print("  [OK] Power BI aberto (exe direto).")
-            return
-        except Exception as e:
-            _print(f"  [T2] Popen falhou: {e}")
-
-    # T3: AppxPackage via PowerShell (Store app)
-    _print("  Tentando via AppxPackage + PowerShell...")
-    pbip_q = PBIP_FILE.replace("'", "''")
-    ps_appx = (
-        "$pkg = Get-AppxPackage *MicrosoftPowerBIDesktop* | Select-Object -First 1; "
-        "if ($pkg) { "
-        "  $exe = Join-Path $pkg.InstallLocation 'bin\\PBIDesktop.exe'; "
-        f"  Start-Process -FilePath $exe -ArgumentList '\"{pbip_q}\"'; "
-        "  exit 0 } else { Write-Error 'PBI nao encontrado via Store'; exit 1 }"
-    )
-    r = subprocess.run(
-        ["powershell", "-NoProfile", "-Command", ps_appx],
-        capture_output=True, text=True, timeout=20
-    )
-    if r.returncode == 0:
-        _print("  [OK] Power BI aberto via AppxPackage.")
-        return
-    _print(f"  [T3 STDERR] {r.stderr.strip()}")
-
-    _print("\n  [ERRO] Nenhuma estrategia funcionou.")
-    _print("  Certifique-se de que o Power BI Desktop esta instalado.")
-    _print(f"  Tente abrir manualmente: {PBIP_FILE}")
+        _print(f"  [ERRO] Nao foi possivel abrir: {e}")
+        _print(f"  Tente abrir manualmente: {PBIP_FILE}")
 
 
 # ── TMDL ──────────────────────────────────────────────────────────────────────
