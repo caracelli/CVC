@@ -41,10 +41,10 @@ class ImportarMatrizes:
             } for p in perfis])
             self._parquet.salvar_fixo(df, f"{self._pasta_parquet}/MATRIZES", "perfis_esperados")
 
-        org, arq_org = self._leitor_org.ler(self._pasta_org)
-        if org:
-            self._repositorio.salvar_organizacional(org, ", ".join(arq_org))
-            self._parquet.salvar_fixo(pd.DataFrame(org), f"{self._pasta_parquet}/MATRIZES", "matriz_organizacional")
+        cco, arq_cco = self._leitor_org.ler(self._pasta_org)
+        if cco:
+            self._repositorio.salvar_cco(cco, ", ".join(arq_cco))
+            self._parquet.salvar_fixo(pd.DataFrame(cco), f"{self._pasta_parquet}/MATRIZES", "matriz_cco")
 
-        logger.info(f"=== Matrizes: {len(perfis)} perfis esperados, {len(org)} centros de custo org ===")
-        return len(perfis), len(org)
+        logger.info(f"=== Matrizes: {len(perfis)} perfis esperados, {len(cco)} mapeamentos CCO ===")
+        return len(perfis), len(cco)

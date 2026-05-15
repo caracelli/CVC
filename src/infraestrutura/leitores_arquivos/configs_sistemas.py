@@ -25,7 +25,7 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
             "nome":         "NM_PESSOA",
             "cpf":          "CPF / CNPJ",
             "email":        "EMAIL",
-            "perfil":       "NM_GRUPO",
+            "perfil":       "CD_GRUPO_SIGLA",   # código do grupo (bate com a matriz)
             "situacao":     "ST_HABILITACAO",
         },
     ),

@@ -1,0 +1,33 @@
+table Perfis_Esperados
+	lineageTag: 66d0dc01-92e2-448c-a78b-b2779abd623a
+
+	column centro_custo
+		dataType: string
+		lineageTag: ec256cdc-e53b-48f2-bf27-8ff185eac655
+		summarizeBy: none
+		sourceColumn: centro_custo
+
+		annotation SummarizationSetBy = Automatic
+
+	column sistema
+		dataType: string
+		lineageTag: ffb8d894-5253-45f8-9f0d-90db96f981c9
+		summarizeBy: none
+		sourceColumn: sistema
+
+		annotation SummarizationSetBy = Automatic
+
+	column perfil
+		dataType: string
+		lineageTag: 6d5ce82e-3487-44b5-85f0-d086d5fc305f
+		summarizeBy: none
+		sourceColumn: perfil
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Perfis_Esperados = m
+		mode: import
+		source = Parquet.Document(File.Contents(CaminhoBase & "DADOS\PARQUET\MATRIZES\perfis_esperados.parquet"))
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>CVC IAM Analytics — Mockup v2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #F2F4F7; width: 1440px; }
+
+  /* ── HEADER ── */
+  .header { background: #1F2D5C; height: 70px; display: flex; align-items: center; padding: 0 24px; position: relative; }
+  .header-accent { width: 6px; height: 70px; background: #F5B800; position: absolute; left: 0; top: 0; }
+  .header-titles { margin-left: 18px; }
+  .header-titles h1 { color: #fff; font-size: 22px; font-weight: 700; line-height: 1.2; }
+  .header-titles p  { color: #B0BEC5; font-size: 11px; margin-top: 2px; }
+  .header-right { margin-left: auto; text-align: right; }
+  .header-right .ref { color: #F5B800; font-size: 12px; font-weight: 700; }
+  .header-right .upd { color: #B0BEC5; font-size: 9px; margin-top: 4px; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; padding: 0 20px; background: #F2F4F7; border-bottom: 1px solid #D8DCE6; }
+  .tab { padding: 8px 22px; font-size: 11px; cursor: pointer; border-radius: 4px 4px 0 0;
+         margin-top: 6px; color: #555; background: #EAECF0; margin-right: 4px; user-select: none; }
+  .tab:hover { background: #DDE1EA; }
+  .tab.active { background: #F5B800; color: #1F2D5C; font-weight: 700; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar { display: flex; align-items: center; padding: 10px 20px; gap: 10px;
+                background: #F2F4F7; border-bottom: 1px solid #E0E0E0; flex-wrap: wrap; }
+  .filter-label { font-size: 10px; font-weight: 700; color: #333; white-space: nowrap; }
+  .filter-btn { padding: 5px 14px; border-radius: 4px; font-size: 10px;
+                border: 1px solid #CCC; background: #FFF; color: #555; cursor: pointer; }
+  .filter-btn.active { background: #F5B800; color: #1F2D5C; font-weight: 700; border-color: #F5B800; }
+  .filter-divider { width: 1px; height: 20px; background: #CCC; margin: 0 6px; }
+  .filter-select { padding: 5px 12px; border-radius: 4px; font-size: 10px;
+                   border: 1px solid #CCC; background: #FFF; color: #333; }
+
+  /* ── BODY ── */
+  .body { display: flex; min-height: 760px; }
+
+  /* ── SIDEBAR ── */
+  .sidebar { width: 210px; min-width: 210px; padding: 14px 12px;
+             display: flex; flex-direction: column; gap: 10px;
+             background: #F2F4F7; border-right: 1px solid #E0E0E0; }
+  .kpi-card { border-radius: 6px; padding: 10px 14px; border: 1px solid transparent; position: relative; }
+  .kpi-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+                      width: 4px; border-radius: 6px 0 0 6px; }
+  .kpi-card.blue   { background: #EBF5FB; border-color: #D5E8F5; }
+  .kpi-card.blue::before   { background: #2980B9; }
+  .kpi-card.orange { background: #FEF3E2; border-color: #F9D5A7; }
+  .kpi-card.orange::before { background: #E67E22; }
+  .kpi-card.red    { background: #FDECEC; border-color: #F5C6C6; }
+  .kpi-card.red::before    { background: #C0392B; }
+  .kpi-card.purple { background: #F5EEF8; border-color: #D7BDE2; }
+  .kpi-card.purple::before { background: #7D3C98; }
+  .kpi-card.green  { background: #EAFAF1; border-color: #A9DFBF; }
+  .kpi-card.green::before  { background: #1E8449; }
+  .kpi-value { font-size: 26px; font-weight: 900; line-height: 1; }
+  .kpi-card.blue   .kpi-value { color: #2980B9; }
+  .kpi-card.orange .kpi-value { color: #E67E22; }
+  .kpi-card.red    .kpi-value { color: #C0392B; }
+  .kpi-card.purple .kpi-value { color: #7D3C98; }
+  .kpi-card.green  .kpi-value { color: #1E8449; }
+  .kpi-label { font-size: 10px; color: #555; margin-top: 3px; }
+
+  .mini-chart { background: #FFF; border-radius: 6px; border: 1px solid #E0E0E0; padding: 10px 12px; }
+  .mini-chart-title { font-size: 10px; font-weight: 700; color: #1F2D5C; margin-bottom: 8px; }
+  .bar-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .bar-dept { font-size: 9px; color: #555; width: 58px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; background: #F0F0F0; border-radius: 3px; height: 10px; }
+  .bar-fill  { height: 10px; border-radius: 3px; }
+  .bar-val   { font-size: 9px; color: #333; font-weight: 700; width: 24px; text-align: right; }
+
+  /* ── MAIN PANEL ── */
+  .main-panel { flex: 1; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; }
+  .table-title { font-size: 13px; font-weight: 700; color: #1F2D5C; }
+  .tfilter-label { font-size: 10px; color: #888; }
+
+  /* ── MATRIX TABLE ── */
+  .div-table { background: #FFF; border-radius: 6px; border: 1px solid #E0E0E0;
+               overflow: hidden; flex: 1; display: flex; flex-direction: column; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead tr { background: #1F2D5C; }
+  thead th { color: #FFF; font-weight: 700; font-size: 10px; padding: 9px 12px; text-align: left; white-space: nowrap; }
+  tbody td { padding: 7px 12px; color: #333; font-size: 11px; border-bottom: 1px solid #EEEEEE; }
+
+  tr.row-parent { background: #FFF; cursor: pointer; }
+  tr.row-parent:nth-child(even) { background: #FAFAFA; }
+  tr.row-parent:hover { background: #DEECF9; }
+  tr.row-parent.open  { background: #DEECF9; }
+  tr.row-parent td    { padding: 6px 8px; font-size: 11px; border-bottom: 1px solid #E0E0E0; }
+
+  .pbi-arrow { display: inline-block; width: 0; height: 0;
+               border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+               border-left: 7px solid #605E5C; margin-right: 6px;
+               vertical-align: middle; transition: transform 0.15s; flex-shrink: 0; }
+  .pbi-arrow.open { transform: rotate(90deg); }
+  .pbi-arrow.hidden { visibility: hidden; }
+  .cell-expand { display: flex; align-items: center; white-space: nowrap; }
+
+  tr.row-child { display: none; background: #F8F8F8; }
+  tr.row-child.visible { display: table-row; }
+  tr.row-child td { padding: 5px 8px; font-size: 10.5px; border-bottom: 1px solid #EDEDEE; }
+  .cell-child { display: flex; align-items: center; padding-left: 22px;
+                border-left: 3px solid #C8C6C4; margin-left: 2px; }
+
+  /* badges de tipo */
+  .cc-orange { background: #FEF3E2; color: #833C00; font-weight: 600; padding: 1px 6px; }
+  .cc-purple { background: #F0E6F6; color: #5C2D91; font-weight: 600; padding: 1px 6px; }
+  .cc-red    { background: #FDE7E9; color: #A4262C; font-weight: 600; padding: 1px 6px; }
+  .cc-green  { background: #DFF6DD; color: #107C10; font-weight: 600; padding: 1px 6px; }
+  .cc-blue   { background: #DEECF9; color: #004578; font-weight: 600; padding: 1px 6px; }
+  .cell-subtotal { color: #605E5C; font-style: italic; font-size: 10.5px; }
+
+  /* ── FLAT TABLE (Ações Pendentes) ── */
+  tr.row-flat { background: #FFF; }
+  tr.row-flat:nth-child(even) { background: #FAFAFA; }
+  tr.row-flat:hover { background: #DEECF9; }
+  tr.row-flat td { padding: 7px 10px; font-size: 10.5px; border-bottom: 1px solid #EEEEEE; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 3px;
+           font-size: 9.5px; font-weight: 700; white-space: nowrap; }
+  .badge-sem-acesso { background: #FEF3E2; color: #833C00; border: 1px solid #F9D5A7; }
+  .badge-divergente { background: #FFFBE6; color: #7D6608; border: 1px solid #F7DC6F; }
+  .badge-em-analise { background: #DEECF9; color: #004578; border: 1px solid #BDD5EC; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel { background: #FFF; border-radius: 6px; border: 1px solid #E0E0E0; padding: 12px 16px; }
+  .detail-title { font-size: 11px; font-weight: 700; color: #1F2D5C; display: inline-block; }
+
+  /* ── PAGINATION ── */
+  .pagination { display: flex; justify-content: space-between; align-items: center;
+                padding: 8px 12px; border-top: 1px solid #EEE; background: #FAFAFA; }
+  .page-info { font-size: 10px; color: #888; }
+  .page-btns { display: flex; gap: 4px; }
+  .page-btn { width: 26px; height: 26px; border-radius: 4px; font-size: 10px;
+              border: 1px solid #DDD; background: #FFF; color: #555;
+              display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .page-btn.active { background: #F5B800; color: #1F2D5C; font-weight: 700; border-color: #F5B800; }
+
+  /* ── TAB CONTENT SWITCHING ── */
+  .tab-content { display: none; }
+  .tab-content.active { display: flex; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-accent"></div>
+  <div class="header-titles">
+    <h1>IAM Analytics</h1>
+    <p>Governança de Acessos — CVC Corp</p>
+  </div>
+  <div class="header-right">
+    <div class="ref">Referência: Maio / 2026</div>
+    <div class="upd">Última atualização: 14/05/2026  10:48</div>
+  </div>
+</div>
+
+<!-- NAVIGATION TABS -->
+<div class="tabs">
+  <div class="tab" onclick="switchTab('divergencias')">Visão Geral</div>
+  <div class="tab active" id="tab-divergencias" onclick="switchTab('divergencias')">Lista de Divergências</div>
+  <div class="tab" id="tab-acoes" onclick="switchTab('acoes')">Ações Pendentes</div>
+  <div class="tab" onclick="switchTab('divergencias')">Desligados c/ Acesso</div>
+  <div class="tab" onclick="switchTab('divergencias')">Sem Vínculo RH</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TAB: LISTA DE DIVERGÊNCIAS
+══════════════════════════════════════════════════════════════ -->
+<div id="content-divergencias" class="tab-content active" style="flex-direction:column">
+
+  <div class="filter-bar">
+    <span class="filter-label">Sistema:</span>
+    <div class="filter-btn active">Todos</div>
+    <div class="filter-btn">SYSTUR</div>
+    <div class="filter-divider"></div>
+    <span class="filter-label">Tipo:</span>
+    <select class="filter-select">
+      <option>Todos os tipos</option>
+      <option>Acesso Desligado</option>
+      <option>Perfil Inválido</option>
+      <option>Sem Vínculo RH</option>
+    </select>
+    <span class="filter-label">Departamento:</span>
+    <select class="filter-select">
+      <option>Todos</option><option>Operações</option><option>TI</option><option>Agências</option><option>Financeiro</option>
+    </select>
+    <span class="filter-label">Status:</span>
+    <select class="filter-select">
+      <option>Todos</option><option>Pendente</option><option>Resolvida</option>
+    </select>
+  </div>
+
+  <div class="body">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="kpi-card blue">
+        <div class="kpi-value">2.207</div>
+        <div class="kpi-label">Funcionários Ativos</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-value">1.041</div>
+        <div class="kpi-label">Ações Pendentes</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-value">243</div>
+        <div class="kpi-label">Desligados c/ Acesso</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-value">4.957</div>
+        <div class="kpi-label">Sem Vínculo RH</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-value">5.271</div>
+        <div class="kpi-label">Total Divergências</div>
+      </div>
+
+      <div class="mini-chart">
+        <div class="mini-chart-title">Top Centros de Custo</div>
+        <div class="bar-row">
+          <span class="bar-dept">AGENCIAS-SP</span>
+          <div class="bar-track"><div class="bar-fill" style="width:100%;background:#E67E22"></div></div>
+          <span class="bar-val">287</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-dept">CENTRAL-RJ</span>
+          <div class="bar-track"><div class="bar-fill" style="width:82%;background:#2980B9"></div></div>
+          <span class="bar-val">234</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-dept">FRANQUIAS</span>
+          <div class="bar-track"><div class="bar-fill" style="width:69%;background:#2980B9"></div></div>
+          <span class="bar-val">198</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-dept">OPERACOES</span>
+          <div class="bar-track"><div class="bar-fill" style="width:57%;background:#2980B9"></div></div>
+          <span class="bar-val">165</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-dept">TI-SISTEMAS</span>
+          <div class="bar-track"><div class="bar-fill" style="width:29%;background:#2980B9"></div></div>
+          <span class="bar-val">84</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN PANEL -->
+    <div class="main-panel">
+      <div class="table-header">
+        <span class="table-title">Divergências — Detalhamento</span>
+        <span class="tfilter-label">5.271 divergências · SYSTUR</span>
+      </div>
+
+      <div class="div-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Usuário / Acesso</th>
+              <th>Nome</th>
+              <th>Matrícula</th>
+              <th>Departamento</th>
+              <th>Cargo</th>
+              <th>Tipo</th>
+              <th>Perfil Enc.</th>
+              <th>Perfil Esp.</th>
+              <th>Data</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <!-- Ana Medeiros — 2 divergências -->
+            <tr class="row-parent" onclick="toggle(this,'g01')">
+              <td><div class="cell-expand"><span class="pbi-arrow" id="g01"></span>usr.ana.medeiros</div></td>
+              <td>Ana Medeiros</td><td>M-00042</td><td>TI</td><td>Analista TI</td>
+              <td class="cell-subtotal">2 divergências</td>
+              <td class="cell-subtotal">—</td><td class="cell-subtotal">—</td>
+              <td>14/05/2026</td><td class="cell-subtotal">—</td>
+            </tr>
+            <tr class="row-child" data-g="g01">
+              <td><div class="cell-child">div-001</div></td>
+              <td>Ana Medeiros</td><td>M-00042</td><td>TI</td><td>Analista TI</td>
+              <td class="cc-orange">PERFIL_INVALIDO</td>
+              <td class="cc-orange">ADMIN</td><td>CONSULTA</td>
+              <td>14/05/2026</td><td class="cc-red">Pendente</td>
+            </tr>
+            <tr class="row-child" data-g="g01">
+              <td><div class="cell-child">div-002</div></td>
+              <td>Ana Medeiros</td><td>—</td><td>—</td><td>—</td>
+              <td class="cc-purple">ACESSO_SEM_VINCULO_RH</td>
+              <td class="cc-purple">OPERADOR</td><td>—</td>
+              <td>14/05/2026</td><td class="cc-red">Pendente</td>
+            </tr>
+
+            <!-- Bruno Soares — desligado c/ acesso -->
+            <tr class="row-parent" onclick="toggle(this,'g02')">
+              <td><div class="cell-expand"><span class="pbi-arrow hidden" id="g02"></span>usr.bruno.soares</div></td>
+              <td>Bruno Soares</td><td>M-00078</td><td>Operações</td><td>Supervisor Ops</td>
+              <td class="cc-red">ACESSO_DESLIGADO</td>
+              <td class="cc-red">OPERADOR</td><td>—</td>
+              <td>14/05/2026</td><td class="cc-red">Pendente</td>
+            </tr>
+
+            <!-- Carla Fonseca — sem vínculo RH -->
+            <tr class="row-parent" onclick="toggle(this,'g03')">
+              <td><div class="cell-expand"><span class="pbi-arrow hidden" id="g03"></span>usr.carla.fonseca</div></td>
+              <td>Carla Fonseca</td><td>—</td><td>—</td><td>—</td>
+              <td class="cc-purple">ACESSO_SEM_VINCULO_RH</td>
+              <td class="cc-purple">GERENTE</td><td>—</td>
+              <td>14/05/2026</td><td class="cc-red">Pendente</td>
+            </tr>
+
+            <!-- Diego Ramos — 2 divergências -->
+            <tr class="row-parent" onclick="toggle(this,'g04')">
+              <td><div class="cell-expand"><span class="pbi-arrow" id="g04"></span>usr.diego.ramos</div></td>
+              <td>Diego Ramos</td><td>—</td><td>—</td><td>—</td>
+              <td class="cell-subtotal">2 divergências</td>
+              <td class="cell-subtotal">—</td><td class="cell-subtotal">—</td>
+              <td>14/05/2026</td><td class="cell-subtotal">—</td>
+            </tr>
+            <tr class="row-child" data-g="g04">
+              <td><div class="cell-child">div-011</div></td>
+              <td>Diego Ramos</td><td>—</td><td>—</td><td>—</td>
+              <td class="cc-purple">ACESSO_SEM_VINCULO_RH</td>
+              <td class="cc-purple">CONSULTA</td><td>—</td>
+              <td>14/05/2026</td><td class="cc-red">Pendente</td>
+            </tr>
+            <tr class="row-child" data-g="g04">
+              <td><div class="cell-child">div-012</div></td>
+              <td>Diego Ramos</td><td>—</td><td>—</td><td>—</td>
+              <td class="cc-red">ACESSO_DESLIGADO</td>
+              <td class="cc-red">ADMIN</td><td>—</td>
+              <td>13/05/2026</td><td class="cc-red">Pendente</td>
+            </tr>
+
+            <!-- Elisa Teixeira — perfil inválido -->
+            <tr class="row-parent" onclick="toggle(this,'g05')">
+              <td><div class="cell-expand"><span class="pbi-arrow hidden" id="g05"></span>usr.elisa.teixeira</div></td>
+              <td>Elisa Teixeira</td><td>M-00117</td><td>Agências</td><td>Coordenadora</td>
+              <td class="cc-orange">PERFIL_INVALIDO</td>
+              <td class="cc-orange">GESTOR</td><td>CONSULTA</td>
+              <td>14/05/2026</td><td class="cc-red">Pendente</td>
+            </tr>
+
+            <!-- Fábio Lins — desligado c/ acesso -->
+            <tr class="row-parent" onclick="toggle(this,'g06')">
+              <td><div class="cell-expand"><span class="pbi-arrow hidden" id="g06"></span>usr.fabio.lins</div></td>
+              <td>Fábio Lins</td><td>M-00134</td><td>Financeiro</td><td>Analista Fin.</td>
+              <td class="cc-red">ACESSO_DESLIGADO</td>
+              <td class="cc-red">ADMIN</td><td>—</td>
+              <td>13/05/2026</td><td class="cc-red">Pendente</td>
+            </tr>
+
+            <!-- Gisele Nunes — sem vínculo -->
+            <tr class="row-parent" onclick="toggle(this,'g07')">
+              <td><div class="cell-expand"><span class="pbi-arrow hidden" id="g07"></span>usr.gisele.nunes</div></td>
+              <td>Gisele Nunes</td><td>—</td><td>—</td><td>—</td>
+              <td class="cc-purple">ACESSO_SEM_VINCULO_RH</td>
+              <td class="cc-purple">CONSULTA</td><td>—</td>
+              <td>13/05/2026</td><td class="cc-red">Pendente</td>
+            </tr>
+
+          </tbody>
+        </table>
+        <div class="pagination">
+          <span class="page-info">Exibindo 1–7 de 5.271 divergências</span>
+          <div class="page-btns">
+            <div class="page-btn">‹</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">3</div>
+            <div class="page-btn">…</div>
+            <div class="page-btn">528</div>
+            <div class="page-btn">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Painel de detalhe -->
+      <div class="detail-panel">
+        <div style="height:3px;background:#F5B800;border-radius:2px;margin-bottom:8px;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span id="detail-title" class="detail-title">Selecione um usuário na tabela acima</span>
+          <span style="font-size:9px;color:#888;font-style:italic">cross-filter nativo Power BI</span>
+        </div>
+        <div id="detail-body">
+          <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
+            <thead>
+              <tr style="background:#2C3E6B;">
+                <th style="color:#fff;padding:6px 10px;font-size:9px;font-weight:700;text-align:left;">Tipo</th>
+                <th style="color:#fff;padding:6px 10px;font-size:9px;font-weight:700;text-align:left;">Perfil Encontrado</th>
+                <th style="color:#fff;padding:6px 10px;font-size:9px;font-weight:700;text-align:left;">Perfil Esperado</th>
+                <th style="color:#fff;padding:6px 10px;font-size:9px;font-weight:700;text-align:left;">Descrição</th>
+                <th style="color:#fff;padding:6px 10px;font-size:9px;font-weight:700;text-align:left;">Data</th>
+                <th style="color:#fff;padding:6px 10px;font-size:9px;font-weight:700;text-align:left;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="detail-rows">
+              <tr><td colspan="6" style="padding:12px 10px;color:#AAA;font-style:italic;font-size:10px;">Nenhum usuário selecionado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /main-panel -->
+  </div><!-- /body -->
+</div><!-- /tab-content divergencias -->
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     TAB: AÇÕES PENDENTES (Validação de Acessos)
+══════════════════════════════════════════════════════════════ -->
+<div id="content-acoes" class="tab-content" style="flex-direction:column">
+
+  <div class="filter-bar">
+    <span class="filter-label">Status:</span>
+    <div class="filter-btn active">Todos</div>
+    <div class="filter-btn">Sem Acesso</div>
+    <div class="filter-btn">Divergente</div>
+    <div class="filter-btn">Em Análise</div>
+    <div class="filter-divider"></div>
+    <span class="filter-label">Sistema:</span>
+    <div class="filter-btn active" style="margin-left:0">Todos</div>
+    <div class="filter-btn">SYSTUR</div>
+    <div class="filter-divider"></div>
+    <span class="filter-label">Centro de Custo:</span>
+    <select class="filter-select">
+      <option>Todos</option><option>AGENCIAS-SP</option><option>CENTRAL-RJ</option><option>FRANQUIAS</option><option>OPERACOES</option><option>TI-SISTEMAS</option>
+    </select>
+    <span class="filter-label">Acesso Manual:</span>
+    <select class="filter-select">
+      <option>Todos</option><option>Sim</option><option>Não</option>
+    </select>
+  </div>
+
+  <div class="body">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="kpi-card orange">
+        <div class="kpi-value">800</div>
+        <div class="kpi-label">Incluir Acesso</div>
+      </div>
+      <div class="kpi-card" style="background:#FFFBE6;border-color:#F7DC6F;">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:6px 0 0 6px;background:#D4AC0D;"></div>
+        <div class="kpi-value" style="color:#7D6608;">180</div>
+        <div class="kpi-label">Alterar Perfil</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-value">61</div>
+        <div class="kpi-label">Em Análise</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-value">23</div>
+        <div class="kpi-label">Acesso Manual</div>
+      </div>
+      <div class="kpi-card" style="background:#F5EEF8;border-color:#D7BDE2;">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:6px 0 0 6px;background:#7D3C98;"></div>
+        <div class="kpi-value" style="color:#7D3C98;">1.041</div>
+        <div class="kpi-label">Total c/ Ação</div>
+      </div>
+
+      <div class="mini-chart">
+        <div class="mini-chart-title">Ações por Status</div>
+        <div class="bar-row">
+          <span class="bar-dept">Sem Acesso</span>
+          <div class="bar-track"><div class="bar-fill" style="width:100%;background:#E67E22"></div></div>
+          <span class="bar-val">800</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-dept">Divergente</span>
+          <div class="bar-track"><div class="bar-fill" style="width:23%;background:#D4AC0D"></div></div>
+          <span class="bar-val">180</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-dept">Em Análise</span>
+          <div class="bar-track"><div class="bar-fill" style="width:8%;background:#2980B9"></div></div>
+          <span class="bar-val">61</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN PANEL -->
+    <div class="main-panel">
+      <div class="table-header">
+        <span class="table-title">Ações Pendentes — Validação de Acessos</span>
+        <span class="tfilter-label">1.041 registros · apenas funcionários ativos com ação pendente</span>
+      </div>
+
+      <div class="div-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Matrícula</th>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Centro de Custo</th>
+              <th>Sistema</th>
+              <th>Perfil Esperado</th>
+              <th>Perfil Atual</th>
+              <th>Status</th>
+              <th>Manual</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="row-flat">
+              <td><b>12345</b></td><td>João da Silva Santos</td><td>123.456.789-00</td>
+              <td>AGENCIAS-SP</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">OPERADOR</td>
+              <td style="color:#A4262C;font-weight:600">CONSULTA</td>
+              <td><span class="badge badge-divergente">DIVERGENTE</span></td>
+              <td>Não</td>
+            </tr>
+            <tr class="row-flat">
+              <td><b>67890</b></td><td>Maria Aparecida Souza</td><td>234.567.890-11</td>
+              <td>CENTRAL-RJ</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">GERENTE</td>
+              <td style="color:#888">—</td>
+              <td><span class="badge badge-sem-acesso">SEM_ACESSO</span></td>
+              <td>Não</td>
+            </tr>
+            <tr class="row-flat">
+              <td><b>11111</b></td><td>Pedro Henrique Costa</td><td>345.678.901-22</td>
+              <td>TI-SISTEMAS</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">ADMIN</td>
+              <td style="color:#A4262C;font-weight:600">CONSULTA</td>
+              <td><span class="badge badge-divergente">DIVERGENTE</span></td>
+              <td>Sim</td>
+            </tr>
+            <tr class="row-flat">
+              <td><b>22222</b></td><td>Ana Paula Ferreira</td><td>456.789.012-33</td>
+              <td>FRANQUIAS</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">CONSULTA</td>
+              <td style="color:#888">—</td>
+              <td><span class="badge badge-sem-acesso">SEM_ACESSO</span></td>
+              <td>Não</td>
+            </tr>
+            <tr class="row-flat">
+              <td><b>33333</b></td><td>Carlos Eduardo Lima</td><td>567.890.123-44</td>
+              <td>CENTRAL-RJ</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">OPERADOR</td>
+              <td style="color:#107C10;font-weight:600">OPERADOR</td>
+              <td><span class="badge badge-em-analise">EM_ANALISE</span></td>
+              <td>Não</td>
+            </tr>
+            <tr class="row-flat">
+              <td><b>44444</b></td><td>Fernanda Costa Ribeiro</td><td>678.901.234-55</td>
+              <td>FRANQUIAS</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">GERENTE</td>
+              <td style="color:#888">—</td>
+              <td><span class="badge badge-sem-acesso">SEM_ACESSO</span></td>
+              <td>Não</td>
+            </tr>
+            <tr class="row-flat">
+              <td><b>55555</b></td><td>Lucas Mendes Oliveira</td><td>789.012.345-66</td>
+              <td>AGENCIAS-SP</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">CONSULTA</td>
+              <td style="color:#A4262C;font-weight:600">ADMIN</td>
+              <td><span class="badge badge-divergente">DIVERGENTE</span></td>
+              <td>Não</td>
+            </tr>
+            <tr class="row-flat">
+              <td><b>66666</b></td><td>Patrícia Alves Sousa</td><td>890.123.456-77</td>
+              <td>OPERACOES</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">OPERADOR</td>
+              <td style="color:#888">—</td>
+              <td><span class="badge badge-sem-acesso">SEM_ACESSO</span></td>
+              <td>Sim</td>
+            </tr>
+            <tr class="row-flat">
+              <td><b>77777</b></td><td>Roberto Teixeira Neto</td><td>901.234.567-88</td>
+              <td>CENTRAL-RJ</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">GERENTE</td>
+              <td style="color:#A4262C;font-weight:600">CONSULTA</td>
+              <td><span class="badge badge-divergente">DIVERGENTE</span></td>
+              <td>Não</td>
+            </tr>
+            <tr class="row-flat">
+              <td><b>88888</b></td><td>Sandra Lima Pereira</td><td>012.345.678-99</td>
+              <td>OPERACOES</td><td>SYSTUR</td>
+              <td style="color:#107C10;font-weight:600">ADMIN</td>
+              <td style="color:#107C10;font-weight:600">OPERADOR</td>
+              <td><span class="badge badge-em-analise">EM_ANALISE</span></td>
+              <td>Não</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pagination">
+          <span class="page-info">Exibindo 1–10 de 1.041 registros</span>
+          <div class="page-btns">
+            <div class="page-btn">‹</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">3</div>
+            <div class="page-btn">…</div>
+            <div class="page-btn">105</div>
+            <div class="page-btn">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legenda de status -->
+      <div class="detail-panel" style="padding:10px 16px;">
+        <div style="height:3px;background:#F5B800;border-radius:2px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:24px;align-items:center;">
+          <span style="font-size:10px;font-weight:700;color:#1F2D5C;">Legenda de Status:</span>
+          <span><span class="badge badge-sem-acesso">SEM_ACESSO</span>
+            <span style="font-size:10px;color:#555;margin-left:6px;">Funcionário ativo sem acesso ao sistema — precisa ser incluído</span></span>
+          <span><span class="badge badge-divergente">DIVERGENTE</span>
+            <span style="font-size:10px;color:#555;margin-left:6px;">Perfil atual difere do esperado pela matriz — precisa ser alterado</span></span>
+          <span><span class="badge badge-em-analise">EM_ANALISE</span>
+            <span style="font-size:10px;color:#555;margin-left:6px;">Dois ou mais perfis válidos mapeados — requer revisão do gestor</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /tab-content acoes -->
+
+<script>
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('content-' + tab).classList.add('active');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+
+  function toggle(tr, id) {
+    const arrow = document.getElementById(id);
+    if (!arrow || arrow.classList.contains('hidden')) return;
+    const open = arrow.classList.toggle('open');
+    tr.classList.toggle('open', open);
+    document.querySelectorAll('[data-g="' + id + '"]').forEach(r => r.classList.toggle('visible', open));
+  }
+</script>
+</body>
+</html>

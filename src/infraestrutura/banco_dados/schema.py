@@ -95,19 +95,43 @@ class PerfilEsperadoModel(Base):
     cargo_descricao = Column(String)
     sistema = Column(String, nullable=False)
     perfil = Column(String, nullable=False)
+    acesso_manual = Column(Boolean, default=False)
     arquivo_origem = Column(String)
     dt_importacao = Column(DateTime, default=datetime.now)
 
 
-class MatrizOrganizacionalModel(Base):
-    __tablename__ = "matriz_organizacional"
+class MatrizCcoModel(Base):
+    __tablename__ = "matriz_cco"
 
-    cargo_codigo = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cc = Column(String, nullable=False, index=True)
+    cc_nome = Column(String)
+    funcao = Column(String, index=True)
+    sistema = Column(String, nullable=False)
+    perfil = Column(String, nullable=False)
+    arquivo_origem = Column(String)
+    dt_importacao = Column(DateTime, default=datetime.now)
+
+
+class ValidacaoAcessoModel(Base):
+    __tablename__ = "validacao_acessos"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    matricula = Column(String, index=True)
+    cpf = Column(String, index=True)
+    nome = Column(String)
+    email = Column(String)
+    centro_custo_codigo = Column(String, index=True)
+    centro_custo_nome = Column(String)
+    cargo_codigo = Column(String)
     cargo_descricao = Column(String)
-    departamento = Column(String)
-    centro_custo = Column(String)
-    arquivo_origem = Column(String)
-    dt_importacao = Column(DateTime, default=datetime.now)
+    sistema = Column(String, nullable=False)
+    perfil_esperado = Column(String)
+    perfil_atual = Column(String)
+    acesso_manual = Column(Boolean, default=False)
+    status = Column(String, nullable=False, index=True)
+    origem_matriz = Column(String)
+    dt_processamento = Column(DateTime, default=datetime.now)
 
 
 class DivergenciaModel(Base):

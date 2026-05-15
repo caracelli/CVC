@@ -3,11 +3,11 @@
   "name": "e4e0039151e8e37b2653",
   "position": {
     "x": 0,
-    "y": 601.25,
-    "z": 34000,
-    "height": 298.75,
+    "y": 539,
+    "z": 35000,
+    "height": 356,
     "width": 198.75,
-    "tabOrder": 34000
+    "tabOrder": 35000
   },
   "visual": {
     "visualType": "clusteredBarChart",
@@ -20,14 +20,14 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "RH_Ativos"
+                      "Entity": "Divergencias"
                     }
                   },
-                  "Property": "departamento"
+                  "Property": "sistema"
                 }
               },
-              "queryRef": "RH_Ativos.departamento",
-              "nativeQueryRef": "departamento",
+              "queryRef": "Divergencias.sistema",
+              "nativeQueryRef": "sistema",
               "active": true
             }
           ]
@@ -94,6 +94,17 @@
                   "Value": "false"
                 }
               }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#1F2D5C'"
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -104,7 +115,18 @@
             "gridlineShow": {
               "expr": {
                 "Literal": {
-                  "Value": "false"
+                  "Value": "true"
+                }
+              }
+            },
+            "gridlineColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#E8EDF2'"
+                    }
+                  }
                 }
               }
             },
@@ -112,6 +134,17 @@
               "expr": {
                 "Literal": {
                   "Value": "false"
+                }
+              }
+            },
+            "labelColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#605E5C'"
+                    }
+                  }
                 }
               }
             }
@@ -127,6 +160,17 @@
                   "Value": "false"
                 }
               }
+            },
+            "labelColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#605E5C'"
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -139,7 +183,7 @@
                 "color": {
                   "expr": {
                     "Literal": {
-                      "Value": "'#2980B9'"
+                      "Value": "'#F5B800'"
                     }
                   }
                 }
@@ -163,7 +207,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Por departamento'"
+                  "Value": "'Por sistema'"
                 }
               }
             },
@@ -186,7 +230,7 @@
                 "color": {
                   "expr": {
                     "Literal": {
-                      "Value": "'#2980B9'"
+                      "Value": "'#1F2D5C'"
                     }
                   }
                 }

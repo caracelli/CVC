@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "CVC_IAM_Analytics"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "cdf416bc-e830-4be7-9b6d-8e90f94a8a7f"
+  }
+}

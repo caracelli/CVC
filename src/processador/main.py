@@ -15,6 +15,7 @@ from aplicacao.casos_de_uso.importar_matrizes import ImportarMatrizes
 from aplicacao.casos_de_uso.vincular_acessos_rh import VincularAcessosRh
 from aplicacao.casos_de_uso.analisar_divergencias import AnalisarDivergencias
 from aplicacao.casos_de_uso.gerar_saidas import GerarSaidas
+from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
 from dominio.objetos_valor.sistema import Sistema
 
 
@@ -97,7 +98,13 @@ def main():
     # Card 8 — Analisar divergencias
     AnalisarDivergencias(conexao=conexao).executar()
 
-    # Card 9 — Gerar saidas (Excel + Parquet)
+    # Validação de acessos (inclusão/alteração) — gera parquet para Power BI
+    ValidarAcessosSistema(
+        conexao=conexao,
+        pasta_parquet=str(app_raiz / "DADOS" / "PARQUET"),
+    ).executar()
+
+    # Card 9 — Gerar saidas (Excel + Parquet) — usa validações acima para coluna acao
     GerarSaidas(
         conexao=conexao,
         pasta_saidas=str(app_raiz / cfg.saida_divergencias),

@@ -1,0 +1,190 @@
+table Validacao_Acessos
+	lineageTag: 9c82f4ef-e803-487e-963d-c8cbab1b7803
+
+	measure 'Total Validações' = COUNTROWS(Validacao_Acessos)
+		formatString: #,0
+		lineageTag: 9263bf24-37af-46c3-b932-6b6ea7b9cde7
+
+	measure 'Total Aderentes' = COUNTROWS(FILTER(Validacao_Acessos, Validacao_Acessos[status] = "ADERENTE"))
+		formatString: #,0
+		lineageTag: b3109d52-7b46-49a8-980e-175b93debcdb
+
+	measure 'Total Divergentes' = COUNTROWS(FILTER(Validacao_Acessos, Validacao_Acessos[status] = "DIVERGENTE"))
+		formatString: #,0
+		lineageTag: ff0e7d50-2733-4b74-8f8a-c5506b2843a6
+
+	measure 'Total Em Análise' = COUNTROWS(FILTER(Validacao_Acessos, Validacao_Acessos[status] = "EM_ANALISE"))
+		formatString: #,0
+		lineageTag: bbdd41bd-a159-4fc0-800d-99eb79322b46
+
+	measure 'Total Não Mapeados' =
+			FORMAT(COUNTROWS(FILTER(Validacao_Acessos, Validacao_Acessos[status] = "NAO_MAPEADO")),
+			    "#,0"
+			)
+		lineageTag: 77c74979-05a7-4b13-8c00-cb5285a03455
+
+	measure 'Total Sem Acesso' = COUNTROWS(FILTER(Validacao_Acessos, Validacao_Acessos[status] = "SEM_ACESSO"))
+		formatString: #,0
+		lineageTag: 67891cfc-d44e-486e-9013-a7ee32d1044e
+
+	measure 'Incluir Acesso' =
+			FORMAT(
+			    COUNTROWS(FILTER(Validacao_Acessos, Validacao_Acessos[status] = "SEM_ACESSO")),
+			    "#,0"
+			)
+		lineageTag: a1b2c3d4-0001-4000-8000-000000000001
+
+	measure 'Alterar Perfil' =
+			FORMAT(
+			    COUNTROWS(FILTER(Validacao_Acessos, Validacao_Acessos[status] = "DIVERGENTE")),
+			    "#,0"
+			)
+		lineageTag: a1b2c3d4-0002-4000-8000-000000000002
+
+	measure 'Em Análise' =
+			FORMAT(
+			    COUNTROWS(FILTER(Validacao_Acessos, Validacao_Acessos[status] = "EM_ANALISE")),
+			    "#,0"
+			)
+		lineageTag: a1b2c3d4-0003-4000-8000-000000000003
+
+	measure 'Total c/ Ação' =
+			FORMAT(
+			    COUNTROWS(
+			        FILTER(
+			            Validacao_Acessos,
+			            Validacao_Acessos[status] IN {"SEM_ACESSO", "DIVERGENTE", "EM_ANALISE"}
+			        )
+			    ),
+			    "#,0"
+			)
+		lineageTag: a1b2c3d4-0004-4000-8000-000000000004
+
+	column matricula
+		dataType: string
+		lineageTag: c909e4a6-a6b2-4e75-8146-cefaa02f60ed
+		summarizeBy: none
+		sourceColumn: matricula
+
+		annotation SummarizationSetBy = Automatic
+
+	column cpf
+		dataType: string
+		lineageTag: 2a4ca11e-6101-46f2-8671-6cfbfa431343
+		summarizeBy: none
+		sourceColumn: cpf
+
+		annotation SummarizationSetBy = Automatic
+
+	column nome
+		dataType: string
+		lineageTag: 3466f5e9-5872-4013-b10b-938f2d4ff3c8
+		summarizeBy: none
+		sourceColumn: nome
+
+		annotation SummarizationSetBy = Automatic
+
+	column email
+		dataType: string
+		lineageTag: 4f0c44a3-a93f-4b93-a7e1-534f77709d22
+		summarizeBy: none
+		sourceColumn: email
+
+		annotation SummarizationSetBy = Automatic
+
+	column centro_custo_codigo
+		dataType: string
+		lineageTag: 32c64fb2-092f-41cd-9875-8f8151a0eaed
+		summarizeBy: none
+		sourceColumn: centro_custo_codigo
+
+		annotation SummarizationSetBy = Automatic
+
+	column centro_custo_nome
+		dataType: string
+		lineageTag: 97c3e23a-468f-455e-ab50-1b78c9397a14
+		summarizeBy: none
+		sourceColumn: centro_custo_nome
+
+		annotation SummarizationSetBy = Automatic
+
+	column cargo_codigo
+		dataType: string
+		lineageTag: 0cc579ba-a404-44d7-8f72-eb64451a68e6
+		summarizeBy: none
+		sourceColumn: cargo_codigo
+
+		annotation SummarizationSetBy = Automatic
+
+	column cargo_descricao
+		dataType: string
+		lineageTag: 8a673d36-1d27-483f-8b98-1c1a22e69715
+		summarizeBy: none
+		sourceColumn: cargo_descricao
+
+		annotation SummarizationSetBy = Automatic
+
+	column sistema
+		dataType: string
+		lineageTag: effccc59-4cff-4952-ac47-cabc5631d262
+		summarizeBy: none
+		sourceColumn: sistema
+
+		annotation SummarizationSetBy = Automatic
+
+	column perfil_esperado
+		dataType: string
+		lineageTag: e154bc21-f614-415c-b5c9-e640937b7c91
+		summarizeBy: none
+		sourceColumn: perfil_esperado
+
+		annotation SummarizationSetBy = Automatic
+
+	column perfil_atual
+		dataType: string
+		lineageTag: 69718130-3750-4525-b176-e5b418a09af2
+		summarizeBy: none
+		sourceColumn: perfil_atual
+
+		annotation SummarizationSetBy = Automatic
+
+	column acesso_manual
+		dataType: boolean
+		lineageTag: 15eef630-06fb-409a-81e4-be2eb2e29be4
+		summarizeBy: none
+		sourceColumn: acesso_manual
+
+		annotation SummarizationSetBy = Automatic
+
+	column status
+		dataType: string
+		lineageTag: ba9540db-a151-4616-b62a-6473472c3b96
+		summarizeBy: none
+		sourceColumn: status
+
+		annotation SummarizationSetBy = Automatic
+
+	column origem_matriz
+		dataType: string
+		lineageTag: e5f3b8c2-1234-4abc-9876-aabbccddeeff
+		summarizeBy: none
+		sourceColumn: origem_matriz
+
+		annotation SummarizationSetBy = Automatic
+
+	column acao
+		dataType: string
+		lineageTag: a1b2c3d4-0010-4000-8000-000000000010
+		summarizeBy: none
+		sourceColumn: acao
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Validacao_Acessos = m
+		mode: import
+		source = Parquet.Document(File.Contents(CaminhoBase & "DADOS\PARQUET\VALIDACAO\validacao_acessos.parquet"))
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navegação
+

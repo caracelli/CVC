@@ -1,0 +1,5 @@
+expression CaminhoBase = "C:\Users\user\OneDrive\Backup Note\Projetos\Antlia\cvc\CVC\CVC_IAM_ANALYTICS\" meta [IsParameterQuery=true, IsParameterQueryRequired=true, Type="Text"]
+	lineageTag: ce6cc774-c8b4-4d08-b929-335f8036b5f7
+
+	annotation PBI_ResultType = Text
+

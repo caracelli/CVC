@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "4b68ae2abe2f7bbb5d7a",
+  "position": {
+    "x": 1090,
+    "y": 36,
+    "z": 5000,
+    "height": 25,
+    "width": 330,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Última atualização: 13/05/2026 09:42",
+                    "textStyle": {
+                      "fontSize": "9pt",
+                      "color": "#b0bec5"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "right"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

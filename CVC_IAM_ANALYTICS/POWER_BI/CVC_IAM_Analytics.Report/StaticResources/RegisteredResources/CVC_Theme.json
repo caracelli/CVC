@@ -1,0 +1,80 @@
+{
+  "name": "CVC_Theme",
+  "dataColors": [
+    "#1F2D5C",
+    "#F5B800",
+    "#2980B9",
+    "#E67E22",
+    "#7D3C98",
+    "#27AE60",
+    "#E74C3C",
+    "#17A589"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#252423",
+  "tableAccent": "#1F2D5C",
+  "good": "#107C10",
+  "neutral": "#F5B800",
+  "bad": "#A4262C",
+  "maximum": "#107C10",
+  "center": "#F5B800",
+  "minimum": "#A4262C",
+  "null": "#8A8886",
+  "firstLevelElements": "#252423",
+  "secondLevelElements": "#1F2D5C",
+  "thirdLevelElements": "#F2F4F7",
+  "fourthLevelElements": "#B3B0AD",
+  "secondaryBackground": "#E8ECF4",
+  "textClasses": {
+    "callout": {
+      "fontSize": 16,
+      "fontFace": "Segoe UI",
+      "color": "#1F2D5C"
+    },
+    "largeTitle": {
+      "fontSize": 10,
+      "fontFace": "Segoe UI",
+      "color": "#1F2D5C"
+    },
+    "title": {
+      "fontSize": 9,
+      "fontFace": "Segoe UI",
+      "color": "#1F2D5C"
+    },
+    "header": {
+      "fontSize": 9,
+      "fontFace": "Segoe UI",
+      "color": "#252423"
+    },
+    "label": {
+      "fontSize": 9,
+      "fontFace": "Segoe UI",
+      "color": "#252423"
+    },
+    "largeLabel": {
+      "fontSize": 9,
+      "fontFace": "Segoe UI",
+      "color": "#252423"
+    },
+    "smallLabel": {
+      "fontSize": 8,
+      "fontFace": "Segoe UI",
+      "color": "#605E5C"
+    }
+  },
+  "visualStyles": {
+    "clusteredBarChart": {
+      "*": {
+        "dataPoint": [
+          {
+            "defaultColor": {
+              "solid": {
+                "color": "#1F2D5C"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

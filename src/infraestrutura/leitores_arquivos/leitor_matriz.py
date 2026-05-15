@@ -29,6 +29,9 @@ _CANDIDATOS_CARGO = ["CARGO", "FUNÇÃO", "FUNCAO", "DESCRICAO CARGO", "FUNÇÃO
 # Coluna de perfil esperado
 _COL_PERFIL = "PERFIL ACESSO"
 
+# Coluna de acesso manual (presente na matriz SYSTUR)
+_COL_ACESSO_MANUAL = "ACESSO MANUAL"
+
 
 def _extrair_sistema(nome_arquivo: str) -> Optional[Sistema]:
     nome = nome_arquivo.upper()
@@ -108,17 +111,21 @@ class LeitorMatrizPerfis(LeitorArquivoBase):
                     self.mover_para_erros(arquivo, "Colunas não encontradas")
                     continue
 
+                col_manual = _COL_ACESSO_MANUAL if _COL_ACESSO_MANUAL in df.columns else None
+
                 for _, row in df.iterrows():
                     cc = str(row.get(col_cc, "")).strip()
                     perfil = str(row.get(_COL_PERFIL, "")).strip()
                     if not (cc and perfil):
                         continue
                     cargo_desc = str(row.get(col_cargo, "")).strip() if col_cargo else ""
+                    manual_raw = str(row.get(col_manual, "")).strip().upper() if col_manual else ""
                     perfis.append(PerfilEsperado(
                         cargo_codigo=cc,
                         sistema=sistema,
                         perfil=perfil,
                         cargo_descricao=cargo_desc,
+                        acesso_manual=(manual_raw == "SIM"),
                     ))
 
                 self.mover_para_processados(arquivo)
@@ -137,10 +144,11 @@ class LeitorMatrizPerfis(LeitorArquivoBase):
 class LeitorMatrizOrganizacional(LeitorArquivoBase):
     """Lê arquivo de mapeamento CCO/CSC — cabeçalhos reais na linha 1 do Excel."""
 
-    # Candidatos para cada coluna relevante
-    _CAND_CC_COD = ["CÓDIGO DO CENTRO DE CUSTO", "CODIGO DO CENTRO DE CUSTO", "CCUSTO", "CENTRO DE CUSTO"]
+    _CAND_CC_COD  = ["CÓDIGO DO CENTRO DE CUSTO", "CODIGO DO CENTRO DE CUSTO", "CCUSTO", "CENTRO DE CUSTO"]
     _CAND_CC_NOME = ["NOME DO CENTRO DE CUSTO", "NOME CENTRO DE CUSTO"]
-    _CAND_FUNCAO = ["FUNÇÃO", "FUNCAO", "FUNÇÃO"]
+    _CAND_FUNCAO  = ["FUNÇÃO", "FUNCAO"]
+    _CAND_SISTEMA = ["SISTEMAS", "SISTEMA"]
+    _CAND_PERFIL  = ["PERFIS", "PERFIL ACESSO", "PERFIL"]
 
     def __init__(
         self,
@@ -157,6 +165,7 @@ class LeitorMatrizOrganizacional(LeitorArquivoBase):
         return None
 
     def ler(self, pasta: str) -> Tuple[List[dict], List[str]]:
+        """Retorna lista de dicts com chaves: cc, cc_nome, funcao, sistema, perfil."""
         registros: List[dict] = []
         processados: List[str] = []
 
@@ -164,9 +173,11 @@ class LeitorMatrizOrganizacional(LeitorArquivoBase):
             try:
                 df = _ler_df_org(arquivo).dropna(how="all")
                 cols = list(df.columns)
-                col_cc = self._resolver(cols, self._CAND_CC_COD)
-                col_nome = self._resolver(cols, self._CAND_CC_NOME)
-                col_funcao = self._resolver(cols, self._CAND_FUNCAO)
+                col_cc      = self._resolver(cols, self._CAND_CC_COD)
+                col_nome    = self._resolver(cols, self._CAND_CC_NOME)
+                col_funcao  = self._resolver(cols, self._CAND_FUNCAO)
+                col_sistema = self._resolver(cols, self._CAND_SISTEMA)
+                col_perfil  = self._resolver(cols, self._CAND_PERFIL)
                 total_antes = len(registros)
 
                 if not col_cc:
@@ -181,18 +192,34 @@ class LeitorMatrizOrganizacional(LeitorArquivoBase):
                     cc = str(row.get(col_cc, "")).strip()
                     if not cc or cc.upper() in ("NAN", ""):
                         continue
+                    sistema_raw = str(row.get(col_sistema, "")).strip() if col_sistema else ""
+                    perfil_raw  = str(row.get(col_perfil, "")).strip() if col_perfil else ""
+                    if not (sistema_raw and perfil_raw and sistema_raw.upper() not in ("NAN", "") and perfil_raw.upper() not in ("NAN", "")):
+                        continue
                     registros.append({
-                        "cargo_codigo": cc,
-                        "cargo_descricao": str(row.get(col_nome, "")).strip() if col_nome else "",
-                        "departamento": str(row.get(col_funcao, "")).strip() if col_funcao else "",
-                        "centro_custo": cc,
+                        "cc":      cc,
+                        "cc_nome": str(row.get(col_nome, "")).strip() if col_nome else "",
+                        "funcao":  str(row.get(col_funcao, "")).strip() if col_funcao else "",
+                        "sistema": sistema_raw,
+                        "perfil":  perfil_raw,
                     })
 
                 self.mover_para_processados(arquivo)
                 processados.append(arquivo.name)
-                logger.success(f"Matriz Org: {len(registros) - total_antes} centros de custo de '{arquivo.name}'")
+                logger.success(f"Matriz CCO/CSC: {len(registros) - total_antes} mapeamentos de '{arquivo.name}'")
 
             except Exception as e:
                 self.mover_para_erros(arquivo, str(e))
 
-        return registros, processados
+        # Deduplica por (cc, funcao, sistema, perfil) — arquivos com conteúdo idêntico mas nomes diferentes
+        seen: set = set()
+        registros_unicos: List[dict] = []
+        for r in registros:
+            key = (r["cc"], r["funcao"], r["sistema"], r["perfil"])
+            if key not in seen:
+                seen.add(key)
+                registros_unicos.append(r)
+        removidos = len(registros) - len(registros_unicos)
+        if removidos:
+            logger.warning(f"Matriz CCO/CSC: {removidos} registros duplicados removidos.")
+        return registros_unicos, processados
