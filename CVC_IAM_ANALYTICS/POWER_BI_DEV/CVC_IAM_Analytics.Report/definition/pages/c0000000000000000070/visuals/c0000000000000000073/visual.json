@@ -1,0 +1,47 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "c0000000000000000073",
+  "position": { "x": 24, "y": 88, "z": 2000, "height": 760, "width": 260, "tabOrder": 2000 },
+  "visual": {
+    "visualType": "slicer",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "Divergencias" } },
+                  "Property": "usuario"
+                }
+              },
+              "queryRef": "Divergencias.usuario",
+              "nativeQueryRef": "usuario"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "selection": [
+        {
+          "properties": {
+            "selectAllCheckboxEnabled": { "expr": { "Literal": { "Value": "true" } } },
+            "singleSelect": { "expr": { "Literal": { "Value": "false" } } }
+          }
+        }
+      ],
+      "header": [
+        {
+          "properties": {
+            "show": { "expr": { "Literal": { "Value": "true" } } },
+            "text": { "expr": { "Literal": { "Value": "'Usuários (multi-seleção)'" } } }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "background": [ { "properties": { "show": { "expr": { "Literal": { "Value": "true" } } } } } ]
+    }
+  }
+}

@@ -65,9 +65,10 @@ def main():
         pasta_parquet_rh=str(app_raiz / cfg.parquet_rh),
         pasta_processados=pasta_proc,
         pasta_erros=pasta_err,
+        pasta_parquet_historico=str(app_raiz / "DADOS" / "PARQUET" / "HISTORICO"),
     ).executar()
 
-    # Card 4 — Padronização e snapshot
+    # Card 4 — Padronização (snapshot/histórico já gravado no Card 3, antes do merge)
     PadronizarRh(conexao).executar()
 
     # Card 5 — Matrizes (perfis esperados e estrutura organizacional)

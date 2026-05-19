@@ -1,0 +1,19 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "c0000000000000000079",
+  "position": { "x": 300, "y": 198, "z": 3500, "height": 22, "width": 800, "tabOrder": 3500 },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              { "textRuns": [ { "value": "Divergências — marque os usuários no filtro à esquerda", "textStyle": { "fontWeight": "bold", "fontSize": "11pt", "color": "#00276B" } } ] }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

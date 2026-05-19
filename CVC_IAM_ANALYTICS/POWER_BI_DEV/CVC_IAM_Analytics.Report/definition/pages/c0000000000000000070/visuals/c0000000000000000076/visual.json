@@ -1,0 +1,41 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "c0000000000000000076",
+  "position": { "x": 832, "y": 88, "z": 3200, "height": 96, "width": 250, "tabOrder": 3200 },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "Divergencias" } },
+                  "Property": "Total Divergências"
+                }
+              },
+              "queryRef": "Divergencias.Total Divergências",
+              "nativeQueryRef": "Total Divergências",
+              "format": "#,0"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "value": [
+        {
+          "properties": {
+            "fontColor": { "solid": { "color": { "expr": { "Literal": { "Value": "'#003B95'" } } } } }
+          },
+          "selector": { "id": "default" }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "background": [ { "properties": { "show": { "expr": { "Literal": { "Value": "true" } } } } } ],
+      "border": [ { "properties": { "show": { "expr": { "Literal": { "Value": "true" } } }, "color": { "solid": { "color": { "expr": { "Literal": { "Value": "'#003B95'" } } } } }, "radius": { "expr": { "Literal": { "Value": "6D" } } } } } ]
+    }
+  }
+}

@@ -6,7 +6,7 @@ model Model
 		legacyRedirects
 		returnErrorValuesAsNull
 
-annotation PBI_QueryOrder = ["Divergencias","Matriz_Organizacional","Perfis_Esperados","RH_Ativos","SYSTUR","Validacao_Acessos","CaminhoBase"]
+annotation PBI_QueryOrder = ["Divergencias","Matriz_Organizacional","Perfis_Esperados","RH_Ativos","SYSTUR","Validacao_Acessos","Quarentena","CaminhoBase"]
 
 annotation PBI_ProTooling = ["DevMode"]
 
@@ -18,6 +18,7 @@ ref table Perfis_Esperados
 ref table RH_Ativos
 ref table SYSTUR
 ref table Validacao_Acessos
+ref table Quarentena
 
 ref cultureInfo pt-BR
 

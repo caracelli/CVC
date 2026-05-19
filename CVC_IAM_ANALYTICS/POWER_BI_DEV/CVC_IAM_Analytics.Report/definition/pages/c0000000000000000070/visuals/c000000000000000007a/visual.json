@@ -1,0 +1,26 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "c000000000000000007a",
+  "position": { "x": 300, "y": 224, "z": 3600, "height": 332, "width": 1116, "tabOrder": 3600 },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            { "field": { "Column": { "Expression": { "SourceRef": { "Entity": "Divergencias" } }, "Property": "usuario" } }, "queryRef": "Divergencias.usuario", "nativeQueryRef": "usuario" },
+            { "field": { "Column": { "Expression": { "SourceRef": { "Entity": "Divergencias" } }, "Property": "nome_usuario" } }, "queryRef": "Divergencias.nome_usuario", "nativeQueryRef": "nome_usuario" },
+            { "field": { "Column": { "Expression": { "SourceRef": { "Entity": "Divergencias" } }, "Property": "sistema" } }, "queryRef": "Divergencias.sistema", "nativeQueryRef": "sistema" },
+            { "field": { "Column": { "Expression": { "SourceRef": { "Entity": "Divergencias" } }, "Property": "tipo" } }, "queryRef": "Divergencias.tipo", "nativeQueryRef": "tipo" },
+            { "field": { "Column": { "Expression": { "SourceRef": { "Entity": "Divergencias" } }, "Property": "perfil_encontrado" } }, "queryRef": "Divergencias.perfil_encontrado", "nativeQueryRef": "perfil_encontrado" },
+            { "field": { "Column": { "Expression": { "SourceRef": { "Entity": "Divergencias" } }, "Property": "data_identificacao" } }, "queryRef": "Divergencias.data_identificacao", "nativeQueryRef": "data_identificacao" },
+            { "field": { "Column": { "Expression": { "SourceRef": { "Entity": "Divergencias" } }, "Property": "Status" } }, "queryRef": "Divergencias.Status", "nativeQueryRef": "Status" }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "background": [ { "properties": { "show": { "expr": { "Literal": { "Value": "true" } } } } } ]
+    }
+  }
+}

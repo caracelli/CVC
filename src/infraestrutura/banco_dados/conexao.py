@@ -33,6 +33,21 @@ class ConexaoBancoDados:
                 conn.commit()
                 logger.info("Migration: coluna acesso_manual adicionada a perfis_esperados.")
 
+            # snapshots_rh: colunas de CDC (novos / alterados / removidos)
+            cols_snap = {row[1] for row in conn.execute(text("PRAGMA table_info(snapshots_rh)"))}
+            for coluna in ("novos", "alterados", "removidos"):
+                if coluna not in cols_snap:
+                    conn.execute(text(f"ALTER TABLE snapshots_rh ADD COLUMN {coluna} INTEGER DEFAULT 0"))
+                    conn.commit()
+                    logger.info(f"Migration: coluna {coluna} adicionada a snapshots_rh.")
+
+            # validacao_acessos: ciclo PENDENTE/RESOLVIDO da ação
+            cols_val = {row[1] for row in conn.execute(text("PRAGMA table_info(validacao_acessos)"))}
+            if "situacao_acao" not in cols_val:
+                conn.execute(text("ALTER TABLE validacao_acessos ADD COLUMN situacao_acao TEXT DEFAULT 'PENDENTE'"))
+                conn.commit()
+                logger.info("Migration: coluna situacao_acao adicionada a validacao_acessos.")
+
             # matriz_organizacional → substituída por matriz_cco; remover tabela antiga se existir
             tabelas = {row[0] for row in conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))}
             if "matriz_organizacional" in tabelas and "matriz_cco" not in tabelas:

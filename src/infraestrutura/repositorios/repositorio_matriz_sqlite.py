@@ -87,7 +87,8 @@ class RepositorioMatrizSqlite:
                     "cargo_codigo": r.cargo_codigo, "cargo_descricao": r.cargo_descricao,
                     "sistema": r.sistema, "perfil_esperado": r.perfil_esperado,
                     "perfil_atual": r.perfil_atual, "acesso_manual": r.acesso_manual,
-                    "status": r.status, "origem_matriz": r.origem_matriz,
+                    "status": r.status, "situacao_acao": r.situacao_acao,
+                    "origem_matriz": r.origem_matriz,
                     "dt_processamento": r.dt_processamento,
                 }
                 for r in rows

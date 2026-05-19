@@ -7,6 +7,7 @@ from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.leitores_arquivos.leitor_rh import LeitorRh
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
 from infraestrutura.escritores_arquivos.escritor_parquet import EscritorParquet
+from aplicacao.casos_de_uso.registrar_historico_rh import RegistrarHistoricoRh
 
 
 class ImportarRh:
@@ -19,10 +20,12 @@ class ImportarRh:
         pasta_parquet_rh: str,
         pasta_processados: str = None,
         pasta_erros: str = None,
+        pasta_parquet_historico: str = None,
     ):
         self._leitor = LeitorRh(pasta_processados=pasta_processados, pasta_erros=pasta_erros)
         self._repositorio = RepositorioFuncionarioSqlite(conexao)
         self._parquet = EscritorParquet()
+        self._historico = RegistrarHistoricoRh(conexao, pasta_parquet_historico)
         self._pasta_ativos = pasta_ativos
         self._pasta_desligados = pasta_desligados
         self._pasta_parquet = pasta_parquet_rh
@@ -32,6 +35,8 @@ class ImportarRh:
 
         ativos, arq_ativos = self._leitor.ler_ativos(self._pasta_ativos)
         if ativos:
+            # CDC antes do merge: o estado anterior ainda está intacto no banco
+            self._historico.registrar_ativos(ativos)
             self._repositorio.salvar_ativos(ativos, ", ".join(arq_ativos))
             df = pd.DataFrame([{
                 "matricula": f.matricula,
@@ -49,6 +54,7 @@ class ImportarRh:
 
         desligados, arq_desligados = self._leitor.ler_desligados(self._pasta_desligados)
         if desligados:
+            self._historico.registrar_desligados(desligados)
             self._repositorio.salvar_desligados(desligados, ", ".join(arq_desligados))
             df = pd.DataFrame([{
                 "matricula": f.matricula,
@@ -60,6 +66,8 @@ class ImportarRh:
                 "data_desligamento": str(f.data_desligamento) if f.data_desligamento else None,
             } for f in desligados])
             self._parquet.salvar_fixo(df, self._pasta_parquet, "rh_desligados")
+
+        self._historico.exportar_parquet()
 
         logger.info(f"=== Importação RH concluída: {len(ativos)} ativos, {len(desligados)} desligados ===")
         return len(ativos), len(desligados)

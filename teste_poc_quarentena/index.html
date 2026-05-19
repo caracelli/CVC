@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang='pt-BR'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>POC Quarentena — Teste de Gravação</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+  body { margin: 0; background: #F2F4F7; color: #1F2D5C; }
+  header { background: #1F2D5C; color: #fff; padding: 16px 28px; border-bottom: 4px solid #F5B800; }
+  header h1 { margin: 0; font-size: 18px; }
+  header small { color: #C9D2E3; }
+  .wrap { max-width: 880px; margin: 22px auto; padding: 0 18px; }
+  .card { background: #fff; border: 1px solid #E2E8F0; border-radius: 8px; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(31,45,92,.08); }
+  .card h2 { margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: .5px; color: #1F2D5C; }
+  .diag { display: grid; grid-template-columns: 150px 1fr; gap: 6px 14px; font-size: 13px; }
+  .diag b { color: #555; font-weight: 600; }
+  .ok { color: #1E8449; font-weight: 700; }
+  .bad { color: #C0392B; font-weight: 700; }
+  .row { display: flex; gap: 10px; }
+  input[type=text] { flex: 1; padding: 11px 12px; font-size: 15px; border: 1px solid #B8C2D0; border-radius: 6px; }
+  input[type=text]:focus { outline: 2px solid #F5B800; border-color: #F5B800; }
+  button { background: #1F2D5C; color: #fff; border: 0; padding: 11px 22px; font-size: 15px; font-weight: 700; border-radius: 6px; cursor: pointer; }
+  button:hover { background: #2c3f7e; }
+  button:disabled { background: #9AA0A6; cursor: not-allowed; }
+  #msg { margin-top: 10px; font-size: 14px; min-height: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #EDF1F6; }
+  th { background: #F5B800; color: #1F2D5C; }
+  tr:nth-child(even) td { background: #FAFBFD; }
+  .empty { color: #888; padding: 14px 0; font-style: italic; }
+</style>
+</head>
+<body>
+<header>
+  <h1>POC Quarentena — Teste de Gravação no Banco</h1>
+  <small>Servidor Python local · SQLite · prova via git (teste.db + registros.txt)</small>
+</header>
+<div class='wrap'>
+
+  <div class='card'>
+    <h2>Diagnóstico do ambiente</h2>
+    <div class='diag' id='diag'>carregando…</div>
+  </div>
+
+  <div class='card'>
+    <h2>Enviar texto para o banco</h2>
+    <div class='row'>
+      <input type='text' id='txt' placeholder='Digite qualquer texto e clique Enviar' autocomplete='off'>
+      <button id='btn'>Enviar</button>
+    </div>
+    <div id='msg'></div>
+  </div>
+
+  <div class='card'>
+    <h2>Registros gravados (SQLite)</h2>
+    <table>
+      <thead><tr><th>#</th><th>Conteúdo</th><th>Criado em</th><th>Máquina</th><th>Usuário</th></tr></thead>
+      <tbody id='tb'><tr><td colspan='5' class='empty'>—</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+<script>
+const $ = s => document.querySelector(s);
+
+function pinta(d) {
+  const esc = d.escrita.startsWith('OK') ? 'ok' : 'bad';
+  $('#diag').innerHTML =
+    "<b>Banco SQLite</b><span>" + d.db_path + "</span>" +
+    "<b>Texto prova</b><span>" + d.txt_path + "</span>" +
+    "<b>Permissão escrita</b><span class='" + esc + "'>" + d.escrita + "</span>" +
+    "<b>Máquina</b><span>" + d.maquina + "</span>" +
+    "<b>Usuário</b><span>" + d.usuario + "</span>" +
+    "<b>Hora servidor</b><span>" + d.hora_servidor + "</span>";
+  const tb = $('#tb');
+  if (!d.registros.length) { tb.innerHTML = "<tr><td colspan='5' class='empty'>Nenhum registro ainda.</td></tr>"; return; }
+  tb.innerHTML = d.registros.map(r =>
+    "<tr><td>" + r.id + "</td><td>" + r.conteudo + "</td><td>" + r.criado_em +
+    "</td><td>" + r.maquina + "</td><td>" + r.usuario + "</td></tr>").join('');
+}
+
+async function carregar() {
+  try {
+    const r = await fetch('/api/registros');
+    pinta(await r.json());
+  } catch (e) {
+    $('#diag').innerHTML = "<span class='bad'>Servidor não respondeu: " + e + "</span>";
+  }
+}
+
+async function enviar() {
+  const v = $('#txt').value.trim();
+  if (!v) { $('#msg').innerHTML = "<span class='bad'>Digite algo antes de enviar.</span>"; return; }
+  $('#btn').disabled = true;
+  $('#msg').textContent = 'Enviando…';
+  try {
+    const r = await fetch('/api/enviar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto: v })
+    });
+    const j = await r.json();
+    if (j.ok) {
+      $('#msg').innerHTML = "<span class='ok'>Gravado no banco: registro #" + j.gravado.id + " (" + j.gravado.criado_em + ")</span>";
+      $('#txt').value = '';
+      pinta(Object.assign({}, await (await fetch('/api/registros')).json()));
+    } else {
+      $('#msg').innerHTML = "<span class='bad'>Erro: " + (j.erro || '?') + "</span>";
+    }
+  } catch (e) {
+    $('#msg').innerHTML = "<span class='bad'>Falha de conexão: " + e + "</span>";
+  } finally {
+    $('#btn').disabled = false;
+  }
+}
+
+async function ping() { try { await fetch('/api/ping'); } catch (e) {} }
+window.addEventListener('pagehide', () => {
+  try { navigator.sendBeacon('/api/encerrar'); } catch (e) {}
+});
+
+$('#btn').addEventListener('click', enviar);
+$('#txt').addEventListener('keydown', e => { if (e.key === 'Enter') enviar(); });
+carregar();
+ping();
+setInterval(carregar, 8000);
+setInterval(ping, 5000);
+</script>
+</body>
+</html>

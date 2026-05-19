@@ -53,8 +53,28 @@ class SnapshotRh(Base):
     data_snapshot = Column(Date, nullable=False, index=True)
     tipo = Column(String, nullable=False)  # ATIVO / DESLIGADO
     total_registros = Column(Integer)
+    novos = Column(Integer, default=0)
+    alterados = Column(Integer, default=0)
+    removidos = Column(Integer, default=0)
     arquivo_parquet = Column(String)
     dt_criacao = Column(DateTime, default=datetime.now)
+
+
+class HistoricoRh(Base):
+    """Trilha de auditoria imutável: um registro por matrícula que mudou
+    entre uma importação e a anterior (CDC da base de RH)."""
+
+    __tablename__ = "historico_rh"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    data_snapshot = Column(Date, nullable=False, index=True)
+    tipo = Column(String, nullable=False, index=True)        # ATIVO / DESLIGADO
+    matricula = Column(String, nullable=False, index=True)
+    tipo_mudanca = Column(String, nullable=False, index=True)  # NOVO / ALTERADO / REMOVIDO
+    campos_alterados = Column(Text)                            # CSV dos campos (só ALTERADO)
+    dados_anterior = Column(Text)                              # JSON (null em NOVO)
+    dados_novo = Column(Text)                                  # JSON (null em REMOVIDO)
+    dt_registro = Column(DateTime, default=datetime.now)
 
 
 class AcessoSistema(Base):
@@ -130,6 +150,7 @@ class ValidacaoAcessoModel(Base):
     perfil_atual = Column(String)
     acesso_manual = Column(Boolean, default=False)
     status = Column(String, nullable=False, index=True)
+    situacao_acao = Column(String, default="PENDENTE", index=True)  # PENDENTE / RESOLVIDO
     origem_matriz = Column(String)
     dt_processamento = Column(DateTime, default=datetime.now)
 

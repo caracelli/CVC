@@ -81,6 +81,9 @@ class ValidarAcessosSistema:
             StatusValidacao.EM_ANALISE.value,
         }
         registros_acao = [r for r in registros if r["status"] in _STATUS_ACAO]
+        # Fase 1: toda inclusão/alteração nasce PENDENTE (ciclo PENDENTE→RESOLVIDO)
+        for r in registros_acao:
+            r["situacao_acao"] = "PENDENTE"
 
         repo = RepositorioMatrizSqlite(self._conexao)
         repo.salvar_validacoes(registros_acao)
@@ -107,6 +110,7 @@ class ValidarAcessosSistema:
                 "perfil_atual": "str",
                 "acesso_manual": "bool",
                 "status": "str",
+                "situacao_acao": "str",
                 "origem_matriz": "str",
             })
             df["acao"] = df["status"].map(_STATUS_LABEL).fillna("")
@@ -120,7 +124,7 @@ class ValidarAcessosSistema:
                 "sistema": d.sistema.value, "perfil_esperado": "",
                 "perfil_atual": d.perfil_encontrado or "",
                 "acesso_manual": False, "status": "NAO_MAPEADO",
-                "origem_matriz": "", "acao": "Não Mapeado",
+                "situacao_acao": "", "origem_matriz": "", "acao": "Não Mapeado",
             }
             for d in self._repo_div.obter_todas()
             if d.tipo == TipoDivergencia.ACESSO_SEM_VINCULO_RH
@@ -129,7 +133,7 @@ class ValidarAcessosSistema:
             df_nm = pd.DataFrame(nao_mapeados).astype({c: "str" for c in [
                 "matricula","cpf","nome","email","centro_custo_codigo",
                 "centro_custo_nome","cargo_codigo","cargo_descricao",
-                "sistema","perfil_esperado","perfil_atual","status","origem_matriz","acao",
+                "sistema","perfil_esperado","perfil_atual","status","situacao_acao","origem_matriz","acao",
             ]})
             df_nm["acesso_manual"] = df_nm["acesso_manual"].astype("bool")
             df = pd.concat([df, df_nm], ignore_index=True)

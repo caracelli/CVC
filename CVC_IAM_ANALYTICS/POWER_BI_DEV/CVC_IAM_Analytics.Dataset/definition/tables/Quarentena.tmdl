@@ -1,0 +1,95 @@
+table Quarentena
+	lineageTag: c0a0e0e0-0000-4000-8000-000000000000
+
+	measure 'Em Quarentena' = COUNTROWS(Quarentena)
+		formatString: #,0
+		displayFolder: Quarentena
+		lineageTag: c0a0e0e0-0002-4000-8000-000000000002
+
+	measure 'Qtd Vigentes' = CALCULATE(COUNTROWS(Quarentena), Quarentena[status] = "Em quarentena")
+		formatString: #,0
+		displayFolder: Quarentena
+		lineageTag: c0a0e0e0-0003-4000-8000-000000000003
+
+	measure 'Selecionados' = DISTINCTCOUNT(Divergencias[usuario])
+		formatString: #,0
+		displayFolder: Quarentena
+		lineageTag: c0a0e0e0-0005-4000-8000-000000000005
+
+	measure 'URL Quarentena' = VAR usuarios = CONCATENATEX(VALUES(Divergencias[usuario]), Divergencias[usuario], ",") VAR qtd = DISTINCTCOUNT(Divergencias[usuario]) RETURN IF(qtd >= 1 && LEN(usuarios) < 1800, "cvciam://quarentena?usuarios=" & usuarios)
+		displayFolder: Quarentena
+		lineageTag: c0a0e0e0-0006-4000-8000-000000000006
+
+	measure 'Status Cor' = SWITCH(TRUE(), SELECTEDVALUE(Quarentena[status]) = "Em quarentena", "#F0A500", SELECTEDVALUE(Quarentena[status]) = "A expirar", "#1B7F3B", SELECTEDVALUE(Quarentena[status]) = "Expirada", "#9AA0A6", "#9AA0A6")
+		displayFolder: Quarentena
+		lineageTag: c0a0e0e0-0007-4000-8000-000000000007
+
+	column usuario
+		dataType: string
+		lineageTag: c0a0e0e0-0010-4000-8000-000000000010
+		summarizeBy: none
+		sourceColumn: usuario
+
+		annotation SummarizationSetBy = Automatic
+
+	column nome_usuario
+		dataType: string
+		lineageTag: c0a0e0e0-0011-4000-8000-000000000011
+		summarizeBy: none
+		sourceColumn: nome_usuario
+
+		annotation SummarizationSetBy = Automatic
+
+	column sistema
+		dataType: string
+		lineageTag: c0a0e0e0-0012-4000-8000-000000000012
+		summarizeBy: none
+		sourceColumn: sistema
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_inicio
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: c0a0e0e0-0013-4000-8000-000000000013
+		summarizeBy: none
+		sourceColumn: data_inicio
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_fim
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: c0a0e0e0-0014-4000-8000-000000000014
+		summarizeBy: none
+		sourceColumn: data_fim
+
+		annotation SummarizationSetBy = Automatic
+
+	column status
+		dataType: string
+		lineageTag: c0a0e0e0-0015-4000-8000-000000000015
+		summarizeBy: none
+		sourceColumn: status
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Quarentena = m
+		mode: import
+		source = ```
+				let
+				    Source = #table(
+				        type table [usuario = text, nome_usuario = text, sistema = text, data_inicio = date, data_fim = date, status = text],
+				        {
+				            {"pedro.alves",  "Pedro Alves",  "SYSTUR", #date(2026,5,2),  #date(2026,6,1),  "Em quarentena"},
+				            {"lucia.dias",   "Lúcia Dias",   "IC",     #date(2026,4,20), #date(2026,5,20), "A expirar"},
+				            {"rafael.gomes", "Rafael Gomes", "SIGOT",  #date(2026,5,10), #date(2026,6,9),  "Em quarentena"},
+				            {"carla.menezes","Carla Menezes","SYSTUR", #date(2026,3,15), #date(2026,4,14), "Expirada"},
+				            {"bruno.tavares","Bruno Tavares","SICA_RA",#date(2026,5,15), #date(2026,6,14), "Em quarentena"}
+				        }
+				    )
+				in
+				    Source
+				```
+
+	annotation PBI_ResultType = Table
