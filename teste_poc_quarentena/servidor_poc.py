@@ -17,14 +17,9 @@ Uso:
   ServidorPOC.exe selftest   -> autoteste headless (grava 1 registro e sai)
 """
 import sys, os, json, time, socket, sqlite3, threading, webbrowser, getpass
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-
-try:
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-except Exception:
-    pass
 
 HOST = "127.0.0.1"
 PORT = 8799
@@ -34,8 +29,74 @@ if getattr(sys, "frozen", False):
 else:
     BASE = os.path.dirname(os.path.abspath(__file__))  # rodando como .py
 
-DB_PATH = os.path.join(BASE, "teste.db")
-TXT_PATH = os.path.join(BASE, "registros.txt")
+
+class _Tee:
+    """Espelha prints para arquivo de log (vale com --noconsole, sem janela)."""
+    def __init__(self, caminho):
+        self._f = open(caminho, "a", encoding="utf-8", errors="replace")
+        self._orig = sys.__stdout__
+    def write(self, s):
+        try:
+            self._f.write(s); self._f.flush()
+        except Exception:
+            pass
+        if self._orig:
+            try:
+                self._orig.write(s); self._orig.flush()
+            except Exception:
+                pass
+    def flush(self):
+        try:
+            self._f.flush()
+        except Exception:
+            pass
+
+
+LOG_PATH = os.path.join(BASE, "poc_log.txt")
+try:
+    _tee = _Tee(LOG_PATH)
+    sys.stdout = _tee
+    sys.stderr = _tee
+except Exception:
+    pass
+
+CONFIG_PATH = os.path.join(BASE, "config.xml")
+
+
+def carregar_config():
+    """Le config.xml (ao lado do exe). <banco caminho='...'>.
+    Caminho relativo -> resolve na pasta do exe. Absoluto/UNC -> usa direto.
+    Sem config ou erro -> padrao 'teste.db' na pasta do exe."""
+    padrao = os.path.join(BASE, "teste.db")
+    origem = "padrao (sem config.xml)"
+    caminho = padrao
+    if os.path.exists(CONFIG_PATH):
+        try:
+            root = ET.parse(CONFIG_PATH).getroot()
+            el = root.find("banco")
+            val = None
+            if el is not None:
+                val = el.get("caminho") or (el.text or "").strip() or None
+            if val:
+                caminho = val if os.path.isabs(val) else os.path.join(BASE, val)
+                origem = f"config.xml ({val})"
+            else:
+                origem = "config.xml sem <banco caminho> -> padrao"
+        except Exception as e:
+            origem = f"config.xml invalido ({e!r}) -> padrao"
+            caminho = padrao
+    caminho = os.path.abspath(caminho)
+    db_dir = os.path.dirname(caminho)
+    erro_dir = ""
+    try:
+        os.makedirs(db_dir, exist_ok=True)
+    except Exception as e:
+        erro_dir = f"nao criou pasta {db_dir}: {e!r}"
+    txt = os.path.join(db_dir, "registros.txt")
+    return caminho, txt, origem, erro_dir
+
+
+DB_PATH, TXT_PATH, CONFIG_SRC, CONFIG_ERR = carregar_config()
 USUARIO = getpass.getuser()
 MAQUINA = socket.gethostname()
 
@@ -107,7 +168,7 @@ def listar() -> list:
 
 def teste_escrita() -> str:
     try:
-        p = os.path.join(BASE, ".escrita_ok.tmp")
+        p = os.path.join(os.path.dirname(DB_PATH), ".escrita_ok.tmp")
         with open(p, "w", encoding="utf-8") as f:
             f.write("ok")
         os.remove(p)
@@ -187,6 +248,7 @@ function pinta(d) {
   $('#diag').innerHTML =
     "<b>Banco SQLite</b><span>" + d.db_path + "</span>" +
     "<b>Texto prova</b><span>" + d.txt_path + "</span>" +
+    "<b>Origem config</b><span>" + d.origem_config + "</span>" +
     "<b>Permissao escrita</b><span class='" + esc + "'>" + d.escrita + "</span>" +
     "<b>Maquina</b><span>" + d.maquina + "</span>" +
     "<b>Usuario</b><span>" + d.usuario + "</span>" +
@@ -277,6 +339,7 @@ class Handler(BaseHTTPRequestHandler):
                 "ok": True,
                 "db_path": DB_PATH,
                 "txt_path": TXT_PATH,
+                "origem_config": CONFIG_SRC + (f" | {CONFIG_ERR}" if CONFIG_ERR else ""),
                 "maquina": MAQUINA,
                 "usuario": USUARIO,
                 "escrita": teste_escrita(),
@@ -316,6 +379,9 @@ def banner():
     print(" POC QUARENTENA — servidor de teste")
     print("=" * 64)
     print(f"  Pasta base   : {BASE}")
+    print(f"  Config       : {CONFIG_SRC}")
+    if CONFIG_ERR:
+        print(f"  [ALERTA dir] : {CONFIG_ERR}")
     print(f"  Banco SQLite : {DB_PATH}")
     print(f"  Texto prova  : {TXT_PATH}")
     print(f"  Maquina      : {MAQUINA}")
@@ -341,7 +407,14 @@ def main():
     except OSError as e:
         print(f"  [FALHA] nao consegui abrir {HOST}:{PORT} -> {e!r}")
         print("  (porta ocupada ou bloqueio de socket). Encerrando.")
-        input("  Pressione ENTER para fechar...")
+        print(f"  Detalhes registrados em: {LOG_PATH}")
+        try:
+            if sys.stdin and sys.stdin.isatty():
+                input("  Pressione ENTER para fechar...")
+            else:
+                time.sleep(8)
+        except Exception:
+            time.sleep(8)
         return 1
 
     global SRV

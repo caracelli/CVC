@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Parametro do banco do POC.
+  - caminho RELATIVO  -> resolvido na pasta do ServidorPOC.exe
+  - caminho ABSOLUTO  -> usado como esta (inclui rede UNC \\servidor\share\...)
+  registros.txt e gravado SEMPRE na mesma pasta do banco.
+
+  Exemplos:
+    <banco caminho="teste.db" />                                  (pasta do exe)
+    <banco caminho="dados\teste.db" />                             (subpasta local)
+    <banco caminho="D:\Compartilhado\quarentena\teste.db" />       (disco local)
+    <banco caminho="\\servidorcvc\share\IAM\teste.db" />           (rede - testa SMB)
+-->
+<config>
+  <banco caminho="teste.db" />
+</config>
