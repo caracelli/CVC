@@ -26,6 +26,8 @@ CVC_IAM_ANALYTICS/DADOS/SAIDAS/**/*.pdf
 # Banco de dados
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.db
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.sqlite
+CVC_IAM_ANALYTICS/DADOS/BANCO/*.db-shm
+CVC_IAM_ANALYTICS/DADOS/BANCO/*.db-wal
 
 # Parquet gerado — versionado para sincronizar entre maquinas (dados pequenos)
 # CVC_IAM_ANALYTICS/DADOS/PARQUET/**/*.parquet
@@ -53,8 +55,13 @@ desktop.ini
 # Executáveis gerados
 CVC_IAM_ANALYTICS/EXECUTAVEIS/*.exe
 
+# Mockup CVC IAM — exe e log (artefatos de runtime; entrega versionada via zip)
+CVC_IAM_ANALYTICS/MOCKUP/visualizador.exe
+CVC_IAM_ANALYTICS/MOCKUP/mockup_log.txt
+
 # Artefatos de build PyInstaller
 deploy/_build/
+deploy/_build_mockup/
 
 # Configurações locais do Claude
 .claude/
