@@ -522,6 +522,7 @@ def _montar_base():
             tp = r["tipo"]
             u["divs"].append({
                 "t": tp, "tl": TIPO_LABEL.get(tp, tp), "a": r["acao"],
+                "sis": r["sistema"] or "",
                 "pe": r["perfil_encontrado"], "pp": r["perfil_esperado"],
                 "dt": (r["data_identificacao"] or "")[:10],
                 "s": "Resolvida" if r["resolvida"] else "Pendente",

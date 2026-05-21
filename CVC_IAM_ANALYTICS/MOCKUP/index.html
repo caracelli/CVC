@@ -608,9 +608,10 @@ document.querySelectorAll('.tab').forEach(t => {
 
 /* ── Filtros laterais (gerados da base, multi-seleção) ────────────────── */
 const FILTROS = [
-  {id:'acao',   campo:'a',  rotulo:'Ação'},
-  {id:'status', campo:'s',  rotulo:'Status'},
-  {id:'tipo',   campo:'tl', rotulo:'Tipo'},
+  {id:'acao',    campo:'a',   rotulo:'Ação'},
+  {id:'status',  campo:'s',   rotulo:'Status'},
+  {id:'tipo',    campo:'tl',  rotulo:'Tipo'},
+  {id:'sistema', campo:'sis', rotulo:'Sistema'},
 ];
 const filtroSel = {};
 
@@ -665,9 +666,10 @@ function filtroTodos(fid, btn){
 }
 
 function divPassa(d){
-  return (!filtroSel.acao   || filtroSel.acao.has(d.a))   &&
-         (!filtroSel.status || filtroSel.status.has(d.s)) &&
-         (!filtroSel.tipo   || filtroSel.tipo.has(d.tl));
+  return (!filtroSel.acao    || filtroSel.acao.has(d.a))    &&
+         (!filtroSel.status  || filtroSel.status.has(d.s))  &&
+         (!filtroSel.tipo    || filtroSel.tipo.has(d.tl))   &&
+         (!filtroSel.sistema || filtroSel.sistema.has(d.sis));
 }
 
 function aplicarFiltro(){
