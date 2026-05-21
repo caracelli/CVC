@@ -74,7 +74,10 @@ ORIGEM_LABEL = {"MATRIZ": "Sistema", "CCO": "Base CCO"}
 SRV = None
 _last_seen = time.time()
 _armed = False
-_OCIOSO = 15
+_OCIOSO = 300   # watchdog tolerante: aba em 2o plano (heartbeat estrangulado) nao mata o servidor
+_enc_em = None  # timestamp de um encerramento agendado (None = nenhum pendente)
+_GRACE = 5      # carencia: F5/Ctrl+F5 recarrega e re-arma a aba dentro desse prazo
+_sessao = None  # id da aba ativa; um beacon de encerrar so vale vindo dela
 _BASE = None   # cache da parte cara do DB (bi_divergencias + JOIN); 1x por execução
 
 
@@ -84,11 +87,26 @@ def _enc(motivo):
         threading.Thread(target=SRV.shutdown, daemon=True).start()
 
 
+def agendar_encerramento(sessao, motivo):
+    """Agenda o encerramento p/ daqui a _GRACE s, em vez de matar na hora.
+    Um F5/Ctrl+F5 recarrega a aba: a pagina nova manda /api/ping e cancela
+    este pedido. Beacon atrasado de uma aba ja substituida e ignorado."""
+    global _enc_em
+    if _sessao is not None and sessao and sessao != _sessao:
+        print("  [encerrar ignorado] beacon de sessao antiga (F5)")
+        return
+    _enc_em = time.time()
+    print(f"  [encerrar agendado +{_GRACE}s] {motivo}")
+
+
 def _watchdog():
     while True:
-        time.sleep(3)
+        time.sleep(1)
+        if _enc_em is not None and (time.time() - _enc_em) > _GRACE:
+            _enc("aba fechada (sem retorno apos carencia)")
+            return
         if _armed and (time.time() - _last_seen) > _OCIOSO:
-            _enc(f"pagina fechada (sem heartbeat >{_OCIOSO}s)")
+            _enc(f"aba inativa (sem heartbeat >{_OCIOSO}s)")
             return
 
 
@@ -653,7 +671,7 @@ class H(BaseHTTPRequestHandler):
         print("  [http] " + (a[0] % a[1:]))
 
     def do_GET(self):
-        global _last_seen, _armed
+        global _last_seen, _armed, _enc_em, _sessao
         try:
             if self.path in ("/", "/index.html"):
                 self._send(200, html_injetado(), "text/html; charset=utf-8")
@@ -663,8 +681,12 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/api/quarentena":
                 self._send(200, json.dumps(listar_quarentena(), ensure_ascii=False),
                            "application/json; charset=utf-8")
-            elif self.path == "/api/ping":
-                _last_seen = time.time(); _armed = True
+            elif self.path.split("?")[0] == "/api/ping":
+                _last_seen = time.time(); _armed = True; _enc_em = None
+                if "?" in self.path:
+                    for par in self.path.split("?", 1)[1].split("&"):
+                        if par.startswith("s="):
+                            _sessao = par[2:]
                 self._send(200, '{"ok":true}', "application/json")
             elif self.path == "/api/encerrar":
                 self._send(200, '{"ok":true}', "application/json")
@@ -687,8 +709,10 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             if self.path == "/api/encerrar":
+                n = int(self.headers.get("Content-Length", 0))
+                sessao = self.rfile.read(n).decode("utf-8").strip() if n else ""
                 self._send(200, '{"ok":true}', "application/json")
-                _enc("pagina fechada (sendBeacon)")
+                agendar_encerramento(sessao, "aba fechada/recarregada (sendBeacon)")
                 return
             if self.path == "/api/quarentena":
                 n = int(self.headers.get("Content-Length", 0))

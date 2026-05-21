@@ -830,7 +830,7 @@ async function quarentenar(u){
     } else {
       msg = 'Falha ao enviar: ' + ((j && j.erro) || 'desconhecida');
     }
-  }catch(e){ msg = 'Erro de conexão com o servidor: ' + e; }
+  }catch(e){ msg = 'Sem conexão com o visualizador — ele pode ter sido encerrado. Feche esta aba e abra o visualizador.exe novamente.'; }
   finally{ await proc(false); }
   if(msg) alert(msg);
 }
@@ -958,7 +958,7 @@ async function retirarQuarentena(id){
     } else {
       msg = 'Falha ao retirar: ' + ((j && j.erro) || 'desconhecida');
     }
-  }catch(e){ msg = 'Erro de conexão com o servidor: ' + e; }
+  }catch(e){ msg = 'Sem conexão com o visualizador — ele pode ter sido encerrado. Feche esta aba e abra o visualizador.exe novamente.'; }
   finally{ await proc(false); }
   if(msg) alert(msg);
 }
@@ -997,7 +997,7 @@ async function baixarExcel(arquivo, colunas, linhas, niveis, formatos){
     a.href = url; a.download = arquivo + '.xlsx';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-  }catch(e){ alert('Erro ao exportar: ' + e); }
+  }catch(e){ alert('Sem conexão com o visualizador — ele pode ter sido encerrado. Abra o visualizador.exe novamente.'); }
   finally{ await proc(false); }
 }
 
@@ -1117,11 +1117,18 @@ function distOrdenada(obj){
 
 /* ── Inicialização ────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-  // Heartbeat (arma o watchdog) + encerra ao fechar a página
-  fetch('/api/ping').catch(()=>{});
-  setInterval(() => fetch('/api/ping').catch(()=>{}), 4000);
+  // Heartbeat (arma o watchdog) + encerra ao fechar a página.
+  // SESSAO identifica esta carga da aba: um F5/Ctrl+F5 gera uma SESSAO nova,
+  // cujo /api/ping cancela o encerramento agendado pela página anterior.
+  const SESSAO = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const ping = () => fetch('/api/ping?s=' + SESSAO).catch(()=>{});
+  ping();
+  setInterval(ping, 4000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) ping();
+  });
   window.addEventListener('pagehide', () => {
-    if (navigator.sendBeacon) navigator.sendBeacon('/api/encerrar');
+    if (navigator.sendBeacon) navigator.sendBeacon('/api/encerrar', SESSAO);
   });
 
   // Labels do header a partir das datas da base
