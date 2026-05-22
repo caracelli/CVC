@@ -6,7 +6,9 @@ da validacao de acessos (0 / 1 / 2+ perfis).
 
 Roda sem dependencias extras:  python -m unittest discover -s tests
 """
+import json
 import os
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -29,6 +31,7 @@ from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
 from aplicacao.casos_de_uso.registrar_historico_rh import RegistrarHistoricoRh
 from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
+from aplicacao.casos_de_uso.dobrar_interacoes import DobrarInteracoes
 
 
 def _cargo(cc="100", desc="ANALISTA"):
@@ -185,12 +188,20 @@ class TestCDCHistoricoRh(unittest.TestCase):
         self.repo = RepositorioFuncionarioSqlite(self.conexao)
         self.hist = RegistrarHistoricoRh(self.conexao)
 
-    def test_novo_quando_matricula_inexistente(self):
-        # banco vazio; CDC compara contra nada -> tudo NOVO
+    def test_carga_inicial_nao_gera_trilha(self):
+        # base anterior vazia = carga inicial: estabelece a baseline e NAO
+        # gera trilha (a auditoria registra so os ajustes a partir da 2a carga)
         r = self.hist.registrar_ativos([_ativo("100", "11111111111")])
+        self.assertEqual((r["novos"], r["alterados"], r["removidos"]), (0, 0, 0))
+        self.assertTrue(r.get("carga_inicial"))
+
+    def test_novo_quando_matricula_inexistente(self):
+        # 2a importacao: a baseline ja existe -> matricula nova entra como NOVO
+        self.repo.salvar_ativos([_ativo("100", "11111111111")])
+        r = self.hist.registrar_ativos([_ativo("100", "11111111111"),
+                                        _ativo("200", "22222222222")])
         self.assertEqual(r["novos"], 1)
-        self.assertEqual(r["alterados"], 0)
-        self.assertEqual(r["removidos"], 0)
+        self.assertEqual((r["alterados"], r["removidos"]), (0, 0))
 
     def test_sem_mudanca_quando_registro_identico(self):
         f = _ativo("100", "11111111111")
@@ -209,6 +220,93 @@ class TestCDCHistoricoRh(unittest.TestCase):
         r = self.hist.registrar_ativos([_ativo("100", "11111111111")])
         self.assertEqual(r["removidos"], 1)
         self.assertEqual(r["total"], 1)
+
+
+# ───────── Histórico — dobra das resoluções de pendência (aba Histórico) ─────────
+class TestDobraResolucaoHistorico(unittest.TestCase):
+    """A aba Histórico mostra as resoluções de pendência. Esta suíte cobre a
+    dobra das interações RESOLUCAO (.jsonl da rede) na tabela `resolucoes`,
+    feita pelo Processador — incluindo o snapshot das pendências."""
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="cvc_dobra_res_")
+        self._db = os.path.join(self._tmp, "iam_analytics.db")
+        self._inter = os.path.join(self._tmp, "INTERACOES")
+        os.makedirs(self._inter)
+
+    def _gravar(self, interacao):
+        with open(os.path.join(self._inter, "interacao_user.jsonl"),
+                  "a", encoding="utf-8") as f:
+            f.write(json.dumps(interacao, ensure_ascii=False) + "\n")
+
+    def _resolucoes(self):
+        c = sqlite3.connect(self._db)
+        c.row_factory = sqlite3.Row
+        try:
+            tem = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                            "AND name='resolucoes'").fetchone()
+            return [dict(r) for r in c.execute("SELECT * FROM resolucoes")] if tem else []
+        finally:
+            c.close()
+
+    @staticmethod
+    def _resolucao(rid="123", ticket="IAM-1", data="2026-05-22T10:00:00"):
+        return {
+            "tipo_interacao": "RESOLUCAO", "registro_id": rid, "acao": "RESOLVER",
+            "ticket": ticket, "ticket_url": "http://jira/" + ticket,
+            "descricao": "regularizado", "cargo": "ANALISTA FISCAL",
+            "centro_custo": "01.02 - FISCAL", "nome": "FULANO DE TAL",
+            "usuario": "analista1", "data_acao": data,
+            "pendencias": [
+                {"tipo": "Divergente", "acao": "Alterar Perfil",
+                 "sistema": "SYSTUR", "origem": "Matriz SYSTUR",
+                 "pe": "PERFIL_A", "pp": "PERFIL_B", "opcoes": []},
+                {"tipo": "Em Análise", "acao": "Em Análise",
+                 "sistema": "SYSTUR", "origem": "Matriz SYSTUR",
+                 "pe": "PERFIL_A", "pp": "", "opcoes": ["PERFIL_B", "PERFIL_C"]},
+            ],
+        }
+
+    def test_resolucao_dobrada_na_tabela(self):
+        # interacao RESOLUCAO na rede -> Processador dobra -> tabela resolucoes
+        self._gravar(self._resolucao())
+        DobrarInteracoes(self._db, self._inter).executar()
+        rs = self._resolucoes()
+        self.assertEqual(len(rs), 1)
+        r = rs[0]
+        self.assertEqual(r["registro_id"], "123")
+        self.assertEqual(r["ticket"], "IAM-1")
+        self.assertEqual(r["cargo"], "ANALISTA FISCAL")
+        self.assertEqual(r["centro_custo"], "01.02 - FISCAL")
+        self.assertEqual(r["resolvido_por"], "analista1")
+        self.assertEqual(r["resolvido_em"], "2026-05-22T10:00:00")
+
+    def test_snapshot_das_pendencias_preservado(self):
+        # o detalhe das pendências (inclusive as opções do "Em Análise")
+        # é gravado como JSON e recuperável íntegro
+        self._gravar(self._resolucao())
+        DobrarInteracoes(self._db, self._inter).executar()
+        pend = json.loads(self._resolucoes()[0]["pendencias"])
+        self.assertEqual(len(pend), 2)
+        em_analise = [p for p in pend if p["tipo"] == "Em Análise"][0]
+        self.assertEqual(em_analise["opcoes"], ["PERFIL_B", "PERFIL_C"])
+
+    def test_idempotente_sem_novas_interacoes(self):
+        # rodar a dobra de novo (pasta já consolidada) não duplica nada
+        self._gravar(self._resolucao())
+        DobrarInteracoes(self._db, self._inter).executar()
+        DobrarInteracoes(self._db, self._inter).executar()
+        self.assertEqual(len(self._resolucoes()), 1)
+
+    def test_reresolucao_vence_a_mais_recente(self):
+        # nova resolução da mesma matrícula sobrepõe a anterior (1 por matrícula)
+        self._gravar(self._resolucao(ticket="IAM-1", data="2026-05-22T10:00:00"))
+        DobrarInteracoes(self._db, self._inter).executar()
+        self._gravar(self._resolucao(ticket="IAM-9", data="2026-05-23T09:00:00"))
+        DobrarInteracoes(self._db, self._inter).executar()
+        rs = self._resolucoes()
+        self.assertEqual(len(rs), 1)
+        self.assertEqual(rs[0]["ticket"], "IAM-9")
 
 
 if __name__ == "__main__":

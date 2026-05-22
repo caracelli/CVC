@@ -8,6 +8,10 @@ os registros recebidos no arquivo e registra apenas o que mudou:
   ALTERADO — matrícula existe nos dois lados e algum campo mudou
   REMOVIDO — matrícula existia no banco e não veio no arquivo
 
+**Carga inicial:** quando a base anterior está vazia, a importação é o marco
+zero — apenas estabelece a baseline e **não gera trilha**. A trilha de
+ouvidoria registra somente os ajustes a partir da 2ª importação.
+
 REMOVIDO é apenas registrado na trilha (auditoria); a linha **não** é
 apagada do banco — o tratamento de quem saiu da base (desligado/transferido)
 é fluxo separado, a ser feito posteriormente.
@@ -64,6 +68,22 @@ class RegistrarHistoricoRh:
             for f in recebidos:
                 chave = self._pad.normalizar_matricula(f.matricula)
                 novo[chave] = self._dict_entidade(f, campos)
+
+            # Carga inicial: base anterior vazia = marco zero. Estabelece a
+            # baseline e NÃO gera trilha — a auditoria de ouvidoria registra
+            # apenas os ajustes a partir da 2ª importação.
+            if not anterior:
+                sessao.add(SnapshotRh(
+                    data_snapshot=hoje, tipo=tipo, total_registros=len(novo),
+                    novos=0, alterados=0, removidos=0,
+                ))
+                sessao.commit()
+                logger.info(
+                    f"Histórico {tipo}: carga inicial — baseline de "
+                    f"{len(novo)} registros estabelecida, trilha não gerada."
+                )
+                return {"total": len(novo), "novos": 0, "alterados": 0,
+                        "removidos": 0, "carga_inicial": True}
 
             novos = alterados = removidos = 0
 

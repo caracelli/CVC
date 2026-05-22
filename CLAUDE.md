@@ -13,66 +13,63 @@ Processar bases de RH e extratos de acesso dos sistemas corporativos, cruzar com
 | SIGOT | Sistema de Gestão de Operações e Turismo | CSV |
 | SICA_RA | Controle de Acesso — Rede Agência | CSV |
 | SICA_ESFERA | Controle de Acesso — Esfera | CSV |
-| SYSTUR | Sistema de Turismo | XLSX |
+| SYSTUR | Sistema de Turismo | CSV |
 | IC | Integrador Contábil | XLSX |
 | ORACLE_EBS | Oracle EBS | — (Card 11) |
 | SIG | SIG | — (Card 12) |
 
-## Estrutura do repositório
+## Dois aplicativos
 
-A pasta `CVC_IAM_ANALYTICS/` é organizada em duas fases:
+- **Processador** (`Processador.exe`) — lê as bases de `ENTRADA`, padroniza, cruza com as matrizes, grava o banco `iam_analytics.db` e gera os relatórios Excel. Roda sob demanda.
+- **Visualizador** (`visualizador.exe`) — servidor local que abre o painel (`REPORT/index.html`) no navegador, lendo o banco ao vivo. Fonte: `EXECUTAVEIS/visualizador.py` (Python stdlib puro, sem dependências).
 
-**Fase 1 — Cliente** (o que o usuário copia ou deposita):
+## Arquitetura multiusuário
+
+A base e os dados ficam numa **raiz de rede** (`<rede><raiz>` no config). Vários usuários abrem o Visualizador ao mesmo tempo:
+
+- O Processador grava o `iam_analytics.db` na rede; cada Visualizador **copia o banco para um cache local** no startup (mais rápido, sem ler durante a escrita).
+- As interações da quarentena são gravadas em `INTERACOES/` — um arquivo `.jsonl` append-only **por usuário** (um escritor por arquivo, seguro sobre SMB).
+- O Processador, a cada execução, **consolida (dobra)** os `.jsonl` no banco e reseta a pasta `INTERACOES/` por rename atômico.
+- Os exes **se auto-atualizam**: comparam a `<versao>` do config local com a da rede e se copiam da rede se diferente.
+
+Detalhes em `docs/ARQUITETURA_MULTIUSUARIO_FASE1.md`.
+
+## Estrutura da pasta de rede (`CVC_IAM_ANALYTICS/`)
+
 ```
 CVC_IAM_ANALYTICS/
-  config.xml                 # Parâmetros de todos os sistemas (na raiz)
-  EXECUTAVEIS/               # Processador.exe e Visualizador.exe para cópia local
-  POWER_BI/                  # Arquivo .pbix para cópia local
-  ENTRADA/                   # Arquivos que o usuário deposita
-    RH/ATIVOS/               # Base de funcionários ativos
-    RH/DESLIGADOS/           # Base de desligados
-    SISTEMAS/SIGOT/          # Extratos de acesso por sistema
-    SISTEMAS/SICA_RA/
-    SISTEMAS/SICA_ESFERA/
-    SISTEMAS/SYSTUR/
-    SISTEMAS/IC/
-    MATRIZES/ORGANIZACIONAL/
-    MATRIZES/PERFIS_SISTEMAS/
-```
-
-**Fase 2 — Aplicativo** (gerenciado pelo Processador/Visualizador):
-```
+  ENTRADA/                   # arquivos depositados pelo cliente
+    RH/ATIVOS/, RH/DESLIGADOS/
+    SISTEMAS/{SIGOT,SICA_RA,SICA_ESFERA,SYSTUR,IC}/
+    MATRIZES/{ORGANIZACIONAL,PERFIS_SISTEMAS}/
   DADOS/
-    BANCO/                   # SQLite (iam_analytics.db)
-    PARQUET/                 # Parquet para consumo do Power BI
-      ACESSOS/               # Um subdiretório por sistema
-      DIVERGENCIAS/
-      HISTORICO/
-      RH/
-    SAIDAS/                  # Relatórios gerados
-      DIVERGENCIAS/
-      DESLIGADOS/
-      TRANSFERIDOS/
-      AUDITORIA/
-    PROCESSADOS/             # Arquivos já importados (movidos após leitura)
-    ERROS/                   # Arquivos rejeitados na importação
-    LOGS/                    # Logs de execução
-    SNAPSHOTS/               # Snapshots históricos
+    BANCO/                   # iam_analytics.db (SQLite)
+    SAIDAS/{DIVERGENCIAS,DESLIGADOS,TRANSFERIDOS,AUDITORIA}/
+    PROCESSADOS/             # arquivos já importados
+    ERROS/                   # arquivos rejeitados na importação
+    LOGS/
+  EXECUTAVEIS/
+    CONFIG/config.xml        # configuração única do projeto
+    REPORT/index.html        # painel do Visualizador
+    Processador.exe, visualizador.exe, visualizador.py
+  INTERACOES/                # interações multiusuário (.jsonl por usuário)
 ```
 
-**Código-fonte:**
-```
-src/                         # Código-fonte (DDD)
-  dominio/                   # Entidades, objetos de valor, regras, interfaces
-  aplicacao/                 # Casos de uso, DTOs
-  infraestrutura/            # Leitores CSV/XLSX, repositórios SQLite, Parquet
-  processador/main.py        # Entry point do Processador (roda na rede)
-  visualizador/main.py       # Entry point do Visualizador (roda localmente)
+## Código-fonte
 
-tests/                       # Testes automatizados
-docs/                        # Documentação técnica
-scripts/                     # Scripts utilitários
-deploy/                      # Empacotamento dos executáveis
+```
+src/                         # código do Processador (DDD)
+  dominio/                   # entidades, objetos de valor, regras, interfaces
+  aplicacao/casos_de_uso/    # casos de uso
+  infraestrutura/            # leitores CSV/XLSX, repositórios SQLite,
+                             # configuração, interações, auto-update
+  processador/main.py        # entry point do Processador
+
+CVC_IAM_ANALYTICS/EXECUTAVEIS/visualizador.py   # fonte do Visualizador (standalone)
+tests/                       # testes automatizados
+docs/                        # documentação técnica
+scripts/                     # scripts utilitários
+deploy/                      # empacotamento (build_processador.py, build_visualizador.py)
 ```
 
 ## Camada de domínio
@@ -84,8 +81,8 @@ deploy/                      # Empacotamento dos executáveis
 
 ## Configuração
 
-Todos os parâmetros de caminhos, colunas e sistemas estão em:
-`CVC_IAM_ANALYTICS/config.xml`
+Tudo — raiz de rede, caminhos, colunas, sistemas, escopo do Visualizador — está em:
+`CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml`
 
 ## Cronograma
 
@@ -96,4 +93,5 @@ Detalhes em `.claude/projects/.../memory/project_cronograma.md`.
 
 - Arquivos de dados do cliente **não são versionados** (ver `.gitignore`)
 - Pasta `Arquivos_origem/` contém os arquivos de referência iniciais — também fora do versionamento
+- Pasta `OLD/` guarda artefatos obsoletos (Power BI, POC) — fora do versionamento
 - Python 3.10+, dependências em `requirements.txt`

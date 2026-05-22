@@ -7,6 +7,7 @@ if not getattr(sys, "frozen", False):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from infraestrutura.configuracao.leitor_config import LeitorConfig
+from infraestrutura.atualizacao.auto_update import verificar_atualizacao
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from aplicacao.casos_de_uso.importar_rh import ImportarRh
 from aplicacao.casos_de_uso.padronizar_rh import PadronizarRh
@@ -16,15 +17,17 @@ from aplicacao.casos_de_uso.vincular_acessos_rh import VincularAcessosRh
 from aplicacao.casos_de_uso.analisar_divergencias import AnalisarDivergencias
 from aplicacao.casos_de_uso.gerar_saidas import GerarSaidas
 from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
+from aplicacao.casos_de_uso.dobrar_interacoes import DobrarInteracoes
 from dominio.objetos_valor.sistema import Sistema
 
 
 def _caminho_config() -> Path:
     if getattr(sys, "frozen", False):
-        # Executável em EXECUTAVEIS/, config.xml está um nível acima
-        return Path(sys.executable).parent.parent / "config.xml"
-    # Script em src/processador/main.py, CVC_IAM_ANALYTICS em ../../../
-    return Path(__file__).resolve().parent.parent.parent / "CVC_IAM_ANALYTICS" / "config.xml"
+        # Executável em EXECUTAVEIS/, config em EXECUTAVEIS/CONFIG/config.xml
+        return Path(sys.executable).parent / "CONFIG" / "config.xml"
+    # Script em src/processador/main.py
+    return (Path(__file__).resolve().parent.parent.parent
+            / "CVC_IAM_ANALYTICS" / "EXECUTAVEIS" / "CONFIG" / "config.xml")
 
 
 def configurar_log(pasta_logs: str):
@@ -45,8 +48,19 @@ def main():
         logger.error(f"config.xml não encontrado: {caminho_config}")
         sys.exit(1)
 
+    # Auto-update: se a versao da rede diferir, copia e re-executa (encerra aqui)
+    verificar_atualizacao(logger.info)
+
     cfg = LeitorConfig(str(caminho_config)).carregar()
-    app_raiz = caminho_config.parent
+    # Raiz dos dados: rede (se <rede><raiz> definido) ou local (modo dev).
+    if cfg.rede_raiz:
+        app_raiz = Path(cfg.rede_raiz)
+        if not app_raiz.exists():
+            logger.error(f"Raiz de rede inacessível: {app_raiz} — abortando.")
+            sys.exit(1)
+    else:
+        # config em EXECUTAVEIS/CONFIG/ -> raiz do app sobe tres niveis
+        app_raiz = caminho_config.parent.parent.parent
 
     configurar_log(str(app_raiz / cfg.saida_logs))
     logger.info(f"IAM Analytics — {cfg.cliente} v{cfg.versao}")
@@ -56,6 +70,14 @@ def main():
 
     conexao = ConexaoBancoDados(str(app_raiz / cfg.banco_dados))
     conexao.inicializar()
+
+    # Dobra das interacoes multiusuario (.jsonl da rede) nas tabelas de quarentena
+    DobrarInteracoes(
+        caminho_banco=str(app_raiz / cfg.banco_dados),
+        pasta_interacoes=(str(Path(cfg.rede_raiz) / cfg.rede_interacoes)
+                          if cfg.rede_raiz else ""),
+        quarentena_dias=cfg.visualizador_quarentena_dias,
+    ).executar()
 
     # Card 3 — Importação RH
     ImportarRh(
