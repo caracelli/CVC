@@ -9,7 +9,6 @@
         <entrada>ENTRADA</entrada>
         <saidas>DADOS/SAIDAS</saidas>
         <banco_dados>DADOS/BANCO/iam_analytics.db</banco_dados>
-        <parquet>DADOS/PARQUET</parquet>
         <processados>DADOS/PROCESSADOS</processados>
         <erros>DADOS/ERROS</erros>
         <logs>DADOS/LOGS</logs>
@@ -156,10 +155,4 @@
         <auditoria>DADOS/SAIDAS/AUDITORIA</auditoria>
         <logs>DADOS/LOGS</logs>
     </saidas>
-
-    
-    <local>
-        <parquet_destino />
-        <power_bi></power_bi>
-    </local>
 </configuracao>
