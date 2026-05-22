@@ -1,13 +1,11 @@
 from datetime import datetime
 from typing import Optional
 
-import pandas as pd
 from loguru import logger
 
 from dominio.objetos_valor.tipo_divergencia import TipoDivergencia
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.escritores_arquivos.escritor_excel import EscritorExcel
-from infraestrutura.escritores_arquivos.escritor_parquet import EscritorParquet
 from infraestrutura.repositorios.repositorio_divergencia_sqlite import RepositorioDivergenciaSqlite
 from infraestrutura.repositorios.repositorio_matriz_sqlite import RepositorioMatrizSqlite
 
@@ -25,16 +23,13 @@ class GerarSaidas:
         self,
         conexao: ConexaoBancoDados,
         pasta_saidas: str,
-        pasta_parquet: str,
         pasta_processados: Optional[str] = None,
         pasta_erros: Optional[str] = None,
     ):
         self._repo_div = RepositorioDivergenciaSqlite(conexao)
         self._repo_matriz = RepositorioMatrizSqlite(conexao)
         self._escritor_excel = EscritorExcel()
-        self._escritor_parquet = EscritorParquet()
         self._pasta_saidas = pasta_saidas
-        self._pasta_parquet = pasta_parquet
 
     def executar(self) -> int:
         logger.info("=== Geracao de Saidas iniciada ===")
@@ -100,22 +95,6 @@ class GerarSaidas:
         if divergencias_excel:
             caminho_excel = self._escritor_excel.salvar_divergencias(divergencias_excel, self._pasta_saidas)
             logger.info(f"Excel gerado: {caminho_excel}")
-
-        # Parquet para Power BI
-        df = pd.DataFrame(all_rows)
-        df = df.astype({
-            "id": "str", "tipo": "str", "sistema": "str", "usuario": "str",
-            "nome_usuario": "str", "matricula": "str", "perfil_encontrado": "str",
-            "perfil_esperado": "str", "descricao": "str", "data_identificacao": "str",
-            "acao": "str",
-        })
-        df["resolvida"] = df["resolvida"].astype("bool")
-
-        self._escritor_parquet.salvar_fixo(
-            df,
-            f"{self._pasta_parquet}/DIVERGENCIAS",
-            "divergencias",
-        )
 
         logger.info(f"=== Saidas geradas: {len(all_rows)} registros ===")
         return len(all_rows)

@@ -62,10 +62,8 @@ def main():
         conexao=conexao,
         pasta_ativos=str(app_raiz / cfg.rh_ativos_caminho),
         pasta_desligados=str(app_raiz / cfg.rh_desligados_caminho),
-        pasta_parquet_rh=str(app_raiz / cfg.parquet_rh),
         pasta_processados=pasta_proc,
         pasta_erros=pasta_err,
-        pasta_parquet_historico=str(app_raiz / "DADOS" / "PARQUET" / "HISTORICO"),
     ).executar()
 
     # Card 4 — Padronização (snapshot/histórico já gravado no Card 3, antes do merge)
@@ -76,7 +74,6 @@ def main():
         conexao=conexao,
         pasta_perfis=str(app_raiz / cfg.matrizes_perfis_caminho),
         pasta_org=str(app_raiz / cfg.matrizes_org_caminho),
-        pasta_parquet=str(app_raiz / "DADOS" / "PARQUET"),
         pasta_processados=pasta_proc,
         pasta_erros=pasta_err,
     ).executar()
@@ -88,7 +85,6 @@ def main():
             conexao=conexao,
             sistema=Sistema.SYSTUR,
             pasta_entrada=str(app_raiz / sis_cfg.caminho_entrada),
-            pasta_parquet=str(app_raiz / sis_cfg.caminho_parquet),
             pasta_processados=pasta_proc,
             pasta_erros=pasta_err,
         ).executar()
@@ -99,17 +95,13 @@ def main():
     # Card 8 — Analisar divergencias
     AnalisarDivergencias(conexao=conexao).executar()
 
-    # Validação de acessos (inclusão/alteração) — gera parquet para Power BI
-    ValidarAcessosSistema(
-        conexao=conexao,
-        pasta_parquet=str(app_raiz / "DADOS" / "PARQUET"),
-    ).executar()
+    # Validação de acessos (inclusão/alteração) — grava na tabela validacao_acessos
+    ValidarAcessosSistema(conexao=conexao).executar()
 
-    # Card 9 — Gerar saidas (Excel + Parquet) — usa validações acima para coluna acao
+    # Card 9 — Gerar saidas (Excel) — usa validações acima para a coluna acao
     GerarSaidas(
         conexao=conexao,
         pasta_saidas=str(app_raiz / cfg.saida_divergencias),
-        pasta_parquet=str(app_raiz / "DADOS" / "PARQUET"),
     ).executar()
 
     logger.info("Processamento finalizado.")
