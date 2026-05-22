@@ -26,7 +26,6 @@ class Configuracao:
     sistemas: Dict[str, ConfigSistema]
     rh_ativos_caminho: str
     rh_desligados_caminho: str
-    parquet_rh: str
     processados: str
     erros: str
     matrizes_perfis_caminho: str
@@ -82,7 +81,6 @@ class LeitorConfig:
             sistemas=sistemas,
             rh_ativos_caminho=root.findtext("rh/ativos/caminho", ""),
             rh_desligados_caminho=root.findtext("rh/desligados/caminho", ""),
-            parquet_rh=str(raiz / root.findtext("caminhos/parquet", "DADOS/PARQUET") / "RH"),
             processados=root.findtext("caminhos/processados", "DADOS/PROCESSADOS"),
             erros=root.findtext("caminhos/erros", "DADOS/ERROS"),
             matrizes_perfis_caminho=root.findtext("matrizes/perfis_sistemas/caminho", ""),
