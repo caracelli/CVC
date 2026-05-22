@@ -1,0 +1,1978 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>CVC IAM Analytics</title>
+<script src="chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+:root{
+  --navy:#1F2D5C; --navy-l:#2C3D72; --navy-d:#172143;
+  --gold:#F5B800; --gold-l:#FFCE3A;
+  --sh-1:0 1px 2px rgba(20,28,55,.07),0 5px 14px rgba(20,28,55,.10);
+  --sh-2:0 2px 6px rgba(20,28,55,.10),0 14px 32px rgba(20,28,55,.16);
+  --sh-3:0 6px 18px rgba(20,28,55,.16),0 26px 52px rgba(20,28,55,.26);
+}
+body{
+  font-family:'Segoe UI',Tahoma,sans-serif;color:#252423;
+  display:flex;flex-direction:column;overflow:hidden;
+  background:
+    radial-gradient(1100px 520px at 88% -10%,rgba(245,184,0,.13),transparent 62%),
+    radial-gradient(900px 460px at 0% 112%,rgba(31,45,92,.13),transparent 60%),
+    linear-gradient(158deg,#EEF1F7 0%,#E3E8F1 55%,#DAE0EC 100%);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.header{
+  flex:none;position:relative;z-index:30;height:62px;
+  background:linear-gradient(125deg,#2C3D72 0%,#1F2D5C 52%,#172143 100%);
+  border-bottom:2px solid var(--gold);
+  box-shadow:0 8px 28px rgba(13,19,40,.42);
+  display:flex;align-items:center;padding:0 32px;
+}
+.header::before{
+  content:"";position:absolute;left:0;top:0;width:6px;height:100%;
+  background:linear-gradient(180deg,var(--gold-l),var(--gold));
+  box-shadow:0 0 18px rgba(245,184,0,.75);
+}
+.hdr-titles{display:flex;flex-direction:column;}
+.hdr-title{font-size:21px;font-weight:700;color:#fff;line-height:1.25;letter-spacing:.2px;}
+.hdr-sub{font-size:12px;color:#AEB8D4;}
+.hdr-meta{margin-left:auto;text-align:right;}
+.hdr-ref{font-size:15px;font-weight:700;color:var(--gold);text-shadow:0 1px 8px rgba(245,184,0,.4);}
+.hdr-upd{font-size:11px;color:#AEB8D4;}
+
+/* ── Nav tabs ───────────────────────────────────────────────────────── */
+.nav{
+  flex:none;z-index:20;
+  background:transparent;
+  display:flex;gap:4px;padding:7px 18px 0;
+  border-bottom:2px solid var(--navy);
+}
+.tab{
+  flex:0 0 auto;min-width:172px;height:33px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.90);color:#5A6377;
+  border-radius:8px 8px 0 0;cursor:pointer;
+  font-size:13px;font-weight:600;user-select:none;
+  transition:background .16s,color .16s,transform .16s;
+}
+.tab:hover{background:#fff;color:var(--navy);transform:translateY(-1px);}
+.tab.active{
+  background:linear-gradient(180deg,var(--gold-l),var(--gold));
+  color:var(--navy);font-weight:700;
+  box-shadow:0 -2px 14px rgba(245,184,0,.5);
+}
+
+/* ── Pages + animações de entrada ───────────────────────────────────── */
+.pages{flex:1;min-height:0;position:relative;}
+.page{
+  display:none;position:absolute;inset:0;
+  flex-direction:column;gap:13px;padding:16px;
+}
+.page.active{display:flex;}
+.page.active>*:not(.kpi-row){animation:rise .46s cubic-bezier(.22,.68,.24,1) both .12s;}
+.page.active .kpi{animation:pop .42s cubic-bezier(.22,.68,.24,1) both;}
+.page.active .kpi:nth-child(1){animation-delay:.03s;}
+.page.active .kpi:nth-child(2){animation-delay:.07s;}
+.page.active .kpi:nth-child(3){animation-delay:.11s;}
+.page.active .kpi:nth-child(4){animation-delay:.15s;}
+.page.active .kpi:nth-child(5){animation-delay:.19s;}
+@keyframes rise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.96);}to{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+/* ── KPI cards ──────────────────────────────────────────────────────── */
+.kpi-row{flex:none;display:flex;gap:13px;}
+.kpi{
+  flex:1;min-width:0;height:80px;position:relative;overflow:hidden;
+  border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:inset 6px 0 0 0 var(--kpi-bar,var(--gold)),var(--sh-1);
+  transition:transform .18s cubic-bezier(.22,.68,.24,1),box-shadow .18s;
+}
+.kpi::before{               /* brilho superior (recua 6px p/ não cobrir a faixa) */
+  content:"";position:absolute;left:6px;right:0;top:0;height:56%;
+  background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0));
+  pointer-events:none;
+}
+.kpi::after{               /* brilho diagonal (recua 6px p/ não cobrir a faixa) */
+  content:"";position:absolute;left:6px;top:0;right:0;bottom:0;
+  background:linear-gradient(125deg,rgba(255,255,255,.4) 0%,transparent 40%);
+  pointer-events:none;
+}
+.kpi:hover{transform:translateY(-5px);box-shadow:inset 6px 0 0 0 var(--kpi-bar,var(--gold)),var(--sh-3);}
+.kpi-val{font-size:25px;font-weight:800;line-height:1;
+  position:relative;z-index:1;text-shadow:0 1px 2px rgba(255,255,255,.55);}
+.kpi-lbl{font-size:11px;font-weight:700;margin-top:6px;text-align:center;
+  position:relative;z-index:1;letter-spacing:.2px;}
+
+/* ── Painéis (glassmorphism) ────────────────────────────────────────── */
+.panel{
+  background:rgba(255,255,255,.72);
+  -webkit-backdrop-filter:blur(12px) saturate(150%);
+  backdrop-filter:blur(12px) saturate(150%);
+  border:1px solid rgba(255,255,255,.65);
+  border-radius:12px;box-shadow:var(--sh-1);
+}
+
+/* ── Inclusão / Alteração ───────────────────────────────────────────── */
+.incl-body{flex:1;min-height:0;display:flex;gap:13px;}
+.incl-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;}
+.sidebar{flex:none;width:224px;display:flex;flex-direction:column;gap:11px;
+  overflow-y:auto;overflow-x:hidden;padding-right:3px;}
+.sidebar::-webkit-scrollbar{width:8px;}
+.sidebar::-webkit-scrollbar-track{background:transparent;}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(31,45,92,.26);border-radius:5px;}
+.sidebar::-webkit-scrollbar-thumb:hover{background:rgba(31,45,92,.45);}
+#filtros{display:flex;flex-direction:column;gap:11px;}
+.side-panel{padding:11px 12px;}
+.panel-lbl{
+  font-size:10.5px;font-weight:700;color:var(--navy);
+  display:block;margin-bottom:8px;letter-spacing:.3px;
+}
+.slicer{display:flex;flex-direction:column;gap:6px;}
+.pill{
+  width:100%;padding:8px;border:none;border-radius:22px;cursor:pointer;
+  font-size:11px;font-weight:700;text-align:center;
+  transition:transform .14s,filter .14s,box-shadow .14s;
+}
+.pill.yellow{
+  background:linear-gradient(180deg,var(--gold-l),var(--gold));
+  color:var(--navy);box-shadow:0 3px 10px rgba(245,184,0,.45);
+}
+.pill.gray{
+  background:linear-gradient(180deg,#EFF0F3,#DFE1E8);color:#3A3F4C;
+  box-shadow:0 2px 6px rgba(20,28,55,.10);
+}
+.pill:hover{transform:translateY(-2px);filter:brightness(1.05);}
+.pill:active{transform:translateY(0);}
+.pill-linha{position:relative;}
+.info-i{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:15px;height:15px;border-radius:50%;background:#C9D2DF;color:#fff;
+  font:800 9.5px/1 Arial;font-style:normal;display:inline-flex;align-items:center;
+  justify-content:center;cursor:help;z-index:3;}
+.info-i:hover{background:#1F2D5C;}
+#info-tip{position:fixed;z-index:10050;display:none;max-width:240px;
+  background:#fff;color:#3A3F4C;padding:8px 11px;border-radius:7px;
+  border:1px solid #D5DCE6;font:500 10.5px/1.45 Arial;
+  box-shadow:0 4px 14px rgba(20,28,55,.14);pointer-events:none;}
+.th-x{cursor:pointer;user-select:none;padding-right:26px;}
+.th-x:hover{background:linear-gradient(180deg,#34488A,#28386F);}
+.th-so{font-size:9px;opacity:.95;white-space:nowrap;}
+.th-mk{position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  width:16px;height:16px;border-radius:4px;
+  color:rgba(255,255,255,.82);background:rgba(255,255,255,.13);}
+.th-mk:hover{background:rgba(255,255,255,.6);color:#1F2D5C;}
+.th-mk svg{width:10px;height:10px;}
+.th-mk.mk-filtrado{background:var(--gold);color:#1F2D5C;}
+.th-mk.mk-filtrado:hover{background:var(--gold-l);}
+
+/* ── Modal (resolução de pendência) ──────────────────────────────────── */
+.modal-bg{position:fixed;inset:0;z-index:10050;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(16,23,46,.44);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
+.modal-bg.show{display:flex;animation:fadeIn .15s ease both;}
+.modal-card{background:#fff;border-radius:12px;width:446px;max-width:94vw;
+  border-top:3px solid var(--gold);
+  box-shadow:0 24px 60px rgba(10,15,34,.5);overflow:hidden;}
+.modal-card.lg{width:560px;}
+.modal-hd{padding:15px 20px 12px;border-bottom:1px solid #E7EBF2;}
+.modal-hd h3{margin:0;font:700 14px Arial;color:#1F2D5C;}
+.modal-hd p{margin:3px 0 0;font:400 11px Arial;color:#7B8085;}
+.modal-bd{padding:15px 20px 4px;max-height:74vh;overflow:auto;}
+.modal-bd label{display:block;font:600 11px Arial;color:#3A3F4C;margin:12px 0 4px;}
+.modal-bd label:first-child{margin-top:0;}
+.modal-bd .req{color:#C0392B;}
+.modal-bd input,.modal-bd textarea{width:100%;box-sizing:border-box;
+  border:1px solid #CBD3E0;border-radius:6px;padding:7px 9px;
+  font:400 12px Arial;color:#1F2D5C;}
+.modal-bd input:focus,.modal-bd textarea:focus{outline:none;
+  border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,193,66,.22);}
+.modal-bd textarea{resize:vertical;min-height:64px;}
+.modal-err{color:#C0392B;font:600 10.5px Arial;margin:8px 0 0;min-height:14px;}
+.modal-ft{padding:13px 20px 16px;display:flex;gap:8px;justify-content:flex-end;}
+.modal-ft button{border:none;border-radius:6px;padding:8px 16px;
+  font:700 11.5px Arial;cursor:pointer;}
+.mf-cancel{background:#ECEFF4;color:#3A3F4C;}
+.mf-cancel:hover{background:#E0E5EC;}
+.mf-ok{background:var(--gold);color:#1F2D5C;}
+.mf-ok:hover{filter:brightness(1.05);}
+.modal-vw{font:400 12px/1.5 Arial;color:#3A3F4C;}
+.modal-vw .vw-row{margin-bottom:12px;}
+.modal-vw .vw-row:last-child{margin-bottom:2px;}
+.modal-vw .vw-lbl{font:700 9.5px Arial;color:#8A9099;letter-spacing:.05em;
+  text-transform:uppercase;margin-bottom:2px;}
+.modal-vw .vw-desc{white-space:pre-wrap;}
+.modal-vw a{color:#2D6CDF;word-break:break-all;}
+/* botão Resolver / lupa na grid de Pendências */
+.btn-res{border:1px solid var(--gold);background:var(--gold);color:#1F2D5C;
+  border-radius:5px;padding:2px 9px;font:700 9.5px Arial;cursor:pointer;
+  vertical-align:middle;margin-left:6px;white-space:nowrap;}
+.btn-res:hover{filter:brightness(1.05);}
+.btn-res.lupa{background:#fff;border-color:#CBD3E0;padding:3px 6px;
+  display:inline-flex;align-items:center;}
+.btn-res.lupa:hover{border-color:var(--gold);background:#FFFBF0;filter:none;}
+.btn-res.lupa svg{display:block;}
+.btn-res.ico-res{padding:3px 6px;display:inline-flex;align-items:center;
+  background:#fff;border-color:#CBD3E0;}
+.btn-res.ico-res:hover{background:#FFFBF0;border-color:var(--gold);filter:none;}
+.btn-res.ico-res svg{display:block;}
+/* Histórico — badge de movimentação e link de ticket */
+.h-mov{display:inline-block;padding:2px 9px;border-radius:9px;
+  font:700 9.5px Arial;white-space:nowrap;}
+.h-adm{background:#E3F3E8;color:#1E7B43;}
+.h-alt{background:#FFF3D6;color:#8A6314;}
+.h-pen{background:#FDE7E9;color:#A4262C;}
+.h-res{background:#E7EEFB;color:#27468C;}
+.filtro-dica{font:600 9px Arial;color:#8A9099;padding:1px 2px 7px;line-height:1.45;}
+.filtro-dica b{color:#3A3F4C;font-weight:800;}
+.hist-tk{color:#2D6CDF;cursor:pointer;font-weight:700;
+  display:inline-flex;align-items:center;gap:3px;}
+.hist-tk:hover{text-decoration:underline;}
+.vw-sec{font:800 9.5px Arial;color:#1F2D5C;letter-spacing:.05em;
+  text-transform:uppercase;border-bottom:1px solid #E7EBF2;
+  padding-bottom:5px;margin:14px 0 9px;}
+.vw-grid2{display:flex;gap:20px;}
+.vw-grid2>div{flex:1;min-width:0;}
+.vw-val{font:600 12px Arial;color:#1F2D5C;word-break:break-word;}
+.vw-vazio{color:#A0A6AE;}
+.vw-mt{margin-top:11px;}
+.vw-pcard{border:1px solid #E7EBF2;border-radius:7px;padding:9px 11px;margin-bottom:7px;}
+.vw-pcard:last-child{margin-bottom:0;}
+.vw-grid3{display:flex;gap:14px;}
+.vw-grid3>div{flex:1;min-width:0;}
+.vw-tdesc{font:400 10px Arial;color:#8A9099;line-height:1.45;margin-top:7px;}
+.vw-cmp{margin-top:7px;}
+.vw-perfil{font:600 11px Arial;color:#1F2D5C;word-break:break-all;margin-top:1px;}
+.vw-opc-l{margin-top:2px;}
+.vw-opc-li{font:600 10.5px Arial;color:#6B4E08;background:#FFF6E0;border-radius:4px;
+  padding:3px 8px;margin-top:3px;word-break:break-all;}
+.gx-menu{position:fixed;z-index:10060;background:#fff;border:1px solid #C9D2DF;
+  border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.30);padding:5px;
+  font:500 11px/1.3 Arial;color:#1F2D5C;width:212px;}
+.gx-op{padding:6px 8px;border-radius:5px;cursor:pointer;}
+.gx-op:hover{background:#EEF2F8;}
+.gx-sep{height:1px;background:#E3E8F0;margin:4px 2px;}
+.gx-busca{width:100%;box-sizing:border-box;padding:5px 7px;margin:2px 0 4px;
+  border:1px solid #C9D2DF;border-radius:5px;font:500 11px Arial;}
+.gx-vals{max-height:168px;overflow:auto;}
+.gx-v{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;cursor:pointer;}
+.gx-v:hover{background:#EEF2F8;}
+.gx-todos{font-weight:700;border-bottom:1px solid #E3E8F0;margin-bottom:2px;}
+.gx-acoes{display:flex;gap:6px;margin-top:5px;}
+.gx-acoes button{flex:1;padding:6px;border:none;border-radius:5px;cursor:pointer;font:700 11px Arial;}
+.gx-ok{background:#1F2D5C;color:#fff;}
+.gx-limpar{background:#EFF0F3;color:#3A3F4C;}
+.side-chart{flex:none;height:178px;display:flex;flex-direction:column;padding:11px 12px;}
+.side-chart .panel-lbl{text-align:center;font-size:11px;}
+.side-chart .chart-box{flex:1;min-height:0;position:relative;}
+
+.content-panel{
+  flex:1;min-width:0;
+  background:#fff;border:1px solid rgba(31,45,92,.08);border-radius:12px;
+  box-shadow:var(--sh-2);
+  overflow:hidden;display:flex;
+}
+.tbl-wrap{flex:1;overflow:auto;}
+.tbl-wrap::-webkit-scrollbar{width:11px;height:11px;}
+.tbl-wrap::-webkit-scrollbar-track{background:transparent;}
+.tbl-wrap::-webkit-scrollbar-thumb{
+  background:rgba(31,45,92,.30);border-radius:7px;
+  border:2px solid transparent;background-clip:padding-box;
+}
+.tbl-wrap::-webkit-scrollbar-thumb:hover{background:rgba(31,45,92,.52);background-clip:padding-box;}
+
+/* ── Tabela ─────────────────────────────────────────────────────────── */
+table{border-collapse:collapse;width:100%;font-size:11px;}
+#matrix-tbl{table-layout:fixed;min-width:1240px;}
+#sv-tbl{table-layout:fixed;min-width:1040px;}
+#quar-tbl{table-layout:fixed;min-width:1040px;}
+thead th{
+  position:sticky;top:0;z-index:2;
+  background:linear-gradient(180deg,#2C3D72,#1F2D5C);color:#fff;
+  padding:9px 7px;text-align:left;font-weight:600;
+  white-space:nowrap;font-size:11px;letter-spacing:.2px;
+  border-right:1px solid rgba(255,255,255,.12);
+  box-shadow:0 3px 10px rgba(13,19,40,.30);
+}
+thead th:last-child{border-right:none;}
+tbody td{
+  padding:6px 7px;color:#252423;
+  border-bottom:1px solid #EAEEF3;border-right:1px solid #F2F3F6;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+tbody td:last-child{border-right:none;}
+tbody tr{transition:background .12s;}
+tbody tr:nth-child(even){background:#F7F9FC;}
+tbody tr:hover{background:#E8EFFB;}
+tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--gold);}
+tr.sub-row td{background:#F3F5F9;color:#555;}
+
+.expand-btn{
+  background:#fff;border:1.5px solid var(--navy);border-radius:5px;cursor:pointer;
+  color:var(--navy);font-size:10px;padding:1px 5px;font-weight:800;
+  line-height:1;display:inline-flex;align-items:center;justify-content:center;
+  transition:background .14s,color .14s,transform .14s;
+}
+.expand-btn:hover{background:var(--navy);color:#fff;transform:scale(1.12);}
+.qbtn{
+  background:none;border:0;cursor:pointer;color:var(--navy);padding:3px 6px;
+  line-height:0;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:6px;transition:background .14s,color .14s,transform .14s;
+}
+.qbtn:hover{background:#E9EEF9;color:#0A1F52;transform:scale(1.16);}
+.qbtn:active{transform:scale(1);}
+.qbtn svg{display:block;}
+
+/* ── Badges ─────────────────────────────────────────────────────────── */
+.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-weight:600;
+  font-size:10.5px;white-space:nowrap;box-shadow:0 1px 2px rgba(20,28,55,.07);}
+.b-sem-acesso  {background:#DEECF9;color:#004578;}
+.b-sem-vinculo {background:#F0E6F6;color:#5C2D91;}
+.b-divergente  {background:#FEF3E2;color:#833C00;}
+.b-em-analise  {background:#FFF3CD;color:#856404;}
+.b-pendente    {background:#FDE7E9;color:#A4262C;}
+.b-resolvida   {background:#DFF6DD;color:#107C10;}
+
+/* ── Gráficos ───────────────────────────────────────────────────────── */
+.chart-row{flex:1;min-height:0;display:flex;gap:13px;}
+.chart-panel{
+  flex:1;min-width:0;
+  background:#fff;border-radius:12px;border:1px solid rgba(31,45,92,.07);
+  box-shadow:var(--sh-2);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:transform .18s,box-shadow .18s;
+}
+.chart-panel:hover{transform:translateY(-3px);box-shadow:var(--sh-3);}
+.chart-title{font-size:13px;font-weight:700;color:var(--navy);text-align:center;
+  padding:12px 8px 4px;letter-spacing:.2px;}
+.chart-title.orange{color:#E67E22;}
+.chart-box{flex:1;min-height:0;position:relative;margin:2px 12px 12px;}
+
+/* ── Aba Quarentena ─────────────────────────────────────────────────── */
+.quar-toolbar{flex:none;display:flex;align-items:center;}
+.seg{
+  padding:8px 22px;border:1px solid #C9D2E3;background:#fff;color:var(--navy);
+  font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
+}
+.seg:first-child{border-radius:8px 0 0 8px;}
+.seg+.seg{border-radius:0 8px 8px 0;border-left:none;}
+.seg:hover{background:#EEF1F8;}
+.seg.active{
+  background:linear-gradient(180deg,#2C3D72,#1F2D5C);color:#fff;
+  border-color:var(--navy);box-shadow:0 4px 14px rgba(31,45,92,.42);
+}
+.quar-count{font-size:12px;color:#5A6377;margin-left:14px;font-weight:600;}
+.qbtn-out{
+  background:linear-gradient(180deg,#2C3D72,#1F2D5C);color:#fff;border:0;
+  border-radius:7px;cursor:pointer;font-size:10.5px;font-weight:700;padding:5px 12px;
+  box-shadow:0 3px 9px rgba(31,45,92,.36);
+  transition:transform .14s,box-shadow .14s,filter .14s;
+}
+.qbtn-out:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(31,45,92,.46);filter:brightness(1.12);}
+.qbtn-out:active{transform:translateY(0);}
+
+/* ── Botão Exportar Excel ───────────────────────────────────────────── */
+.exp-bar{flex:none;display:flex;justify-content:flex-end;align-items:center;}
+.lista-total{margin-right:auto;font-size:12.5px;color:#5A6377;}
+.btn-exp{
+  display:inline-flex;align-items:center;gap:7px;
+  background:linear-gradient(180deg,#1E8449,#176B3A);color:#fff;
+  border:0;border-radius:8px;cursor:pointer;
+  font-size:12px;font-weight:700;padding:8px 16px;
+  box-shadow:0 3px 10px rgba(23,107,58,.4);
+  transition:transform .14s,box-shadow .14s,filter .14s;
+}
+.btn-exp:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(23,107,58,.5);filter:brightness(1.1);}
+.btn-exp:active{transform:translateY(0);}
+.btn-exp svg{display:block;}
+.pp-wrap{display:flex;align-items:center;gap:6px;margin-right:14px;font-size:12px;color:#5A6377;}
+.pp-wrap select{font:600 12px 'Segoe UI',sans-serif;color:#1F2D5C;background:#fff;
+  border:1px solid #C9D2E3;border-radius:6px;padding:4px 7px;cursor:pointer;}
+.pager{display:flex;align-items:center;gap:5px;margin-right:16px;}
+.pg-btn{
+  min-width:28px;height:27px;border:1px solid #1F2D5C;background:#fff;
+  border-radius:6px;cursor:pointer;color:#1F2D5C;font-weight:700;font-size:13px;
+  transition:background .12s,color .12s,transform .1s;
+}
+.pg-btn:hover:not(:disabled){background:#1F2D5C;color:#fff;transform:translateY(-1px);}
+.pg-btn:disabled{opacity:.35;cursor:default;}
+.pg-atual{font-weight:700;color:#1F2D5C;font-size:12px;padding:0 6px;white-space:nowrap;}
+
+/* ── Tooltip (estilo Power BI) ──────────────────────────────────────── */
+#hovertip{position:fixed;z-index:9999;display:none;pointer-events:none;
+  background:rgba(255,255,255,.97);border:1px solid #D5DCE6;border-left:3px solid var(--navy);
+  border-radius:7px;box-shadow:var(--sh-2);
+  padding:8px 11px;font-size:11px;color:#252423;max-width:360px;}
+#hovertip div{white-space:nowrap;line-height:1.55;overflow:hidden;text-overflow:ellipsis;}
+#hovertip span{display:inline-block;min-width:80px;color:#7B8290;font-weight:600;}
+
+/* ── Overlay "Processando" (identidade CVC) ─────────────────────────── */
+#overlay{
+  position:fixed;inset:0;z-index:10000;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(16,23,46,.36);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+}
+#overlay.show{display:flex;animation:fadeIn .2s ease both;}
+.proc-card{
+  background:rgba(255,255,255,.86);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  backdrop-filter:blur(18px) saturate(160%);
+  border:1px solid rgba(255,255,255,.7);border-top:3px solid var(--gold);
+  border-radius:16px;
+  box-shadow:0 20px 54px rgba(10,15,34,.52);
+  padding:28px 44px;
+  display:flex;flex-direction:column;align-items:center;gap:15px;
+  animation:pop .32s cubic-bezier(.22,.68,.24,1) both;
+}
+.proc-card .lbl{
+  font:700 12.5px 'Segoe UI',sans-serif;color:var(--navy);letter-spacing:.6px;
+}
+.spinner{position:relative;width:52px;height:52px;}
+.spinner i{position:absolute;inset:0;}
+.spinner i::before{
+  content:"";position:absolute;top:1px;left:50%;
+  width:8px;height:8px;margin-left:-4px;border-radius:50%;
+  background:#1F2D5C;
+  animation:cvcDot 1.1s ease-in-out infinite both;
+}
+.spinner i:nth-child(1) {transform:rotate(0deg);}
+.spinner i:nth-child(2) {transform:rotate(30deg);}
+.spinner i:nth-child(3) {transform:rotate(60deg);}
+.spinner i:nth-child(4) {transform:rotate(90deg);}
+.spinner i:nth-child(5) {transform:rotate(120deg);}
+.spinner i:nth-child(6) {transform:rotate(150deg);}
+.spinner i:nth-child(7) {transform:rotate(180deg);}
+.spinner i:nth-child(8) {transform:rotate(210deg);}
+.spinner i:nth-child(9) {transform:rotate(240deg);}
+.spinner i:nth-child(10){transform:rotate(270deg);}
+.spinner i:nth-child(11){transform:rotate(300deg);}
+.spinner i:nth-child(12){transform:rotate(330deg);}
+.spinner i:nth-child(1)::before {animation-delay:-1.100s;}
+.spinner i:nth-child(2)::before {animation-delay:-1.008s;}
+.spinner i:nth-child(3)::before {animation-delay:-0.917s;}
+.spinner i:nth-child(4)::before {animation-delay:-0.825s;}
+.spinner i:nth-child(5)::before {animation-delay:-0.733s;}
+.spinner i:nth-child(6)::before {animation-delay:-0.642s;}
+.spinner i:nth-child(7)::before {animation-delay:-0.550s;}
+.spinner i:nth-child(8)::before {animation-delay:-0.458s;}
+.spinner i:nth-child(9)::before {animation-delay:-0.367s;}
+.spinner i:nth-child(10)::before{animation-delay:-0.275s;}
+.spinner i:nth-child(11)::before{animation-delay:-0.183s;}
+.spinner i:nth-child(12)::before{animation-delay:-0.092s;}
+@keyframes cvcDot{
+  0%,100%{transform:scale(.32);opacity:.28;}
+  40%    {transform:scale(1);  opacity:1;}
+}
+
+/* ── Placeholder ────────────────────────────────────────────────────── */
+.ph{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;color:#5A6377;
+}
+.ph h2{font-size:23px;font-weight:800;color:var(--navy);}
+.ph p{font-size:14px;max-width:450px;text-align:center;line-height:1.7;}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="hdr-titles">
+    <div class="hdr-title">IAM Analitics</div>
+    <div class="hdr-sub">Governança de Acessos — CVC Corp</div>
+  </div>
+  <div class="hdr-meta">
+    <div class="hdr-ref">Referência: Maio / 2026</div>
+    <div class="hdr-upd">Última atualização: 14/05/2026 09:42</div>
+  </div>
+</header>
+
+<nav class="nav">
+  <div class="tab"        data-tab="vg">Visão Geral</div>
+  <div class="tab"        data-tab="consulta">Consulta</div>
+  <div class="tab active" data-tab="incl">Pendências</div>
+  <div class="tab"        data-tab="hist">Histórico</div>
+  <div class="tab"        data-tab="quar">Quarentena</div>
+</nav>
+
+<div class="pages">
+
+  <!-- ═══ VISÃO GERAL ═══ -->
+  <div class="page" id="pg-vg">
+    <div class="kpi-row">
+      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2980B9;">
+        <div class="kpi-val" style="color:#2980B9;">562</div>
+        <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso</div>
+      </div>
+      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#154360;">
+        <div class="kpi-val" style="color:#154360;">41</div>
+        <div class="kpi-lbl" style="color:#154360;">Alterar Perfil</div>
+      </div>
+      <div class="kpi" style="background:#FEF3E2;border:1px solid #F9D5A7;--kpi-bar:#E67E22;">
+        <div class="kpi-val" style="color:#E67E22;">798</div>
+        <div class="kpi-lbl" style="color:#E67E22;">Em Análise</div>
+      </div>
+      <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;--kpi-bar:#7D3C98;">
+        <div class="kpi-val" style="color:#7D3C98;">4.957</div>
+        <div class="kpi-lbl" style="color:#7D3C98;">Total Não Mapeados</div>
+      </div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-panel">
+        <div class="chart-title">Ações Pendentes por Sistema</div>
+        <div class="chart-box"><canvas id="ch-sis-vg"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="chart-title orange">Distribuição por Tipo de Ação</div>
+        <div class="chart-box"><canvas id="ch-acao-vg"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INCLUSÃO / ALTERAÇÃO ═══ -->
+  <div class="page active" id="pg-incl">
+    <div class="kpi-row">
+      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2980B9;">
+        <div class="kpi-val" style="color:#2980B9;">562</div>
+        <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso</div>
+      </div>
+      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#154360;">
+        <div class="kpi-val" style="color:#154360;">41</div>
+        <div class="kpi-lbl" style="color:#154360;">Alterar Perfil</div>
+      </div>
+      <div class="kpi" style="background:#FEF3E2;border:1px solid #F9D5A7;--kpi-bar:#E67E22;">
+        <div class="kpi-val" style="color:#E67E22;">798</div>
+        <div class="kpi-lbl" style="color:#E67E22;">Em Análise</div>
+      </div>
+      <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;--kpi-bar:#7D3C98;">
+        <div class="kpi-val" style="color:#7D3C98;">4.957</div>
+        <div class="kpi-lbl" style="color:#7D3C98;">Total Não Mapeados</div>
+      </div>
+      <div class="kpi" style="background:#EAFAF1;border:1px solid #A9DFBF;--kpi-bar:#1E8449;">
+        <div class="kpi-val" style="color:#1E8449;">6.358</div>
+        <div class="kpi-lbl" style="color:#1E8449;">Total c/ Ação</div>
+      </div>
+    </div>
+    <div class="incl-body">
+      <div class="sidebar">
+        <div id="filtros"></div>
+      </div>
+      <div class="incl-main">
+        <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="por-pagina" onchange="mudarPorPagina(this.value)"><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="pager"></span><span class="lista-total" id="incl-total"></span><button class="btn-exp" onclick="exportarInclusao()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+      <div class="content-panel">
+        <div class="tbl-wrap">
+          <table id="matrix-tbl">
+            <colgroup>
+              <col style="width:84px">    <!-- Quarentena -->
+              <col style="width:30px">    <!-- expand -->
+              <col style="width:104px">   <!-- Vínculo -->
+              <col style="width:124px">   <!-- Usuário -->
+              <col style="width:58px">    <!-- Qtd -->
+              <col style="width:230px">   <!-- Nome -->
+              <col style="width:96px">    <!-- Matrícula -->
+              <col style="width:150px">   <!-- Departamento -->
+              <col style="width:160px">   <!-- Cargo -->
+              <col style="width:120px">   <!-- Tipo -->
+              <col style="width:150px">   <!-- Perfil Encontrado -->
+              <col style="width:150px">   <!-- Perfil Esperado -->
+              <col style="width:82px">    <!-- Data -->
+              <col style="width:150px">   <!-- Status -->
+              <col style="width:96px">    <!-- Origem -->
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="text-align:center;">Quarentena</th>
+                <th></th>
+                <th>Vínculo</th>
+                <th>Usuário/Acesso</th>
+                <th style="text-align:center;">Qtd</th>
+                <th>Nome</th>
+                <th>Matrícula</th>
+                <th>Departamento</th>
+                <th>Cargo</th>
+                <th>Tipo</th>
+                <th>Perfil Encontrado</th>
+                <th>Perfil Esperado</th>
+                <th>Data</th>
+                <th>Status</th>
+                <th style="text-align:center;">Origem</th>
+              </tr>
+            </thead>
+            <tbody id="matrix-body"></tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONSULTA ═══ -->
+  <div class="page" id="pg-consulta">
+    <div class="ph">
+      <h2>Consulta</h2>
+      <p>Grade de consulta com filtros — em construção. Os filtros serão
+         definidos e adicionados em seguida.</p>
+    </div>
+  </div>
+
+  <!-- ═══ HISTÓRICO ═══ -->
+  <div class="page" id="pg-hist">
+    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="hist-pp" onchange="histPP(this.value)"><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="hist-pager"></span><span class="lista-total" id="hist-count"></span><button class="btn-exp" onclick="exportarHistorico()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+    <div class="content-panel">
+      <div class="tbl-wrap">
+        <table id="hist-tbl">
+          <colgroup>
+            <col style="width:34px">
+            <col style="width:112px">
+            <col style="width:300px">
+            <col style="width:170px">
+            <col style="width:150px">
+            <col style="width:260px">
+          </colgroup>
+          <thead>
+            <tr>
+              <th data-nf></th>
+              <th>Matrícula</th>
+              <th>Nome</th>
+              <th>Movimentação</th>
+              <th>Data</th>
+              <th>Detalhe</th>
+            </tr>
+          </thead>
+          <tbody id="hist-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ QUARENTENA ═══ -->
+  <div class="page" id="pg-quar">
+    <div class="quar-toolbar">
+      <button class="seg active" data-view="ativas"    onclick="quarView(this)">Ativas</button>
+      <button class="seg"        data-view="historico" onclick="quarView(this)">Histórico</button>
+      <span class="quar-count" id="quar-count"></span>
+      <button class="btn-exp" style="margin-left:auto;" onclick="exportarQuarentena()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button>
+    </div>
+    <div class="content-panel">
+      <div class="tbl-wrap">
+        <table id="quar-tbl">
+          <colgroup id="quar-cols"></colgroup>
+          <thead id="quar-head"></thead>
+          <tbody id="quar-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /pages -->
+
+<div id="overlay">
+  <div class="proc-card">
+    <div class="spinner"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="lbl">Processando…</div>
+  </div>
+</div>
+
+<div id="modal-bg" class="modal-bg" onclick="if(event.target===this)fecharModal()">
+  <div class="modal-card" id="modal-card"></div>
+</div>
+
+<script>
+/* ── Navegação entre abas ─────────────────────────────────────────────── */
+let _procT = 0;
+proc(true);   /* overlay "Processando" visível desde a abertura da página */
+
+function showPage(tab){
+  proc(true);
+  // 2 frames: deixa o overlay PINTAR antes do trabalho pesado da troca
+  requestAnimationFrame(() => requestAnimationFrame(async () => {
+    document.querySelectorAll('.tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.tab === tab));
+    document.querySelectorAll('.page').forEach(p =>
+      p.classList.toggle('active', p.id === 'pg-' + tab));
+    await refreshDB();   // releitura por evento: traz interacoes novas da rede
+    if (tab === 'quar') await renderQuarentena();
+    else if (tab === 'hist') await renderHistorico();
+    else if (tab !== 'consulta') { renderMatrix(); aplicarKPIs(); }
+    ['ch-sis-vg','ch-acao-vg'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el._chart) el._chart.resize();
+    });
+    await proc(false);
+  }));
+}
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => showPage(t.dataset.tab));
+});
+
+/* ── Filtros laterais (gerados da base, multi-seleção) ────────────────── */
+const FILTROS = [
+  {id:'vinculo', campo:'vinc', rotulo:'Vínculo'},
+  {id:'acao',    campo:'a',   rotulo:'Ação'},
+  {id:'status',  campo:'s',   rotulo:'Status'},
+  {id:'tipo',    campo:'tl',  rotulo:'Tipo'},
+  {id:'sistema', campo:'sis', rotulo:'Sistema'},
+];
+const filtroSel = {};
+
+// Textos do (i) dos filtros — validados nas regras de validar_acessos_sistema.py
+const DESC_FILTRO = {
+  // Ação
+  'Incluir Acesso': 'Funcionário sem o acesso que a matriz do cargo exige — precisa incluir o perfil.',
+  'Alterar Perfil': 'Funcionário com perfil diferente do permitido para o cargo — precisa alterar.',
+  'Em Análise':     'O cargo tem mais de um perfil possível na matriz — requer análise manual.',
+  'Não Mapeado':    'Acesso no sistema sem funcionário correspondente na base de RH ativa.',
+  // Tipo (mesma classificação, rótulo usado na grid)
+  'Sem Acesso':     'Funcionário sem o acesso que a matriz do cargo exige — precisa incluir o perfil.',
+  'Divergente':     'Funcionário com perfil diferente do permitido para o cargo — precisa alterar.',
+  'Sem Vínculo RH': 'Acesso no sistema sem funcionário correspondente na base de RH ativa.',
+  // Status
+  'Pendente':  'Pendência ainda não tratada.',
+  'Resolvido': 'Pendência já tratada e resolvida.',
+};
+
+function valoresFiltro(campo){
+  const set = new Set();
+  DB.users.forEach(u => u.divs.forEach(d => { if(d[campo]) set.add(d[campo]); }));
+  return [...set].sort((a,b) => a.localeCompare(b,'pt-BR'));
+}
+
+function montarFiltros(){
+  const host = document.getElementById('filtros');
+  const dica = '<div class="filtro-dica">Clique <b>isola</b> o valor · '
+    + 'Ctrl+clique para <b>combinar</b></div>';
+  host.innerHTML = dica + FILTROS.map(f => {
+    // Status é um conjunto fechado: fixa Pendente/Resolvido para que uma
+    // pendência resolvida ao vivo continue visível (o valor já existe no card).
+    const vals = f.id === 'status'
+      ? ['Pendente', 'Resolvido'] : valoresFiltro(f.campo);
+    filtroSel[f.id] = new Set(vals);
+    const comInfo = (f.id === 'acao' || f.id === 'status' || f.id === 'tipo');
+    const todos = `<button class="pill yellow" data-all="1" onclick="filtroTodos('${f.id}',this)">Desmarcar Todos</button>`;
+    const pills = vals.map(v => {
+      const btn = `<button class="pill yellow" data-v="${esc(v)}" onclick="filtroPill(event,'${f.id}',this)">${esc(v)}</button>`;
+      const tip = DESC_FILTRO[v];
+      return (comInfo && tip)
+        ? `<div class="pill-linha">${btn}<span class="info-i" data-tip="${esc(tip)}">i</span></div>`
+        : btn;
+    }).join('');
+    return `<div class="panel side-panel"><span class="panel-lbl">${f.rotulo}:</span>`
+         + `<div class="slicer" data-filtro="${f.id}">${todos}${pills}</div></div>`;
+  }).join('');
+}
+
+function sincTodos(fid){
+  const grupo = document.querySelector(`.slicer[data-filtro="${fid}"]`);
+  const nVals = grupo.querySelectorAll('.pill[data-v]').length;
+  const btn = grupo.querySelector('.pill[data-all]');
+  const cheio = filtroSel[fid].size === nVals;
+  btn.textContent = cheio ? 'Desmarcar Todos' : 'Selecionar Todos';
+  btn.classList.toggle('yellow', cheio);
+  btn.classList.toggle('gray', !cheio);
+}
+
+function filtroPill(ev, fid, pill){
+  const v = pill.dataset.v, sel = filtroSel[fid];
+  if(ev && (ev.ctrlKey || ev.metaKey || ev.shiftKey)){
+    if(sel.has(v)) sel.delete(v); else sel.add(v);   // Ctrl+clique: combina
+  } else {
+    sel.clear(); sel.add(v);                          // clique simples: isola
+  }
+  pill.closest('.slicer').querySelectorAll('.pill[data-v]').forEach(p => {
+    const on = sel.has(p.dataset.v);
+    p.classList.toggle('yellow', on);
+    p.classList.toggle('gray', !on);
+  });
+  sincTodos(fid);
+  aplicarFiltro();
+}
+
+function filtroTodos(fid, btn){
+  const valPills = btn.parentElement.querySelectorAll('.pill[data-v]');
+  const sel = filtroSel[fid];
+  const cheio = sel.size === valPills.length;
+  sel.clear();
+  valPills.forEach(p => {
+    if(cheio){ p.classList.remove('yellow'); p.classList.add('gray'); }
+    else     { p.classList.remove('gray');   p.classList.add('yellow'); sel.add(p.dataset.v); }
+  });
+  sincTodos(fid);
+  aplicarFiltro();
+}
+
+function divPassa(d){
+  return (!filtroSel.vinculo || filtroSel.vinculo.has(d.vinc)) &&
+         (!filtroSel.acao    || filtroSel.acao.has(d.a))    &&
+         (!filtroSel.status  || filtroSel.status.has(d.s))  &&
+         (!filtroSel.tipo    || filtroSel.tipo.has(d.tl))   &&
+         (!filtroSel.sistema || filtroSel.sistema.has(d.sis));
+}
+
+async function aplicarFiltro(){
+  paginaAtual = 1;
+  await refreshDB();   // releitura por evento: traz interacoes novas da rede
+  comHandling(renderMatrix);
+}
+
+/* ── Dados (substituídos ao vivo pelo servidor; amostra genérica = fallback) */
+const DB = {"kpis":{"sem_acesso":562,"divergente":41,"em_analise":798,"nao_mapeado":4957,"total":6358},"acao_dist":{"Não Mapeado":4957,"Em Análise":798,"Incluir Acesso":562,"Alterar Perfil":41},"sis_dist":{"SICA_ESFERA":3,"SICA_RA":52,"SIGOT":549,"SYSTUR":6358},"meta":{"referencia":"—","atualizacao":"—"},"users":[{"u":"00001","n":"USUARIO EXEMPLO A","m":"00001","c":"ANALISTA","d":"TI","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"PERFIL_ATUAL","pp":"PERFIL_ESPERADO","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"Matriz SYSTUR"}]},{"u":"00002","n":"USUARIO EXEMPLO B","m":"00002","c":"GERENTE VENDAS","d":"Comercial","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"READ_GERENTE","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"Matriz SYSTUR"}]},{"u":"00003","n":"USUARIO EXEMPLO C","m":"00003","c":"COORDENADOR CUSTOS","d":"Financeiro","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"CUSTOS","pp":"CUSTOS","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"—"}]},{"u":"EXMP0004","n":"USUARIO EXEMPLO D","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"—"}]}]};
+
+/* ── Helpers ──────────────────────────────────────────────────────────── */
+const TIPO_CSS = {
+  'SEM_ACESSO':            'b-sem-acesso',
+  'ACESSO_SEM_VINCULO_RH': 'b-sem-vinculo',
+  'DIVERGENTE':            'b-divergente',
+  'EM_ANALISE':            'b-em-analise'
+};
+function tipoBadge(t, tl){ return `<span class="badge ${TIPO_CSS[t]||''}">${tl||t}</span>`; }
+function stBadge(s)      { return `<span class="badge ${s==='Pendente'?'b-pendente':'b-resolvida'}">${s}</span>`; }
+/* Padrão único de data: dd/mm/aaaa hh:mm:ss (data sem hora recebe 00:00:00). */
+function fmtDH(iso){
+  if(!iso) return '';
+  const s = String(iso), p = s.slice(0,10).split('-');
+  if(p.length !== 3) return s;
+  let hms = '00:00:00';
+  const t = s.slice(11).trim();
+  if(t){
+    const hp = t.split(':');
+    hms = (hp[0]||'00').padStart(2,'0') + ':' + (hp[1]||'00').padStart(2,'0')
+        + ':' + String(hp[2]||'00').slice(0,2).padStart(2,'0');
+  }
+  return `${p[2]}/${p[1]}/${p[0]} ${hms}`;
+}
+function fmtDate(iso){ return fmtDH(iso); }
+function fmtDT(iso){ return fmtDH(iso); }
+function esc(v)          { return (v||'—').replace(/</g,'&lt;'); }
+
+/* ── Render Matrix ────────────────────────────────────────────────────── */
+/* ── Grade: filtro + paginação ────────────────────────────────────────── */
+let porPagina = 100, paginaAtual = 1, _usersFiltrados = [];
+
+/* ── Classificar + filtrar nas grids (menu estilo Excel) ─────────────── */
+function _gxNum(s){ if(!/\d/.test(String(s))) return null;
+  const n=parseFloat(String(s).replace(/\./g,'').replace(',','.'));
+  return isNaN(n)?null:n; }
+function _gxData(s){ s=String(s);
+  let m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(s);
+  if(m) return Number(m[3]+m[2]+m[1]);
+  m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  return m?Number(m[1]+m[2]+m[3]):null; }
+function _gxCmp(x,y){
+  const a=String(x==null?'':x).trim(), b=String(y==null?'':y).trim();
+  const da=_gxData(a), db=_gxData(b);
+  if(da!=null&&db!=null) return da-db;
+  const na=_gxNum(a), nb=_gxNum(b);
+  if(na!=null&&nb!=null) return na-nb;
+  return a.localeCompare(b,'pt-BR');
+}
+function _gxTxt(tr,c){ const td=tr.cells[c]; return td?td.textContent.trim():''; }
+
+const _SVG_FUNIL='<svg viewBox="0 0 24 24" width="9" height="9" '+
+  'fill="currentColor"><path d="M2 4h20l-8 9v7l-4-2v-5z"/></svg>';
+const _gridSt = {};
+function gridExcel(tableId){
+  const tbl=document.getElementById(tableId);
+  if(!tbl||!tbl.tHead||!tbl.tHead.rows[0]) return;
+  const st=_gridSt[tableId]||(_gridSt[tableId]={ord:null,filt:{}});
+  [...tbl.tHead.rows[0].cells].forEach((th,c)=>{
+    if(th.dataset.nf!==undefined||!th.textContent.trim()) return;
+    th.classList.add('th-x');
+    th.onclick=ev=>{ ev.stopPropagation(); _gxFechar();
+      st.ord=(st.ord&&st.ord.c===c)?{c:c,d:-st.ord.d}:{c:c,d:1};
+      gridExcel(tableId); };
+    let so=th.querySelector('.th-so');
+    if(!so){ so=document.createElement('span'); so.className='th-so'; th.appendChild(so); }
+    so.textContent=(st.ord&&st.ord.c===c)?(st.ord.d>0?' ▲':' ▼'):'';
+    let mk=th.querySelector('.th-mk');
+    if(!mk){ mk=document.createElement('span'); mk.className='th-mk';
+      mk.innerHTML=_SVG_FUNIL;
+      mk.onclick=ev=>{ ev.stopPropagation(); _gxMenu(tableId,c,th); };
+      th.appendChild(mk); }
+    mk.classList.toggle('mk-filtrado', !!st.filt[c]);
+  });
+  _gxAplicar(tableId);
+}
+function _gxAplicar(tableId){
+  const tbl=document.getElementById(tableId), st=_gridSt[tableId];
+  if(!tbl||!st||!tbl.tBodies[0]) return;
+  const tb=tbl.tBodies[0], blocos=[];
+  [...tb.rows].forEach(tr=>{
+    if(tr.hasAttribute('data-sub')&&blocos.length) blocos[blocos.length-1].push(tr);
+    else blocos.push([tr]);
+  });
+  const msg=b=>b.length===1&&b[0].cells.length<=1;
+  blocos.forEach(b=>{
+    if(msg(b)) return;
+    const ok=Object.entries(st.filt).every(([c,set])=>!set||set.has(_gxTxt(b[0],+c)));
+    if(ok) b[0].style.display='';
+    else b.forEach(tr=>tr.style.display='none');
+  });
+  if(st.ord){
+    const dados=blocos.filter(b=>!msg(b)), ms=blocos.filter(msg);
+    dados.sort((a,b)=>_gxCmp(_gxTxt(a[0],st.ord.c),_gxTxt(b[0],st.ord.c))*st.ord.d);
+    dados.concat(ms).forEach(b=>b.forEach(tr=>tb.appendChild(tr)));
+  }
+}
+function _gxFechar(){ const m=document.getElementById('gx-menu');
+  if(m) m.remove(); document.removeEventListener('mousedown',_gxFora); }
+function _gxFora(e){ if(!e.target.closest('#gx-menu')) _gxFechar(); }
+function _gxMenu(tableId,c,th){
+  _gxFechar();
+  const tbl=document.getElementById(tableId), st=_gridSt[tableId], tb=tbl.tBodies[0];
+  const vals=new Set();
+  [...tb.rows].forEach(tr=>{ if(!tr.hasAttribute('data-sub')&&tr.cells.length>1)
+    vals.add(_gxTxt(tr,c)); });
+  const lista=[...vals].sort(_gxCmp), sel=st.filt[c];
+  const m=document.createElement('div'); m.className='gx-menu'; m.id='gx-menu';
+  m.innerHTML=
+    '<input class="gx-busca" placeholder="buscar valor...">'+
+    '<label class="gx-v gx-todos"><input type="checkbox" checked> (Todos)</label>'+
+    '<div class="gx-vals">'+lista.map((v,i)=>
+      '<label class="gx-v"><input type="checkbox" value="'+i+'" '+
+      ((!sel||sel.has(v))?'checked':'')+'> '+(esc(v)||'(vazio)')+'</label>').join('')+
+    '</div><div class="gx-acoes"><button class="gx-ok">Aplicar</button>'+
+    '<button class="gx-limpar">Limpar</button></div>';
+  document.body.appendChild(m);
+  const r=th.getBoundingClientRect();
+  m.style.left=Math.max(6,Math.min(r.left,window.innerWidth-m.offsetWidth-6))+'px';
+  m.style.top=Math.min(r.bottom+2,window.innerHeight-m.offsetHeight-6)+'px';
+  const bu=m.querySelector('.gx-busca');
+  bu.oninput=()=>{ const q=bu.value.toLowerCase();
+    m.querySelectorAll('.gx-vals .gx-v').forEach(l=>{
+      const hit=l.textContent.toLowerCase().includes(q);
+      l.style.display=hit?'':'none'; l.querySelector('input').checked=hit; });
+    const all=[...m.querySelectorAll('.gx-vals input')];
+    m.querySelector('.gx-todos input').checked=all.every(i=>i.checked); };
+  const tdc=m.querySelector('.gx-todos input');
+  tdc.onchange=()=>m.querySelectorAll('.gx-vals .gx-v').forEach(l=>{
+    if(l.style.display!=='none') l.querySelector('input').checked=tdc.checked; });
+  m.querySelector('.gx-ok').onclick=()=>{
+    const marc=[...m.querySelectorAll('.gx-vals input:checked')].map(i=>lista[+i.value]);
+    if(marc.length>=lista.length) delete st.filt[c];
+    else st.filt[c]=new Set(marc);
+    _gxFechar(); gridExcel(tableId); };
+  m.querySelector('.gx-limpar').onclick=()=>{
+    delete st.filt[c]; _gxFechar(); gridExcel(tableId); };
+  setTimeout(()=>document.addEventListener('mousedown',_gxFora),0);
+}
+
+/* Pendências (grid agrupada): ordenação por coluna no clique do cabeçalho */
+const _PEND_KEY={2:u=>u.divs[0].vinc,3:u=>u.u,4:u=>u.divs.length,5:u=>u.n,
+  6:u=>u.m,7:u=>u.d,8:u=>u.c,
+  9:u=>u.divs[0].tl,10:u=>u.divs[0].pe,11:u=>u.divs[0].pp,12:u=>u.divs[0].dt,
+  13:u=>u.divs[0].s,14:u=>u.divs[0].o};
+let _ordPend=null;
+const _filtPend={};
+function _ordenarPend(arr){
+  if(_ordPend&&_PEND_KEY[_ordPend.c]){
+    const k=_PEND_KEY[_ordPend.c], d=_ordPend.d;
+    arr.sort((a,b)=>_gxCmp(k(a),k(b))*d);
+  } else arr.sort((a,b)=>b.divs.length-a.divs.length);
+}
+function _pendDisp(c,u){
+  if(c===12) return fmtDate(u.divs[0].dt)||'—';
+  if(c===4) return String(u.divs.length);
+  const v=_PEND_KEY[c](u);
+  return (v==null||v==='')?'—':String(v);
+}
+/* Vínculo (2), Tipo (9) e Status (13) têm card de filtro no topo — na grid só ordenam. */
+const _PEND_SO_ORD=new Set([2,9,13]);
+function _pendMenu(c,th){
+  _gxFechar();
+  const base=DB.users.filter(u=>u.divs.some(divPassa));
+  const sv=new Set(); base.forEach(u=>sv.add(_pendDisp(c,u)));
+  const lista=[...sv].sort(_gxCmp), sel=_filtPend[c];
+  const m=document.createElement('div'); m.className='gx-menu'; m.id='gx-menu';
+  m.innerHTML=
+    '<input class="gx-busca" placeholder="buscar valor...">'+
+    '<label class="gx-v gx-todos"><input type="checkbox" checked> (Todos)</label>'+
+    '<div class="gx-vals">'+lista.map((v,i)=>
+      '<label class="gx-v"><input type="checkbox" value="'+i+'" '+
+      ((!sel||sel.has(v))?'checked':'')+'> '+(esc(v)||'(vazio)')+'</label>').join('')+
+    '</div><div class="gx-acoes"><button class="gx-ok">Aplicar</button>'+
+    '<button class="gx-limpar">Limpar</button></div>';
+  document.body.appendChild(m);
+  const r=th.getBoundingClientRect();
+  m.style.left=Math.max(6,Math.min(r.left,window.innerWidth-m.offsetWidth-6))+'px';
+  m.style.top=Math.min(r.bottom+2,window.innerHeight-m.offsetHeight-6)+'px';
+  const bu=m.querySelector('.gx-busca');
+  bu.oninput=()=>{ const q=bu.value.toLowerCase();
+    m.querySelectorAll('.gx-vals .gx-v').forEach(l=>{
+      const hit=l.textContent.toLowerCase().includes(q);
+      l.style.display=hit?'':'none'; l.querySelector('input').checked=hit; });
+    const all=[...m.querySelectorAll('.gx-vals input')];
+    m.querySelector('.gx-todos input').checked=all.every(i=>i.checked); };
+  const tdc=m.querySelector('.gx-todos input');
+  tdc.onchange=()=>m.querySelectorAll('.gx-vals .gx-v').forEach(l=>{
+    if(l.style.display!=='none') l.querySelector('input').checked=tdc.checked; });
+  m.querySelector('.gx-ok').onclick=()=>{
+    const marc=[...m.querySelectorAll('.gx-vals input:checked')].map(i=>lista[+i.value]);
+    if(marc.length>=lista.length) delete _filtPend[c];
+    else _filtPend[c]=new Set(marc);
+    paginaAtual=1; _gxFechar(); comHandling(renderMatrix); };
+  m.querySelector('.gx-limpar').onclick=()=>{
+    delete _filtPend[c];
+    paginaAtual=1; _gxFechar(); comHandling(renderMatrix); };
+  setTimeout(()=>document.addEventListener('mousedown',_gxFora),0);
+}
+function equiparPend(){
+  document.querySelectorAll('#matrix-tbl thead th').forEach((th,c)=>{
+    if(!_PEND_KEY[c]) return;
+    th.classList.add('th-x');
+    th.onclick=ev=>{ ev.stopPropagation(); _gxFechar();
+      _ordPend=(_ordPend&&_ordPend.c===c)?{c:c,d:-_ordPend.d}:{c:c,d:1};
+      comHandling(renderMatrix); };
+    let so=th.querySelector('.th-so');
+    if(!so){ so=document.createElement('span'); so.className='th-so'; th.appendChild(so); }
+    so.textContent=(_ordPend&&_ordPend.c===c)?(_ordPend.d>0?' ▲':' ▼'):'';
+    if(!_PEND_SO_ORD.has(c)){
+      let mk=th.querySelector('.th-mk');
+      if(!mk){ mk=document.createElement('span'); mk.className='th-mk';
+        mk.innerHTML=_SVG_FUNIL;
+        mk.onclick=ev=>{ ev.stopPropagation(); _pendMenu(c,th); };
+        th.appendChild(mk); }
+      mk.classList.toggle('mk-filtrado', !!_filtPend[c]);
+    }
+  });
+}
+
+function renderMatrix(){
+  _usersFiltrados = DB.users.filter(u => u.divs.some(divPassa));
+  const fp = Object.entries(_filtPend);
+  if(fp.length) _usersFiltrados = _usersFiltrados.filter(u =>
+    fp.every(([c,set]) => set.has(_pendDisp(+c,u))));
+  _ordenarPend(_usersFiltrados);
+  const totPag = Math.max(1, Math.ceil(_usersFiltrados.length / porPagina));
+  if(paginaAtual > totPag) paginaAtual = totPag;
+  pintarPagina();
+  equiparPend();
+}
+
+function pintarPagina(){
+  const users = _usersFiltrados, total = users.length;
+  const totPag = Math.max(1, Math.ceil(total / porPagina));
+  const ini = (paginaAtual - 1) * porPagina;
+  const pag = users.slice(ini, ini + porPagina);
+  let h = '';
+  pag.forEach((u, rowIdx) => {
+    const hasMore = u.divs.length > 1;
+    const d0 = u.divs[0];
+    h += `<tr data-u="${esc(u.u)}" data-n="${esc(u.n)}">
+      <td style="text-align:center;"><button class="qbtn" title="Enviar para quarentena" aria-label="Enviar para quarentena" onclick="quarentenar('${u.u}')"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V7"/><path d="M6 13l6-6 6 6"/><path d="M5 21h14"/></svg></button></td>
+      <td style="text-align:center;">${hasMore ? `<button class="expand-btn" data-row="${rowIdx}" onclick="toggleSubs(this)">+</button>` : ''}</td>
+      <td>${esc(d0.vinc)||'—'}</td>
+      <td><strong style="color:#1F2D5C;">${esc(u.u)}</strong></td>
+      <td style="text-align:center;font-weight:700;color:#1F2D5C;">${u.divs.length}</td>
+      <td>${esc(u.n)}</td>
+      <td>${esc(u.m)||'—'}</td>
+      <td>${esc(u.d)||'—'}</td>
+      <td>${esc(u.c)||'—'}</td>
+      <td>${tipoBadge(d0.t,d0.tl)}</td>
+      <td>${esc(d0.pe)||'—'}</td>
+      <td>${esc(d0.pp)||'—'}</td>
+      <td>${fmtDate(d0.dt)}</td>
+      <td>${stBadge(d0.s)}${btnRes(u)}</td>
+      <td style="text-align:center;">${esc(d0.o)||'—'}</td>
+    </tr>`;
+    u.divs.slice(1).forEach(d => {
+      h += `<tr class="sub-row" data-u="${esc(u.u)}" data-n="${esc(u.n)}" data-sub="${rowIdx}" style="display:none;">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td style="padding-left:14px;color:#7B8085;font-size:10.5px;">↳ ${esc(d.pp||'—')}</td>
+        <td style="text-align:center;">1</td>
+        <td>—</td><td>—</td><td>—</td><td>—</td>
+        <td>${tipoBadge(d.t,d.tl)}</td>
+        <td>${esc(d.pe)||'—'}</td>
+        <td>${esc(d.pp)||'—'}</td>
+        <td>${fmtDate(d.dt)}</td>
+        <td>${stBadge(d.s)}</td>
+        <td style="text-align:center;">${esc(d.o)||'—'}</td>
+      </tr>`;
+    });
+  });
+  document.getElementById('matrix-body').innerHTML = h ||
+    '<tr><td colspan="15" style="text-align:center;padding:28px;color:#8A9099;">Nenhum registro com os filtros atuais.</td></tr>';
+  const tot = document.getElementById('incl-total');
+  if(tot) tot.innerHTML =
+    `<strong style="color:#1F2D5C;font-size:14px;">${total.toLocaleString('pt-BR')}</strong> registros filtrados`;
+  const pg = document.getElementById('pager');
+  if(pg) pg.innerHTML = total === 0 ? '' :
+    `<button class="pg-btn" ${paginaAtual<=1?'disabled':''} onclick="irPara(1)">«</button>` +
+    `<button class="pg-btn" ${paginaAtual<=1?'disabled':''} onclick="irPara(${paginaAtual-1})">‹</button>` +
+    `<span class="pg-atual">${paginaAtual} / ${totPag}</span>` +
+    `<button class="pg-btn" ${paginaAtual>=totPag?'disabled':''} onclick="irPara(${paginaAtual+1})">›</button>` +
+    `<button class="pg-btn" ${paginaAtual>=totPag?'disabled':''} onclick="irPara(${totPag})">»</button>`;
+}
+
+function comHandling(fn){
+  proc(true);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fn();
+    proc(false);
+  }));
+}
+
+function irPara(p){
+  const totPag = Math.max(1, Math.ceil(_usersFiltrados.length / porPagina));
+  paginaAtual = Math.min(totPag, Math.max(1, p));
+  comHandling(pintarPagina);
+}
+
+function mudarPorPagina(v){
+  porPagina = parseInt(v, 10) || 100;
+  paginaAtual = 1;
+  comHandling(pintarPagina);
+}
+
+function toggleSubs(btn){
+  const row = btn.dataset.row;
+  const isOpen = btn.textContent === '-';
+  document.querySelectorAll(`#matrix-body [data-sub="${row}"]`).forEach(r =>
+    r.style.display = isOpen ? 'none' : 'table-row'
+  );
+  btn.textContent = isOpen ? '+' : '-';
+}
+
+/* ── Quarentena (botão na grid → grava no SQLite via servidor) ─────────── */
+async function refreshDB(){
+  try{
+    const r = await fetch('/api/dados');
+    const d = await r.json();
+    DB.kpis = d.kpis; DB.acao_dist = d.acao_dist;
+    DB.sis_dist = d.sis_dist; DB.users = d.users;
+  }catch(e){ /* mantém dados atuais se falhar */ }
+}
+/* ── Overlay "Processando" (mínimo de exibição evita piscar) ──────────── */
+function proc(on){
+  const ov = document.getElementById('overlay');
+  if(on){ _procT = Date.now(); ov.classList.add('show'); return Promise.resolve(); }
+  const espera = Math.max(0, 450 - (Date.now() - _procT));
+  return new Promise(res => setTimeout(() => { ov.classList.remove('show'); res(); }, espera));
+}
+
+async function quarentenar(u){
+  if(!confirm('Enviar o usuário ' + u + ' para quarentena?')) return;
+  proc(true);
+  let msg;
+  try{
+    const r = await fetch('/api/quarentena', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({usuarios:[u], origem:'Inclusão / Alteração'})
+    });
+    const j = await r.json();
+    if(j && j.ok){
+      await refreshDB();
+      renderMatrix(); renderSV(); aplicarKPIs();
+      msg = 'Usuário ' + u + ' em quarentena até ' +
+            (j.resultado && fmtDT(j.resultado.data_fim) || '—') + '.';
+    } else {
+      msg = 'Falha ao enviar: ' + ((j && j.erro) || 'desconhecida');
+    }
+  }catch(e){ msg = 'Sem conexão com o visualizador — ele pode ter sido encerrado. Feche esta aba e abra o visualizador.exe novamente.'; }
+  finally{ await proc(false); }
+  if(msg) alert(msg);
+}
+
+/* ── Resolução de pendência (modal → grava interação RESOLUCAO) ───────── */
+let _resAlvo = null;
+
+function btnRes(u){
+  if(u.resolvido){
+    return '<button class="btn-res lupa" title="Ver dados da resolução" '
+      + 'onclick="verResolucao(\'' + esc(u.u) + '\')">'
+      + '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" '
+      + 'stroke="#1F2D5C" stroke-width="2.4" stroke-linecap="round">'
+      + '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>';
+  }
+  return '<button class="btn-res ico-res" title="Resolver pendência(s)" '
+    + 'onclick="abrirResolver(\'' + esc(u.u) + '\')">'
+    + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" '
+    + 'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" '
+    + 'stroke-linejoin="round"><circle cx="12" cy="12" r="9"/>'
+    + '<path d="M8.4 12.3l2.5 2.5 4.7-5.3"/></svg></button>';
+}
+
+function _modal(html, cls){
+  const card = document.getElementById('modal-card');
+  card.className = 'modal-card' + (cls ? ' ' + cls : '');
+  card.innerHTML = html;
+  document.getElementById('modal-bg').classList.add('show');
+}
+function fecharModal(){
+  document.getElementById('modal-bg').classList.remove('show');
+  _resAlvo = null;
+}
+
+function abrirResolver(uid){
+  const u = DB.users.find(x => String(x.u) === String(uid));
+  if(!u) return;
+  _resAlvo = u;
+  const q = u.divs.length;
+  _modal(
+    '<div class="modal-hd"><h3>Resolver pendência(s)</h3>'
+    + '<p>' + esc(u.n) + ' — ' + esc(u.u) + ' · ' + q
+    + ' pendência(s) marcada(s) como resolvida(s)</p></div>'
+    + '<div class="modal-bd">'
+    + '<label>Nº do ticket do Jira <span class="req">*</span></label>'
+    + '<input id="res-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
+    + '<label>Link do ticket</label>'
+    + '<input id="res-url" placeholder="https://..." autocomplete="off">'
+    + '<label>Descrição</label>'
+    + '<textarea id="res-desc" placeholder="Observações sobre a resolução (opcional)" '
+    + 'maxlength="600"></textarea>'
+    + '<div class="modal-err" id="res-err"></div></div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
+    + '<button class="mf-ok" onclick="confirmarResolucao()">Confirmar resolução</button>'
+    + '</div>');
+  setTimeout(() => { const i = document.getElementById('res-ticket'); if(i) i.focus(); }, 60);
+}
+
+async function confirmarResolucao(){
+  if(!_resAlvo) return;
+  const ticket = document.getElementById('res-ticket').value.trim();
+  const url    = document.getElementById('res-url').value.trim();
+  const desc   = document.getElementById('res-desc').value.trim();
+  if(!ticket){
+    document.getElementById('res-err').textContent =
+      'O número do ticket do Jira é obrigatório.';
+    document.getElementById('res-ticket').focus();
+    return;
+  }
+  const uid = _resAlvo.u;
+  fecharModal();
+  proc(true);
+  let msg;
+  try{
+    const r = await fetch('/api/resolver', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id:uid, ticket:ticket, ticket_url:url, descricao:desc})
+    });
+    const j = await r.json();
+    if(j && j.ok){
+      if(j.dados){
+        DB.kpis = j.dados.kpis; DB.acao_dist = j.dados.acao_dist;
+        DB.sis_dist = j.dados.sis_dist; DB.users = j.dados.users;
+      } else { await refreshDB(); }
+      renderMatrix(); aplicarKPIs();
+      msg = 'Pendência(s) de ' + uid + ' resolvida(s) sob o ticket ' + ticket + '.';
+    } else {
+      msg = 'Falha ao resolver: ' + ((j && j.erro) || 'desconhecida');
+    }
+  }catch(e){ msg = 'Sem conexão com o visualizador — ele pode ter sido encerrado. Feche esta aba e abra o visualizador.exe novamente.'; }
+  finally{ await proc(false); }
+  if(msg) alert(msg);
+}
+
+const _TIPO_BADGE = {'Sem Acesso':'b-sem-acesso','Divergente':'b-divergente',
+  'Em Análise':'b-em-analise','Sem Vínculo RH':'b-sem-vinculo'};
+function _cardPendencia(p){
+  const badge = '<span class="badge ' + (_TIPO_BADGE[p.tipo]||'') + '">'
+    + (esc(p.tipo) || '—') + '</span>';
+  const head = '<div class="vw-grid3">'
+    + '<div><div class="vw-lbl">Tipo</div><div>' + badge + '</div></div>'
+    + '<div><div class="vw-lbl">Sistema</div><div class="vw-val">'
+    + (esc(p.sistema) || '—') + '</div></div>'
+    + '<div><div class="vw-lbl">Origem</div><div class="vw-val">'
+    + (esc(p.origem) || '—') + '</div></div></div>'
+    + (DESC_FILTRO[p.tipo]
+       ? '<div class="vw-tdesc">' + esc(DESC_FILTRO[p.tipo]) + '</div>' : '');
+  let corpo;
+  if(p.opcoes && p.opcoes.length){
+    corpo = '<div class="vw-cmp"><div class="vw-lbl">Perfil atual</div>'
+      + '<div class="vw-perfil">' + (esc(p.pe) || '—') + '</div></div>'
+      + '<div class="vw-cmp"><div class="vw-lbl">Perfis possíveis ('
+      + p.opcoes.length + ')</div><div class="vw-opc-l">'
+      + p.opcoes.map(o => '<div class="vw-opc-li">' + esc(o) + '</div>').join('')
+      + '</div></div>';
+  } else if(p.pe || p.pp){
+    corpo = '<div class="vw-cmp"><div class="vw-lbl">Perfil encontrado</div>'
+      + '<div class="vw-perfil">' + (esc(p.pe) || '—') + '</div></div>'
+      + '<div class="vw-cmp"><div class="vw-lbl">Perfil esperado</div>'
+      + '<div class="vw-perfil">' + (esc(p.pp) || '—') + '</div></div>';
+  } else { corpo = ''; }
+  return '<div class="vw-pcard">' + head + corpo + '</div>';
+}
+/* Popup DETALHE — o que era a pendência (funcionário + pendências). */
+function _modalDetalhe(sub, rc){
+  rc = rc || {};
+  const ps = rc.pendencias || [];
+  const pend = ps.length ? ps.map(_cardPendencia).join('')
+    : '<span class="vw-vazio">— sem detalhe das pendências —</span>';
+  _modal(
+    '<div class="modal-hd"><h3>Detalhe da(s) pendência(s)</h3>'
+    + '<p>' + esc(sub) + '</p></div>'
+    + '<div class="modal-bd modal-vw">'
+    + '<div class="vw-grid2">'
+    + '<div><div class="vw-lbl">Cargo</div><div class="vw-val">'
+    + (esc(rc.cargo) || '—') + '</div></div>'
+    + '<div><div class="vw-lbl">Centro de custo</div><div class="vw-val">'
+    + (esc(rc.centro_custo) || '—') + '</div></div></div>'
+    + '<div class="vw-sec">Pendência(s)'
+    + (ps.length ? ' (' + ps.length + ')' : '') + '</div>' + pend
+    + '</div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Fechar</button></div>',
+    'lg');
+}
+/* Popup RESOLUÇÃO — só o ticket do Jira (sem dados da pendência). */
+function _modalResolucao(sub, rc){
+  rc = rc || {};
+  const link = rc.ticket_url
+    ? '<a href="' + esc(rc.ticket_url) + '" target="_blank" rel="noopener">'
+      + esc(rc.ticket_url) + '</a>'
+    : '<span class="vw-vazio">— sem link —</span>';
+  const dsc = esc(rc.descricao)
+    ? '<div class="vw-desc">' + esc(rc.descricao) + '</div>'
+    : '<span class="vw-vazio">— sem descrição —</span>';
+  _modal(
+    '<div class="modal-hd"><h3>Resolução</h3>'
+    + '<p>' + esc(sub) + '</p></div>'
+    + '<div class="modal-bd modal-vw">'
+    + '<div class="vw-grid2">'
+    + '<div><div class="vw-lbl">Ticket do Jira</div>'
+    + '<div class="vw-val" style="font-size:14px;">' + (esc(rc.ticket) || '—')
+    + '</div></div>'
+    + '<div><div class="vw-lbl">Resolvido em</div><div class="vw-val">'
+    + (rc.em ? fmtDT(rc.em) : '—') + '</div></div></div>'
+    + '<div class="vw-lbl vw-mt">Link do Jira</div><div>' + link + '</div>'
+    + '<div class="vw-lbl vw-mt">Descrição</div><div>' + dsc + '</div>'
+    + '</div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Fechar</button></div>');
+}
+function verResolucao(uid){
+  const u = DB.users.find(x => String(x.u) === String(uid));
+  if(!u || !u.resolucao) return;
+  _modalResolucao(u.n + ' — ' + u.u, u.resolucao);
+}
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' &&
+     document.getElementById('modal-bg').classList.contains('show')) fecharModal();
+});
+
+/* ── Aba Quarentena (Ativas / Histórico) ──────────────────────────────── */
+let quarData = null, quarVista = 'ativas';
+
+async function renderQuarentena(){
+  try{
+    const r = await fetch('/api/quarentena');
+    quarData = await r.json();
+  }catch(e){ quarData = {ativas:[], historico:[]}; }
+  pintarQuarentena();
+}
+
+function quarView(btn){
+  document.querySelectorAll('.quar-toolbar .seg')
+          .forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  quarVista = btn.dataset.view;
+  delete _gridSt['quar-tbl'];
+  pintarQuarentena();
+}
+
+function pintarQuarentena(){
+  if(!quarData) return;
+  const cols = document.getElementById('quar-cols');
+  const head = document.getElementById('quar-head');
+  const body = document.getElementById('quar-body');
+  const cnt  = document.getElementById('quar-count');
+  if(quarVista === 'ativas'){
+    const rows = quarData.ativas || [];
+    cols.innerHTML = `<col style="width:104px"><col style="width:220px">`
+      + `<col style="width:92px"><col style="width:132px">`
+      + `<col style="width:132px"><col style="width:96px"><col style="width:112px">`;
+    head.innerHTML = `<tr>
+      <th>Usuário</th><th>Nome</th><th>Sistema</th>
+      <th>Data início</th><th>Data fim</th>
+      <th style="text-align:center;">Dias restantes</th>
+      <th style="text-align:center;" data-nf>Ação</th></tr>`;
+    body.innerHTML = rows.length ? rows.map(q => `<tr>
+      <td><strong style="color:#1F2D5C;">${esc(q.usuario)}</strong></td>
+      <td>${esc(q.nome_usuario)}</td>
+      <td>${esc(q.sistema)}</td>
+      <td>${fmtDT(q.data_inicio)}</td>
+      <td>${fmtDT(q.data_fim)}</td>
+      <td style="text-align:center;font-weight:700;">${q.dias_restantes}</td>
+      <td style="text-align:center;"><button class="qbtn-out" onclick="retirarQuarentena('${q.id}')">↩ Retirar</button></td>
+    </tr>`).join('')
+      : `<tr><td colspan="7" style="text-align:center;padding:26px;color:#8A9099;">Ninguém em quarentena no momento.</td></tr>`;
+    cnt.textContent = rows.length + ' em quarentena';
+  } else {
+    const recs = quarData.historico || [];
+    const grupos = {}, ordem = [];
+    recs.forEach(r => {
+      if(!grupos[r.usuario]){ grupos[r.usuario] = []; ordem.push(r.usuario); }
+      grupos[r.usuario].push(r);
+    });
+    cols.innerHTML = `<col style="width:30px"><col style="width:104px">`
+      + `<col style="width:222px"><col style="width:90px">`
+      + `<col style="width:112px"><col style="width:112px"><col style="width:96px">`
+      + `<col style="width:130px">`;
+    head.innerHTML = `<tr>
+      <th></th><th>Usuário</th><th>Nome</th><th>Sistema</th>
+      <th>Início</th><th>Saída</th>
+      <th style="text-align:center;">Período</th><th>Motivo</th></tr>`;
+    let h = '';
+    ordem.forEach((u, idx) => {
+      const eps = grupos[u], e0 = eps[0], mais = eps.length > 1;
+      h += `<tr>
+        <td style="text-align:center;">${mais ? `<button class="expand-btn" data-row="${idx}" onclick="toggleHist(this)">+</button>` : ''}</td>
+        <td><strong style="color:#1F2D5C;">${esc(e0.usuario)}</strong>${mais ? ` <span style="color:#9099A6;font-weight:700;">${eps.length}×</span>` : ''}</td>
+        <td>${esc(e0.nome_usuario)}</td>
+        <td>${esc(e0.sistema)}</td>
+        <td>${fmtDT(e0.data_inicio)}</td>
+        <td>${fmtDT(e0.data_saida)}</td>
+        <td style="text-align:center;">${e0.periodo_dias} dia(s)</td>
+        <td>${esc(e0.motivo)}</td>
+      </tr>`;
+      eps.slice(1).forEach(e => {
+        h += `<tr class="sub-row" data-sub="${idx}" style="display:none;">
+          <td></td>
+          <td style="padding-left:16px;color:#7B8085;">↳</td>
+          <td>—</td><td>—</td>
+          <td>${fmtDT(e.data_inicio)}</td>
+          <td>${fmtDT(e.data_saida)}</td>
+          <td style="text-align:center;">${e.periodo_dias} dia(s)</td>
+          <td>${esc(e.motivo)}</td>
+        </tr>`;
+      });
+    });
+    body.innerHTML = recs.length ? h
+      : `<tr><td colspan="8" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma quarentena encerrada ainda.</td></tr>`;
+    cnt.textContent = ordem.length +
+      (ordem.length === 1 ? ' usuário no histórico' : ' usuários no histórico');
+  }
+  gridExcel('quar-tbl');
+}
+
+function toggleHist(btn){
+  const row = btn.dataset.row;
+  const open = btn.textContent === '-';
+  document.querySelectorAll(`#quar-body tr[data-sub="${row}"]`).forEach(r =>
+    r.style.display = open ? 'none' : 'table-row'
+  );
+  btn.textContent = open ? '+' : '-';
+}
+
+async function retirarQuarentena(id){
+  if(!confirm('Retirar este usuário da quarentena?')) return;
+  proc(true);
+  let msg;
+  try{
+    const r = await fetch('/api/quarentena/retirar', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id:id})
+    });
+    const j = await r.json();
+    if(j && j.ok){
+      quarData = j.quarentena || quarData;
+      pintarQuarentena();
+      await refreshDB(); renderMatrix(); renderSV(); aplicarKPIs();
+      msg = 'Usuário retirado da quarentena.';
+    } else {
+      msg = 'Falha ao retirar: ' + ((j && j.erro) || 'desconhecida');
+    }
+  }catch(e){ msg = 'Sem conexão com o visualizador — ele pode ter sido encerrado. Feche esta aba e abra o visualizador.exe novamente.'; }
+  finally{ await proc(false); }
+  if(msg) alert(msg);
+}
+
+/* ── Render Sem Vínculo RH ────────────────────────────────────────────── */
+function renderSV(){
+  const svBody = document.getElementById('sv-body');
+  if(!svBody) return;   // aba Sem Vínculo RH removida
+  const svUsers = DB.users.filter(u => u.divs[0].t === 'ACESSO_SEM_VINCULO_RH');
+  let h = '';
+  svUsers.forEach(u => {
+    h += `<tr>
+      <td>${esc(u.u)}</td>
+      <td>${esc(u.n)}</td>
+      <td>SYSTUR</td>
+      <td>—</td>
+      <td>Não localizado na base RH ativa</td>
+      <td>${fmtDate(u.divs[0].dt)}</td>
+      <td>${stBadge(u.divs[0].s)}</td>
+    </tr>`;
+  });
+  svBody.innerHTML = h;
+}
+
+
+let _histRecs=[], _histOrd=null, _histPag=1, _histPP=100;
+const _histFilt={};
+/* colunas: 0=expand 1=Matrícula 2=Nome 3=Movimentação 4=Data 5=Detalhe */
+function _histDisp(c,r){
+  if(c===4) return fmtDate(r.data)||'—';
+  const v=[null,r.matricula,r.nome,r.movimentacao,null,r.campos][c];
+  return (v==null||v==='')?'—':String(v);
+}
+const _HMOV_CSS={'Admitido':'h-adm','Alterado':'h-alt',
+  'Pendência identificada':'h-pen','Pendência resolvida':'h-res'};
+function histMov(r){
+  return `<span class="h-mov ${_HMOV_CSS[r.movimentacao]||''}">`
+    + `${esc(r.movimentacao)||'—'}</span>`;
+}
+function _resumoPend(ps){
+  if(!ps || !ps.length) return '';
+  const ac = [...new Set(ps.map(p => p.tipo || p.acao || '—'))];
+  return ps.length + ' pendência' + (ps.length>1?'s':'') + ': ' + ac.join(', ');
+}
+function _histLupa(r, txt, fn){
+  return `<span class="hist-tk" title="Ver detalhes" `
+    + `onclick="${fn}(${r._i})">${esc(txt)} `
+    + `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" `
+    + `stroke="currentColor" stroke-width="2.6" stroke-linecap="round" `
+    + `style="vertical-align:-1px;"><circle cx="11" cy="11" r="7"/>`
+    + `<path d="M21 21l-4.3-4.3"/></svg></span>`;
+}
+function histDet(r){
+  if(r.tipo==='RESOLUCAO')
+    return _histLupa(r, r.ticket || 'ticket', 'verResolucaoHist');
+  if(r.tipo==='PENDENCIA')
+    return _histLupa(r, _resumoPend(r.pendencias) || 'ver detalhes', 'verDetalheHist');
+  return esc(r.campos)||'—';
+}
+async function renderHistorico(){
+  try{ const r=await fetch('/api/historico'); _histRecs=await r.json(); }
+  catch(e){ _histRecs=[]; }
+  _histRecs.forEach((r,i)=>r._i=i);
+  pintarHistorico();
+}
+function _histGrupos(){
+  let rs=_histRecs.slice();
+  const ff=Object.entries(_histFilt);
+  if(ff.length) rs=rs.filter(r=>ff.every(([c,set])=>set.has(_histDisp(+c,r))));
+  const mapa={}, ordem=[];
+  rs.forEach(r=>{
+    const k=(r.matricula||'')+''+(r.nome||'');
+    if(!mapa[k]){ mapa[k]={chave:k,matricula:r.matricula||'',
+                           nome:r.nome||'',recs:[]}; ordem.push(k); }
+    mapa[k].recs.push(r);
+  });
+  const grupos=ordem.map(k=>mapa[k]);
+  // dentro do grupo: mais recente vira o cabeçalho (_ord = data + hora;
+  // a resolução fica acima da "identificada" mesmo no mesmo dia).
+  grupos.forEach(g=>g.recs.sort((a,b)=>
+    String(b._ord||'').localeCompare(String(a._ord||''))));
+  // ordem dos grupos: pela coluna clicada, ou pela interação mais recente
+  if(_histOrd){
+    grupos.sort((a,b)=>_gxCmp(_histDisp(_histOrd.c,a.recs[0]),
+                              _histDisp(_histOrd.c,b.recs[0]))*_histOrd.d);
+  } else {
+    grupos.sort((a,b)=>String(b.recs[0]._ord||'')
+      .localeCompare(String(a.recs[0]._ord||'')));
+  }
+  return grupos;
+}
+function pintarHistorico(){
+  const grupos=_histGrupos();
+  const totRec=grupos.reduce((s,g)=>s+g.recs.length,0);
+  const totPag=Math.max(1,Math.ceil(grupos.length/_histPP));
+  if(_histPag>totPag) _histPag=totPag;
+  if(_histPag<1) _histPag=1;
+  const ini=(_histPag-1)*_histPP, pag=grupos.slice(ini,ini+_histPP);
+  const body=document.getElementById('hist-body');
+  let h='';
+  pag.forEach((g,gi)=>{
+    const hdr=g.recs[0], resto=g.recs.slice(1);
+    h+=`<tr>
+      <td style="text-align:center;">${resto.length
+        ?`<button class="expand-btn" onclick="histToggle(this,${gi})">+</button>`:''}</td>
+      <td><strong style="color:#1F2D5C;">${esc(g.matricula)||'—'}</strong></td>
+      <td>${esc(g.nome)||'—'}</td>
+      <td>${histMov(hdr)}</td>
+      <td>${fmtDate(hdr.data)}</td>
+      <td>${histDet(hdr)}</td>
+    </tr>`;
+    resto.forEach(r=>{
+      h+=`<tr class="sub-row" data-hsub="${gi}" style="display:none;">
+        <td></td>
+        <td style="text-align:center;color:#B4BAC2;">↳</td>
+        <td></td>
+        <td>${histMov(r)}</td>
+        <td>${fmtDate(r.data)}</td>
+        <td>${histDet(r)}</td>
+      </tr>`;
+    });
+  });
+  if(body) body.innerHTML = h ||
+    `<tr><td colspan="6" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma movimentação registrada.</td></tr>`;
+  const cnt=document.getElementById('hist-count');
+  if(cnt) cnt.innerHTML=
+    `<strong style="color:#1F2D5C;font-size:14px;">`+
+    `${grupos.length.toLocaleString('pt-BR')}</strong> funcionário`+
+    `${grupos.length===1?'':'s'} · ${totRec.toLocaleString('pt-BR')} `+
+    `movimentaç${totRec===1?'ão':'ões'}`;
+  const pg=document.getElementById('hist-pager');
+  if(pg) pg.innerHTML = grupos.length===0 ? '' :
+    `<button class="pg-btn" ${_histPag<=1?'disabled':''} onclick="histIr(1)">«</button>`+
+    `<button class="pg-btn" ${_histPag<=1?'disabled':''} onclick="histIr(${_histPag-1})">‹</button>`+
+    `<span class="pg-atual">${_histPag} / ${totPag}</span>`+
+    `<button class="pg-btn" ${_histPag>=totPag?'disabled':''} onclick="histIr(${_histPag+1})">›</button>`+
+    `<button class="pg-btn" ${_histPag>=totPag?'disabled':''} onclick="histIr(${totPag})">»</button>`;
+  equiparHist();
+}
+function histToggle(btn,gi){
+  const open=btn.textContent==='-';
+  document.querySelectorAll(`#hist-body [data-hsub="${gi}"]`).forEach(r=>
+    r.style.display=open?'none':'table-row');
+  btn.textContent=open?'+':'-';
+}
+function histIr(p){ _histPag=p; comHandling(pintarHistorico); }
+function histPP(v){ _histPP=parseInt(v,10)||100; _histPag=1; comHandling(pintarHistorico); }
+function verResolucaoHist(i){
+  const r=_histRecs[i];
+  if(!r) return;
+  _modalResolucao((r.nome||'')+' — '+(r.matricula||''),
+    {ticket:r.ticket,ticket_url:r.ticket_url,descricao:r.descricao,em:r.em});
+}
+function verDetalheHist(i){
+  const r=_histRecs[i];
+  if(!r) return;
+  _modalDetalhe((r.nome||'')+' — '+(r.matricula||''),
+    {cargo:r.cargo,centro_custo:r.centro_custo,pendencias:r.pendencias});
+}
+function _histMenu(c,th){
+  _gxFechar();
+  const sv=new Set(); _histRecs.forEach(r=>sv.add(_histDisp(c,r)));
+  const lista=[...sv].sort(_gxCmp), sel=_histFilt[c];
+  const m=document.createElement('div'); m.className='gx-menu'; m.id='gx-menu';
+  m.innerHTML=
+    '<input class="gx-busca" placeholder="buscar valor...">'+
+    '<label class="gx-v gx-todos"><input type="checkbox" checked> (Todos)</label>'+
+    '<div class="gx-vals">'+lista.map((v,i)=>
+      '<label class="gx-v"><input type="checkbox" value="'+i+'" '+
+      ((!sel||sel.has(v))?'checked':'')+'> '+(esc(v)||'(vazio)')+'</label>').join('')+
+    '</div><div class="gx-acoes"><button class="gx-ok">Aplicar</button>'+
+    '<button class="gx-limpar">Limpar</button></div>';
+  document.body.appendChild(m);
+  const r=th.getBoundingClientRect();
+  m.style.left=Math.max(6,Math.min(r.left,window.innerWidth-m.offsetWidth-6))+'px';
+  m.style.top=Math.min(r.bottom+2,window.innerHeight-m.offsetHeight-6)+'px';
+  const bu=m.querySelector('.gx-busca');
+  bu.oninput=()=>{ const q=bu.value.toLowerCase();
+    m.querySelectorAll('.gx-vals .gx-v').forEach(l=>{
+      const hit=l.textContent.toLowerCase().includes(q);
+      l.style.display=hit?'':'none'; l.querySelector('input').checked=hit; });
+    const all=[...m.querySelectorAll('.gx-vals input')];
+    m.querySelector('.gx-todos input').checked=all.every(i=>i.checked); };
+  const tdc=m.querySelector('.gx-todos input');
+  tdc.onchange=()=>m.querySelectorAll('.gx-vals .gx-v').forEach(l=>{
+    if(l.style.display!=='none') l.querySelector('input').checked=tdc.checked; });
+  m.querySelector('.gx-ok').onclick=()=>{
+    const marc=[...m.querySelectorAll('.gx-vals input:checked')].map(i=>lista[+i.value]);
+    if(marc.length>=lista.length) delete _histFilt[c];
+    else _histFilt[c]=new Set(marc);
+    _histPag=1; _gxFechar(); comHandling(pintarHistorico); };
+  m.querySelector('.gx-limpar').onclick=()=>{
+    delete _histFilt[c];
+    _histPag=1; _gxFechar(); comHandling(pintarHistorico); };
+  setTimeout(()=>document.addEventListener('mousedown',_gxFora),0);
+}
+function equiparHist(){
+  document.querySelectorAll('#hist-tbl thead th').forEach((th,c)=>{
+    if(!th.textContent.trim()) return;
+    th.classList.add('th-x');
+    th.onclick=ev=>{ ev.stopPropagation(); _gxFechar();
+      _histOrd=(_histOrd&&_histOrd.c===c)?{c:c,d:-_histOrd.d}:{c:c,d:1};
+      comHandling(pintarHistorico); };
+    let so=th.querySelector('.th-so');
+    if(!so){ so=document.createElement('span'); so.className='th-so'; th.appendChild(so); }
+    so.textContent=(_histOrd&&_histOrd.c===c)?(_histOrd.d>0?' ▲':' ▼'):'';
+    let mk=th.querySelector('.th-mk');
+    if(!mk){ mk=document.createElement('span'); mk.className='th-mk';
+      mk.innerHTML=_SVG_FUNIL;
+      mk.onclick=ev=>{ ev.stopPropagation(); _histMenu(c,th); };
+      th.appendChild(mk); }
+    mk.classList.toggle('mk-filtrado', !!_histFilt[c]);
+  });
+}
+
+/* ── Exportação para Excel (respeita os filtros da página) ────────────── */
+async function baixarExcel(arquivo, colunas, linhas, niveis, formatos){
+  if(!linhas.length){ alert('Nada para exportar com os filtros atuais.'); return; }
+  proc(true);
+  try{
+    const r = await fetch('/api/exportar', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({arquivo, colunas, linhas,
+                            niveis: niveis || null, formatos: formatos || null})
+    });
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = arquivo + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }catch(e){ alert('Sem conexão com o visualizador — ele pode ter sido encerrado. Abra o visualizador.exe novamente.'); }
+  finally{ await proc(false); }
+}
+
+function exportarInclusao(){
+  const cols = ['Vínculo','Usuário','Nome','Matrícula','Departamento',
+                'Centro de Custo','Cargo','Tipo','Perfil Encontrado',
+                'Perfil Esperado','Data','Status','Origem','Ticket Jira',
+                'Link do ticket','Descrição da resolução','Resolvido em'];
+  const linhas = [], niveis = [];
+  _usersFiltrados.forEach(u => {
+    const rc = u.resolucao || {};
+    u.divs.filter(divPassa).forEach((d, i) => {
+      linhas.push([d.vinc||'', u.u, u.n, u.m||'', u.d||'', u.cc||'', u.c||'', d.tl,
+                   d.pe||'', d.pp||'', fmtDate(d.dt), d.s, d.o||'',
+                   rc.ticket||'', rc.ticket_url||'', rc.descricao||'',
+                   rc.em ? fmtDate(rc.em) : '']);
+      niveis.push(i === 0 ? 0 : 1);
+    });
+  });
+  const formatos = [
+    {col:7, regras:[
+      {quando:'Sem Acesso',     fundo:'DEECF9', texto:'004578'},
+      {quando:'Divergente',     fundo:'FEF3E2', texto:'833C00'},
+      {quando:'Em Análise',     fundo:'FFF3CD', texto:'856404'},
+      {quando:'Sem Vínculo RH', fundo:'F0E6F6', texto:'5C2D91'}
+    ]},
+    {col:11, regras:[
+      {quando:'Pendente',  fundo:'FDE7E9', texto:'A4262C'},
+      {quando:'Resolvido', fundo:'DFF6DD', texto:'107C10'}
+    ]}
+  ];
+  baixarExcel('Inclusao_Alteracao', cols, linhas, niveis, formatos);
+}
+
+function _pendDetalheTexto(ps){
+  if(!ps || !ps.length) return '';
+  return ps.map(p => {
+    let s = (p.tipo||'—') + (p.sistema?' · '+p.sistema:'')
+          + (p.origem && p.origem!=='—' ? ' · '+p.origem : '');
+    if(p.opcoes && p.opcoes.length)
+      s += ' · atual: ' + (p.pe||'—') + ' · opções: ' + p.opcoes.join(', ');
+    else if(p.pe || p.pp)
+      s += ' · ' + (p.pe||'—') + ' → ' + (p.pp||'—');
+    return s;
+  }).join('   |   ');
+}
+function exportarHistorico(){
+  const grupos = _histGrupos();
+  const cols = ['Matrícula','Nome','Cargo','Centro de Custo','Movimentação','Data',
+                'Detalhe','Ticket Jira','Link do ticket','Descrição da resolução'];
+  const linhas = [], niveis = [];
+  grupos.forEach(g => {
+    g.recs.forEach((r, i) => {
+      const det = (r.tipo === 'RH') ? (r.campos || '')
+                                    : _pendDetalheTexto(r.pendencias);
+      linhas.push([i === 0 ? g.matricula : '',
+                   i === 0 ? g.nome : '',
+                   r.cargo || '', r.centro_custo || '',
+                   r.movimentacao || '', fmtDate(r.data),
+                   det, r.ticket || '', r.ticket_url || '',
+                   r.descricao || '']);
+      niveis.push(i === 0 ? 0 : 1);
+    });
+  });
+  baixarExcel('Historico_RH', cols, linhas, niveis);
+}
+
+function exportarSV(){
+  const cols = ['Usuário','Nome','Sistema','Perfil no Sistema',
+                'Situação RH','Detecção','Status'];
+  const linhas = DB.users
+    .filter(u => u.divs[0].t === 'ACESSO_SEM_VINCULO_RH')
+    .map(u => [u.u, u.n, 'SYSTUR', '—', 'Não localizado na base RH ativa',
+               fmtDate(u.divs[0].dt), u.divs[0].s]);
+  const formatos = [{col:6, regras:[
+    {quando:'Pendente',  fundo:'FDE7E9', texto:'A4262C'},
+    {quando:'Resolvido', fundo:'DFF6DD', texto:'107C10'}
+  ]}];
+  baixarExcel('Sem_Vinculo_RH', cols, linhas, null, formatos);
+}
+
+function exportarQuarentena(){
+  if(!quarData){ alert('Abra a aba Quarentena primeiro.'); return; }
+  const st = _gridSt['quar-tbl'];
+  const visiveis = (rows, disp) => {
+    let r = rows;
+    if(st){
+      const ff = Object.entries(st.filt);
+      if(ff.length) r = r.filter(x => ff.every(([c,set]) => set.has(disp(+c,x))));
+      if(st.ord) r = [...r].sort((a,b) =>
+        _gxCmp(disp(st.ord.c,a), disp(st.ord.c,b))*st.ord.d);
+    }
+    return r;
+  };
+  if(quarVista === 'ativas'){
+    const cols = ['Usuário','Nome','Sistema','Data início',
+                  'Data fim','Dias restantes'];
+    const disp = (c,q) => [q.usuario, q.nome_usuario, q.sistema,
+      fmtDT(q.data_inicio), fmtDT(q.data_fim), String(q.dias_restantes)][c] || '';
+    const linhas = visiveis(quarData.ativas||[], disp).map(q =>
+      [q.usuario, q.nome_usuario, q.sistema,
+       fmtDT(q.data_inicio), fmtDT(q.data_fim), q.dias_restantes]);
+    baixarExcel('Quarentena_Ativas', cols, linhas);
+  } else {
+    const cols = ['Usuário','Nome','Sistema','Início','Saída',
+                  'Período (dias)','Motivo'];
+    const disp = (c,q) => ['', q.usuario, q.nome_usuario, q.sistema,
+      fmtDT(q.data_inicio), fmtDT(q.data_saida),
+      q.periodo_dias+' dia(s)', q.motivo][c] || '';
+    const grupos = {}, ordem = [];
+    visiveis(quarData.historico||[], disp).forEach(q => {
+      if(!grupos[q.usuario]){ grupos[q.usuario] = []; ordem.push(q.usuario); }
+      grupos[q.usuario].push(q);
+    });
+    const linhas = [], niveis = [];
+    ordem.forEach(u => grupos[u].forEach((q, i) => {
+      linhas.push([q.usuario, q.nome_usuario, q.sistema, q.origem,
+                   fmtDT(q.data_inicio), fmtDT(q.data_saida), q.periodo_dias, q.motivo]);
+      niveis.push(i === 0 ? 0 : 1);
+    }));
+    baixarExcel('Quarentena_Historico', cols, linhas, niveis);
+  }
+}
+
+/* ── Gráficos (Chart.js — responsivos) ────────────────────────────────── */
+const YELLOW='#F5B800', NAVY='#1F2D5C', GRID='#E8EDF2', AXIS='#605E5C';
+
+const BASE_OPT = {
+  indexAxis:'y',
+  plugins:{legend:{display:false},tooltip:{backgroundColor:NAVY,titleColor:'#fff',bodyColor:'#fff',cornerRadius:4}},
+  scales:{
+    x:{grid:{color:GRID},ticks:{color:AXIS,font:{size:11}}},
+    y:{grid:{display:false},ticks:{color:AXIS,font:{size:11}}}
+  }
+};
+
+function mkChart(id, labels, data, alpha){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const fill = alpha
+    ? YELLOW + Math.round((1-alpha)*255).toString(16).padStart(2,'0')
+    : YELLOW;
+  if(el._chart) el._chart.destroy();
+  el._chart = new Chart(el,{
+    type:'bar',
+    data:{labels, datasets:[{data, backgroundColor:fill, borderRadius:3, borderSkipped:false}]},
+    options:{...BASE_OPT, responsive:true, maintainAspectRatio:false, animation:{duration:0}}
+  });
+}
+
+/* ── KPIs data-driven (lidos do DB injetado pelo servidor) ────────────── */
+const KPI_MAP = {
+  'Incluir Acesso':'sem_acesso', 'Alterar Perfil':'divergente',
+  'Em Análise':'em_analise', 'Total Não Mapeados':'nao_mapeado',
+  'Total c/ Ação':'total'
+};
+function aplicarKPIs(){
+  document.querySelectorAll('.kpi').forEach(card => {
+    const lbl = card.querySelector('.kpi-lbl');
+    const val = card.querySelector('.kpi-val');
+    if(!lbl || !val) return;
+    const k = KPI_MAP[lbl.textContent.trim()];
+    if(k && DB.kpis && DB.kpis[k] != null)
+      val.textContent = Number(DB.kpis[k]).toLocaleString('pt-BR');
+  });
+}
+function distOrdenada(obj){
+  const e = Object.entries(obj || {}).sort((a,b) => a[1]-b[1]);
+  return { labels: e.map(x=>x[0]), data: e.map(x=>x[1]) };
+}
+
+/* ── Inicialização ────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  // Heartbeat (arma o watchdog) + encerra ao fechar a página.
+  // SESSAO identifica esta carga da aba: um F5/Ctrl+F5 gera uma SESSAO nova,
+  // cujo /api/ping cancela o encerramento agendado pela página anterior.
+  const SESSAO = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const ping = () => fetch('/api/ping?s=' + SESSAO).catch(()=>{});
+  ping();
+  setInterval(ping, 4000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) ping();
+  });
+  window.addEventListener('pagehide', () => {
+    if (navigator.sendBeacon) navigator.sendBeacon('/api/encerrar', SESSAO);
+  });
+
+  // Labels do header a partir das datas da base
+  const M = DB.meta || {};
+  const elRef = document.querySelector('.hdr-ref');
+  const elUpd = document.querySelector('.hdr-upd');
+  if (elRef) elRef.textContent = 'Referência: ' + (M.referencia || '—');
+  if (elUpd) elUpd.textContent = 'Última atualização: ' + (M.atualizacao || '—');
+
+  // Overlay já visível desde o topo do script: 2 frames p/ ele pintar,
+  // depois a renderização pesada (grade/gráficos), e então esconde.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    montarFiltros();
+    renderMatrix();
+    aplicarKPIs();
+
+    const s = distOrdenada(DB.sis_dist);
+    mkChart('ch-sis-vg', s.labels, s.data);
+    const a = distOrdenada(DB.acao_dist);
+    mkChart('ch-acao-vg', a.labels, a.data, 0.22);
+
+    // Tooltip automático estilo Power BI: Usuário, Nome e a coluna sob o mouse
+    const tip = document.createElement('div');
+    tip.id = 'hovertip';
+    document.body.appendChild(tip);
+    const ths = [...document.querySelectorAll('#matrix-tbl thead th')]
+                  .map(t => t.textContent.trim());
+    const mb = document.getElementById('matrix-body');
+    mb.addEventListener('mousemove', e => {
+      const td = e.target.closest('td');
+      const tr = e.target.closest('tr');
+      if (!td || !tr || !mb.contains(td)) { tip.style.display = 'none'; return; }
+      const col = ths[td.cellIndex] || '';
+      const u = tr.dataset.u || '', n = tr.dataset.n || '';
+      const val = td.textContent.trim();
+      const dup = (col === 'Usuário/Acesso' || col === 'Nome');
+      tip.innerHTML =
+        `<div><span>Usuário</span>${u || '—'}</div>` +
+        `<div><span>Nome</span>${n || '—'}</div>` +
+        ((col && !dup) ? `<div><span>${col}</span>${val || '—'}</div>` : '');
+      tip.style.display = 'block';
+      const pad = 16, w = tip.offsetWidth, h = tip.offsetHeight;
+      let x = e.clientX + pad, y = e.clientY + pad;
+      if (x + w > window.innerWidth)  x = e.clientX - w - pad;
+      if (y + h > window.innerHeight) y = e.clientY - h - pad;
+      tip.style.left = x + 'px';
+      tip.style.top  = y + 'px';
+    });
+    mb.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+
+    // Tooltip dos (i) dos filtros (fixed — escapa do overflow da barra lateral)
+    const itip = document.createElement('div');
+    itip.id = 'info-tip';
+    document.body.appendChild(itip);
+    document.addEventListener('mouseover', e => {
+      const ic = e.target.closest('.info-i');
+      if (!ic) return;
+      itip.textContent = ic.dataset.tip || '';
+      itip.style.display = 'block';
+      const r = ic.getBoundingClientRect();
+      const tw = itip.offsetWidth, th = itip.offsetHeight;
+      let x = r.right + 8;
+      if (x + tw > window.innerWidth - 8) x = r.left - tw - 8;
+      const y = Math.max(8, Math.min(r.top + r.height / 2 - th / 2,
+                                     window.innerHeight - th - 8));
+      itip.style.left = x + 'px';
+      itip.style.top = y + 'px';
+    });
+    document.addEventListener('mouseout', e => {
+      if (e.target.closest('.info-i')) itip.style.display = 'none';
+    });
+
+    proc(false);
+  }));
+});
+</script>
+</body>
+</html>

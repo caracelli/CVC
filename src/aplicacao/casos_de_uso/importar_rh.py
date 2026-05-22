@@ -33,7 +33,8 @@ class ImportarRh:
 
         desligados, arq_desligados = self._leitor.ler_desligados(self._pasta_desligados)
         if desligados:
-            self._historico.registrar_desligados(desligados)
+            # Desligados fora do escopo da trilha de ouvidoria (Fase 1):
+            # atualiza só a base, sem registrar histórico de movimentação.
             self._repositorio.salvar_desligados(desligados, ", ".join(arq_desligados))
 
         logger.info(f"=== Importação RH concluída: {len(ativos)} ativos, {len(desligados)} desligados ===")

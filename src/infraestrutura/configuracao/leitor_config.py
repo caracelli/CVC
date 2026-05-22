@@ -19,6 +19,9 @@ class Configuracao:
     versao: str
     cliente: str
     raiz: Path
+    rede_raiz: str
+    rede_executaveis: str
+    rede_interacoes: str
     banco_dados: str
     encoding_padrao: str
     separador_csv: str
@@ -37,6 +40,8 @@ class Configuracao:
     saida_transferidos: str
     saida_auditoria: str
     saida_logs: str
+    visualizador_sistema: str
+    visualizador_quarentena_dias: int
 
 
 class LeitorConfig:
@@ -74,15 +79,18 @@ class LeitorConfig:
             versao=root.findtext("versao", "1.0.0"),
             cliente=root.findtext("cliente", ""),
             raiz=raiz,
-            banco_dados=root.findtext("caminhos/banco_dados", ""),
+            rede_raiz=root.findtext("rede/raiz", ""),
+            rede_executaveis=root.findtext("rede/executaveis", "EXECUTAVEIS"),
+            rede_interacoes=root.findtext("rede/interacoes", "INTERACOES"),
+            banco_dados=root.findtext("rede/banco_dados", ""),
             encoding_padrao=proc.findtext("encoding_padrao", "utf-8") if proc else "utf-8",
             separador_csv=proc.findtext("separador_csv", ";") if proc else ";",
             formato_data=proc.findtext("formato_data", "%d/%m/%Y") if proc else "%d/%m/%Y",
             sistemas=sistemas,
             rh_ativos_caminho=root.findtext("rh/ativos/caminho", ""),
             rh_desligados_caminho=root.findtext("rh/desligados/caminho", ""),
-            processados=root.findtext("caminhos/processados", "DADOS/PROCESSADOS"),
-            erros=root.findtext("caminhos/erros", "DADOS/ERROS"),
+            processados=root.findtext("rede/processados", "DADOS/PROCESSADOS"),
+            erros=root.findtext("rede/erros", "DADOS/ERROS"),
             matrizes_perfis_caminho=root.findtext("matrizes/perfis_sistemas/caminho", ""),
             matrizes_perfis_colunas=_colunas("matrizes/perfis_sistemas/colunas"),
             matrizes_org_caminho=root.findtext("matrizes/organizacional/caminho", ""),
@@ -92,4 +100,7 @@ class LeitorConfig:
             saida_transferidos=root.findtext("saidas/transferidos", ""),
             saida_auditoria=root.findtext("saidas/auditoria", ""),
             saida_logs=root.findtext("saidas/logs", ""),
+            visualizador_sistema=root.findtext("visualizador/sistema", ""),
+            visualizador_quarentena_dias=int(
+                root.findtext("visualizador/quarentena_dias", "90") or "90"),
         )

@@ -25,6 +25,7 @@ CVC_IAM_ANALYTICS/DADOS/SAIDAS/**/*.pdf
 
 # Banco de dados
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.db
+CVC_IAM_ANALYTICS/DADOS/BANCO/*.bak*
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.sqlite
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.db-shm
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.db-wal
@@ -35,6 +36,10 @@ CVC_IAM_ANALYTICS/DADOS/PARQUET/
 # Arquivos processados e de erro
 CVC_IAM_ANALYTICS/DADOS/PROCESSADOS/
 CVC_IAM_ANALYTICS/DADOS/ERROS/
+
+# Interacoes multiusuario (pasta de rede; copias locais nunca versionadas)
+CVC_IAM_ANALYTICS/INTERACOES/
+CVC_IAM_ANALYTICS/INTERACOES_processando/
 
 # Logs
 CVC_IAM_ANALYTICS/DADOS/LOGS/
@@ -55,16 +60,22 @@ desktop.ini
 # Executáveis gerados
 CVC_IAM_ANALYTICS/EXECUTAVEIS/*.exe
 
-# Mockup CVC IAM — exe e log (artefatos de runtime; entrega versionada via zip)
-CVC_IAM_ANALYTICS/MOCKUP/visualizador.exe
-CVC_IAM_ANALYTICS/MOCKUP/mockup_log.txt
+# Visualizador — log de runtime, copias .old do auto-update e cache local do DB
+CVC_IAM_ANALYTICS/EXECUTAVEIS/visualizador_log.txt
+CVC_IAM_ANALYTICS/EXECUTAVEIS/*.old
+CVC_IAM_ANALYTICS/EXECUTAVEIS/*.db
+CVC_IAM_ANALYTICS/EXECUTAVEIS/*.db-wal
+CVC_IAM_ANALYTICS/EXECUTAVEIS/*.db-shm
 
 # Artefatos de build PyInstaller
 deploy/_build/
-deploy/_build_mockup/
+deploy/_build_visualizador/
 
 # Configurações locais do Claude
 .claude/
+
+# Arquivos antigos / obsoletos — movidos para limpeza, fora do versionamento
+OLD/
 
 # Power BI — arquivos locais e cache (não versionados)
 **/.pbi/localSettings.json
