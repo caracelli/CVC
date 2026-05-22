@@ -89,7 +89,7 @@ body{
   flex:1;min-width:0;height:80px;position:relative;overflow:hidden;
   border-radius:12px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  box-shadow:inset 6px 0 0 0 var(--gold),var(--sh-1);
+  box-shadow:inset 6px 0 0 0 var(--kpi-bar,var(--gold)),var(--sh-1);
   transition:transform .18s cubic-bezier(.22,.68,.24,1),box-shadow .18s;
 }
 .kpi::before{               /* brilho superior (recua 6px p/ não cobrir a faixa) */
@@ -102,7 +102,7 @@ body{
   background:linear-gradient(125deg,rgba(255,255,255,.4) 0%,transparent 40%);
   pointer-events:none;
 }
-.kpi:hover{transform:translateY(-5px);box-shadow:inset 6px 0 0 0 var(--gold),var(--sh-3);}
+.kpi:hover{transform:translateY(-5px);box-shadow:inset 6px 0 0 0 var(--kpi-bar,var(--gold)),var(--sh-3);}
 .kpi-val{font-size:25px;font-weight:800;line-height:1;
   position:relative;z-index:1;text-shadow:0 1px 2px rgba(255,255,255,.55);}
 .kpi-lbl{font-size:11px;font-weight:700;margin-top:6px;text-align:center;
@@ -386,19 +386,19 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   <!-- ═══ VISÃO GERAL ═══ -->
   <div class="page" id="pg-vg">
     <div class="kpi-row">
-      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;">
+      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2980B9;">
         <div class="kpi-val" style="color:#2980B9;">562</div>
         <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso</div>
       </div>
-      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;">
+      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2471A3;">
         <div class="kpi-val" style="color:#2471A3;">41</div>
         <div class="kpi-lbl" style="color:#2471A3;">Alterar Perfil</div>
       </div>
-      <div class="kpi" style="background:#FEF3E2;border:1px solid #F9D5A7;">
+      <div class="kpi" style="background:#FEF3E2;border:1px solid #F9D5A7;--kpi-bar:#E67E22;">
         <div class="kpi-val" style="color:#E67E22;">798</div>
         <div class="kpi-lbl" style="color:#E67E22;">Em Análise</div>
       </div>
-      <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;">
+      <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;--kpi-bar:#7D3C98;">
         <div class="kpi-val" style="color:#7D3C98;">4.957</div>
         <div class="kpi-lbl" style="color:#7D3C98;">Total Não Mapeados</div>
       </div>
@@ -418,23 +418,23 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   <!-- ═══ INCLUSÃO / ALTERAÇÃO ═══ -->
   <div class="page active" id="pg-incl">
     <div class="kpi-row">
-      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;">
+      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2980B9;">
         <div class="kpi-val" style="color:#2980B9;">562</div>
         <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso</div>
       </div>
-      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;">
+      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2471A3;">
         <div class="kpi-val" style="color:#2471A3;">41</div>
         <div class="kpi-lbl" style="color:#2471A3;">Alterar Perfil</div>
       </div>
-      <div class="kpi" style="background:#FEF3E2;border:1px solid #F9D5A7;">
+      <div class="kpi" style="background:#FEF3E2;border:1px solid #F9D5A7;--kpi-bar:#E67E22;">
         <div class="kpi-val" style="color:#E67E22;">798</div>
         <div class="kpi-lbl" style="color:#E67E22;">Em Análise</div>
       </div>
-      <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;">
+      <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;--kpi-bar:#7D3C98;">
         <div class="kpi-val" style="color:#7D3C98;">4.957</div>
         <div class="kpi-lbl" style="color:#7D3C98;">Total Não Mapeados</div>
       </div>
-      <div class="kpi" style="background:#EAFAF1;border:1px solid #A9DFBF;">
+      <div class="kpi" style="background:#EAFAF1;border:1px solid #A9DFBF;--kpi-bar:#1E8449;">
         <div class="kpi-val" style="color:#1E8449;">6.358</div>
         <div class="kpi-lbl" style="color:#1E8449;">Total c/ Ação</div>
       </div>
@@ -506,19 +506,19 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   <!-- ═══ SEM VÍNCULO RH ═══ -->
   <div class="page" id="pg-sv">
     <div class="kpi-row">
-      <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;">
+      <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;--kpi-bar:#7D3C98;">
         <div class="kpi-val" style="color:#7D3C98;">4.957</div>
         <div class="kpi-lbl" style="color:#7D3C98;">Sem Vínculo RH</div>
       </div>
-      <div class="kpi" style="background:#FDE7E9;border:1px solid #F1AEBA;">
+      <div class="kpi" style="background:#FDE7E9;border:1px solid #F1AEBA;--kpi-bar:#A4262C;">
         <div class="kpi-val" style="color:#A4262C;">4.957</div>
         <div class="kpi-lbl" style="color:#A4262C;">Pendentes</div>
       </div>
-      <div class="kpi" style="background:#DFF6DD;border:1px solid #9FD89A;">
+      <div class="kpi" style="background:#DFF6DD;border:1px solid #9FD89A;--kpi-bar:#107C10;">
         <div class="kpi-val" style="color:#107C10;">0</div>
         <div class="kpi-lbl" style="color:#107C10;">Resolvidos</div>
       </div>
-      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;">
+      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2980B9;">
         <div class="kpi-val" style="color:#2980B9;">1</div>
         <div class="kpi-lbl" style="color:#2980B9;">Sistemas</div>
       </div>
