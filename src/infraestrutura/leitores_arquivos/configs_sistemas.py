@@ -26,7 +26,7 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
             "cpf":          "CPF / CNPJ",
             "email":        "EMAIL",
             "perfil":       "CD_GRUPO_SIGLA",   # código do grupo (bate com a matriz)
-            "situacao":     "ST_HABILITACAO",
+            "situacao":     "S",                # extrato CSV novo: coluna "S" (A=Ativo)
         },
     ),
 

@@ -19,20 +19,33 @@ class LeitorArquivoBase:
         self._pasta_processados = Path(pasta_processados) if pasta_processados else None
         self._pasta_erros = Path(pasta_erros) if pasta_erros else None
 
+    # Subpastas ignoradas na varredura recursiva (saídas do próprio processo)
+    _SUBPASTAS_IGNORADAS = {"processados", "erros"}
+
     def listar_arquivos(self, pasta: str) -> List[Path]:
+        """Varre a pasta de forma RECURSIVA, ignorando PROCESSADOS/ e ERROS/."""
         p = Path(pasta)
         if not p.exists():
             logger.warning(f"Pasta não encontrada: {pasta}")
             return []
         arquivos = [
-            f for f in p.iterdir()
-            if f.is_file() and f.suffix.lower() in EXTENSOES_SUPORTADAS
+            f for f in p.rglob("*")
+            if f.is_file()
+            and f.suffix.lower() in EXTENSOES_SUPORTADAS
+            and not any(
+                parte.lower() in self._SUBPASTAS_IGNORADAS
+                for parte in f.relative_to(p).parts[:-1]
+            )
         ]
-        logger.info(f"{len(arquivos)} arquivo(s) encontrado(s) em {p.name}")
+        logger.info(f"{len(arquivos)} arquivo(s) encontrado(s) em {p.name} (recursivo)")
         return sorted(arquivos)
 
-    def mover_para_processados(self, arquivo: Path):
-        destino = self._pasta_processados if self._pasta_processados else arquivo.parent / "PROCESSADOS"
+    def mover_para_processados(self, arquivo: Path, destino: Optional[Path] = None):
+        destino = (
+            Path(destino) if destino
+            else self._pasta_processados if self._pasta_processados
+            else arquivo.parent / "PROCESSADOS"
+        )
         destino.mkdir(parents=True, exist_ok=True)
         sufixo = datetime.now().strftime("%Y%m%d_%H%M%S")
         novo_nome = f"{arquivo.stem}_{sufixo}{arquivo.suffix}"

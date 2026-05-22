@@ -46,9 +46,9 @@ body{
 /* ── Nav tabs ───────────────────────────────────────────────────────── */
 .nav{
   flex:none;z-index:20;
-  background:linear-gradient(180deg,#1B2750,#172143);
+  background:transparent;
   display:flex;gap:4px;padding:7px 18px 0;
-  box-shadow:0 6px 16px rgba(13,19,40,.30);
+  border-bottom:2px solid var(--navy);
 }
 .tab{
   flex:0 0 auto;min-width:172px;height:33px;
@@ -89,20 +89,20 @@ body{
   flex:1;min-width:0;height:80px;position:relative;overflow:hidden;
   border-radius:12px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  box-shadow:var(--sh-1);
+  box-shadow:inset 6px 0 0 0 var(--gold),var(--sh-1);
   transition:transform .18s cubic-bezier(.22,.68,.24,1),box-shadow .18s;
 }
-.kpi::before{
-  content:"";position:absolute;left:0;right:0;top:0;height:56%;
+.kpi::before{               /* brilho superior (recua 6px p/ não cobrir a faixa) */
+  content:"";position:absolute;left:6px;right:0;top:0;height:56%;
   background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0));
   pointer-events:none;
 }
-.kpi::after{
-  content:"";position:absolute;inset:0;
+.kpi::after{               /* brilho diagonal (recua 6px p/ não cobrir a faixa) */
+  content:"";position:absolute;left:6px;top:0;right:0;bottom:0;
   background:linear-gradient(125deg,rgba(255,255,255,.4) 0%,transparent 40%);
   pointer-events:none;
 }
-.kpi:hover{transform:translateY(-5px);box-shadow:var(--sh-3);}
+.kpi:hover{transform:translateY(-5px);box-shadow:inset 6px 0 0 0 var(--gold),var(--sh-3);}
 .kpi-val{font-size:25px;font-weight:800;line-height:1;
   position:relative;z-index:1;text-shadow:0 1px 2px rgba(255,255,255,.55);}
 .kpi-lbl{font-size:11px;font-weight:700;margin-top:6px;text-align:center;
