@@ -38,6 +38,50 @@ class RepositorioAcessoSqlite(IRepositorioAcesso):
     def salvar(self, perfil: PerfilAcesso) -> None:
         self.salvar_lote([perfil])
 
+    def substituir_sistema(
+        self,
+        sistema: Sistema,
+        perfis: List[PerfilAcesso],
+        arquivo_origem: str = "",
+    ) -> int:
+        """Substitui TODOS os acessos do sistema: remove os da importação
+        anterior e grava os do arquivo atual (semântica de snapshot).
+        Deduplica por (sistema, usuario) mantendo o último — mesmo critério
+        do merge usado anteriormente."""
+        unicos: Dict[tuple, PerfilAcesso] = {}
+        for p in perfis:
+            unicos[(p.sistema.value, p.usuario)] = p
+
+        with self._conexao.sessao() as sessao:
+            removidos = (
+                sessao.query(AcessoSistema)
+                .filter_by(sistema=sistema.value)
+                .delete()
+            )
+            sessao.flush()
+            for p in unicos.values():
+                sessao.add(AcessoSistema(
+                    sistema=p.sistema.value,
+                    usuario=p.usuario,
+                    nome_usuario=p.nome_usuario,
+                    cpf=p.cpf or None,
+                    email=None,
+                    perfil=p.perfil,
+                    situacao=p.situacao,
+                    data_criacao=p.data_criacao,
+                    ultimo_acesso=p.ultimo_acesso,
+                    matricula_vinculada=p.matricula_vinculada,
+                    arquivo_origem=arquivo_origem,
+                    dt_importacao=datetime.now(),
+                ))
+            sessao.commit()
+
+        logger.info(
+            f"{sistema.value}: {removidos} acesso(s) da importação anterior "
+            f"removido(s), {len(unicos)} do arquivo gravado(s) (substituição)."
+        )
+        return len(unicos)
+
     def obter_todos(self) -> List[PerfilAcesso]:
         with self._conexao.sessao() as sessao:
             rows = sessao.query(AcessoSistema).all()

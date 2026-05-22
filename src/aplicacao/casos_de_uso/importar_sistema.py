@@ -33,26 +33,47 @@ class ImportarSistema:
     def executar(self) -> int:
         logger.info(f"=== Importação {self._sistema.value} iniciada ===")
 
-        perfis, processados = self._leitor.ler(self._pasta_entrada)
-
-        if not perfis:
+        # varredura recursiva da pasta de entrada, ordenada pela data no nome
+        arquivos = self._leitor.listar_ordenado(self._pasta_entrada)
+        if not arquivos:
             logger.warning(f"{self._sistema.value}: nenhum arquivo encontrado.")
             return 0
 
-        self._repositorio.salvar_lote(perfis, ", ".join(processados))
+        # PROCESSADOS na raiz da pasta do sistema (ex.: .../SYSTUR/PROCESSADOS)
+        destino_proc = Path(self._pasta_entrada) / "PROCESSADOS"
 
-        df = pd.DataFrame([{
-            "sistema":    p.sistema.value,
-            "usuario":    p.usuario,
-            "nome":       p.nome_usuario,
-            "perfil":     p.perfil,
-            "situacao":   p.situacao,
-            "data_criacao":   str(p.data_criacao) if p.data_criacao else None,
-            "ultimo_acesso":  str(p.ultimo_acesso) if p.ultimo_acesso else None,
-        } for p in perfis])
+        for arquivo in arquivos:
+            try:
+                perfis = self._leitor.ler_um(arquivo)
+            except Exception as e:
+                logger.error(f"Erro lendo '{arquivo.name}': {e!r}")
+                self._leitor.mover_para_erros(arquivo, str(e))
+                continue
+            # substituição (snapshot): remove os dados do sistema da
+            # importação anterior e grava os do arquivo atual
+            self._repositorio.substituir_sistema(self._sistema, perfis, arquivo.name)
+            self._leitor.mover_para_processados(arquivo, destino=destino_proc)
+            logger.success(
+                f"{self._sistema.value}: '{arquivo.name}' processado "
+                f"({len(perfis)} linhas) e movido para PROCESSADOS."
+            )
 
-        nome = self._sistema.value.lower()
-        self._parquet.salvar_fixo(df, self._pasta_parquet, nome)
+        # parquet reflete o estado final do banco (último arquivo da ordem)
+        perfis_final = self._repositorio.obter_por_sistema(self._sistema)
+        if perfis_final:
+            df = pd.DataFrame([{
+                "sistema":       p.sistema.value,
+                "usuario":       p.usuario,
+                "nome":          p.nome_usuario,
+                "perfil":        p.perfil,
+                "situacao":      p.situacao,
+                "data_criacao":  str(p.data_criacao) if p.data_criacao else None,
+                "ultimo_acesso": str(p.ultimo_acesso) if p.ultimo_acesso else None,
+            } for p in perfis_final])
+            self._parquet.salvar_fixo(df, self._pasta_parquet, self._sistema.value.lower())
 
-        logger.info(f"=== {self._sistema.value}: {len(perfis)} registros importados ===")
-        return len(perfis)
+        logger.info(
+            f"=== {self._sistema.value}: {len(arquivos)} arquivo(s) processado(s); "
+            f"{len(perfis_final)} acessos no banco (estado final) ==="
+        )
+        return len(perfis_final)
