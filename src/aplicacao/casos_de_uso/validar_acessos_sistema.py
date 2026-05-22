@@ -2,16 +2,12 @@ import unicodedata
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple
 
-import pandas as pd
 from loguru import logger
 
 from dominio.objetos_valor.sistema import sistema_do_texto
 from dominio.objetos_valor.status_validacao import StatusValidacao
-from dominio.objetos_valor.tipo_divergencia import TipoDivergencia
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.schema import AcessoSistema, RhAtivo
-from infraestrutura.escritores_arquivos.escritor_parquet import EscritorParquet
-from infraestrutura.repositorios.repositorio_divergencia_sqlite import RepositorioDivergenciaSqlite
 from infraestrutura.repositorios.repositorio_matriz_sqlite import RepositorioMatrizSqlite
 
 
@@ -25,11 +21,8 @@ def _norm(s: str) -> str:
 
 class ValidarAcessosSistema:
 
-    def __init__(self, conexao: ConexaoBancoDados, pasta_parquet: str):
+    def __init__(self, conexao: ConexaoBancoDados):
         self._conexao = conexao
-        self._parquet = EscritorParquet()
-        self._pasta_parquet = pasta_parquet
-        self._repo_div = RepositorioDivergenciaSqlite(conexao)
 
     def executar(self):
         ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco = self._carregar_dados()
@@ -88,57 +81,6 @@ class ValidarAcessosSistema:
         repo = RepositorioMatrizSqlite(self._conexao)
         repo.salvar_validacoes(registros_acao)
 
-        _STATUS_LABEL = {
-            StatusValidacao.SEM_ACESSO.value:  "Incluir Acesso",
-            StatusValidacao.DIVERGENTE.value:   "Alterar Perfil",
-            StatusValidacao.EM_ANALISE.value:   "Em Análise",
-        }
-
-        df = pd.DataFrame(registros_acao)
-        if not df.empty:
-            df = df.astype({
-                "matricula": "str",
-                "cpf": "str",
-                "nome": "str",
-                "email": "str",
-                "centro_custo_codigo": "str",
-                "centro_custo_nome": "str",
-                "cargo_codigo": "str",
-                "cargo_descricao": "str",
-                "sistema": "str",
-                "perfil_esperado": "str",
-                "perfil_atual": "str",
-                "acesso_manual": "bool",
-                "status": "str",
-                "situacao_acao": "str",
-                "origem_matriz": "str",
-            })
-            df["acao"] = df["status"].map(_STATUS_LABEL).fillna("")
-
-        # Adiciona ACESSO_SEM_VINCULO_RH como "Não Mapeado"
-        nao_mapeados = [
-            {
-                "matricula": "", "cpf": "", "nome": d.nome_usuario or d.usuario,
-                "email": "", "centro_custo_codigo": "", "centro_custo_nome": "",
-                "cargo_codigo": "", "cargo_descricao": "",
-                "sistema": d.sistema.value, "perfil_esperado": "",
-                "perfil_atual": d.perfil_encontrado or "",
-                "acesso_manual": False, "status": "NAO_MAPEADO",
-                "situacao_acao": "", "origem_matriz": "", "acao": "Não Mapeado",
-            }
-            for d in self._repo_div.obter_todas()
-            if d.tipo == TipoDivergencia.ACESSO_SEM_VINCULO_RH
-        ]
-        if nao_mapeados:
-            df_nm = pd.DataFrame(nao_mapeados).astype({c: "str" for c in [
-                "matricula","cpf","nome","email","centro_custo_codigo",
-                "centro_custo_nome","cargo_codigo","cargo_descricao",
-                "sistema","perfil_esperado","perfil_atual","status","situacao_acao","origem_matriz","acao",
-            ]})
-            df_nm["acesso_manual"] = df_nm["acesso_manual"].astype("bool")
-            df = pd.concat([df, df_nm], ignore_index=True)
-
-        self._parquet.salvar_fixo(df, f"{self._pasta_parquet}/VALIDACAO", "validacao_acessos")
         logger.success(
             f"Validação de acessos concluída: {len(registros)} avaliados, "
             f"{len(registros_acao)} com ação pendente gravados."

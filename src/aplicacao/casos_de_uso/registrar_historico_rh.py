@@ -19,12 +19,10 @@ dois lados, senão diferença de formatação viraria falsa "alteração".
 import json
 from datetime import date
 
-import pandas as pd
 from loguru import logger
 
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.schema import RhAtivo, RhDesligado, SnapshotRh, HistoricoRh
-from infraestrutura.escritores_arquivos.escritor_parquet import EscritorParquet
 from dominio.servicos_dominio.servico_padronizacao import ServicoPadronizacao
 
 # Campos comparados por tipo (ordem usada também no JSON da trilha)
@@ -40,11 +38,9 @@ _CAMPOS_DESLIGADO = [
 
 class RegistrarHistoricoRh:
 
-    def __init__(self, conexao: ConexaoBancoDados, pasta_parquet_historico: str = None):
+    def __init__(self, conexao: ConexaoBancoDados):
         self._conexao = conexao
-        self._pasta_parquet = pasta_parquet_historico
         self._pad = ServicoPadronizacao()
-        self._parquet = EscritorParquet()
 
     # ---- API pública -----------------------------------------------------
 
@@ -53,29 +49,6 @@ class RegistrarHistoricoRh:
 
     def registrar_desligados(self, desligados: list) -> dict:
         return self._registrar("DESLIGADO", RhDesligado, _CAMPOS_DESLIGADO, desligados)
-
-    def exportar_parquet(self):
-        """Dump da trilha completa para Power BI (regenerado a cada execução)."""
-        if not self._pasta_parquet:
-            return
-        with self._conexao.sessao() as sessao:
-            linhas = sessao.query(HistoricoRh).order_by(HistoricoRh.id).all()
-            df = pd.DataFrame([{
-                "data_snapshot": str(h.data_snapshot),
-                "tipo": h.tipo,
-                "matricula": h.matricula,
-                "tipo_mudanca": h.tipo_mudanca,
-                "campos_alterados": h.campos_alterados or "",
-                "dados_anterior": h.dados_anterior or "",
-                "dados_novo": h.dados_novo or "",
-                "dt_registro": str(h.dt_registro),
-            } for h in linhas])
-        if df.empty:
-            df = pd.DataFrame(columns=[
-                "data_snapshot", "tipo", "matricula", "tipo_mudanca",
-                "campos_alterados", "dados_anterior", "dados_novo", "dt_registro",
-            ])
-        self._parquet.salvar_fixo(df, self._pasta_parquet, "historico_rh")
 
     # ---- núcleo do CDC ---------------------------------------------------
 

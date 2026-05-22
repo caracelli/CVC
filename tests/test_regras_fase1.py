@@ -136,7 +136,7 @@ class TestValidacaoStatus(unittest.TestCase):
         cls._tmp = tempfile.mkdtemp(prefix="cvc_test_")
         conexao = ConexaoBancoDados(os.path.join(cls._tmp, "t.db"))
         conexao.inicializar()
-        cls.uc = ValidarAcessosSistema(conexao, cls._tmp)
+        cls.uc = ValidarAcessosSistema(conexao)
 
     def _func(self):
         return SimpleNamespace(
@@ -183,7 +183,7 @@ class TestCDCHistoricoRh(unittest.TestCase):
         self.conexao = ConexaoBancoDados(os.path.join(self._tmp, "cdc.db"))
         self.conexao.inicializar()
         self.repo = RepositorioFuncionarioSqlite(self.conexao)
-        self.hist = RegistrarHistoricoRh(self.conexao, None)
+        self.hist = RegistrarHistoricoRh(self.conexao)
 
     def test_novo_quando_matricula_inexistente(self):
         # banco vazio; CDC compara contra nada -> tudo NOVO

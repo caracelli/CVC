@@ -29,8 +29,8 @@ CVC_IAM_ANALYTICS/DADOS/BANCO/*.sqlite
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.db-shm
 CVC_IAM_ANALYTICS/DADOS/BANCO/*.db-wal
 
-# Parquet gerado — versionado para sincronizar entre maquinas (dados pequenos)
-# CVC_IAM_ANALYTICS/DADOS/PARQUET/**/*.parquet
+# Parquet — descartado: o visualizador le o SQLite direto (sem Power BI)
+CVC_IAM_ANALYTICS/DADOS/PARQUET/
 
 # Arquivos processados e de erro
 CVC_IAM_ANALYTICS/DADOS/PROCESSADOS/
