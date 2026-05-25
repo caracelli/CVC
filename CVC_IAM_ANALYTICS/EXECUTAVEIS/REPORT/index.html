@@ -699,7 +699,7 @@ function showPage(tab){
     await refreshDB();   // releitura por evento: traz interacoes novas da rede
     if (tab === 'quar') await renderQuarentena();
     else if (tab === 'hist') await renderHistorico();
-    else if (tab !== 'consulta') { renderMatrix(); aplicarKPIs(); }
+    else if (tab !== 'consulta') { renderMatrix(); aplicarKPIs(); atualizarCharts(); }
     ['ch-sis-vg','ch-acao-vg'].forEach(id => {
       const el = document.getElementById(id);
       if (el && el._chart) el._chart.resize();
@@ -1169,11 +1169,18 @@ function atualizarHeaderMeta(){
   if (elRef) elRef.textContent = 'Referência: ' + (M.referencia || '—');
   if (elUpd) elUpd.textContent = 'Última atualização: ' + (M.atualizacao || '—');
 }
+function atualizarCharts(){
+  if (!document.getElementById('ch-sis-vg')) return;
+  const s = distOrdenada(DB.sis_dist);
+  mkChart('ch-sis-vg', s.labels, s.data);
+  const a = distOrdenada(DB.acao_dist);
+  mkChart('ch-acao-vg', a.labels, a.data, 0.22);
+}
 async function recarregarAbaAtual(){
   await refreshDB();
   if (_tabAtual === 'quar') await renderQuarentena();
   else if (_tabAtual === 'hist') await renderHistorico();
-  else if (_tabAtual !== 'consulta') { renderMatrix(); aplicarKPIs(); }
+  else if (_tabAtual !== 'consulta') { renderMatrix(); aplicarKPIs(); atualizarCharts(); }
 }
 
 /* ── Quarentena (botão na grid → grava no SQLite via servidor) ─────────── */
