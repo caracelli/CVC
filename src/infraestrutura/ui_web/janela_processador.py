@@ -72,6 +72,17 @@ const stEl = document.getElementById('status');
 const card = document.getElementById('card');
 const btn = document.getElementById('btn-fechar');
 
+// Status base sem reticencias finais; os dots animados sao adicionados pelo
+// setInterval abaixo (cresce de . ate ......) — assim o usuario ve algo se
+// movendo mesmo quando a etapa atual demora alguns segundos.
+let baseStatus = 'Iniciando';
+let dotN = 0;
+setInterval(() => {
+  if (card.classList.contains('done') || card.classList.contains('err')) return;
+  dotN = (dotN % 6) + 1;
+  stEl.textContent = baseStatus + '.'.repeat(dotN);
+}, 350);
+
 function tick(){
   fetch('/log?since=' + cursor).then(r=>r.json()).then(d=>{
     if (d.lines && d.lines.length){
@@ -79,7 +90,7 @@ function tick(){
       log.scrollTop = log.scrollHeight;
       cursor = d.cursor;
     }
-    if (d.status) stEl.textContent = d.status;
+    if (d.status) baseStatus = d.status.replace(/\\.+$/, '');
     if (d.done){
       card.classList.add(d.erro ? 'err' : 'done');
       btn.disabled = false;
@@ -88,6 +99,8 @@ function tick(){
         // painel quando este responder. Polla via <script src=...> (sem CORS).
         stEl.textContent = 'Concluído. Aguardando o painel...';
         pollar_painel(d.on_done_url);
+      } else {
+        stEl.textContent = baseStatus;  // texto final estatico
       }
       return;
     }
