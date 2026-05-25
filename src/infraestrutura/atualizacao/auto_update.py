@@ -14,7 +14,10 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
+import time
 import xml.etree.ElementTree as ET
+from datetime import datetime
 from pathlib import Path
 
 _IGNORAR = ("*.old", "*.log", "visualizador_log.txt", "__pycache__",
@@ -32,7 +35,6 @@ def _texto(caminho: Path, tag: str) -> str:
 def _retry_io(fn, tentativas: int = 5, delay: float = 0.4) -> bool:
     """Retenta uma operacao de IO algumas vezes — antivirus/Defender pode segurar
     arquivos por alguns ms apos copia/extracao. Devolve True se OK."""
-    import time
     for i in range(tentativas):
         try:
             fn()
@@ -44,15 +46,38 @@ def _retry_io(fn, tentativas: int = 5, delay: float = 0.4) -> bool:
     return False
 
 
-def _limpar_old(diretorio: Path, log) -> None:
+def _limpar_old(diretorio: Path, log, silencioso: bool = False) -> None:
     """Remove .old residuais de updates anteriores. Roda sempre, mesmo sem
-    update pendente. Silencioso se o arquivo estiver bloqueado."""
+    update pendente. Tentativa rapida — use _agendar_limpeza_old() pra
+    retentar em background apos o startup."""
     try:
         for antigo in diretorio.glob("*.old"):
             if _retry_io(antigo.unlink, tentativas=3, delay=0.3):
-                log(f"[auto-update] removido .old anterior: {antigo.name}")
+                if not silencioso:
+                    log(f"[auto-update] removido .old anterior: {antigo.name}")
     except Exception:
         pass
+
+
+def _agendar_limpeza_old(diretorio: Path, log, duracao_s: int = 60) -> None:
+    """Retenta a remocao de .old por ate `duracao_s` em background."""
+    def _worker():
+        fim = time.time() + duracao_s
+        while time.time() < fim:
+            time.sleep(2.0)
+            try:
+                remanescentes = list(diretorio.glob("*.old"))
+                if not remanescentes:
+                    return
+                for f in remanescentes:
+                    try:
+                        f.unlink()
+                        log(f"[auto-update] removido .old (background): {f.name}")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+    threading.Thread(target=_worker, daemon=True).start()
 
 
 def verificar_atualizacao(log=print) -> None:
@@ -66,7 +91,8 @@ def verificar_atualizacao(log=print) -> None:
     if not cfg_local.exists():
         log(f"[auto-update] config local ausente ({cfg_local}) - sem checar")
         return
-    _limpar_old(exe_dir, log)     # ← em todo startup
+    _limpar_old(exe_dir, log)              # tentativa rapida no startup
+    _agendar_limpeza_old(exe_dir, log, 60) # background: ate 60s
 
     base = _texto(cfg_local, "rede/raiz")
     if not base:
@@ -96,11 +122,12 @@ def verificar_atualizacao(log=print) -> None:
 
 
 def _aplicar(exe: Path, exe_dir: Path, rede_exec: Path, log) -> None:
-    _limpar_old(exe_dir, log)    # garante que nao ha .old residual
+    _limpar_old(exe_dir, log, silencioso=True)
 
-    # o exe em execucao nao pode ser sobrescrito: renomeia para .old
-    # Retry porque AV/Defender pode estar segurando o arquivo.
-    exe_old = exe.with_name(exe.name + ".old")
+    # o exe em execucao nao pode ser sobrescrito: renomeia para .old com
+    # timestamp pra nao conflitar com .old residual de update anterior.
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    exe_old = exe.with_name(exe.name + "." + stamp + ".old")
     if not _retry_io(lambda: exe.rename(exe_old), tentativas=6, delay=0.5):
         log("[auto-update] nao foi possivel liberar o exe (WinError 32?) - update abortado")
         return
