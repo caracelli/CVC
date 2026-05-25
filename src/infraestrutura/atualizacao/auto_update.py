@@ -29,6 +29,20 @@ def _texto(caminho: Path, tag: str) -> str:
         return ""
 
 
+def _limpar_old(diretorio: Path, log) -> None:
+    """Remove .old residuais de updates anteriores. Roda sempre, mesmo sem
+    update pendente. Silencioso se o arquivo estiver bloqueado."""
+    try:
+        for antigo in diretorio.glob("*.old"):
+            try:
+                antigo.unlink()
+                log(f"[auto-update] removido .old anterior: {antigo.name}")
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
 def verificar_atualizacao(log=print) -> None:
     """Checa versao local x rede; se diferir, atualiza e re-executa o exe."""
     if not getattr(sys, "frozen", False):
@@ -40,6 +54,7 @@ def verificar_atualizacao(log=print) -> None:
     if not cfg_local.exists():
         log(f"[auto-update] config local ausente ({cfg_local}) - sem checar")
         return
+    _limpar_old(exe_dir, log)     # ← em todo startup
 
     base = _texto(cfg_local, "rede/raiz")
     if not base:
@@ -69,12 +84,7 @@ def verificar_atualizacao(log=print) -> None:
 
 
 def _aplicar(exe: Path, exe_dir: Path, rede_exec: Path, log) -> None:
-    # limpa .old de updates anteriores
-    for antigo in exe_dir.glob("*.old"):
-        try:
-            antigo.unlink()
-        except Exception:
-            pass
+    _limpar_old(exe_dir, log)    # garante que nao ha .old residual
 
     # o exe em execucao nao pode ser sobrescrito: renomeia para .old
     exe_old = exe.with_name(exe.name + ".old")

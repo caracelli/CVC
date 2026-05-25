@@ -1229,8 +1229,11 @@ border-radius:50%;animation:spin .9s linear infinite;margin:28px auto 20px}
 <p class="small">O painel será aberto automaticamente quando a atualização terminar.</p>
 </div><script>
 const st=document.getElementById('status');
-setTimeout(()=>st.textContent='Reiniciando o visualizador...',2500);
-setTimeout(()=>st.textContent='Pronto. Abrindo o painel...',4500);
+let baseSt='Baixando nova versão da rede';
+setTimeout(()=>{baseSt='Reiniciando o visualizador';},2500);
+setTimeout(()=>{baseSt='Pronto. Abrindo o painel';},4500);
+let dn=0;
+setInterval(()=>{dn=(dn%6)+1;st.textContent=baseSt+'.'.repeat(dn);},350);
 function tentar(){
   const s=document.createElement('script');
   s.onload=()=>window.location.replace('http://127.0.0.1:8800/');
@@ -1256,6 +1259,23 @@ def _abrir_splash_update(v_local, v_rede):
         print(f"  [splash] erro ao abrir: {e!r}")
 
 
+def _limpar_old():
+    """Remove .exe.old (e demais .old) deixados por uma atualizacao anterior.
+    Roda em TODO startup, nao so quando ha update pendente. Silencioso se o
+    arquivo ainda estiver bloqueado (sera removido no proximo startup)."""
+    try:
+        for f in os.listdir(BASE):
+            if f.endswith(".old"):
+                p = os.path.join(BASE, f)
+                try:
+                    os.remove(p)
+                    print(f"  [auto-update] removido .old anterior: {f}")
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
 def verificar_atualizacao():
     """Auto-update: compara <versao> local x rede; se diferir, copia e reinicia.
     No-op fora do exe. Rede indisponivel: avisa e segue."""
@@ -1263,6 +1283,7 @@ def verificar_atualizacao():
         return
     if not os.path.exists(CONFIG_PATH):
         return
+    _limpar_old()    # ← em todo startup, mesmo sem update agora
 
     def _txt(p, tag):
         try:
@@ -1290,12 +1311,7 @@ def verificar_atualizacao():
 
     print(f"  [auto-update] atualizando {v_local} -> {v_rede}")
     exe = sys.executable
-    for f in os.listdir(BASE):
-        if f.endswith(".old"):
-            try:
-                os.remove(os.path.join(BASE, f))
-            except Exception:
-                pass
+    _limpar_old()    # garante que nao ha .old residual antes do novo rename
     try:
         os.rename(exe, exe + ".old")
     except Exception as e:
