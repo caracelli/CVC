@@ -166,4 +166,13 @@ def _aplicar(exe: Path, exe_dir: Path, rede_exec: Path, log) -> None:
     except Exception as e:
         log(f"[auto-update] falha ao reiniciar ({e!r})")
         return
+    # Redireciona stdout/stderr OS-level pra NUL — silencia o warning
+    # "Failed to remove temporary directory" do bootloader PyInstaller no exit.
+    try:
+        nul = os.open("NUL" if sys.platform == "win32" else "/dev/null",
+                      os.O_WRONLY)
+        os.dup2(nul, 1)
+        os.dup2(nul, 2)
+    except Exception:
+        pass
     sys.exit(0)

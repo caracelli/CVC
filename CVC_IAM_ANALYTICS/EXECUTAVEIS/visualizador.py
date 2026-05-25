@@ -1424,6 +1424,16 @@ def verificar_atualizacao():
             sys.stdout._f.close()
     except Exception:
         pass
+    # Redireciona stdout/stderr OS-level pra NUL — o bootloader PyInstaller, ao
+    # sair, escreve "Failed to remove temporary directory" no stderr C, fora do
+    # alcance do _Tee. Como o processo ja vai morrer, podemos descartar.
+    try:
+        nul = os.open("NUL" if sys.platform == "win32" else "/dev/null",
+                      os.O_WRONLY)
+        os.dup2(nul, 1)
+        os.dup2(nul, 2)
+    except Exception:
+        pass
     sys.exit(0)
 
 
