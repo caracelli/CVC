@@ -1,4 +1,6 @@
+import os
 import sys
+import traceback
 from pathlib import Path
 
 from loguru import logger
@@ -9,6 +11,7 @@ if not getattr(sys, "frozen", False):
 from infraestrutura.configuracao.leitor_config import LeitorConfig
 from infraestrutura.atualizacao.auto_update import verificar_atualizacao
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
+from infraestrutura.ui_web import janela_processador as ui
 from aplicacao.casos_de_uso.importar_rh import ImportarRh
 from aplicacao.casos_de_uso.padronizar_rh import PadronizarRh
 from aplicacao.casos_de_uso.importar_sistema import ImportarSistema
@@ -41,12 +44,73 @@ def configurar_log(pasta_logs: str):
     )
 
 
-def main():
-    caminho_config = _caminho_config()
+def _ligar_sink_ui():
+    """Encaminha cada mensagem do loguru para a janela HTML do Processador.
+    Formato curto: '12:34:56 INFO    | mensagem'."""
+    def _sink(message):
+        ui.escrever(str(message))
+    logger.add(_sink, level="INFO",
+               format="{time:HH:mm:ss} {level: <7} | {message}")
 
+
+def _detectar_etapa(msg: str) -> str:
+    """Mapeia trechos de log para o rotulo de status amigavel do topo."""
+    m = msg.lower()
+    if "auto-update" in m:        return "Verificando atualização..."
+    if "importação rh" in m:      return "Importando RH..."
+    if "padronizando rh" in m or "padronizacao" in m: return "Padronizando RH..."
+    if "matrizes" in m:           return "Importando matrizes..."
+    if "importação systur" in m or "systur iniciada" in m: return "Importando SYSTUR..."
+    if "vincular" in m or "vinculacao" in m: return "Vinculando acessos ao RH..."
+    if "divergenci" in m:         return "Analisando divergências..."
+    if "validacao" in m or "validação" in m: return "Validando acessos..."
+    if "saidas" in m or "saídas" in m: return "Gerando saídas (Excel)..."
+    if "dobra" in m:              return "Consolidando interações..."
+    return ""
+
+
+def _ligar_sink_status():
+    """Sink leve so para atualizar o rotulo de status do topo da pagina."""
+    def _sink(message):
+        et = _detectar_etapa(str(message))
+        if et:
+            ui.status(et)
+    logger.add(_sink, level="INFO", format="{message}")
+
+
+def main():
+    # Sobe a janela HTML (substitui o terminal — Processador.exe e' --noconsole).
+    # Em dev (script .py), tambem abre, util pra depurar.
+    abre_navegador = os.environ.get("PROCESSADOR_NOBROWSER") != "1"
+    try:
+        ui.iniciar(abrir_navegador=abre_navegador)
+    except Exception as e:
+        print(f"[ui] falha ao iniciar janela HTML: {e!r}")
+    _ligar_sink_ui()
+    _ligar_sink_status()
+
+    erro = False
+    try:
+        codigo = _executar(_caminho_config())
+        if codigo != 0:
+            erro = True
+    except SystemExit:
+        raise  # auto-update reinicia via sys.exit(0)
+    except Exception as e:
+        erro = True
+        logger.error(f"Erro nao tratado: {e!r}")
+        logger.error(traceback.format_exc())
+    finally:
+        ui.concluir(erro=erro)
+        # Da tempo do usuario ler a mensagem final antes do servidor cair
+        ui.aguardar_e_encerrar(segundos=10)
+
+
+def _executar(caminho_config: Path) -> int:
+    """Logica original do Processador. Devolve 0 se OK, 1 se erro."""
     if not caminho_config.exists():
         logger.error(f"config.xml não encontrado: {caminho_config}")
-        sys.exit(1)
+        return 1
 
     # Auto-update: se a versao da rede diferir, copia e re-executa (encerra aqui)
     verificar_atualizacao(logger.info)
@@ -126,7 +190,8 @@ def main():
         pasta_saidas=str(app_raiz / cfg.saida_divergencias),
     ).executar()
 
-    logger.info("Processamento finalizado.")
+    logger.success("Processamento finalizado.")
+    return 0
 
 
 if __name__ == "__main__":

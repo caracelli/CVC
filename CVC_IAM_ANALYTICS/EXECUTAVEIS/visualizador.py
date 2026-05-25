@@ -22,7 +22,7 @@ config.xml (ao lado do exe):
   </config>
 """
 import sys, os, io, json, time, socket, sqlite3, threading, webbrowser, getpass, zipfile
-import shutil, subprocess
+import shutil, subprocess, tempfile
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -1172,6 +1172,58 @@ def banner():
     print("=" * 64)
 
 
+_SPLASH_UPDATE_HTML = """<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>IAM Analytics — Atualizando</title><style>
+*{box-sizing:border-box}body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;
+background:linear-gradient(180deg,#f5f6fa 0%,#e7ebf2 100%);margin:0;min-height:100vh;
+display:flex;align-items:center;justify-content:center}
+.card{background:#fff;border-radius:14px;padding:44px 52px;
+box-shadow:0 8px 28px rgba(31,45,92,.12);text-align:center;max-width:480px}
+.brand{color:#1F2D5C;font:700 11.5px Arial;letter-spacing:.1em;margin-bottom:6px}
+h1{color:#1F2D5C;margin:0 0 6px;font:700 22px Arial}
+.sub{color:#7B8085;font:400 13px Arial;margin:0}
+.ver{color:#1F2D5C;font-weight:700}
+.spinner{width:44px;height:44px;border:4px solid #E7EBF2;border-top-color:#1F2D5C;
+border-radius:50%;animation:spin .9s linear infinite;margin:28px auto 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#status{color:#3A3F4C;font:600 14px Arial;margin:0 0 4px}
+.small{color:#8A9099;font:400 11.5px Arial;margin-top:18px}
+</style></head><body><div class="card">
+<div class="brand">CVC · IAM ANALYTICS</div>
+<h1>Atualizando para nova versão</h1>
+<p class="sub">Versão <span class="ver">__V_LOCAL__</span> → <span class="ver">__V_REDE__</span></p>
+<div class="spinner"></div>
+<p id="status">Baixando nova versão da rede...</p>
+<p class="small">O painel será aberto automaticamente quando a atualização terminar.</p>
+</div><script>
+const st=document.getElementById('status');
+setTimeout(()=>st.textContent='Reiniciando o visualizador...',2500);
+setTimeout(()=>st.textContent='Pronto. Abrindo o painel...',4500);
+function tentar(){
+  const s=document.createElement('script');
+  s.onload=()=>window.location.replace('http://127.0.0.1:8800/');
+  s.onerror=()=>{s.remove();setTimeout(tentar,700)};
+  s.src='http://127.0.0.1:8800/chart.umd.min.js?_='+Date.now();
+  document.head.appendChild(s);
+}
+setTimeout(tentar,2000);
+</script></body></html>"""
+
+
+def _abrir_splash_update(v_local, v_rede):
+    """Salva o splash HTML em %TEMP% e abre no navegador padrao."""
+    try:
+        html = (_SPLASH_UPDATE_HTML
+                .replace("__V_LOCAL__", v_local or "—")
+                .replace("__V_REDE__", v_rede or "—"))
+        p = os.path.join(tempfile.gettempdir(), "cvc_iam_atualizando.html")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(html)
+        webbrowser.open("file:///" + p.replace("\\", "/"))
+    except Exception as e:
+        print(f"  [splash] erro ao abrir: {e!r}")
+
+
 def verificar_atualizacao():
     """Auto-update: compara <versao> local x rede; se diferir, copia e reinicia.
     No-op fora do exe. Rede indisponivel: avisa e segue."""
@@ -1199,6 +1251,10 @@ def verificar_atualizacao():
         return
     if os.path.normcase(BASE).startswith(os.path.normcase(rede_exec)):
         return  # rodando direto da rede
+
+    # Splash visivel antes da copia (visualizador.exe e' --noconsole, sem terminal)
+    _abrir_splash_update(v_local, v_rede)
+    time.sleep(0.8)  # da tempo do browser pintar o splash
 
     print(f"  [auto-update] atualizando {v_local} -> {v_rede}")
     exe = sys.executable
@@ -1235,18 +1291,53 @@ def verificar_atualizacao():
         return
     print("  [auto-update] concluido - reiniciando")
     try:
-        subprocess.Popen([exe] + sys.argv[1:], cwd=BASE)
+        # Splash ja esta aberto no navegador e vai redirecionar pra :8800/
+        # quando o novo exe responder. Nao abrir uma segunda aba.
+        env = os.environ.copy()
+        env["VISUALIZADOR_NOBROWSER"] = "1"
+        subprocess.Popen([exe] + sys.argv[1:], cwd=BASE, env=env)
     except Exception as e:
         print(f"  [auto-update] falha ao reiniciar ({e!r})")
         return
     sys.exit(0)
 
 
+def _rodar_processador_se_necessario():
+    """Se o banco nao existe, tenta rodar o Processador (na rede ou local).
+    O Processador.exe abre sua propria janela HTML com o log; bloqueamos
+    aqui ate ele terminar e entao re-sincronizamos o banco.
+    Devolve True se ha banco utilizavel depois, False se nao deu jeito."""
+    global DB_PATH
+    if os.path.exists(DB_PATH):
+        return True
+    # Procura o Processador.exe na rede primeiro, depois localmente
+    candidatos = []
+    if REDE_RAIZ:
+        sub = os.path.join("EXECUTAVEIS", "Processador.exe")
+        candidatos.append(os.path.join(REDE_RAIZ, sub))
+    candidatos.append(os.path.join(BASE, "Processador.exe"))
+    proc_exe = next((p for p in candidatos if os.path.exists(p)), None)
+    if not proc_exe:
+        print(f"  [primeiro-uso] Processador.exe nao encontrado em {candidatos}")
+        return False
+    print(f"  [primeiro-uso] banco ausente — rodando {proc_exe}")
+    try:
+        # subprocess.run bloqueia ate o Processador terminar. A janela HTML
+        # dele fica visivel pro usuario acompanhar.
+        cp = subprocess.run([proc_exe], cwd=os.path.dirname(proc_exe))
+        print(f"  [primeiro-uso] Processador retornou {cp.returncode}")
+    except Exception as e:
+        print(f"  [primeiro-uso] erro ao rodar Processador: {e!r}")
+        return False
+    DB_PATH = sincronizar_banco()
+    return os.path.exists(DB_PATH)
+
+
 def main():
     global SRV
     verificar_atualizacao()
     banner()
-    if not os.path.exists(DB_PATH):
+    if not _rodar_processador_se_necessario():
         print(f"  [FALHA] banco nao encontrado: {DB_PATH}")
         time.sleep(8)
         return 1
