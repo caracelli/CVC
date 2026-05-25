@@ -1356,8 +1356,14 @@ def _rodar_processador_se_necessario():
     try:
         # subprocess.run bloqueia ate o Processador terminar. A janela HTML
         # dele fica visivel pro usuario acompanhar.
-        cp = subprocess.run([proc_exe], cwd=os.path.dirname(proc_exe))
+        # PROCESSADOR_ON_DONE diz pra aba do Processador redirecionar pra
+        # nosso painel quando terminar (assim a mesma aba "vira" o painel).
+        env = os.environ.copy()
+        env["PROCESSADOR_ON_DONE"] = f"http://{HOST}:{PORT}/"
+        cp = subprocess.run([proc_exe], cwd=os.path.dirname(proc_exe), env=env)
         print(f"  [primeiro-uso] Processador retornou {cp.returncode}")
+        # A aba do Processador vai abrir o painel sozinha — nao abrir outra.
+        os.environ["VISUALIZADOR_NOBROWSER"] = "1"
     except Exception as e:
         print(f"  [primeiro-uso] erro ao rodar Processador: {e!r}")
         return False
