@@ -71,11 +71,11 @@ def main():
     conexao = ConexaoBancoDados(str(app_raiz / cfg.banco_dados))
     conexao.inicializar()
 
-    # Dobra das interacoes multiusuario (.jsonl da rede) nas tabelas de quarentena
+    # Dobra das interacoes (.jsonl) nas tabelas de quarentena. Em modo rede a
+    # pasta esta na raiz compartilhada; em modo local, dentro do app_raiz.
     DobrarInteracoes(
         caminho_banco=str(app_raiz / cfg.banco_dados),
-        pasta_interacoes=(str(Path(cfg.rede_raiz) / cfg.rede_interacoes)
-                          if cfg.rede_raiz else ""),
+        pasta_interacoes=str(app_raiz / cfg.rede_interacoes),
         quarentena_dias=cfg.visualizador_quarentena_dias,
     ).executar()
 
