@@ -88,11 +88,10 @@ def copiar_banco_consistente(destino: Path):
 def montar_projeto_cvc(base: Path):
     """Visualizador + banco (com cenario atual). Para o cliente VER o painel."""
     raiz = base / "CVC_IAM_ANALYTICS"
-    # EXECUTAVEIS
+    # EXECUTAVEIS — somente o exe + config + REPORT + LEIA-ME (sem .py)
     execs = raiz / "EXECUTAVEIS"
     execs.mkdir(parents=True, exist_ok=True)
     shutil.copy2(VISUALIZADOR_EXE, execs / "visualizador.exe")
-    shutil.copy2(VISUALIZADOR_PY, execs / "visualizador.py")
     shutil.copy2(LEIA_ME_EXECS, execs / "LEIA-ME.md")
     # REPORT
     shutil.copytree(REPORT_DIR, execs / "REPORT", dirs_exist_ok=True)

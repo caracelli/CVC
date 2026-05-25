@@ -108,11 +108,11 @@ def montar_rede(base: Path):
     """REDE/CVC_IAM_ANALYTICS/ — vai para o share.
     Banco vazio + arquivos de entrada prontos para o primeiro processamento."""
     raiz = base / "CVC_IAM_ANALYTICS"
+    # EXECUTAVEIS — somente exes + config + REPORT + LEIA-ME (sem .py)
     execs = raiz / "EXECUTAVEIS"
     execs.mkdir(parents=True, exist_ok=True)
     shutil.copy2(PROCESSADOR_EXE, execs / "Processador.exe")
     shutil.copy2(VISUALIZADOR_EXE, execs / "visualizador.exe")
-    shutil.copy2(VISUALIZADOR_PY, execs / "visualizador.py")
     shutil.copy2(LEIA_ME_EXECS, execs / "LEIA-ME.md")
     shutil.copytree(REPORT_DIR, execs / "REPORT", dirs_exist_ok=True)
     grava_config(execs / "CONFIG" / "config.xml", VERSAO_INICIAL, RAIZ_REDE)
@@ -131,11 +131,11 @@ def montar_rede(base: Path):
 
 
 def montar_cliente(base: Path):
-    """CLIENTE/CVC_VISUALIZADOR/ — vai para a maquina-usuario."""
+    """CLIENTE/CVC_VISUALIZADOR/ — vai para a maquina-usuario.
+    Somente o exe + config + REPORT + LEIA-ME (sem .py — fica so no projeto)."""
     raiz = base / "CVC_VISUALIZADOR"
     raiz.mkdir(parents=True, exist_ok=True)
     shutil.copy2(VISUALIZADOR_EXE, raiz / "visualizador.exe")
-    shutil.copy2(VISUALIZADOR_PY, raiz / "visualizador.py")
     shutil.copy2(LEIA_ME_EXECS, raiz / "LEIA-ME.md")
     shutil.copytree(REPORT_DIR, raiz / "REPORT", dirs_exist_ok=True)
     grava_config(raiz / "CONFIG" / "config.xml", VERSAO_INICIAL, RAIZ_REDE)

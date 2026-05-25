@@ -36,9 +36,20 @@ else:
 
 RAIZ_APP = os.path.dirname(BASE)             # CVC_IAM_ANALYTICS (EXECUTAVEIS e' filho dela)
 REPORT_DIR = os.path.join(BASE, "REPORT")    # index.html + chart.umd.min.js
-LOG_PATH = os.path.join(BASE, "visualizador_log.txt")
+# Pasta DADOS local: mantem o cache do banco, WAL/SHM e logs fora do diretorio
+# do exe — o usuario ve so o que precisa (exe + CONFIG + REPORT).
+DADOS_DIR = os.path.join(BASE, "DADOS")
+BANCO_LOCAL = os.path.join(DADOS_DIR, "BANCO", "iam_analytics.db")
+LOG_PATH = os.path.join(DADOS_DIR, "LOGS", "visualizador.log")
 INDEX_PATH = os.path.join(REPORT_DIR, "index.html")
 CONFIG_PATH = os.path.join(BASE, "CONFIG", "config.xml")
+
+# Garante a estrutura DADOS\LOGS\ e DADOS\BANCO\ antes de qualquer escrita
+for _p in (os.path.dirname(LOG_PATH), os.path.dirname(BANCO_LOCAL)):
+    try:
+        os.makedirs(_p, exist_ok=True)
+    except Exception:
+        pass
 
 
 class _Tee:
@@ -143,19 +154,40 @@ def carregar_config():
 REDE_RAIZ, BANCO_SUB, SISTEMA, QUAR_DIAS, CONFIG_SRC = carregar_config()
 
 
+def _precisa_sincronizar(rede_db: str, local_db: str) -> bool:
+    """True se o cache local esta defasado em relacao ao da rede.
+
+    Heuristica (rapida, sem ler o conteudo do arquivo):
+      - sem cache local            -> precisa copiar
+      - tamanhos diferentes        -> precisa copiar (o Processador re-escreveu)
+      - rede modificada apos cache -> precisa copiar
+      - caso contrario             -> cache em dia, pula a copia."""
+    if not os.path.exists(local_db):
+        return True
+    try:
+        if os.path.getsize(rede_db) != os.path.getsize(local_db):
+            return True
+        return os.path.getmtime(rede_db) > os.path.getmtime(local_db)
+    except OSError:
+        return True
+
+
 def sincronizar_banco():
-    """Opcao B: em modo rede, copia o iam_analytics.db da rede para um cache
-    local (backup SQLite consistente) e le da copia local — mais rapido e sem
-    risco de ler durante a escrita do Processador. Sem <rede><raiz>, le o
-    banco local direto."""
+    """Modo rede: copia o iam_analytics.db da rede para um cache local
+    (backup SQLite consistente) so se houver diferenca de tamanho/mtime — caso
+    contrario reusa o cache anterior. Le sempre do cache local. Sem
+    <rede><raiz>, le o banco local direto, sem copia."""
     raiz = REDE_RAIZ if REDE_RAIZ else RAIZ_APP
     rede_db = (BANCO_SUB if os.path.isabs(BANCO_SUB)
                else os.path.join(raiz, BANCO_SUB))
     rede_db = os.path.abspath(rede_db)
     if not REDE_RAIZ:
         return rede_db                        # modo local: le direto
-    local_db = os.path.join(BASE, "iam_analytics.db")
+    local_db = BANCO_LOCAL                    # BASE\DADOS\BANCO\iam_analytics.db
     if os.path.exists(rede_db):
+        if not _precisa_sincronizar(rede_db, local_db):
+            print(f"  [banco] cache local em dia (rede inalterada): {local_db}")
+            return local_db
         try:
             src = sqlite3.connect(f"file:{rede_db}?mode=ro", uri=True, timeout=15)
             dst = sqlite3.connect(local_db, timeout=15)
@@ -1272,8 +1304,8 @@ def verificar_atualizacao():
     try:
         shutil.copytree(rede_exec, BASE, dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns(
-                            "*.old", "*.log", "visualizador_log.txt",
-                            "__pycache__", "*.db-shm", "*.db-wal"))
+                            "*.old", "*.log", "__pycache__",
+                            "DADOS", "*.db", "*.db-shm", "*.db-wal"))
     except Exception as e:
         print(f"  [auto-update] falha ao copiar ({e!r})")
         if not os.path.exists(exe):
