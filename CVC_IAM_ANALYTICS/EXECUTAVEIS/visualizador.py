@@ -179,15 +179,15 @@ DB_PATH = sincronizar_banco()
 
 # ───────────── Interacoes multiusuario (.jsonl na rede) ─────────────
 def caminho_interacoes():
-    """Pasta de interacoes na rede: <rede><raiz> + <rede><interacoes>."""
-    if not REDE_RAIZ:
-        return ""
+    """Pasta de interacoes: <rede><raiz>/<rede><interacoes> em modo rede;
+    RAIZ_APP/<rede><interacoes> em modo local (raiz vazia)."""
     try:
         sub = (ET.parse(CONFIG_PATH).getroot().findtext("rede/interacoes")
                or "INTERACOES").strip()
     except Exception:
         sub = "INTERACOES"
-    return os.path.join(REDE_RAIZ, sub)
+    base = REDE_RAIZ if REDE_RAIZ else RAIZ_APP
+    return os.path.join(base, sub)
 
 
 PASTA_INTERACOES = caminho_interacoes()
@@ -202,7 +202,7 @@ def _interacao_arquivo(usuario):
 def _interacao_gravar(interacao):
     """Anexa uma interacao (dict) ao .jsonl do USUARIO atual na rede."""
     if not PASTA_INTERACOES:
-        raise RuntimeError("pasta de interacoes da rede nao configurada")
+        raise RuntimeError("pasta de interacoes nao configurada")
     os.makedirs(PASTA_INTERACOES, exist_ok=True)
     with open(_interacao_arquivo(USUARIO), "a", encoding="utf-8") as f:
         f.write(json.dumps(interacao, ensure_ascii=False) + "\n")
