@@ -29,16 +29,28 @@ def _texto(caminho: Path, tag: str) -> str:
         return ""
 
 
+def _retry_io(fn, tentativas: int = 5, delay: float = 0.4) -> bool:
+    """Retenta uma operacao de IO algumas vezes — antivirus/Defender pode segurar
+    arquivos por alguns ms apos copia/extracao. Devolve True se OK."""
+    import time
+    for i in range(tentativas):
+        try:
+            fn()
+            return True
+        except Exception:
+            if i == tentativas - 1:
+                return False
+            time.sleep(delay)
+    return False
+
+
 def _limpar_old(diretorio: Path, log) -> None:
     """Remove .old residuais de updates anteriores. Roda sempre, mesmo sem
     update pendente. Silencioso se o arquivo estiver bloqueado."""
     try:
         for antigo in diretorio.glob("*.old"):
-            try:
-                antigo.unlink()
+            if _retry_io(antigo.unlink, tentativas=3, delay=0.3):
                 log(f"[auto-update] removido .old anterior: {antigo.name}")
-            except Exception:
-                pass
     except Exception:
         pass
 
@@ -87,23 +99,19 @@ def _aplicar(exe: Path, exe_dir: Path, rede_exec: Path, log) -> None:
     _limpar_old(exe_dir, log)    # garante que nao ha .old residual
 
     # o exe em execucao nao pode ser sobrescrito: renomeia para .old
+    # Retry porque AV/Defender pode estar segurando o arquivo.
     exe_old = exe.with_name(exe.name + ".old")
-    try:
-        exe.rename(exe_old)
-    except Exception as e:
-        log(f"[auto-update] nao foi possivel liberar o exe ({e!r}) - update abortado")
+    if not _retry_io(lambda: exe.rename(exe_old), tentativas=6, delay=0.5):
+        log("[auto-update] nao foi possivel liberar o exe (WinError 32?) - update abortado")
         return
 
-    try:
+    def _copiar():
         shutil.copytree(rede_exec, exe_dir, dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns(*_IGNORAR))
-    except Exception as e:
-        log(f"[auto-update] falha ao copiar da rede ({e!r}) - restaurando")
+    if not _retry_io(_copiar, tentativas=3, delay=0.5):
+        log("[auto-update] falha ao copiar da rede - restaurando")
         if not exe.exists():
-            try:
-                exe_old.rename(exe)
-            except Exception:
-                pass
+            _retry_io(lambda: exe_old.rename(exe), tentativas=3, delay=0.3)
         return
 
     if not exe.exists():
@@ -115,8 +123,19 @@ def _aplicar(exe: Path, exe_dir: Path, rede_exec: Path, log) -> None:
         return
 
     log("[auto-update] concluido - reiniciando")
+    # Pequena pausa pra file system assentar (AV/indexer pode estar segurando)
+    import time
+    time.sleep(0.5)
     try:
-        subprocess.Popen([str(exe)] + sys.argv[1:], cwd=str(exe_dir))
+        # DETACHED_PROCESS: o novo exe nao herda handles do pai — evita o
+        # "failed to delete temp" do bootloader PyInstaller ao sair.
+        flags = 0
+        if sys.platform == "win32":
+            DETACHED_PROCESS = 0x00000008
+            CREATE_NEW_PROCESS_GROUP = 0x00000200
+            flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+        subprocess.Popen([str(exe)] + sys.argv[1:], cwd=str(exe_dir),
+                         creationflags=flags, close_fds=True)
     except Exception as e:
         log(f"[auto-update] falha ao reiniciar ({e!r})")
         return
