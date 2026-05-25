@@ -53,15 +53,31 @@ for _p in (os.path.dirname(LOG_PATH), os.path.dirname(BANCO_LOCAL)):
 
 
 class _Tee:
+    # Warnings cosmeticos do bootloader PyInstaller --onefile, emitidos no
+    # exit do processo. Acontecem quando o Windows ainda tem DLLs do _MEI
+    # temporario mapeadas; nao afeta funcionalidade alguma (o Windows limpa
+    # o temp sozinho depois). Filtramos pra nao confundir o usuario.
+    _FILTROS_BOOTLOADER = (
+        "Failed to remove temporary directory",
+        "Failed to remove old temporary directory",
+    )
+
     def __init__(self, p):
         self._f = open(p, "a", encoding="utf-8", errors="replace")
         self._o = sys.__stdout__
+
+    def _filtrar(self, s):
+        return any(f in s for f in self._FILTROS_BOOTLOADER)
+
     def write(self, s):
+        if self._filtrar(s):
+            return
         try: self._f.write(s); self._f.flush()
         except Exception: pass
         if self._o:
             try: self._o.write(s); self._o.flush()
             except Exception: pass
+
     def flush(self):
         try: self._f.flush()
         except Exception: pass
@@ -1228,20 +1244,25 @@ border-radius:50%;animation:spin .9s linear infinite;margin:28px auto 20px}
 <p id="status">Baixando nova versão da rede...</p>
 <p class="small">O painel será aberto automaticamente quando a atualização terminar.</p>
 </div><script>
+// O splash nao "sabe" o tempo real da copia (rede + AV imprevisivel).
+// Em vez de status com tempo, deixa "Baixando..." enquanto a copia roda e
+// muda para "Aguardando o painel..." quando o polling do :8800 comeca,
+// indicando que o exe novo deve estar a caminho. Nunca anunciamos "Pronto" —
+// quando o painel responde, redireciona direto.
 const st=document.getElementById('status');
 let baseSt='Baixando nova versão da rede';
-setTimeout(()=>{baseSt='Reiniciando o visualizador';},2500);
-setTimeout(()=>{baseSt='Pronto. Abrindo o painel';},4500);
 let dn=0;
 setInterval(()=>{dn=(dn%6)+1;st.textContent=baseSt+'.'.repeat(dn);},350);
 function tentar(){
+  if(baseSt.indexOf('Aguardando')<0) baseSt='Aguardando o painel ficar pronto';
   const s=document.createElement('script');
   s.onload=()=>window.location.replace('http://127.0.0.1:8800/');
   s.onerror=()=>{s.remove();setTimeout(tentar,700)};
   s.src='http://127.0.0.1:8800/chart.umd.min.js?_='+Date.now();
   document.head.appendChild(s);
 }
-setTimeout(tentar,2000);
+// Da 4s pro Python terminar rename+copy+spawn antes de comecar a pollar
+setTimeout(tentar,4000);
 </script></body></html>"""
 
 
@@ -1273,18 +1294,44 @@ def _retry_io(fn, tentativas=5, delay=0.4):
     return False
 
 
-def _limpar_old():
-    """Remove .exe.old (e demais .old) deixados por uma atualizacao anterior.
-    Roda em TODO startup, nao so quando ha update pendente. Silencioso se o
-    arquivo ainda estiver bloqueado (sera removido no proximo startup)."""
+def _limpar_old(silencioso=False):
+    """Remove .old deixados por atualizacoes anteriores. Tentativa unica,
+    rapida — usado no startup. Para retentar em background apos o startup,
+    use _agendar_limpeza_old() que cobre o caso de AV segurar o arquivo
+    por dezenas de segundos."""
     try:
         for f in os.listdir(BASE):
             if f.endswith(".old"):
                 p = os.path.join(BASE, f)
                 if _retry_io(lambda: os.remove(p), tentativas=3, delay=0.3):
-                    print(f"  [auto-update] removido .old anterior: {f}")
+                    if not silencioso:
+                        print(f"  [auto-update] removido .old anterior: {f}")
     except Exception:
         pass
+
+
+def _agendar_limpeza_old(duracao_s: int = 60):
+    """Retenta a remocao de .old por ate `duracao_s` em background.
+    Necessario porque o Antivirus/Defender pode segurar o .exe.old por
+    bastante tempo enquanto escaneia. O update do exe esta funcionalmente
+    pronto, so a faxina demora."""
+    def _worker():
+        fim = time.time() + duracao_s
+        while time.time() < fim:
+            time.sleep(2.0)
+            try:
+                remanescentes = [f for f in os.listdir(BASE) if f.endswith(".old")]
+                if not remanescentes:
+                    return
+                for f in remanescentes:
+                    try:
+                        os.remove(os.path.join(BASE, f))
+                        print(f"  [auto-update] removido .old (background): {f}")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+    threading.Thread(target=_worker, daemon=True).start()
 
 
 def verificar_atualizacao():
@@ -1294,7 +1341,8 @@ def verificar_atualizacao():
         return
     if not os.path.exists(CONFIG_PATH):
         return
-    _limpar_old()    # ← em todo startup, mesmo sem update agora
+    _limpar_old()                # tentativa rapida no startup
+    _agendar_limpeza_old(60)     # background: ate 60s tentando se o AV segurar
 
     def _txt(p, tag):
         try:
@@ -1322,11 +1370,13 @@ def verificar_atualizacao():
 
     print(f"  [auto-update] atualizando {v_local} -> {v_rede}")
     exe = sys.executable
-    _limpar_old()    # garante que nao ha .old residual antes do novo rename
-    # Retry no rename — WinError 32 acontece quando antivirus/Defender ou o
-    # proprio bootloader ainda esta segurando o handle. Esperar e tentar de
-    # novo normalmente resolve em < 1s.
-    if not _retry_io(lambda: os.rename(exe, exe + ".old"),
+    _limpar_old(silencioso=True)
+    # .old com timestamp: nunca conflita com .old residual de update anterior
+    # (que pode ainda estar travado pelo AV). O _agendar_limpeza_old recolhe
+    # todos os .old depois.
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    exe_old = exe + "." + stamp + ".old"
+    if not _retry_io(lambda: os.rename(exe, exe_old),
                      tentativas=6, delay=0.5):
         print("  [auto-update] nao liberou o exe (WinError 32?) - abortado")
         return
@@ -1338,7 +1388,7 @@ def verificar_atualizacao():
     if not _retry_io(_copiar, tentativas=3, delay=0.5):
         print("  [auto-update] falha ao copiar da rede - restaurando")
         if not os.path.exists(exe):
-            _retry_io(lambda: os.rename(exe + ".old", exe), tentativas=3, delay=0.3)
+            _retry_io(lambda: os.rename(exe_old, exe), tentativas=3, delay=0.3)
         return
     if not os.path.exists(exe):
         try:
