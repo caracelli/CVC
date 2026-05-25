@@ -1259,6 +1259,20 @@ def _abrir_splash_update(v_local, v_rede):
         print(f"  [splash] erro ao abrir: {e!r}")
 
 
+def _retry_io(fn, tentativas=5, delay=0.4):
+    """Tenta uma operacao de IO algumas vezes — antivirus/Defender frequentemente
+    seguram .exe recem-copiados ou em uso por alguns ms. Devolve True se OK."""
+    for i in range(tentativas):
+        try:
+            fn()
+            return True
+        except Exception:
+            if i == tentativas - 1:
+                return False
+            time.sleep(delay)
+    return False
+
+
 def _limpar_old():
     """Remove .exe.old (e demais .old) deixados por uma atualizacao anterior.
     Roda em TODO startup, nao so quando ha update pendente. Silencioso se o
@@ -1267,11 +1281,8 @@ def _limpar_old():
         for f in os.listdir(BASE):
             if f.endswith(".old"):
                 p = os.path.join(BASE, f)
-                try:
-                    os.remove(p)
+                if _retry_io(lambda: os.remove(p), tentativas=3, delay=0.3):
                     print(f"  [auto-update] removido .old anterior: {f}")
-                except Exception:
-                    pass
     except Exception:
         pass
 
@@ -1312,23 +1323,22 @@ def verificar_atualizacao():
     print(f"  [auto-update] atualizando {v_local} -> {v_rede}")
     exe = sys.executable
     _limpar_old()    # garante que nao ha .old residual antes do novo rename
-    try:
-        os.rename(exe, exe + ".old")
-    except Exception as e:
-        print(f"  [auto-update] nao liberou o exe ({e!r}) - abortado")
+    # Retry no rename — WinError 32 acontece quando antivirus/Defender ou o
+    # proprio bootloader ainda esta segurando o handle. Esperar e tentar de
+    # novo normalmente resolve em < 1s.
+    if not _retry_io(lambda: os.rename(exe, exe + ".old"),
+                     tentativas=6, delay=0.5):
+        print("  [auto-update] nao liberou o exe (WinError 32?) - abortado")
         return
-    try:
+    def _copiar():
         shutil.copytree(rede_exec, BASE, dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns(
                             "*.old", "*.log", "__pycache__",
                             "DADOS", "*.db", "*.db-shm", "*.db-wal"))
-    except Exception as e:
-        print(f"  [auto-update] falha ao copiar ({e!r})")
+    if not _retry_io(_copiar, tentativas=3, delay=0.5):
+        print("  [auto-update] falha ao copiar da rede - restaurando")
         if not os.path.exists(exe):
-            try:
-                os.rename(exe + ".old", exe)
-            except Exception:
-                pass
+            _retry_io(lambda: os.rename(exe + ".old", exe), tentativas=3, delay=0.3)
         return
     if not os.path.exists(exe):
         try:
@@ -1338,15 +1348,32 @@ def verificar_atualizacao():
         print("  [auto-update] exe novo ausente apos copia - abortado")
         return
     print("  [auto-update] concluido - reiniciando")
+    # Pequena pausa pra file system assentar (AV/indexer pode estar segurando)
+    time.sleep(0.5)
     try:
         # Splash ja esta aberto no navegador e vai redirecionar pra :8800/
         # quando o novo exe responder. Nao abrir uma segunda aba.
         env = os.environ.copy()
         env["VISUALIZADOR_NOBROWSER"] = "1"
-        subprocess.Popen([exe] + sys.argv[1:], cwd=BASE, env=env)
+        # DETACHED_PROCESS: o novo exe nao herda handles do pai — evita o
+        # "failed to delete temp" do bootloader PyInstaller ao sair.
+        flags = 0
+        if sys.platform == "win32":
+            DETACHED_PROCESS = 0x00000008
+            CREATE_NEW_PROCESS_GROUP = 0x00000200
+            flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+        subprocess.Popen([exe] + sys.argv[1:], cwd=BASE, env=env,
+                         creationflags=flags, close_fds=True)
     except Exception as e:
         print(f"  [auto-update] falha ao reiniciar ({e!r})")
         return
+    # Garante que o handle do log fecha antes do bootloader rodar a limpeza
+    try:
+        if hasattr(sys.stdout, "_f"):
+            sys.stdout._f.flush()
+            sys.stdout._f.close()
+    except Exception:
+        pass
     sys.exit(0)
 
 
