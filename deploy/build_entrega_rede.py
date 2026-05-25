@@ -1,0 +1,382 @@
+"""
+Monta o pacote ENTREGA_REDE.zip — teste end-to-end da arquitetura
+multiusuario apontando para o caminho de rede Z:\\CVC\\CVC_IAM_ANALYTICS.
+
+Conteudo:
+  ENTREGA_REDE/
+    LEIA-ME.txt
+    REDE/                              -> vai para Z:\\CVC\\
+      CVC_IAM_ANALYTICS/...            (exes + ENTRADA com arquivos prontos,
+                                        DADOS/BANCO VAZIO — cliente roda o
+                                        Processador para gerar o iam_analytics.db)
+    CLIENTE/                           -> vai para C:\\CVC\\ de cada usuario
+      CVC_VISUALIZADOR/
+        visualizador.exe + visualizador.py + CONFIG/ + REPORT/ + LEIA-ME.md
+    ATUALIZACAO/                       -> para demonstrar o auto-update
+      CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml   (versao 1.0.1)
+
+Pre-requisito: rodar build_processador.py e build_visualizador.py antes.
+
+Uso:
+    cd deploy
+    python build_entrega_rede.py
+"""
+import shutil
+import sys
+import xml.etree.ElementTree as ET
+import zipfile
+from datetime import datetime
+from pathlib import Path
+
+DEPLOY_DIR = Path(__file__).resolve().parent
+RAIZ = DEPLOY_DIR.parent
+APP = RAIZ / "CVC_IAM_ANALYTICS"
+EXECS = APP / "EXECUTAVEIS"
+ENTREGA = RAIZ / "ENTREGA"
+STAGING = RAIZ / "_entrega_rede_staging"
+
+PROCESSADOR_EXE = EXECS / "Processador.exe"
+VISUALIZADOR_EXE = EXECS / "visualizador.exe"
+VISUALIZADOR_PY = EXECS / "visualizador.py"
+REPORT_DIR = EXECS / "REPORT"
+CONFIG_SRC = EXECS / "CONFIG" / "config.xml"
+LEIA_ME_EXECS = EXECS / "LEIA-ME.md"
+ARQUIVOS_ORIGEM = RAIZ / "Arquivos_origem"
+
+# (origem em Arquivos_origem) -> (subpasta dentro de CVC_IAM_ANALYTICS/ENTRADA)
+ENTRADA_ARQUIVOS = [
+    ("PROJETOIAM (8).CSV",                                       "RH/ATIVOS"),
+    ("PROJETOIAMDESLIGADOS (2).CSV",                             "RH/DESLIGADOS"),
+    ("Mapeamento CCO_CSC (1).xlsx",                              "MATRIZES/ORGANIZACIONAL"),
+    ("MATRIZ DE PERFIL DE ACESSO - SIGOT.xlsx",                  "MATRIZES/PERFIS_SISTEMAS"),
+    ("MATRIZ DE PERFIL DE ACESSO SICA ESFERA.xlsx",              "MATRIZES/PERFIS_SISTEMAS"),
+    ("MATRIZ DE PERFIL DE ACESSO SICA RA.xlsx",                  "MATRIZES/PERFIS_SISTEMAS"),
+    ("MATRIZ DE PERFIL DE ACESSO SYSTUR.xlsx",                   "MATRIZES/PERFIS_SISTEMAS"),
+    ("Matriz de Perfil de Acessso - IC Integrador Contabil.xlsx", "MATRIZES/PERFIS_SISTEMAS"),
+    ("relatorio systur 30.04.xlsx",                              "SISTEMAS/SYSTUR"),
+    # Fase 1 (escopo do teste) e' SYSTUR; os arquivos abaixo ficam no zip
+    # mas o Processador atual so processa SYSTUR. Quando outros sistemas
+    # entrarem em escopo, os arquivos ja estarao no lugar.
+    ("SIGOT_30_04.csv",                                          "SISTEMAS/SIGOT"),
+    ("SICA_RA_30_04.csv",                                        "SISTEMAS/SICA_RA"),
+    ("relatorio IC 30.04.xlsx",                                  "SISTEMAS/IC"),
+]
+
+RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
+VERSAO_INICIAL = "1.0.0"
+VERSAO_NOVA = "1.0.1"
+
+ENTRADA_SUBDIRS = [
+    "RH/ATIVOS", "RH/DESLIGADOS",
+    "SISTEMAS/SIGOT", "SISTEMAS/SICA_RA", "SISTEMAS/SICA_ESFERA",
+    "SISTEMAS/SYSTUR", "SISTEMAS/IC",
+    "MATRIZES/ORGANIZACIONAL", "MATRIZES/PERFIS_SISTEMAS",
+]
+DADOS_SUBDIRS = [
+    "BANCO", "PROCESSADOS", "ERROS", "LOGS",
+    "SAIDAS/DIVERGENCIAS", "SAIDAS/DESLIGADOS",
+    "SAIDAS/TRANSFERIDOS", "SAIDAS/AUDITORIA",
+]
+
+
+def checar_prerequisitos():
+    base = [PROCESSADOR_EXE, VISUALIZADOR_EXE, VISUALIZADOR_PY,
+            CONFIG_SRC, REPORT_DIR / "index.html"]
+    arq_orig = [ARQUIVOS_ORIGEM / nome for nome, _ in ENTRADA_ARQUIVOS]
+    faltando = [str(p) for p in base + arq_orig if not p.exists()]
+    if faltando:
+        print("FALHA — arquivos ausentes:")
+        for f in faltando:
+            print(f"  - {f}")
+        sys.exit(1)
+
+
+def grava_config(destino: Path, versao: str, raiz_valor: str):
+    tree = ET.parse(CONFIG_SRC)
+    root = tree.getroot()
+    n_v = root.find("versao")
+    if n_v is not None:
+        n_v.text = versao
+    n_r = root.find("rede/raiz")
+    if n_r is not None:
+        n_r.text = raiz_valor
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    tree.write(destino, encoding="UTF-8", xml_declaration=True)
+
+
+def montar_rede(base: Path):
+    """REDE/CVC_IAM_ANALYTICS/ — vai para o share.
+    Banco vazio + arquivos de entrada prontos para o primeiro processamento."""
+    raiz = base / "CVC_IAM_ANALYTICS"
+    execs = raiz / "EXECUTAVEIS"
+    execs.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(PROCESSADOR_EXE, execs / "Processador.exe")
+    shutil.copy2(VISUALIZADOR_EXE, execs / "visualizador.exe")
+    shutil.copy2(VISUALIZADOR_PY, execs / "visualizador.py")
+    shutil.copy2(LEIA_ME_EXECS, execs / "LEIA-ME.md")
+    shutil.copytree(REPORT_DIR, execs / "REPORT", dirs_exist_ok=True)
+    grava_config(execs / "CONFIG" / "config.xml", VERSAO_INICIAL, RAIZ_REDE)
+    # ENTRADA com os arquivos prontos para o primeiro processamento
+    for sub in ENTRADA_SUBDIRS:
+        (raiz / "ENTRADA" / sub).mkdir(parents=True, exist_ok=True)
+    for nome_origem, sub_destino in ENTRADA_ARQUIVOS:
+        origem = ARQUIVOS_ORIGEM / nome_origem
+        destino = raiz / "ENTRADA" / sub_destino / nome_origem
+        shutil.copy2(origem, destino)
+    # DADOS esqueleto, SEM banco (cliente roda o Processador para gera-lo)
+    for sub in DADOS_SUBDIRS:
+        (raiz / "DADOS" / sub).mkdir(parents=True, exist_ok=True)
+    # INTERACOES vazia
+    (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
+
+
+def montar_cliente(base: Path):
+    """CLIENTE/CVC_VISUALIZADOR/ — vai para a maquina-usuario."""
+    raiz = base / "CVC_VISUALIZADOR"
+    raiz.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(VISUALIZADOR_EXE, raiz / "visualizador.exe")
+    shutil.copy2(VISUALIZADOR_PY, raiz / "visualizador.py")
+    shutil.copy2(LEIA_ME_EXECS, raiz / "LEIA-ME.md")
+    shutil.copytree(REPORT_DIR, raiz / "REPORT", dirs_exist_ok=True)
+    grava_config(raiz / "CONFIG" / "config.xml", VERSAO_INICIAL, RAIZ_REDE)
+
+
+def montar_atualizacao(base: Path):
+    """ATUALIZACAO/ — config.xml com versao bumpada para demonstrar o auto-update."""
+    raiz = base / "CVC_IAM_ANALYTICS" / "EXECUTAVEIS" / "CONFIG"
+    raiz.mkdir(parents=True, exist_ok=True)
+    grava_config(raiz / "config.xml", VERSAO_NOVA, RAIZ_REDE)
+
+
+LEIA_ME = """\
+ENTREGA_REDE — Teste end-to-end com pasta de rede
+===================================================
+
+Dois zips compoem o teste (cada um e' autoexplicativo, este LEIA-ME
+esta nos dois):
+
+  ENTREGA_REDE_servidor.zip   REDE\\  (vai para Z:\\CVC\\)
+                              ATUALIZACAO\\  (demo do auto-update)
+  ENTREGA_REDE_cliente.zip    CLIENTE\\  (vai para cada maquina-usuario)
+
+Este pacote valida a arquitetura multiusuario: base na rede,
+varios visualizadores escrevendo .jsonl por usuario em INTERACOES/,
+Processador consolidando, auto-update por versao.
+
+Caminho de rede assumido: Z:\\CVC\\CVC_IAM_ANALYTICS
+
+------------------------------------------------------------
+1. PRE-REQUISITO — Drive Z: mapeado
+------------------------------------------------------------
+
+OPCAO A: Z: e' um share de rede real
+    Mapear o drive Z: na maquina/servidor que vai hospedar a base
+    e em cada maquina-usuario. As permissoes devem ser R/W para
+    todos os usuarios do teste.
+
+OPCAO B: Simulacao local (uma maquina, uma "rede" fake)
+    Criar uma pasta local e mapear Z: para ela com subst:
+        mkdir C:\\CVC
+        subst Z: C:\\CVC
+
+    Para desfazer ao final: subst Z: /D
+
+    O subst nao sobrevive a reboot — se rebootar, refaca.
+
+------------------------------------------------------------
+2. SUBIR A "REDE"
+------------------------------------------------------------
+
+Copie o conteudo da pasta REDE\\CVC_IAM_ANALYTICS\\ deste zip
+para  Z:\\CVC\\CVC_IAM_ANALYTICS\\
+
+A pasta REDE\\ ja vem com:
+    EXECUTAVEIS\\  Processador.exe, visualizador.exe, CONFIG\\config.xml
+                  (com <raiz>Z:\\CVC\\CVC_IAM_ANALYTICS</raiz>),
+                  REPORT\\, visualizador.py, LEIA-ME.md
+    ENTRADA\\      arquivos PRONTOS para o primeiro processamento:
+                    RH\\ATIVOS\\PROJETOIAM (8).CSV
+                    RH\\DESLIGADOS\\PROJETOIAMDESLIGADOS (2).CSV
+                    MATRIZES\\ORGANIZACIONAL\\Mapeamento CCO_CSC (1).xlsx
+                    MATRIZES\\PERFIS_SISTEMAS\\MATRIZ DE PERFIL DE ACESSO ...
+                    SISTEMAS\\SYSTUR\\relatorio systur 30.04.xlsx
+                    (SIGOT, SICA_RA, IC tambem ja estao no lugar
+                     para quando entrarem em escopo)
+    DADOS\\         estrutura vazia (Processador grava aqui o iam_analytics.db
+                   e os Excel de saida)
+    INTERACOES\\    vazia (escrita pelos visualizadores)
+
+------------------------------------------------------------
+3. INSTALAR CADA MAQUINA-USUARIO
+------------------------------------------------------------
+
+Em cada maquina onde alguem vai abrir o Visualizador:
+
+    Copie a pasta CLIENTE\\CVC_VISUALIZADOR\\ deste zip para
+    onde preferir (ex.: C:\\CVC\\VISUALIZADOR\\).
+
+    Garanta que o drive Z: esta mapeado nessa maquina.
+
+    Para abrir, basta dois cliques em visualizador.exe — ele:
+      - Compara versao local x rede (auto-update);
+      - Copia o iam_analytics.db da rede para um cache local;
+      - Abre o painel em http://127.0.0.1:8800/
+
+------------------------------------------------------------
+4. PRIMEIRO PROCESSAMENTO (gera o iam_analytics.db)
+------------------------------------------------------------
+
+A base nasce VAZIA. Para gerar o iam_analytics.db inicial, execute
+uma vez (de qualquer maquina com Z: mapeado):
+
+    Z:\\CVC\\CVC_IAM_ANALYTICS\\EXECUTAVEIS\\Processador.exe
+
+O log fica em Z:\\CVC\\CVC_IAM_ANALYTICS\\DADOS\\LOGS\\.
+Esperado ao fim:
+    - Z:\\CVC\\CVC_IAM_ANALYTICS\\DADOS\\BANCO\\iam_analytics.db criado
+    - Excel de divergencias em DADOS\\SAIDAS\\DIVERGENCIAS\\
+    - Arquivos lidos movidos para Z:\\CVC\\CVC_IAM_ANALYTICS\\DADOS\\PROCESSADOS\\
+      (e SISTEMAS\\SYSTUR\\PROCESSADOS\\ para o arquivo do sistema)
+
+A partir dai, abrir o visualizador.exe (em qualquer maquina-cliente)
+ja mostra o cenario processado.
+
+------------------------------------------------------------
+5. TESTE MULTIUSUARIO
+------------------------------------------------------------
+
+CENARIO REAL (duas maquinas, dois usuarios):
+    1. Em cada maquina, abrir visualizador.exe.
+    2. Em cada uma, fazer uma acao diferente:
+         - Maquina A: enviar funcionario X para quarentena.
+         - Maquina B: resolver pendencia do funcionario Y sob ticket.
+    3. Verificar que Z:\\CVC\\CVC_IAM_ANALYTICS\\INTERACOES\\ ficou
+       com DOIS arquivos: interacao_<usuarioA>.jsonl, interacao_<usuarioB>.jsonl.
+    4. Em uma das maquinas, rodar
+       Z:\\CVC\\CVC_IAM_ANALYTICS\\EXECUTAVEIS\\Processador.exe.
+       No log: "Dobra: N interacao(es) consolidada(s) de 'INTERACOES_processando'".
+    5. INTERACOES\\ volta a ficar vazia. Atualizar (F5) o painel em
+       cada maquina — ambas devem ver as duas acoes no Historico.
+
+SIMULACAO LOCAL (uma maquina, dois usuarios sequenciais):
+    Como o visualizador usa porta fixa 8800, rode um de cada vez.
+
+    Terminal 1 (CMD ou PowerShell):
+        set USERNAME=USUARIO_A         (CMD)
+        $env:USERNAME="USUARIO_A"      (PowerShell)
+        C:\\CVC\\VISUALIZADOR\\visualizador.exe
+
+    Faca uma acao (ex.: enviar para quarentena), feche o navegador
+    (encerra o visualizador).
+
+    Mesmo terminal, agora como B:
+        set USERNAME=USUARIO_B
+        C:\\CVC\\VISUALIZADOR\\visualizador.exe
+
+    Faca outra acao (ex.: resolver pendencia), feche.
+
+    Conferir Z:\\CVC\\CVC_IAM_ANALYTICS\\INTERACOES\\:
+      interacao_USUARIO_A.jsonl
+      interacao_USUARIO_B.jsonl
+
+    Rodar o Processador e validar como no cenario real.
+
+------------------------------------------------------------
+6. TESTE DO AUTO-UPDATE
+------------------------------------------------------------
+
+A pasta ATUALIZACAO\\ deste zip traz o mesmo config.xml com
+<versao>1.0.1</versao> (a versao da rede vai estar a frente da
+versao local de cada cliente).
+
+    1. Copie ATUALIZACAO\\CVC_IAM_ANALYTICS\\EXECUTAVEIS\\CONFIG\\config.xml
+       por cima de Z:\\CVC\\CVC_IAM_ANALYTICS\\EXECUTAVEIS\\CONFIG\\config.xml.
+    2. Em uma maquina-usuario, abra C:\\CVC\\VISUALIZADOR\\visualizador.exe.
+    3. No log (visualizador_log.txt, ao lado do exe):
+         [auto-update] atualizando 1.0.0 -> 1.0.1
+         [auto-update] concluido - reiniciando
+    4. O visualizador.exe local foi renomeado para .exe.old, o novo
+       foi copiado da rede, e o processo reiniciou sozinho.
+
+------------------------------------------------------------
+7. CHECAGENS DE BORDA (opcional, mas vale a pena)
+------------------------------------------------------------
+
+- Conflito: rodar o Processador exatamente enquanto um visualizador
+  esta gravando em INTERACOES\\. Esperado: o rename do Processador
+  e' atomico; visualizador segue gravando no novo INTERACOES\\.
+
+- Crash no meio da dobra: matar o Processador durante a fase
+  "Dobra:" e rodar de novo. Esperado: ele recupera a pasta orfa
+  INTERACOES_processando\\ e a consome.
+
+- Rede caida: desconectar Z: e abrir o visualizador. Esperado:
+  log "[auto-update] rede indisponivel - seguindo sem atualizar"
+  e o visualizador roda com o cache local (mas sem multiusuario).
+
+------------------------------------------------------------
+8. LIMPEZA APOS O TESTE
+------------------------------------------------------------
+
+- Visualizadores: matar a aba do navegador.
+- subst (se foi simulacao local): subst Z: /D
+- Apagar Z:\\CVC\\CVC_IAM_ANALYTICS\\ se nao for usar de novo.
+"""
+
+
+def zipar(base: Path, alvo_zip: Path):
+    alvo_zip.parent.mkdir(parents=True, exist_ok=True)
+    if alvo_zip.exists():
+        alvo_zip.unlink()
+    with zipfile.ZipFile(alvo_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+        for p in base.rglob("*"):
+            if p.is_file():
+                arcname = base.name + "/" + str(p.relative_to(base)).replace("\\", "/")
+                zf.write(p, arcname)
+            elif p.is_dir() and not any(p.iterdir()):
+                arcname = base.name + "/" + str(p.relative_to(base)).replace("\\", "/") + "/"
+                zf.writestr(zipfile.ZipInfo(arcname), "")
+
+
+def main():
+    """Divide em dois zips para caber no limite de 100MB do GitHub:
+      - ENTREGA_REDE_servidor.zip  (REDE + ATUALIZACAO + LEIA-ME)
+      - ENTREGA_REDE_cliente.zip   (CLIENTE + LEIA-ME)
+    O LEIA-ME vai em ambos para que cada zip seja autoexplicativo."""
+    print("=== Build ENTREGA_REDE (dois zips) ===")
+    checar_prerequisitos()
+
+    if STAGING.exists():
+        shutil.rmtree(STAGING)
+    STAGING.mkdir(parents=True, exist_ok=True)
+    ENTREGA.mkdir(parents=True, exist_ok=True)
+
+    inicio = datetime.now()
+
+    # --- ZIP 1: SERVIDOR (rede + atualizacao) ---
+    print("\n[1/2] Montando ENTREGA_REDE_servidor (REDE + ATUALIZACAO)")
+    serv = STAGING / "ENTREGA_REDE_servidor"
+    serv.mkdir()
+    (serv / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
+    montar_rede(serv / "REDE")
+    montar_atualizacao(serv / "ATUALIZACAO")
+    alvo_serv = ENTREGA / "ENTREGA_REDE_servidor.zip"
+    zipar(serv, alvo_serv)
+    print(f"  OK -> {alvo_serv}  ({alvo_serv.stat().st_size/1024/1024:.1f} MB)")
+
+    # --- ZIP 2: CLIENTE ---
+    print("\n[2/2] Montando ENTREGA_REDE_cliente (CLIENTE)")
+    cli = STAGING / "ENTREGA_REDE_cliente"
+    cli.mkdir()
+    (cli / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
+    montar_cliente(cli / "CLIENTE")
+    alvo_cli = ENTREGA / "ENTREGA_REDE_cliente.zip"
+    zipar(cli, alvo_cli)
+    print(f"  OK -> {alvo_cli}  ({alvo_cli.stat().st_size/1024/1024:.1f} MB)")
+
+    shutil.rmtree(STAGING)
+    print(f"\nConcluido em {(datetime.now()-inicio).total_seconds():.1f}s.")
+
+
+if __name__ == "__main__":
+    main()
