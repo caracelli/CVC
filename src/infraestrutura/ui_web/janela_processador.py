@@ -83,12 +83,27 @@ function tick(){
     if (d.done){
       card.classList.add(d.erro ? 'err' : 'done');
       btn.disabled = false;
-      return;  // para de pollar
+      if (d.on_done_url && !d.erro) {
+        // Auto-launch pelo visualizador: a aba do Processador "vira" a aba do
+        // painel quando este responder. Polla via <script src=...> (sem CORS).
+        stEl.textContent = 'Concluído. Aguardando o painel...';
+        pollar_painel(d.on_done_url);
+      }
+      return;
     }
     setTimeout(tick, 500);
   }).catch(()=> setTimeout(tick, 1200));
 }
 tick();
+
+function pollar_painel(url){
+  const base = url.endsWith('/') ? url : url + '/';
+  const s = document.createElement('script');
+  s.onload = () => window.location.replace(base);
+  s.onerror = () => { s.remove(); setTimeout(() => pollar_painel(url), 700); };
+  s.src = base + 'chart.umd.min.js?_=' + Date.now();
+  document.head.appendChild(s);
+}
 
 function fechar(){
   // window.close() so funciona em janelas abertas por JS; em aba normal
@@ -132,11 +147,13 @@ class _Estado:
                 "done": self._done,
                 "erro": self._erro,
                 "status": self._status,
+                "on_done_url": _ON_DONE_URL,
             }
 
 
 _ESTADO = _Estado()
 _SRV = None
+_ON_DONE_URL = ""    # se setado, a pagina redireciona pra ca quando done=True
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -179,9 +196,15 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def iniciar(porta_inicial: int = 8801, abrir_navegador: bool = True) -> str:
-    """Sobe o servidor da UI e abre o navegador. Devolve a URL final."""
-    global _SRV
+def iniciar(porta_inicial: int = 8801, abrir_navegador: bool = True,
+            on_done_url: str = "") -> str:
+    """Sobe o servidor da UI e abre o navegador. Devolve a URL final.
+
+    Se `on_done_url` for passada, a pagina redireciona pra essa URL quando
+    a execucao terminar (usado pelo visualizador para reaproveitar a aba
+    do Processador como aba do painel)."""
+    global _SRV, _ON_DONE_URL
+    _ON_DONE_URL = on_done_url or ""
     porta = None
     for tentativa in range(porta_inicial, porta_inicial + 10):
         try:

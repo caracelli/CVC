@@ -82,8 +82,11 @@ def main():
     # Sobe a janela HTML (substitui o terminal — Processador.exe e' --noconsole).
     # Em dev (script .py), tambem abre, util pra depurar.
     abre_navegador = os.environ.get("PROCESSADOR_NOBROWSER") != "1"
+    # Se o visualizador nos lancou, ele setou PROCESSADOR_ON_DONE com a URL do
+    # painel — a aba do Processador redireciona pra la quando terminar.
+    on_done = os.environ.get("PROCESSADOR_ON_DONE", "")
     try:
-        ui.iniciar(abrir_navegador=abre_navegador)
+        ui.iniciar(abrir_navegador=abre_navegador, on_done_url=on_done)
     except Exception as e:
         print(f"[ui] falha ao iniciar janela HTML: {e!r}")
     _ligar_sink_ui()
