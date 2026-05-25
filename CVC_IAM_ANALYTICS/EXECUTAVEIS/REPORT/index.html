@@ -688,6 +688,7 @@ let _procT = 0;
 proc(true);   /* overlay "Processando" visível desde a abertura da página */
 
 function showPage(tab){
+  _tabAtual = tab;
   proc(true);
   // 2 frames: deixa o overlay PINTAR antes do trabalho pesado da troca
   requestAnimationFrame(() => requestAnimationFrame(async () => {
@@ -1139,6 +1140,42 @@ function toggleSubs(btn){
   btn.textContent = isOpen ? '+' : '-';
 }
 
+/* ── Auto-refresh por ociosidade (10s sem interacao) ──────────────────── */
+/* Cada interacao reseta o timer. Se o timer estourar sem nada acontecer,
+ * recarrega silenciosamente a aba ativa (sem mexer em filtros/scroll).
+ * Modal aberto ou aba escondida: o tick pula; fecharModal e visibilitychange
+ * re-armam quando o estado normaliza. */
+let _refreshTimer = null;
+let _tabAtual = 'vg';
+const REFRESH_MS = 10000;
+
+function _modalAberto(){
+  const bg = document.getElementById('modal-bg');
+  return !!bg && bg.classList.contains('show');
+}
+function agendarAutoRefresh(){
+  if (_refreshTimer) clearTimeout(_refreshTimer);
+  _refreshTimer = setTimeout(_tickAutoRefresh, REFRESH_MS);
+}
+async function _tickAutoRefresh(){
+  if (_modalAberto() || document.hidden) return;  // re-armado em fecharModal/visibilitychange
+  await recarregarAbaAtual();
+  agendarAutoRefresh();
+}
+function atualizarHeaderMeta(){
+  const M = DB.meta || {};
+  const elRef = document.querySelector('.hdr-ref');
+  const elUpd = document.querySelector('.hdr-upd');
+  if (elRef) elRef.textContent = 'Referência: ' + (M.referencia || '—');
+  if (elUpd) elUpd.textContent = 'Última atualização: ' + (M.atualizacao || '—');
+}
+async function recarregarAbaAtual(){
+  await refreshDB();
+  if (_tabAtual === 'quar') await renderQuarentena();
+  else if (_tabAtual === 'hist') await renderHistorico();
+  else if (_tabAtual !== 'consulta') { renderMatrix(); aplicarKPIs(); }
+}
+
 /* ── Quarentena (botão na grid → grava no SQLite via servidor) ─────────── */
 async function refreshDB(){
   try{
@@ -1146,7 +1183,10 @@ async function refreshDB(){
     const d = await r.json();
     DB.kpis = d.kpis; DB.acao_dist = d.acao_dist;
     DB.sis_dist = d.sis_dist; DB.users = d.users;
+    if (d.meta) DB.meta = d.meta;
+    atualizarHeaderMeta();
   }catch(e){ /* mantém dados atuais se falhar */ }
+  agendarAutoRefresh();   // toda interacao reseta a contagem de 10s
 }
 /* ── Overlay "Processando" (mínimo de exibição evita piscar) ──────────── */
 function proc(on){
@@ -1207,6 +1247,7 @@ function _modal(html, cls){
 function fecharModal(){
   document.getElementById('modal-bg').classList.remove('show');
   _resAlvo = null;
+  agendarAutoRefresh();   // tick foi pausado enquanto o modal estava aberto
 }
 
 function abrirResolver(uid){
@@ -1894,18 +1935,17 @@ document.addEventListener('DOMContentLoaded', () => {
   ping();
   setInterval(ping, 4000);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) ping();
+    if (!document.hidden) { ping(); agendarAutoRefresh(); }
   });
   window.addEventListener('pagehide', () => {
     if (navigator.sendBeacon) navigator.sendBeacon('/api/encerrar', SESSAO);
   });
 
   // Labels do header a partir das datas da base
-  const M = DB.meta || {};
-  const elRef = document.querySelector('.hdr-ref');
-  const elUpd = document.querySelector('.hdr-upd');
-  if (elRef) elRef.textContent = 'Referência: ' + (M.referencia || '—');
-  if (elUpd) elUpd.textContent = 'Última atualização: ' + (M.atualizacao || '—');
+  atualizarHeaderMeta();
+
+  // Inicia o ciclo de auto-refresh por ociosidade
+  agendarAutoRefresh();
 
   // Overlay já visível desde o topo do script: 2 frames p/ ele pintar,
   // depois a renderização pesada (grade/gráficos), e então esconde.
