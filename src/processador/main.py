@@ -9,7 +9,6 @@ if not getattr(sys, "frozen", False):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from infraestrutura.configuracao.leitor_config import LeitorConfig
-from infraestrutura.atualizacao.auto_update import verificar_atualizacao
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.ui_web import janela_processador as ui
 from aplicacao.casos_de_uso.importar_rh import ImportarRh
@@ -26,8 +25,8 @@ from dominio.objetos_valor.sistema import Sistema
 
 def _caminho_config() -> Path:
     if getattr(sys, "frozen", False):
-        # Executável em EXECUTAVEIS/, config em EXECUTAVEIS/CONFIG/config.xml
-        return Path(sys.executable).parent / "CONFIG" / "config.xml"
+        # Executavel em EXECUTAVEIS/launcher/, config em EXECUTAVEIS/CONFIG/
+        return Path(sys.executable).parent.parent / "CONFIG" / "config.xml"
     # Script em src/processador/main.py
     return (Path(__file__).resolve().parent.parent.parent
             / "CVC_IAM_ANALYTICS" / "EXECUTAVEIS" / "CONFIG" / "config.xml")
@@ -115,8 +114,8 @@ def _executar(caminho_config: Path) -> int:
         logger.error(f"config.xml não encontrado: {caminho_config}")
         return 1
 
-    # Auto-update: se a versao da rede diferir, copia e re-executa (encerra aqui)
-    verificar_atualizacao(logger.info)
+    # Auto-update agora e' responsabilidade do principal (Processador.exe
+    # no top level) e do launcher_atualizador.exe. Este motor so PROCESSA.
 
     cfg = LeitorConfig(str(caminho_config)).carregar()
     # Raiz dos dados: rede (se <rede><raiz> definido) ou local (modo dev).
@@ -126,7 +125,12 @@ def _executar(caminho_config: Path) -> int:
             logger.error(f"Raiz de rede inacessível: {app_raiz} — abortando.")
             sys.exit(1)
     else:
-        # config em EXECUTAVEIS/CONFIG/ -> raiz do app sobe tres niveis
+        # config em EXECUTAVEIS/launcher/CONFIG/ NAO existe — config esta em
+        # EXECUTAVEIS/CONFIG/. Sobe 4 niveis: config -> CONFIG -> EXECUTAVEIS/launcher
+        # nao, esperar: o exe esta em EXECUTAVEIS/launcher/, e config_path foi
+        # calculado como ../CONFIG/config.xml. Entao caminho_config tem
+        # 4 niveis ate a raiz do app:
+        #   config.xml -> CONFIG -> EXECUTAVEIS -> CVC_IAM_ANALYTICS
         app_raiz = caminho_config.parent.parent.parent
 
     configurar_log(str(app_raiz / cfg.saida_logs))

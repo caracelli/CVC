@@ -57,10 +57,13 @@ Arquivos_origem/
 Thumbs.db
 desktop.ini
 
-# Executáveis gerados
+# Executaveis gerados (v2.0+: 2 principais + 3 launchers, gerados via build_all.py)
 CVC_IAM_ANALYTICS/EXECUTAVEIS/*.exe
+CVC_IAM_ANALYTICS/EXECUTAVEIS/launcher/*.exe
+CVC_IAM_ANALYTICS/EXECUTAVEIS/launcher/*.old
 
-# Visualizador — log de runtime, copias .old do auto-update e cache local do DB
+# DADOS local (cache do banco, logs do visualizador, .old do auto-update)
+CVC_IAM_ANALYTICS/EXECUTAVEIS/DADOS/
 CVC_IAM_ANALYTICS/EXECUTAVEIS/visualizador_log.txt
 CVC_IAM_ANALYTICS/EXECUTAVEIS/*.old
 CVC_IAM_ANALYTICS/EXECUTAVEIS/*.db

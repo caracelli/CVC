@@ -29,20 +29,23 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST, PORT = "127.0.0.1", 8800
 
+# Este exe (launcher_visualizador.exe) mora em EXECUTAVEIS\launcher\.
+# BASE_EXE = pasta do exe; BASE_APP = pai dela (EXECUTAVEIS\).
+# CONFIG, REPORT e DADOS sao referenciados a partir de BASE_APP.
 if getattr(sys, "frozen", False):
-    BASE = os.path.dirname(sys.executable)
+    BASE_EXE = os.path.dirname(sys.executable)
 else:
-    BASE = os.path.dirname(os.path.abspath(__file__))
-
-RAIZ_APP = os.path.dirname(BASE)             # CVC_IAM_ANALYTICS (EXECUTAVEIS e' filho dela)
-REPORT_DIR = os.path.join(BASE, "REPORT")    # index.html + chart.umd.min.js
-# Pasta DADOS local: mantem o cache do banco, WAL/SHM e logs fora do diretorio
-# do exe — o usuario ve so o que precisa (exe + CONFIG + REPORT).
-DADOS_DIR = os.path.join(BASE, "DADOS")
+    BASE_EXE = os.path.dirname(os.path.abspath(__file__))
+BASE_APP = os.path.dirname(BASE_EXE)          # EXECUTAVEIS\
+RAIZ_APP = os.path.dirname(BASE_APP)          # CVC_IAM_ANALYTICS\
+REPORT_DIR = os.path.join(BASE_APP, "REPORT")
+DADOS_DIR = os.path.join(BASE_APP, "DADOS")
 BANCO_LOCAL = os.path.join(DADOS_DIR, "BANCO", "iam_analytics.db")
 LOG_PATH = os.path.join(DADOS_DIR, "LOGS", "visualizador.log")
 INDEX_PATH = os.path.join(REPORT_DIR, "index.html")
-CONFIG_PATH = os.path.join(BASE, "CONFIG", "config.xml")
+CONFIG_PATH = os.path.join(BASE_APP, "CONFIG", "config.xml")
+# Alias historico — algumas funcoes mais abaixo ainda usam BASE.
+BASE = BASE_APP
 
 # Garante a estrutura DADOS\LOGS\ e DADOS\BANCO\ antes de qualquer escrita
 for _p in (os.path.dirname(LOG_PATH), os.path.dirname(BANCO_LOCAL)):
@@ -1220,252 +1223,32 @@ def banner():
     print("=" * 64)
 
 
-_SPLASH_UPDATE_HTML = """<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>IAM Analytics — Atualizando</title><style>
-*{box-sizing:border-box}body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;
-background:linear-gradient(180deg,#f5f6fa 0%,#e7ebf2 100%);margin:0;min-height:100vh;
-display:flex;align-items:center;justify-content:center}
-.card{background:#fff;border-radius:14px;padding:44px 52px;
-box-shadow:0 8px 28px rgba(31,45,92,.12);text-align:center;max-width:480px}
-.brand{color:#1F2D5C;font:700 11.5px Arial;letter-spacing:.1em;margin-bottom:6px}
-h1{color:#1F2D5C;margin:0 0 6px;font:700 22px Arial}
-.sub{color:#7B8085;font:400 13px Arial;margin:0}
-.ver{color:#1F2D5C;font-weight:700}
-.spinner{width:44px;height:44px;border:4px solid #E7EBF2;border-top-color:#1F2D5C;
-border-radius:50%;animation:spin .9s linear infinite;margin:28px auto 20px}
-@keyframes spin{to{transform:rotate(360deg)}}
-#status{color:#3A3F4C;font:600 14px Arial;margin:0 0 4px}
-.small{color:#8A9099;font:400 11.5px Arial;margin-top:18px}
-</style></head><body><div class="card">
-<div class="brand">CVC · IAM ANALYTICS</div>
-<h1>Atualizando para nova versão</h1>
-<p class="sub">Versão <span class="ver">__V_LOCAL__</span> → <span class="ver">__V_REDE__</span></p>
-<div class="spinner"></div>
-<p id="status">Baixando nova versão da rede...</p>
-<p class="small">O painel será aberto automaticamente quando a atualização terminar.</p>
-</div><script>
-// O splash nao "sabe" o tempo real da copia (rede + AV imprevisivel).
-// Em vez de status com tempo, deixa "Baixando..." enquanto a copia roda e
-// muda para "Aguardando o painel..." quando o polling do :8800 comeca,
-// indicando que o exe novo deve estar a caminho. Nunca anunciamos "Pronto" —
-// quando o painel responde, redireciona direto.
-const st=document.getElementById('status');
-let baseSt='Baixando nova versão da rede';
-let dn=0;
-setInterval(()=>{dn=(dn%6)+1;st.textContent=baseSt+'.'.repeat(dn);},350);
-function tentar(){
-  if(baseSt.indexOf('Aguardando')<0) baseSt='Aguardando o painel ficar pronto';
-  const s=document.createElement('script');
-  s.onload=()=>window.location.replace('http://127.0.0.1:8800/');
-  s.onerror=()=>{s.remove();setTimeout(tentar,700)};
-  s.src='http://127.0.0.1:8800/chart.umd.min.js?_='+Date.now();
-  document.head.appendChild(s);
-}
-// Da 4s pro Python terminar rename+copy+spawn antes de comecar a pollar
-setTimeout(tentar,4000);
-</script></body></html>"""
-
-
-def _abrir_splash_update(v_local, v_rede):
-    """Salva o splash HTML em %TEMP% e abre no navegador padrao."""
-    try:
-        html = (_SPLASH_UPDATE_HTML
-                .replace("__V_LOCAL__", v_local or "—")
-                .replace("__V_REDE__", v_rede or "—"))
-        p = os.path.join(tempfile.gettempdir(), "cvc_iam_atualizando.html")
-        with open(p, "w", encoding="utf-8") as f:
-            f.write(html)
-        webbrowser.open("file:///" + p.replace("\\", "/"))
-    except Exception as e:
-        print(f"  [splash] erro ao abrir: {e!r}")
-
-
-def _retry_io(fn, tentativas=5, delay=0.4):
-    """Tenta uma operacao de IO algumas vezes — antivirus/Defender frequentemente
-    seguram .exe recem-copiados ou em uso por alguns ms. Devolve True se OK."""
-    for i in range(tentativas):
-        try:
-            fn()
-            return True
-        except Exception:
-            if i == tentativas - 1:
-                return False
-            time.sleep(delay)
-    return False
-
-
-def _limpar_old(silencioso=False):
-    """Remove .old deixados por atualizacoes anteriores. Tentativa unica,
-    rapida — usado no startup. Para retentar em background apos o startup,
-    use _agendar_limpeza_old() que cobre o caso de AV segurar o arquivo
-    por dezenas de segundos."""
-    try:
-        for f in os.listdir(BASE):
-            if f.endswith(".old"):
-                p = os.path.join(BASE, f)
-                if _retry_io(lambda: os.remove(p), tentativas=3, delay=0.3):
-                    if not silencioso:
-                        print(f"  [auto-update] removido .old anterior: {f}")
-    except Exception:
-        pass
-
-
-def _agendar_limpeza_old(duracao_s: int = 60):
-    """Retenta a remocao de .old por ate `duracao_s` em background.
-    Necessario porque o Antivirus/Defender pode segurar o .exe.old por
-    bastante tempo enquanto escaneia. O update do exe esta funcionalmente
-    pronto, so a faxina demora."""
-    def _worker():
-        fim = time.time() + duracao_s
-        while time.time() < fim:
-            time.sleep(2.0)
-            try:
-                remanescentes = [f for f in os.listdir(BASE) if f.endswith(".old")]
-                if not remanescentes:
-                    return
-                for f in remanescentes:
-                    try:
-                        os.remove(os.path.join(BASE, f))
-                        print(f"  [auto-update] removido .old (background): {f}")
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-    threading.Thread(target=_worker, daemon=True).start()
-
-
-def verificar_atualizacao():
-    """Auto-update: compara <versao> local x rede; se diferir, copia e reinicia.
-    No-op fora do exe. Rede indisponivel: avisa e segue."""
-    if not getattr(sys, "frozen", False):
-        return
-    if not os.path.exists(CONFIG_PATH):
-        return
-    _limpar_old()                # tentativa rapida no startup
-    _agendar_limpeza_old(60)     # background: ate 60s tentando se o AV segurar
-
-    def _txt(p, tag):
-        try:
-            return (ET.parse(p).getroot().findtext(tag) or "").strip()
-        except Exception:
-            return ""
-
-    base = _txt(CONFIG_PATH, "rede/raiz")
-    if not base:
-        return
-    rede_exec = os.path.join(base, _txt(CONFIG_PATH, "rede/executaveis") or "EXECUTAVEIS")
-    cfg_rede = os.path.join(rede_exec, "CONFIG", "config.xml")
-    if not os.path.exists(cfg_rede):
-        print(f"  [auto-update] rede indisponivel ({cfg_rede}) - seguindo")
-        return
-    v_local, v_rede = _txt(CONFIG_PATH, "versao"), _txt(cfg_rede, "versao")
-    if not v_rede or v_local == v_rede:
-        return
-    if os.path.normcase(BASE).startswith(os.path.normcase(rede_exec)):
-        return  # rodando direto da rede
-
-    # Splash visivel antes da copia (visualizador.exe e' --noconsole, sem terminal)
-    _abrir_splash_update(v_local, v_rede)
-    time.sleep(0.8)  # da tempo do browser pintar o splash
-
-    print(f"  [auto-update] atualizando {v_local} -> {v_rede}")
-    exe = sys.executable
-    _limpar_old(silencioso=True)
-    # .old com timestamp: nunca conflita com .old residual de update anterior
-    # (que pode ainda estar travado pelo AV). O _agendar_limpeza_old recolhe
-    # todos os .old depois.
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    exe_old = exe + "." + stamp + ".old"
-    if not _retry_io(lambda: os.rename(exe, exe_old),
-                     tentativas=6, delay=0.5):
-        print("  [auto-update] nao liberou o exe (WinError 32?) - abortado")
-        return
-    def _copiar():
-        shutil.copytree(rede_exec, BASE, dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns(
-                            "*.old", "*.log", "__pycache__",
-                            "DADOS", "*.db", "*.db-shm", "*.db-wal"))
-    if not _retry_io(_copiar, tentativas=3, delay=0.5):
-        print("  [auto-update] falha ao copiar da rede - restaurando")
-        if not os.path.exists(exe):
-            _retry_io(lambda: os.rename(exe_old, exe), tentativas=3, delay=0.3)
-        return
-    if not os.path.exists(exe):
-        try:
-            os.rename(exe + ".old", exe)
-        except Exception:
-            pass
-        print("  [auto-update] exe novo ausente apos copia - abortado")
-        return
-    print("  [auto-update] concluido - reiniciando")
-    # Pequena pausa pra file system assentar (AV/indexer pode estar segurando)
-    time.sleep(0.5)
-    try:
-        # Splash ja esta aberto no navegador e vai redirecionar pra :8800/
-        # quando o novo exe responder. Nao abrir uma segunda aba.
-        env = os.environ.copy()
-        env["VISUALIZADOR_NOBROWSER"] = "1"
-        # DETACHED_PROCESS: o novo exe nao herda handles do pai — evita o
-        # "failed to delete temp" do bootloader PyInstaller ao sair.
-        flags = 0
-        if sys.platform == "win32":
-            DETACHED_PROCESS = 0x00000008
-            CREATE_NEW_PROCESS_GROUP = 0x00000200
-            flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
-        subprocess.Popen([exe] + sys.argv[1:], cwd=BASE, env=env,
-                         creationflags=flags, close_fds=True)
-    except Exception as e:
-        print(f"  [auto-update] falha ao reiniciar ({e!r})")
-        return
-    # Garante que o handle do log fecha antes do bootloader rodar a limpeza
-    try:
-        if hasattr(sys.stdout, "_f"):
-            sys.stdout._f.flush()
-            sys.stdout._f.close()
-    except Exception:
-        pass
-    # Redireciona stdout/stderr OS-level pra NUL — o bootloader PyInstaller, ao
-    # sair, escreve "Failed to remove temporary directory" no stderr C, fora do
-    # alcance do _Tee. Como o processo ja vai morrer, podemos descartar.
-    try:
-        nul = os.open("NUL" if sys.platform == "win32" else "/dev/null",
-                      os.O_WRONLY)
-        os.dup2(nul, 1)
-        os.dup2(nul, 2)
-    except Exception:
-        pass
-    sys.exit(0)
-
-
 def _rodar_processador_se_necessario():
-    """Se o banco nao existe, tenta rodar o Processador (na rede ou local).
-    O Processador.exe abre sua propria janela HTML com o log; bloqueamos
-    aqui ate ele terminar e entao re-sincronizamos o banco.
-    Devolve True se ha banco utilizavel depois, False se nao deu jeito."""
+    """Se o banco nao existe, roda o launcher_processador.exe (motor) e
+    bloqueia ate terminar.
+
+    Chamamos o motor DIRETO (nao o principal Processador.exe), porque queremos
+    bloquear esperando processamento concluir — o principal e' fire-and-forget
+    (spawn DETACHED). Auto-update do motor nao e' necessario aqui: se o
+    visualizador esta rodando, sua versao casa com a do motor irmao."""
     global DB_PATH
     if os.path.exists(DB_PATH):
         return True
-    # Procura o Processador.exe na rede primeiro, depois localmente
     candidatos = []
     if REDE_RAIZ:
-        sub = os.path.join("EXECUTAVEIS", "Processador.exe")
-        candidatos.append(os.path.join(REDE_RAIZ, sub))
-    candidatos.append(os.path.join(BASE, "Processador.exe"))
+        candidatos.append(os.path.join(REDE_RAIZ, "EXECUTAVEIS", "launcher",
+                                       "launcher_processador.exe"))
+    candidatos.append(os.path.join(BASE_EXE, "launcher_processador.exe"))
     proc_exe = next((p for p in candidatos if os.path.exists(p)), None)
     if not proc_exe:
-        print(f"  [primeiro-uso] Processador.exe nao encontrado em {candidatos}")
+        print(f"  [primeiro-uso] launcher_processador.exe nao encontrado em {candidatos}")
         return False
     print(f"  [primeiro-uso] banco ausente — rodando {proc_exe}")
     try:
-        # subprocess.run bloqueia ate o Processador terminar. A janela HTML
-        # dele fica visivel pro usuario acompanhar.
-        # PROCESSADOR_ON_DONE diz pra aba do Processador redirecionar pra
-        # nosso painel quando terminar (assim a mesma aba "vira" o painel).
         env = os.environ.copy()
         env["PROCESSADOR_ON_DONE"] = f"http://{HOST}:{PORT}/"
         cp = subprocess.run([proc_exe], cwd=os.path.dirname(proc_exe), env=env)
         print(f"  [primeiro-uso] Processador retornou {cp.returncode}")
-        # A aba do Processador vai abrir o painel sozinha — nao abrir outra.
         os.environ["VISUALIZADOR_NOBROWSER"] = "1"
     except Exception as e:
         print(f"  [primeiro-uso] erro ao rodar Processador: {e!r}")
@@ -1476,7 +1259,8 @@ def _rodar_processador_se_necessario():
 
 def main():
     global SRV
-    verificar_atualizacao()
+    # Auto-update agora e' responsabilidade do principal (visualizador.exe no
+    # top level) e do launcher_atualizador.exe. Este core so SERVE o painel.
     banner()
     if not _rodar_processador_se_necessario():
         print(f"  [FALHA] banco nao encontrado: {DB_PATH}")
