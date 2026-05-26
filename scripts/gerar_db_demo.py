@@ -522,12 +522,18 @@ def gerar_validacoes(ativos, acessos):
             status = "OK"
         else:
             status = "DIVERGENTE"
+        # data_identificacao no PASSADO (30-60 dias atras): garante que
+        # quando essa matricula for resolvida, o resolvido_em fica DEPOIS.
+        di_inicio = HOJE - timedelta(days=60)
+        di_fim = HOJE - timedelta(days=30)
+        data_id = data_aleatoria(di_inicio, di_fim)
         validacoes.append({
             "f": f, "perfil_esp": "|".join(perfis_esp),
             "perfil_atual": perfil_atual or "",
             "status": status,                       # SEM_ACESSO|DIVERGENTE|EM_ANALISE|OK
             "origem": "MATRIZ",                     # origem_matriz: MATRIZ|CCO
             "dt": agora,
+            "data_identificacao": fmt_dt(datetime.combine(data_id, datetime.min.time())),
         })
     return validacoes
 
@@ -629,63 +635,78 @@ def inserir_divergencias(cur, divs):
 def inserir_bi_divergencias(cur, divs, validacoes):
     """A tabela bi_divergencias e' o snapshot consolidado para o painel.
     Combina: validacao_acessos (com acao) + divergencias com tipo
-    ACESSO_SEM_VINCULO_RH."""
-    agora = fmt_dt(datetime.now())
-    # 1. validacoes
+    ACESSO_SEM_VINCULO_RH. A data_identificacao vem da propria validacao
+    (no passado) — assim resolucoes futuras ficam coerentes (resolvido
+    SEMPRE depois de identificado)."""
+    # 1. validacoes (com data_identificacao no passado)
     for v in validacoes:
         if v["status"] == "OK":
             continue
         f = v["f"]
-        # acao label
-        if v["status"] == "SEM_ACESSO":
-            acao = "Incluir Acesso"
-        elif v["status"] == "DIVERGENTE":
-            acao = "Alterar Perfil"
-        elif v["status"] == "EM_ANALISE":
-            acao = "Em Análise"
-        else:
-            acao = "OK"
+        if v["status"] == "SEM_ACESSO":   acao = "Incluir Acesso"
+        elif v["status"] == "DIVERGENTE": acao = "Alterar Perfil"
+        elif v["status"] == "EM_ANALISE": acao = "Em Análise"
+        else:                              acao = "OK"
         cur.execute("""INSERT INTO bi_divergencias VALUES
             (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (f"VAL{f['matricula']}", v["status"], "SYSTUR",
              str(f["matricula"]), f["nome"], str(f["matricula"]),
              v["perfil_atual"], v["perfil_esp"], "",
-             agora, 0, acao, "MATRIZ"))
-    # 2. acesso sem vinculo
+             v["data_identificacao"], 0, acao, "MATRIZ"))
+    # 2. acesso sem vinculo — data tambem no passado pra coerencia
+    di_inicio = HOJE - timedelta(days=60)
+    di_fim = HOJE - timedelta(days=30)
     for d in divs:
         if d["tipo"] != "ACESSO_SEM_VINCULO_RH":
             continue
+        data_id = fmt_dt(datetime.combine(
+            data_aleatoria(di_inicio, di_fim), datetime.min.time()))
         cur.execute("""INSERT INTO bi_divergencias VALUES
             (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (d["id"], d["tipo"], "SYSTUR", d["usuario"],
              d["nome_usuario"], "", d["perfil_encontrado"], "",
-             d["descricao"], agora, 0, "Não Mapeado", ""))
+             d["descricao"], data_id, 0, "Não Mapeado", ""))
 
 
-def gerar_resolucoes(ativos, n=10):
-    """~10 resolucoes ja feitas com tickets IAM-XXXX, distribuidas no tempo."""
-    selected = random.sample(ativos, min(n, len(ativos)))
+def gerar_resolucoes(validacoes, n=10):
+    """~10 resolucoes com tickets IAM-XXXX. Escolhe entre as validacoes
+    PENDENTES (= matriculas que tem bi_divergencias) e seta resolvido_em
+    SEMPRE depois da data_identificacao da pendencia."""
+    pendentes = [v for v in validacoes if v["status"] != "OK"]
+    selected = random.sample(pendentes, min(n, len(pendentes)))
     resolucoes = []
-    for i, f in enumerate(selected):
-        perfis_esp = MATRIZ_CARGO_PERFIL.get(f["cargo_codigo"], ["VENDAS_OPERACIONAL"])
-        tipo = random.choice(["Divergente", "Sem Acesso", "Em Análise"])
+    descricoes = [
+        "Perfil ajustado conforme a matriz.",
+        "Acesso de supervisao concedido apos validacao.",
+        "Perfil corrigido para o adequado ao cargo.",
+        "Acesso incluido conforme solicitacao do gestor.",
+        "Acessos regularizados em massa.",
+        "Perfil ajustado apos reuniao com o gestor.",
+    ]
+    for v in selected:
+        f = v["f"]
+        perfis_esp = v["perfil_esp"].split("|")
+        # mapeia status -> rotulo de tipo da pendencia (igual ao do painel)
+        tipo = {"SEM_ACESSO": "Sem Acesso", "DIVERGENTE": "Divergente",
+                "EM_ANALISE": "Em Análise"}.get(v["status"], "Divergente")
         ticket_num = 2000 + random.randint(0, 200)
-        data = fmt_dt(data_aleatoria(date(2026, 5, 1), date(2026, 5, 25)))
+        # data_id da bi_divergencia (formato "YYYY-MM-DD HH:MM:SS")
+        data_id = v["data_identificacao"]
+        # parse pra date e seta resolvido_em entre (data_id + 3 dias) e HOJE
+        data_id_d = datetime.strptime(data_id, "%Y-%m-%d %H:%M:%S").date()
+        inicio_resolucao = data_id_d + timedelta(days=3)
+        # garante que a janela e' valida (se data_id muito recente, fica >= HOJE)
+        if inicio_resolucao > HOJE:
+            inicio_resolucao = data_id_d + timedelta(days=1)
+        resolvido_em = data_aleatoria(inicio_resolucao, HOJE)
         pendencias = [{
             "tipo": tipo, "acao": tipo,
             "sistema": "SYSTUR", "origem": "Matriz SYSTUR",
-            "pe": random.choice(perfis_esp) if tipo != "Sem Acesso" else "",
-            "pp": random.choice(PERFIS_SYSTUR),
+            "pe": v["perfil_atual"],
+            "pp": perfis_esp[0] if perfis_esp else "",
             "opcoes": perfis_esp if tipo == "Em Análise" and len(perfis_esp) > 1 else [],
+            "dt": data_id,
         }]
-        descricoes = [
-            "Perfil ajustado conforme a matriz.",
-            "Acesso de supervisao concedido apos validacao.",
-            "Perfil corrigido para o adequado ao cargo.",
-            "Acesso incluido conforme solicitacao do gestor.",
-            "Acessos regularizados em massa.",
-            "Perfil ajustado apos reuniao com o gestor.",
-        ]
         resolucoes.append({
             "registro_id": str(f["matricula"]),
             "ticket": f"IAM-{ticket_num}",
@@ -697,7 +718,8 @@ def gerar_resolucoes(ativos, n=10):
             "nome": f["nome"],
             "resolvido_por": random.choice(["nelson.diniz", "ana.souza",
                                              "carlos.lima", "patricia.melo"]),
-            "resolvido_em": data,
+            "resolvido_em": fmt_dt(datetime.combine(
+                resolvido_em, datetime.min.time())),
         })
     return resolucoes
 
@@ -912,9 +934,9 @@ def main():
     inserir_bi_divergencias(cur, divs, validacoes)
     print(f"  divergencias: {len(divs)}")
 
-    resolucoes = gerar_resolucoes(ativos, n=10)
+    resolucoes = gerar_resolucoes(validacoes, n=10)
     inserir_resolucoes(cur, resolucoes)
-    print(f"  resolucoes: {len(resolucoes)}")
+    print(f"  resolucoes: {len(resolucoes)} (resolvido_em > data_identificacao)")
 
     ativos_q, hist_q = gerar_quarentena(ativos)
     inserir_quarentena(cur, ativos_q, hist_q)
