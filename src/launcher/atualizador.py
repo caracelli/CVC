@@ -44,22 +44,40 @@ h1{color:#1F2D5C;margin:0 0 6px;font:700 22px Arial}
 <p class="sub">Versao <span class="ver">__V_LOCAL__</span> -> <span class="ver">__V_REDE__</span></p>
 <div class="spinner"></div>
 <p id="status">Baixando da rede</p>
-<p class="small">O painel sera aberto automaticamente quando a atualizacao terminar.</p>
+<p class="small">O painel sera aberto automaticamente.<br>
+Se nao abrir em 30s, <a href="http://127.0.0.1:8800/" style="color:#1F2D5C;font-weight:600;text-decoration:underline">clique aqui</a>.</p>
 </div>
 <script>
 const st=document.getElementById('status');
 let baseSt='Baixando da rede';
 let dn=0;
 setInterval(()=>{dn=(dn%6)+1;st.textContent=baseSt+'.'.repeat(dn);},350);
+
+// Estrategia 1: polla via <script src=...> — onload em alguns browsers
+// nao dispara para cross-origin file:// -> http://localhost. Por isso o
+// fallback abaixo.
+let tentativas=0;
+const MAX_TENT=20;  // ~14s a 700ms
 function tentar(){
   if(baseSt.indexOf('Aguardando')<0) baseSt='Aguardando o painel ficar pronto';
+  tentativas++;
+  if(tentativas>MAX_TENT){
+    // Fallback: forca redirect. Se 8800 estiver no ar, abre o painel.
+    // Se nao, o browser mostra erro de conexao, ai o usuario sabe.
+    window.location.replace('http://127.0.0.1:8800/');
+    return;
+  }
   const s=document.createElement('script');
   s.onload=()=>window.location.replace('http://127.0.0.1:8800/');
   s.onerror=()=>{s.remove();setTimeout(tentar,700)};
   s.src='http://127.0.0.1:8800/chart.umd.min.js?_='+Date.now();
   document.head.appendChild(s);
 }
-setTimeout(tentar,5000);
+setTimeout(tentar,4000);
+
+// Estrategia 2: fallback ABSOLUTO de 30s — se nada funcionou, redireciona
+// mesmo assim. Cobre o caso de browser bloquear todos os scripts cross-origin.
+setTimeout(()=>{window.location.replace('http://127.0.0.1:8800/');},30000);
 </script></body></html>"""
 
 
