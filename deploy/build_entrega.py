@@ -3,12 +3,11 @@ Monta os dois pacotes de entrega em ENTREGA/:
   - Projeto CVC.zip      (visualizador + banco com cenario atual)
   - Processador CVC.zip  (motor + estrutura ENTRADA/DADOS vazia)
 
-Ambos contem a pasta CVC_IAM_ANALYTICS espelhando a arquitetura atual,
-com <rede><raiz> VAZIA — funcionam em qualquer pasta onde forem extraidos.
+Ambos contem a pasta CVC_IAM_ANALYTICS espelhando a arquitetura v2.0+
+(principal no top + 3 launchers em subpasta), com <rede><raiz> VAZIA —
+funcionam em qualquer pasta onde forem extraidos.
 
-Pre-requisito: Processador.exe e visualizador.exe ja gerados em
-CVC_IAM_ANALYTICS/EXECUTAVEIS/ (rodar build_processador.py e
-build_visualizador.py antes).
+Pre-requisito: rodar deploy/build_all.py antes (gera os 5 exes).
 
 Uso:
     cd deploy
@@ -26,12 +25,17 @@ DEPLOY_DIR = Path(__file__).resolve().parent
 RAIZ = DEPLOY_DIR.parent
 APP = RAIZ / "CVC_IAM_ANALYTICS"
 EXECS = APP / "EXECUTAVEIS"
+LAUNCHER_DIR = EXECS / "launcher"
 ENTREGA = RAIZ / "ENTREGA"
 STAGING = RAIZ / "_entrega_staging"
 
-PROCESSADOR_EXE = EXECS / "Processador.exe"
-VISUALIZADOR_EXE = EXECS / "visualizador.exe"
-VISUALIZADOR_PY = EXECS / "visualizador.py"
+# Os 5 exes da nova arquitetura
+PRINCIPAL_VISUALIZADOR = EXECS / "visualizador.exe"
+PRINCIPAL_PROCESSADOR = EXECS / "Processador.exe"
+LAUNCHER_ATUALIZADOR = LAUNCHER_DIR / "launcher_atualizador.exe"
+LAUNCHER_VISUALIZADOR = LAUNCHER_DIR / "launcher_visualizador.exe"
+LAUNCHER_PROCESSADOR = LAUNCHER_DIR / "launcher_processador.exe"
+
 REPORT_DIR = EXECS / "REPORT"
 CONFIG_SRC = EXECS / "CONFIG" / "config.xml"
 LEIA_ME_EXECS = EXECS / "LEIA-ME.md"
@@ -51,15 +55,16 @@ DADOS_SUBDIRS = [
 
 
 def checar_prerequisitos():
-    faltando = []
-    for p in [PROCESSADOR_EXE, VISUALIZADOR_EXE, VISUALIZADOR_PY,
-              CONFIG_SRC, BANCO_FONTE, REPORT_DIR / "index.html"]:
-        if not p.exists():
-            faltando.append(str(p))
+    faltando = [str(p) for p in [
+        PRINCIPAL_VISUALIZADOR, PRINCIPAL_PROCESSADOR,
+        LAUNCHER_ATUALIZADOR, LAUNCHER_VISUALIZADOR, LAUNCHER_PROCESSADOR,
+        CONFIG_SRC, BANCO_FONTE, REPORT_DIR / "index.html",
+    ] if not p.exists()]
     if faltando:
         print("FALHA — arquivos ausentes:")
         for f in faltando:
             print(f"  - {f}")
+        print("\nRode 'python deploy/build_all.py' primeiro.")
         sys.exit(1)
 
 
@@ -69,7 +74,7 @@ def config_com_raiz_vazia(destino: Path):
     root = tree.getroot()
     raiz_node = root.find("rede/raiz")
     if raiz_node is not None:
-        raiz_node.text = None  # zera a raiz -> modo "local pasta extraida"
+        raiz_node.text = None
     destino.parent.mkdir(parents=True, exist_ok=True)
     tree.write(destino, encoding="UTF-8", xml_declaration=True)
 
@@ -85,42 +90,51 @@ def copiar_banco_consistente(destino: Path):
     src.close()
 
 
+def _montar_executaveis(execs_destino: Path, incluir_processador: bool,
+                         incluir_visualizador: bool):
+    """Monta EXECUTAVEIS/ com os exes solicitados + CONFIG + REPORT + launcher/."""
+    execs_destino.mkdir(parents=True, exist_ok=True)
+    (execs_destino / "launcher").mkdir(parents=True, exist_ok=True)
+
+    # Top level principais
+    if incluir_visualizador:
+        shutil.copy2(PRINCIPAL_VISUALIZADOR, execs_destino / "visualizador.exe")
+    if incluir_processador:
+        shutil.copy2(PRINCIPAL_PROCESSADOR, execs_destino / "Processador.exe")
+    shutil.copy2(LEIA_ME_EXECS, execs_destino / "LEIA-ME.md")
+    shutil.copytree(REPORT_DIR, execs_destino / "REPORT", dirs_exist_ok=True)
+    config_com_raiz_vazia(execs_destino / "CONFIG" / "config.xml")
+
+    # Launchers em subpasta — sempre inclui o atualizador
+    shutil.copy2(LAUNCHER_ATUALIZADOR,
+                 execs_destino / "launcher" / "launcher_atualizador.exe")
+    if incluir_visualizador:
+        shutil.copy2(LAUNCHER_VISUALIZADOR,
+                     execs_destino / "launcher" / "launcher_visualizador.exe")
+    if incluir_processador:
+        shutil.copy2(LAUNCHER_PROCESSADOR,
+                     execs_destino / "launcher" / "launcher_processador.exe")
+
+
 def montar_projeto_cvc(base: Path):
     """Visualizador + banco (com cenario atual). Para o cliente VER o painel."""
     raiz = base / "CVC_IAM_ANALYTICS"
-    # EXECUTAVEIS — somente o exe + config + REPORT + LEIA-ME (sem .py)
-    execs = raiz / "EXECUTAVEIS"
-    execs.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(VISUALIZADOR_EXE, execs / "visualizador.exe")
-    shutil.copy2(LEIA_ME_EXECS, execs / "LEIA-ME.md")
-    # REPORT
-    shutil.copytree(REPORT_DIR, execs / "REPORT", dirs_exist_ok=True)
-    # CONFIG com raiz vazia
-    config_com_raiz_vazia(execs / "CONFIG" / "config.xml")
-    # DADOS/BANCO (com banco copiado consistente)
+    _montar_executaveis(raiz / "EXECUTAVEIS",
+                        incluir_processador=False, incluir_visualizador=True)
     copiar_banco_consistente(raiz / "DADOS" / "BANCO" / "iam_analytics.db")
-    # INTERACOES vazia (placeholder)
     (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
-    # LEIA-ME do pacote no topo
     (base / "LEIA-ME.txt").write_text(LEIA_ME_PROJETO, encoding="utf-8")
 
 
 def montar_processador_cvc(base: Path):
     """Motor + ENTRADA/DADOS vazios. Para o cliente RODAR o engine."""
     raiz = base / "CVC_IAM_ANALYTICS"
-    # EXECUTAVEIS
-    execs = raiz / "EXECUTAVEIS"
-    execs.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(PROCESSADOR_EXE, execs / "Processador.exe")
-    shutil.copy2(LEIA_ME_EXECS, execs / "LEIA-ME.md")
-    config_com_raiz_vazia(execs / "CONFIG" / "config.xml")
-    # ENTRADA — estrutura vazia (cliente deposita os arquivos)
+    _montar_executaveis(raiz / "EXECUTAVEIS",
+                        incluir_processador=True, incluir_visualizador=False)
     for sub in ENTRADA_SUBDIRS:
         (raiz / "ENTRADA" / sub).mkdir(parents=True, exist_ok=True)
-    # DADOS — estrutura vazia
     for sub in DADOS_SUBDIRS:
         (raiz / "DADOS" / sub).mkdir(parents=True, exist_ok=True)
-    # INTERACOES vazia
     (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
     (base / "LEIA-ME.txt").write_text(LEIA_ME_PROCESSADOR, encoding="utf-8")
 
@@ -144,21 +158,21 @@ Estrutura
 ---------
 CVC_IAM_ANALYTICS\\
   EXECUTAVEIS\\
-    visualizador.exe       <- aplicativo
-    visualizador.py        <- codigo-fonte (auditoria)
+    visualizador.exe       <- entry point (clique aqui)
     CONFIG\\config.xml      <- configuracao (raiz vazia = pasta local)
     REPORT\\index.html      <- pagina do painel
     LEIA-ME.md             <- detalhes tecnicos
+    launcher\\
+      launcher_atualizador.exe   <- engine de update (so usado se houver rede)
+      launcher_visualizador.exe  <- painel real (HTTP server em 8800)
   DADOS\\BANCO\\
     iam_analytics.db       <- banco com o cenario atual
 
 Observacoes
 -----------
-- O config.xml ja vem com <raiz> vazia, ou seja, le os dados da
-  pasta CVC_IAM_ANALYTICS extraida deste zip. Nao precisa configurar
-  drive de rede para esta demonstracao.
-- O visualizador faz uma copia local do banco no startup
-  (mais rapido e sem ler durante uma eventual escrita do Processador).
+- O config.xml vem com <raiz> vazia: nao precisa de drive de rede.
+- O painel mora em launcher\\launcher_visualizador.exe; visualizador.exe
+  no top level e' so o orquestrador que verifica update e dispara o painel.
 """
 
 LEIA_ME_PROCESSADOR = """\
@@ -171,13 +185,8 @@ ENTRADA, cruza com as matrizes e gera o banco iam_analytics.db.
 Como usar
 ---------
 1. Extraia este zip onde quiser (ex.: Documentos\\Processador CVC).
-2. Deposite os arquivos do cliente nas pastas correspondentes:
-     CVC_IAM_ANALYTICS\\ENTRADA\\RH\\ATIVOS\\
-     CVC_IAM_ANALYTICS\\ENTRADA\\RH\\DESLIGADOS\\
-     CVC_IAM_ANALYTICS\\ENTRADA\\MATRIZES\\ORGANIZACIONAL\\
-     CVC_IAM_ANALYTICS\\ENTRADA\\MATRIZES\\PERFIS_SISTEMAS\\
-     CVC_IAM_ANALYTICS\\ENTRADA\\SISTEMAS\\SYSTUR\\
-     (idem para SIGOT, SICA_RA, SICA_ESFERA, IC quando houver)
+2. Deposite os arquivos do cliente nas pastas correspondentes em
+   CVC_IAM_ANALYTICS\\ENTRADA\\ (RH, MATRIZES, SISTEMAS).
 3. Execute CVC_IAM_ANALYTICS\\EXECUTAVEIS\\Processador.exe.
 4. O banco gerado fica em CVC_IAM_ANALYTICS\\DADOS\\BANCO\\iam_analytics.db
    (saidas Excel em DADOS\\SAIDAS).
@@ -186,23 +195,13 @@ Estrutura
 ---------
 CVC_IAM_ANALYTICS\\
   EXECUTAVEIS\\
-    Processador.exe        <- motor
-    CONFIG\\config.xml      <- configuracao (raiz vazia = pasta local)
-    LEIA-ME.md             <- detalhes tecnicos
-  ENTRADA\\                  <- arquivos do cliente
-    RH\\, MATRIZES\\, SISTEMAS\\
-  DADOS\\                    <- saidas geradas
-    BANCO\\, SAIDAS\\, PROCESSADOS\\, ERROS\\, LOGS\\
-  INTERACOES\\               <- gravacoes do visualizador (multiusuario)
-
-Observacoes
------------
-- O config.xml ja vem com <raiz> vazia, ou seja, todos os caminhos
-  resolvem relativos a esta pasta extraida. Nao precisa de drive de
-  rede para esta demonstracao.
-- Para ver o resultado no painel, copie o banco gerado por cima do
-  banco do pacote Projeto CVC, ou ajuste o config.xml para apontar
-  ambos para a mesma raiz.
+    Processador.exe        <- entry point (clique aqui)
+    CONFIG\\config.xml      <- configuracao (raiz vazia)
+    LEIA-ME.md
+    launcher\\
+      launcher_atualizador.exe   <- engine de update
+      launcher_processador.exe   <- motor real (com pandas/openpyxl)
+  ENTRADA\\, DADOS\\, INTERACOES\\
 """
 
 
@@ -217,22 +216,18 @@ def zipar(base: Path, alvo_zip: Path):
                 arcname = base.name + "/" + str(p.relative_to(base)).replace("\\", "/")
                 zf.write(p, arcname)
             elif p.is_dir() and not any(p.iterdir()):
-                # mantem diretorios vazios (cliente precisa do esqueleto de ENTRADA/DADOS)
                 arcname = base.name + "/" + str(p.relative_to(base)).replace("\\", "/") + "/"
-                zi = zipfile.ZipInfo(arcname)
-                zf.writestr(zi, "")
+                zf.writestr(zipfile.ZipInfo(arcname), "")
 
 
 def main():
-    print("=== Build dos pacotes de ENTREGA ===")
+    print("=== Build dos pacotes de ENTREGA (v2.0+) ===")
     checar_prerequisitos()
 
-    # Limpa staging
     if STAGING.exists():
         shutil.rmtree(STAGING)
     STAGING.mkdir(parents=True, exist_ok=True)
     ENTREGA.mkdir(parents=True, exist_ok=True)
-
     inicio = datetime.now()
 
     print("\n[1/2] Projeto CVC (visualizador + banco)")
@@ -251,9 +246,7 @@ def main():
     zipar(base_pr, zip_pr)
     print(f"  OK -> {zip_pr}  ({zip_pr.stat().st_size/1024/1024:.1f} MB)")
 
-    # Limpa staging ao final
     shutil.rmtree(STAGING)
-
     dur = (datetime.now() - inicio).total_seconds()
     print(f"\nConcluido em {dur:.1f}s.")
     print(f"Saidas em: {ENTREGA}")

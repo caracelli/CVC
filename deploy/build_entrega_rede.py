@@ -35,9 +35,13 @@ EXECS = APP / "EXECUTAVEIS"
 ENTREGA = RAIZ / "ENTREGA"
 STAGING = RAIZ / "_entrega_rede_staging"
 
-PROCESSADOR_EXE = EXECS / "Processador.exe"
-VISUALIZADOR_EXE = EXECS / "visualizador.exe"
-VISUALIZADOR_PY = EXECS / "visualizador.py"
+# Os 5 exes da arquitetura v2.0+
+LAUNCHER_DIR = EXECS / "launcher"
+PRINCIPAL_VISUALIZADOR = EXECS / "visualizador.exe"
+PRINCIPAL_PROCESSADOR = EXECS / "Processador.exe"
+LAUNCHER_ATUALIZADOR = LAUNCHER_DIR / "launcher_atualizador.exe"
+LAUNCHER_VISUALIZADOR = LAUNCHER_DIR / "launcher_visualizador.exe"
+LAUNCHER_PROCESSADOR = LAUNCHER_DIR / "launcher_processador.exe"
 REPORT_DIR = EXECS / "REPORT"
 CONFIG_SRC = EXECS / "CONFIG" / "config.xml"
 LEIA_ME_EXECS = EXECS / "LEIA-ME.md"
@@ -63,8 +67,8 @@ ENTRADA_ARQUIVOS = [
 ]
 
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
-VERSAO_INICIAL = "1.0.4"     # 1=sistema . 0=ajustes Processador . 4=ajustes Visualizador
-VERSAO_NOVA = "1.0.5"        # bump apenas para demo do auto-update
+VERSAO_INICIAL = "2.0.0"     # 2=sistema (arquitetura launcher) . 0=Processador . 0=Visualizador
+VERSAO_NOVA = "2.0.1"        # bump apenas para demo do auto-update
 
 ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",
@@ -80,7 +84,8 @@ DADOS_SUBDIRS = [
 
 
 def checar_prerequisitos():
-    base = [PROCESSADOR_EXE, VISUALIZADOR_EXE, VISUALIZADOR_PY,
+    base = [PRINCIPAL_VISUALIZADOR, PRINCIPAL_PROCESSADOR,
+            LAUNCHER_ATUALIZADOR, LAUNCHER_VISUALIZADOR, LAUNCHER_PROCESSADOR,
             CONFIG_SRC, REPORT_DIR / "index.html"]
     arq_orig = [ARQUIVOS_ORIGEM / nome for nome, _ in ENTRADA_ARQUIVOS]
     faltando = [str(p) for p in base + arq_orig if not p.exists()]
@@ -88,6 +93,7 @@ def checar_prerequisitos():
         print("FALHA — arquivos ausentes:")
         for f in faltando:
             print(f"  - {f}")
+        print("\nRode 'python deploy/build_all.py' primeiro.")
         sys.exit(1)
 
 
@@ -104,18 +110,49 @@ def grava_config(destino: Path, versao: str, raiz_valor: str):
     tree.write(destino, encoding="UTF-8", xml_declaration=True)
 
 
+def _montar_executaveis_servidor_sem_motor(execs_destino: Path, versao: str):
+    """Monta EXECUTAVEIS/ do servidor MENOS o launcher_processador (motor
+    grande, ~80 MB, vai num zip separado pra ficar < 100 MB do GitHub)."""
+    execs_destino.mkdir(parents=True, exist_ok=True)
+    launcher_d = execs_destino / "launcher"
+    launcher_d.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(PRINCIPAL_VISUALIZADOR, execs_destino / "visualizador.exe")
+    shutil.copy2(PRINCIPAL_PROCESSADOR, execs_destino / "Processador.exe")
+    shutil.copy2(LEIA_ME_EXECS, execs_destino / "LEIA-ME.md")
+    shutil.copytree(REPORT_DIR, execs_destino / "REPORT", dirs_exist_ok=True)
+    grava_config(execs_destino / "CONFIG" / "config.xml", versao, RAIZ_REDE)
+    shutil.copy2(LAUNCHER_ATUALIZADOR, launcher_d / "launcher_atualizador.exe")
+    shutil.copy2(LAUNCHER_VISUALIZADOR, launcher_d / "launcher_visualizador.exe")
+    # launcher_processador.exe NAO entra aqui; vai no ENTREGA_REDE_motor.zip
+
+
+def _montar_motor_separado(base: Path):
+    """REDE/CVC_IAM_ANALYTICS/EXECUTAVEIS/launcher/launcher_processador.exe."""
+    destino = (base / "CVC_IAM_ANALYTICS" / "EXECUTAVEIS"
+               / "launcher" / "launcher_processador.exe")
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(LAUNCHER_PROCESSADOR, destino)
+
+
+def _montar_executaveis_cliente(raiz: Path, versao: str):
+    """Cliente: top + launcher/ (sem launcher_processador, que e' do servidor)."""
+    raiz.mkdir(parents=True, exist_ok=True)
+    launcher_d = raiz / "launcher"
+    launcher_d.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(PRINCIPAL_VISUALIZADOR, raiz / "visualizador.exe")
+    shutil.copy2(LEIA_ME_EXECS, raiz / "LEIA-ME.md")
+    shutil.copytree(REPORT_DIR, raiz / "REPORT", dirs_exist_ok=True)
+    grava_config(raiz / "CONFIG" / "config.xml", versao, RAIZ_REDE)
+    shutil.copy2(LAUNCHER_ATUALIZADOR, launcher_d / "launcher_atualizador.exe")
+    shutil.copy2(LAUNCHER_VISUALIZADOR, launcher_d / "launcher_visualizador.exe")
+
+
 def montar_rede(base: Path):
     """REDE/CVC_IAM_ANALYTICS/ — vai para o share.
-    Banco vazio + arquivos de entrada prontos para o primeiro processamento."""
+    Banco vazio + arquivos de entrada prontos para o primeiro processamento.
+    O launcher_processador.exe (motor, grande) vai num zip separado (motor)."""
     raiz = base / "CVC_IAM_ANALYTICS"
-    # EXECUTAVEIS — somente exes + config + REPORT + LEIA-ME (sem .py)
-    execs = raiz / "EXECUTAVEIS"
-    execs.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(PROCESSADOR_EXE, execs / "Processador.exe")
-    shutil.copy2(VISUALIZADOR_EXE, execs / "visualizador.exe")
-    shutil.copy2(LEIA_ME_EXECS, execs / "LEIA-ME.md")
-    shutil.copytree(REPORT_DIR, execs / "REPORT", dirs_exist_ok=True)
-    grava_config(execs / "CONFIG" / "config.xml", VERSAO_INICIAL, RAIZ_REDE)
+    _montar_executaveis_servidor_sem_motor(raiz / "EXECUTAVEIS", VERSAO_INICIAL)
     # ENTRADA com os arquivos prontos para o primeiro processamento
     for sub in ENTRADA_SUBDIRS:
         (raiz / "ENTRADA" / sub).mkdir(parents=True, exist_ok=True)
@@ -132,13 +169,8 @@ def montar_rede(base: Path):
 
 def montar_cliente(base: Path):
     """CLIENTE/CVC_VISUALIZADOR/ — vai para a maquina-usuario.
-    Somente o exe + config + REPORT + LEIA-ME (sem .py — fica so no projeto)."""
-    raiz = base / "CVC_VISUALIZADOR"
-    raiz.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(VISUALIZADOR_EXE, raiz / "visualizador.exe")
-    shutil.copy2(LEIA_ME_EXECS, raiz / "LEIA-ME.md")
-    shutil.copytree(REPORT_DIR, raiz / "REPORT", dirs_exist_ok=True)
-    grava_config(raiz / "CONFIG" / "config.xml", VERSAO_INICIAL, RAIZ_REDE)
+    Sem o motor (launcher_processador) — ele fica so na rede."""
+    _montar_executaveis_cliente(base / "CVC_VISUALIZADOR", VERSAO_INICIAL)
 
 
 def montar_atualizacao(base: Path):
@@ -339,11 +371,13 @@ def zipar(base: Path, alvo_zip: Path):
 
 
 def main():
-    """Divide em dois zips para caber no limite de 100MB do GitHub:
-      - ENTREGA_REDE_servidor.zip  (REDE + ATUALIZACAO + LEIA-ME)
+    """Divide em TRES zips para caber no limite de 100MB do GitHub:
+      - ENTREGA_REDE_servidor.zip  (REDE sem motor + ATUALIZACAO + LEIA-ME)
+      - ENTREGA_REDE_motor.zip     (so o launcher_processador.exe, ~80 MB)
       - ENTREGA_REDE_cliente.zip   (CLIENTE + LEIA-ME)
-    O LEIA-ME vai em ambos para que cada zip seja autoexplicativo."""
-    print("=== Build ENTREGA_REDE (dois zips) ===")
+    Servidor.zip + motor.zip extraidos em sequencia compoem a rede completa.
+    O LEIA-ME vai em todos para cada zip ser autoexplicativo."""
+    print("=== Build ENTREGA_REDE (tres zips) ===")
     checar_prerequisitos()
 
     if STAGING.exists():
@@ -353,8 +387,8 @@ def main():
 
     inicio = datetime.now()
 
-    # --- ZIP 1: SERVIDOR (rede + atualizacao) ---
-    print("\n[1/2] Montando ENTREGA_REDE_servidor (REDE + ATUALIZACAO)")
+    # --- ZIP 1: SERVIDOR (sem motor) ---
+    print("\n[1/3] Montando ENTREGA_REDE_servidor (REDE sem motor + ATUALIZACAO)")
     serv = STAGING / "ENTREGA_REDE_servidor"
     serv.mkdir()
     (serv / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
@@ -364,8 +398,18 @@ def main():
     zipar(serv, alvo_serv)
     print(f"  OK -> {alvo_serv}  ({alvo_serv.stat().st_size/1024/1024:.1f} MB)")
 
-    # --- ZIP 2: CLIENTE ---
-    print("\n[2/2] Montando ENTREGA_REDE_cliente (CLIENTE)")
+    # --- ZIP 2: MOTOR (so o launcher_processador) ---
+    print("\n[2/3] Montando ENTREGA_REDE_motor (launcher_processador.exe)")
+    motor = STAGING / "ENTREGA_REDE_motor"
+    motor.mkdir()
+    (motor / "LEIA-ME.txt").write_text(LEIA_ME_MOTOR, encoding="utf-8")
+    _montar_motor_separado(motor / "REDE")
+    alvo_motor = ENTREGA / "ENTREGA_REDE_motor.zip"
+    zipar(motor, alvo_motor)
+    print(f"  OK -> {alvo_motor}  ({alvo_motor.stat().st_size/1024/1024:.1f} MB)")
+
+    # --- ZIP 3: CLIENTE ---
+    print("\n[3/3] Montando ENTREGA_REDE_cliente (CLIENTE)")
     cli = STAGING / "ENTREGA_REDE_cliente"
     cli.mkdir()
     (cli / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
@@ -376,6 +420,26 @@ def main():
 
     shutil.rmtree(STAGING)
     print(f"\nConcluido em {(datetime.now()-inicio).total_seconds():.1f}s.")
+
+
+LEIA_ME_MOTOR = """\
+ENTREGA_REDE_motor — Motor do Processador
+==========================================
+
+Este zip contem APENAS o launcher_processador.exe (motor com pandas/openpyxl).
+Foi separado do ENTREGA_REDE_servidor pra cada zip caber no limite de 100 MB
+do GitHub.
+
+Como instalar:
+  Extrair em uma pasta temporaria, depois copiar:
+    REDE/CVC_IAM_ANALYTICS/EXECUTAVEIS/launcher/launcher_processador.exe
+  para o lugar correspondente na rede:
+    Z:/CVC/CVC_IAM_ANALYTICS/EXECUTAVEIS/launcher/launcher_processador.exe
+
+O ENTREGA_REDE_servidor.zip ja traz a estrutura ao redor (CONFIG, REPORT,
+ENTRADA, os outros 4 exes); ele apenas nao tem este motor por causa do
+tamanho.
+"""
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec para o Processador IAM Analytics CVC
-# Executar de dentro da pasta deploy/: pyinstaller processador.spec
+# PyInstaller spec para o motor de processamento (launcher_processador.exe)
+# Vive em EXECUTAVEIS/launcher/. Executar: pyinstaller processador.spec
 
 from pathlib import Path
 
@@ -72,7 +72,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name="Processador",
+    name="launcher_processador",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
