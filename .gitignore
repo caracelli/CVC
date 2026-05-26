@@ -74,6 +74,10 @@ CVC_IAM_ANALYTICS/EXECUTAVEIS/*.db-shm
 deploy/_build/
 deploy/_build_visualizador/
 
+# Zip "completo" gerado localmente: ~116 MB, passa do limite 100 MB do GitHub.
+# Quem precisa, gera com: python deploy/build_entrega_completa.py
+ENTREGA/ENTREGA_REDE_completo.zip
+
 # Configurações locais do Claude
 .claude/
 
