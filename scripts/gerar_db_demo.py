@@ -215,6 +215,7 @@ def criar_schema(cur):
         DROP TABLE IF EXISTS perfis_esperados;
         DROP TABLE IF EXISTS matriz_cco;
         DROP TABLE IF EXISTS acessos_sistemas;
+        DROP TABLE IF EXISTS catalogo_perfis;
         DROP TABLE IF EXISTS divergencias;
         DROP TABLE IF EXISTS bi_divergencias;
         DROP TABLE IF EXISTS validacao_acessos;
@@ -222,6 +223,7 @@ def criar_schema(cur):
         DROP TABLE IF EXISTS quarentena;
         DROP TABLE IF EXISTS quarentena_historico;
         DROP TABLE IF EXISTS historico_rh;
+        DROP TABLE IF EXISTS historico;
         DROP TABLE IF EXISTS snapshots_rh;
         DROP TABLE IF EXISTS log_importacoes;
 
@@ -254,11 +256,19 @@ def criar_schema(cur):
             arquivo_origem VARCHAR, dt_importacao DATETIME);
 
         CREATE TABLE acessos_sistemas (
-            sistema VARCHAR, usuario VARCHAR, nome_usuario VARCHAR,
-            cpf VARCHAR, email VARCHAR, perfil VARCHAR, situacao VARCHAR,
+            sistema VARCHAR, usuario VARCHAR, perfil VARCHAR,
+            nome_usuario VARCHAR, cpf VARCHAR, email VARCHAR, situacao VARCHAR,
             data_criacao DATE, ultimo_acesso DATETIME, filial VARCHAR,
-            matricula_vinculada VARCHAR, arquivo_origem VARCHAR,
-            dt_importacao DATETIME);
+            matricula_vinculada VARCHAR,
+            metodo_vinculacao VARCHAR, score_vinculacao REAL,
+            candidatos_matricula TEXT,
+            arquivo_origem VARCHAR, dt_importacao DATETIME,
+            PRIMARY KEY (sistema, usuario, perfil));
+
+        CREATE TABLE catalogo_perfis (
+            sistema VARCHAR, codigo VARCHAR, nome VARCHAR, familia VARCHAR,
+            descricao TEXT, arquivo_origem VARCHAR, dt_importacao DATETIME,
+            PRIMARY KEY (sistema, codigo));
 
         CREATE TABLE divergencias (
             id VARCHAR PRIMARY KEY, tipo VARCHAR, sistema VARCHAR,
@@ -304,11 +314,12 @@ def criar_schema(cur):
             criado_por TEXT, criado_em TEXT, encerrado_por TEXT,
             movido_em TEXT NOT NULL);
 
-        CREATE TABLE historico_rh (
+        CREATE TABLE historico (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data_snapshot DATE, tipo VARCHAR, matricula VARCHAR,
+            data_snapshot DATE, entidade VARCHAR, chave_entidade VARCHAR,
             tipo_mudanca VARCHAR, campos_alterados TEXT,
-            dados_anterior TEXT, dados_novo TEXT, dt_registro DATETIME);
+            dados_anterior TEXT, dados_novo TEXT, dt_registro DATETIME,
+            tipo VARCHAR, matricula VARCHAR);
 
         CREATE TABLE snapshots_rh (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -319,7 +330,8 @@ def criar_schema(cur):
         CREATE TABLE log_importacoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             arquivo VARCHAR, tipo VARCHAR, total_registros INTEGER,
-            status VARCHAR, mensagem_erro TEXT, dt_importacao DATETIME);
+            status VARCHAR, mensagem_erro TEXT, hash_arquivo VARCHAR,
+            dt_importacao DATETIME);
     """)
 
 
@@ -492,11 +504,22 @@ def _acesso_de(f, perfil, situacao="ATIVO"):
 def inserir_acessos(cur, acessos):
     agora = fmt_dt(datetime.now())
     for a in acessos:
-        cur.execute("""INSERT INTO acessos_sistemas VALUES
-            (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (a["sistema"], a["usuario"], a["nome_usuario"], a["cpf"],
-             a["email"], a["perfil"], a["situacao"], a["data_criacao"],
-             a["ultimo_acesso"], a["filial"], a["matricula_vinculada"],
+        mat = a["matricula_vinculada"]
+        # Demo: assume CPF puro (todo o demo gera CPF completo); sem vinculo = NAO_VINCULADO
+        if mat:
+            metodo, score = "CPF", 1.0
+        else:
+            metodo, score = "NAO_VINCULADO", 0.0
+        cur.execute("""INSERT OR IGNORE INTO acessos_sistemas
+            (sistema, usuario, perfil, nome_usuario, cpf, email, situacao,
+             data_criacao, ultimo_acesso, filial, matricula_vinculada,
+             metodo_vinculacao, score_vinculacao, candidatos_matricula,
+             arquivo_origem, dt_importacao)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (a["sistema"], a["usuario"], a["perfil"], a["nome_usuario"],
+             a["cpf"], a["email"], a["situacao"], a["data_criacao"],
+             a["ultimo_acesso"], a["filial"], mat,
+             metodo, score, None,
              "relatorio_systur_DEMO.xlsx", agora))
 
 
@@ -876,14 +899,19 @@ def gerar_historico_rh(ativos, desligados, n=15):
 
 
 def inserir_historico_rh(cur, eventos):
+    """Insere na tabela historico unificada. Preenche entidade e chave_entidade
+    e duplica em tipo/matricula para compatibilidade com leitura legada."""
     for e in eventos:
-        cur.execute("""INSERT INTO historico_rh
-            (data_snapshot, tipo, matricula, tipo_mudanca, campos_alterados,
-             dados_anterior, dados_novo, dt_registro)
-            VALUES (?,?,?,?,?,?,?,?)""",
-            (e["data_snapshot"], e["tipo"], e["matricula"],
+        entidade = "RH_DESLIGADO" if e["tipo"] == "DESLIGADO" else "RH_ATIVO"
+        cur.execute("""INSERT INTO historico
+            (data_snapshot, entidade, chave_entidade, tipo_mudanca,
+             campos_alterados, dados_anterior, dados_novo, dt_registro,
+             tipo, matricula)
+            VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (e["data_snapshot"], entidade, e["matricula"],
              e["tipo_mudanca"], e["campos_alterados"],
-             e["dados_anterior"], e["dados_novo"], e["dt_registro"]))
+             e["dados_anterior"], e["dados_novo"], e["dt_registro"],
+             e["tipo"], e["matricula"]))
 
 
 def main():
@@ -944,7 +972,7 @@ def main():
 
     eventos = gerar_historico_rh(ativos, desligados, n=15)
     inserir_historico_rh(cur, eventos)
-    print(f"  historico_rh: {len(eventos)}")
+    print(f"  historico (RH): {len(eventos)}")
 
     con.commit()
     con.close()

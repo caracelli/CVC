@@ -100,10 +100,15 @@ def _conectar(p):
 
 
 def limpar(c):
-    try:
-        rh = c.execute("DELETE FROM historico_rh WHERE matricula LIKE '99%'").rowcount
-    except sqlite3.OperationalError:
-        rh = 0
+    # Tabela unificada (historico) ou legada (historico_rh) — tenta as duas.
+    rh = 0
+    for tabela in ("historico", "historico_rh"):
+        try:
+            rh += c.execute(
+                f"DELETE FROM {tabela} WHERE matricula LIKE '99%'"
+            ).rowcount
+        except sqlite3.OperationalError:
+            pass
     try:
         rs = c.execute("DELETE FROM resolucoes WHERE registro_id LIKE '99%'").rowcount
     except sqlite3.OperationalError:
@@ -135,7 +140,7 @@ def main():
             rh, rs = limpar(c)
             if so_limpar:
                 c.commit()
-                print(f"  LIMPO  {p}  (-{rh} historico_rh, -{rs} resolucoes)")
+                print(f"  LIMPO  {p}  (-{rh} historico, -{rs} resolucoes)")
                 continue
             n = inserir(c)
             c.commit()

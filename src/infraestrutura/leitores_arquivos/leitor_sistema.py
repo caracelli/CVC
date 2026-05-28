@@ -68,7 +68,10 @@ class LeitorSistema(LeitorArquivoBase):
 
     def _ler_df(self, arquivo: Path, encoding: str) -> pd.DataFrame:
         if arquivo.suffix.lower() in (".xlsx", ".xls"):
-            df = pd.read_excel(arquivo, dtype=str, skiprows=self._cfg.skiprows)
+            # PRIMEIRA aba sempre (sheet_name=0). Nao confiar no nome literal:
+            # arquivos vindos de export SQL (ex.: 'Select tb_sys_sec_user' do SIG)
+            # tem nome que muda se o cliente regenerar a query.
+            df = pd.read_excel(arquivo, dtype=str, skiprows=self._cfg.skiprows, sheet_name=0)
         else:
             df = pd.read_csv(
                 arquivo,
@@ -113,5 +116,6 @@ class LeitorSistema(LeitorArquivoBase):
                 ultimo_acesso=_parse_datetime(self._valor(row, "ultimo_acesso")),
                 matricula_vinculada=None,
                 cpf=self._pad.normalizar_cpf(self._valor(row, "cpf")),
+                email=(self._valor(row, "email") or None),
             ))
         return perfis

@@ -7,6 +7,9 @@ from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.leitores_arquivos.configs_sistemas import CONFIGS_SISTEMAS
 from infraestrutura.leitores_arquivos.leitor_sistema import LeitorSistema
 from infraestrutura.repositorios.repositorio_acesso_sqlite import RepositorioAcessoSqlite
+from infraestrutura.repositorios.repositorio_log_importacao import (
+    RepositorioLogImportacao, loga_se_reimportacao,
+)
 
 
 class ImportarSistema:
@@ -22,11 +25,12 @@ class ImportarSistema:
         cfg = CONFIGS_SISTEMAS[sistema]
         self._leitor = LeitorSistema(cfg, pasta_processados=pasta_processados, pasta_erros=pasta_erros)
         self._repositorio = RepositorioAcessoSqlite(conexao)
+        self._log = RepositorioLogImportacao(conexao)
         self._sistema = sistema
         self._pasta_entrada = pasta_entrada
 
     def executar(self) -> int:
-        logger.info(f"=== Importação {self._sistema.value} iniciada ===")
+        logger.info(f"=== Importacao {self._sistema.value} iniciada ===")
 
         # varredura recursiva da pasta de entrada, ordenada pela data no nome
         arquivos = self._leitor.listar_ordenado(self._pasta_entrada)
@@ -38,15 +42,32 @@ class ImportarSistema:
         destino_proc = Path(self._pasta_entrada) / "PROCESSADOS"
 
         for arquivo in arquivos:
+            # Hash antes da leitura — assim, mesmo se a leitura falhar, logamos
+            # tentativa de processar o arquivo com seu fingerprint.
+            try:
+                hash_arq = loga_se_reimportacao(self._log, caminho=arquivo, tipo=self._sistema.value)
+            except Exception as e:
+                logger.warning(f"Falha calculando hash de '{arquivo.name}': {e!r}")
+                hash_arq = ""
+
             try:
                 perfis = self._leitor.ler_um(arquivo)
             except Exception as e:
                 logger.error(f"Erro lendo '{arquivo.name}': {e!r}")
+                self._log.registrar(
+                    arquivo=arquivo.name, tipo=self._sistema.value,
+                    hash_arquivo=hash_arq, status="ERRO", mensagem_erro=str(e),
+                )
                 self._leitor.mover_para_erros(arquivo, str(e))
                 continue
-            # substituição (snapshot): remove os dados do sistema da
-            # importação anterior e grava os do arquivo atual
+            # substituicao (snapshot): remove os dados do sistema da
+            # importacao anterior e grava os do arquivo atual
             self._repositorio.substituir_sistema(self._sistema, perfis, arquivo.name)
+            self._log.registrar(
+                arquivo=arquivo.name, tipo=self._sistema.value,
+                hash_arquivo=hash_arq, total_registros=len(perfis),
+                status="SUCESSO",
+            )
             self._leitor.mover_para_processados(arquivo, destino=destino_proc)
             logger.success(
                 f"{self._sistema.value}: '{arquivo.name}' processado "

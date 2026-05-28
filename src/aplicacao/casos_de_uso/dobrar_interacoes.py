@@ -6,6 +6,11 @@ sao consolidadas nas tabelas do banco: `quarentena` / `quarentena_historico`
 (tipo QUARENTENA) e `resolucoes` (tipo RESOLUCAO — resolucao de pendencia
 sob ticket do Jira).
 
+Envelope das interacoes: contrato v1 documentado em
+`docs/INTERACOES_ENVELOPE_V1.md`. Este consumer e' tolerante a v0 (legado)
+e v1 — quando schema_version sobir para 2, este arquivo precisa co-evoluir
+para normalizar v1 -> v2 na leitura.
+
 O reset da pasta usa rename atomico:
     INTERACOES\\  ->  INTERACOES_processando\\   (1 operacao, instantanea)
 e em seguida cria uma INTERACOES\\ nova e vazia. A partir desse instante os

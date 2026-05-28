@@ -3,7 +3,7 @@ from loguru import logger
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.leitores_arquivos.leitor_rh import LeitorRh
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
-from aplicacao.casos_de_uso.registrar_historico_rh import RegistrarHistoricoRh
+from aplicacao.casos_de_uso.registrar_historico import RegistrarHistorico
 
 
 class ImportarRh:
@@ -18,7 +18,7 @@ class ImportarRh:
     ):
         self._leitor = LeitorRh(pasta_processados=pasta_processados, pasta_erros=pasta_erros)
         self._repositorio = RepositorioFuncionarioSqlite(conexao)
-        self._historico = RegistrarHistoricoRh(conexao)
+        self._historico = RegistrarHistorico(conexao)
         self._pasta_ativos = pasta_ativos
         self._pasta_desligados = pasta_desligados
 

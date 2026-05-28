@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, String, Date, DateTime, Integer, Text
+from sqlalchemy import Boolean, Column, Float, String, Date, DateTime, Integer, Text
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -60,37 +60,78 @@ class SnapshotRh(Base):
     dt_criacao = Column(DateTime, default=datetime.now)
 
 
-class HistoricoRh(Base):
-    """Trilha de auditoria imutável: um registro por matrícula que mudou
-    entre uma importação e a anterior (CDC da base de RH)."""
+class Historico(Base):
+    """Trilha de auditoria unificada (CDC).
 
-    __tablename__ = "historico_rh"
+    Substitui historico_rh: agora qualquer entidade pode registrar mudancas
+    aqui — RH (ativos/desligados) e acessos de sistema, e qualquer outra
+    entidade que surgir. Para nao quebrar compatibilidade, mantemos as
+    colunas legadas tipo e matricula populadas para entidades RH."""
+
+    __tablename__ = "historico"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     data_snapshot = Column(Date, nullable=False, index=True)
-    tipo = Column(String, nullable=False, index=True)        # ATIVO / DESLIGADO
-    matricula = Column(String, nullable=False, index=True)
+    entidade = Column(String, nullable=False, index=True)  # RH_ATIVO / RH_DESLIGADO / ACESSO_SISTEMA / ...
+    chave_entidade = Column(String, nullable=False, index=True)  # matricula (RH) ou sistema|usuario|perfil (acesso)
     tipo_mudanca = Column(String, nullable=False, index=True)  # NOVO / ALTERADO / REMOVIDO
-    campos_alterados = Column(Text)                            # CSV dos campos (só ALTERADO)
+    campos_alterados = Column(Text)                            # CSV dos campos (so ALTERADO)
     dados_anterior = Column(Text)                              # JSON (null em NOVO)
     dados_novo = Column(Text)                                  # JSON (null em REMOVIDO)
     dt_registro = Column(DateTime, default=datetime.now)
 
+    # --- compatibilidade com leitura legada (campos populados para entidades RH) ---
+    tipo = Column(String, index=True)        # ATIVO / DESLIGADO (espelho de entidade para RH)
+    matricula = Column(String, index=True)   # espelho de chave_entidade para RH
+
 
 class AcessoSistema(Base):
+    """Um registro por (sistema, usuario, perfil).
+
+    A PK composta com perfil e' fundamental: usuarios sao multi-perfil na maioria
+    dos sistemas. Sem perfil na PK, o merge sobrescreve e so o ultimo perfil
+    sobrevive — bug que o SIG escancarou (mediana de 88 perfis/usuario).
+    """
     __tablename__ = "acessos_sistemas"
 
     sistema = Column(String, primary_key=True)
     usuario = Column(String, primary_key=True)
+    perfil = Column(String, primary_key=True)
     nome_usuario = Column(String)
     cpf = Column(String, index=True)
     email = Column(String)
-    perfil = Column(String)
     situacao = Column(String)
     data_criacao = Column(Date)
     ultimo_acesso = Column(DateTime)
     filial = Column(String)
     matricula_vinculada = Column(String, index=True)
+    # Cascata de vinculacao (matching multi-chave): registra como conseguimos
+    # ligar este acesso a uma matricula do RH. Permite auditoria do match e
+    # filtros por nivel de confianca no painel.
+    metodo_vinculacao = Column(String)     # CPF / EMAIL / CPF_PARCIAL_NOME / NOME / FUZZY / NAO_VINCULADO
+    score_vinculacao = Column(Float)       # 1.0 (CPF) ... 0.5 (fuzzy) ... 0.0 (nao vinculado)
+    candidatos_matricula = Column(Text)    # JSON list de matriculas candidatas quando ambiguo
+    arquivo_origem = Column(String)
+    dt_importacao = Column(DateTime, default=datetime.now)
+
+
+class CatalogoPerfil(Base):
+    """Catalogo de perfis por sistema (codigo -> nome legivel).
+
+    Necessario para sistemas que exportam acessos como codigo numerico
+    (SIG, Oracle EBS) e fornecem o de-para em arquivo separado. Tambem
+    serve para os outros sistemas, com codigo=nome (idempotente).
+
+    Familia: prefixo derivado do nome (ACESSO_HOTEL, ATD, CAD, ...), util
+    para agregacoes no painel.
+    """
+    __tablename__ = "catalogo_perfis"
+
+    sistema = Column(String, primary_key=True)
+    codigo = Column(String, primary_key=True)
+    nome = Column(String, nullable=False)
+    familia = Column(String, index=True)
+    descricao = Column(Text)
     arquivo_origem = Column(String)
     dt_importacao = Column(DateTime, default=datetime.now)
 
@@ -104,6 +145,7 @@ class LogImportacao(Base):
     total_registros = Column(Integer)
     status = Column(String)  # SUCESSO / ERRO
     mensagem_erro = Column(Text)
+    hash_arquivo = Column(String, index=True)  # md5 do conteudo — detecta reimportacao
     dt_importacao = Column(DateTime, default=datetime.now)
 
 
@@ -170,3 +212,10 @@ class DivergenciaModel(Base):
     data_identificacao = Column(DateTime)
     resolvida = Column(Boolean, default=False)
     dt_importacao = Column(DateTime, default=datetime.now)
+
+
+# ---- compat: alias para nao quebrar imports legados -----------------------
+# Antes da unificacao, existia HistoricoRh; agora e' Historico com coluna
+# entidade. Mantemos o nome antigo importavel para qualquer codigo legado
+# que nao tenha sido migrado ainda.
+HistoricoRh = Historico

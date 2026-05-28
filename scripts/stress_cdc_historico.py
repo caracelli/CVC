@@ -18,7 +18,7 @@ from infraestrutura.banco_dados.schema import RhAtivo
 from infraestrutura.leitores_arquivos.leitor_base import LeitorArquivoBase
 from infraestrutura.leitores_arquivos.leitor_rh import LeitorRh
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
-from aplicacao.casos_de_uso.registrar_historico_rh import RegistrarHistoricoRh, _CAMPOS_ATIVO
+from aplicacao.casos_de_uso.registrar_historico import RegistrarHistorico, _CAMPOS_ATIVO
 from dominio.entidades.funcionario_ativo import FuncionarioAtivo
 from dominio.objetos_valor.cargo import Cargo
 from dominio.servicos_dominio.servico_padronizacao import ServicoPadronizacao
@@ -175,7 +175,7 @@ def main():
     cx = ConexaoBancoDados(db)
     cx.inicializar()
     repo = RepositorioFuncionarioSqlite(cx)
-    cdc = RegistrarHistoricoRh(cx)
+    cdc = RegistrarHistorico(cx)
 
     base = carregar_base()
     print(f"Base real carregada: {len(base)} ativos\n")
@@ -222,8 +222,8 @@ def main():
 
     print("-" * 70)
     with cx.sessao() as s:
-        from infraestrutura.banco_dados.schema import HistoricoRh, SnapshotRh
-        th = s.query(HistoricoRh).count()
+        from infraestrutura.banco_dados.schema import Historico, SnapshotRh
+        th = s.query(Historico).count()
         ts = s.query(SnapshotRh).count()
     print(f"Iterações: 30 | Falhas: {falhas} | "
           f"linhas na trilha: {th} | snapshots: {ts}")

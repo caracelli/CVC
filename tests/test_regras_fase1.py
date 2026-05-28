@@ -29,7 +29,7 @@ from dominio.regras.regra_acesso_sem_vinculo import RegraAcessoSemVinculo
 from dominio.regras.regra_perfil_invalido import RegraPerfilInvalido
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
-from aplicacao.casos_de_uso.registrar_historico_rh import RegistrarHistoricoRh
+from aplicacao.casos_de_uso.registrar_historico import RegistrarHistorico as RegistrarHistoricoRh
 from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
 from aplicacao.casos_de_uso.dobrar_interacoes import DobrarInteracoes
 

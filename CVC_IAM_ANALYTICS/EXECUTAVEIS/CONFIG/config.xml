@@ -123,6 +123,63 @@
                 <ultimo_acesso>ULTIMO_ACESSO</ultimo_acesso>
             </colunas>
         </sistema>
+
+        <!-- SIG (Card 12) — extrato matricial pivotado (X = acesso) + de-para
+             de codigos em <caminho_de_para>. Despivot acontece no leitor.
+             A matriz formal de perfil esperado por cargo NAO existe para SIG
+             (gestao "por espelho" + cobertura via Mapeamento CCO_CSC). -->
+        <sistema id="SIG">
+            <nome>SIG</nome>
+            <descricao>SIG</descricao>
+            <caminho_entrada>ENTRADA/SISTEMAS/SIG</caminho_entrada>
+            <caminho_de_para>ENTRADA/MATRIZES/PERFIS_SISTEMAS/SIG/DE_PARA</caminho_de_para>
+            <caminho_parquet>DADOS/PARQUET/ACESSOS/SIG</caminho_parquet>
+            <colunas>
+                <usuario>LOGIN</usuario>
+                <nome>NM_USER</nome>
+                <cpf>CPF</cpf>
+                <email>EMAIL</email>
+                <situacao>STATUS</situacao>
+            </colunas>
+            <formato>matricial</formato>
+        </sistema>
+
+        <!-- Oracle EBS (Card 11) — scaffold preparado, arquivo ainda nao recebido.
+             Quando o arquivo chegar: ajustar <colunas> e implementar leitor. -->
+        <sistema id="ORACLE_EBS">
+            <nome>ORACLE_EBS</nome>
+            <descricao>Oracle EBS</descricao>
+            <caminho_entrada>ENTRADA/SISTEMAS/ORACLE_EBS</caminho_entrada>
+            <caminho_parquet>DADOS/PARQUET/ACESSOS/ORACLE_EBS</caminho_parquet>
+            <colunas>
+                <usuario>USUARIO</usuario>
+                <nome>NOME</nome>
+                <cpf>CPF</cpf>
+                <email>EMAIL</email>
+                <perfil>PERFIL</perfil>
+                <situacao>SITUACAO</situacao>
+            </colunas>
+            <ativo>false</ativo>
+        </sistema>
+
+        <!-- OPERA OPERACIONAL — scaffold preparado. Aparece no Mapeamento CCO_CSC
+             (30 entradas) mas escopo na entrega ainda precisa ser confirmado
+             com a usuaria. -->
+        <sistema id="OPERA_OPERACIONAL">
+            <nome>OPERA_OPERACIONAL</nome>
+            <descricao>Opera Operacional</descricao>
+            <caminho_entrada>ENTRADA/SISTEMAS/OPERA_OPERACIONAL</caminho_entrada>
+            <caminho_parquet>DADOS/PARQUET/ACESSOS/OPERA_OPERACIONAL</caminho_parquet>
+            <colunas>
+                <usuario>USUARIO</usuario>
+                <nome>NOME</nome>
+                <cpf>CPF</cpf>
+                <email>EMAIL</email>
+                <perfil>PERFIL</perfil>
+                <situacao>SITUACAO</situacao>
+            </colunas>
+            <ativo>false</ativo>
+        </sistema>
     </sistemas>
 
     <matrizes>
