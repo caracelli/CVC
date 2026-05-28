@@ -12,6 +12,16 @@ class ConfigSistema:
     caminho_entrada: str
     caminho_parquet: str
     colunas: Dict[str, str] = field(default_factory=dict)
+    # Caminho do de-para de codigos -> nomes (usado por sistemas com
+    # formato matricial como SIG). Vazio para sistemas que trazem o nome
+    # do perfil direto no extrato (SYSTUR, SIGOT, IC, etc.).
+    caminho_de_para: str = ""
+    # 'longo' (padrao) = 1 linha por par usuario-perfil; 'matricial' =
+    # 1 linha por usuario com colunas = codigos de perfil (X = tem).
+    formato: str = "longo"
+    # false = sistema declarado no config mas sem implementacao/arquivo ainda
+    # (scaffold). Processador ignora.
+    ativo: bool = True
 
 
 @dataclass
@@ -60,6 +70,7 @@ class LeitorConfig:
             sid = sis.get("id")
             colunas_node = sis.find("colunas")
             colunas = {c.tag: c.text for c in colunas_node} if colunas_node else {}
+            ativo_txt = (sis.findtext("ativo", "true") or "true").strip().lower()
             sistemas[sid] = ConfigSistema(
                 id=sid,
                 nome=sis.findtext("nome", ""),
@@ -67,6 +78,9 @@ class LeitorConfig:
                 caminho_entrada=sis.findtext("caminho_entrada", ""),
                 caminho_parquet=sis.findtext("caminho_parquet", ""),
                 colunas=colunas,
+                caminho_de_para=sis.findtext("caminho_de_para", "") or "",
+                formato=(sis.findtext("formato", "longo") or "longo").strip().lower(),
+                ativo=ativo_txt not in ("false", "0", "no", "nao", "n"),
             )
 
         proc = root.find("processamento")

@@ -65,6 +65,19 @@ class TestNormalizacao(unittest.TestCase):
     def test_normalizar_email_lower_trim(self):
         self.assertEqual(normalizar_email("  Foo@Bar.com  "), "foo@bar.com")
 
+    def test_normalizar_cpf_mascarado_e_preservado(self):
+        # SICA_RA real: '39328XXX' nao deve virar '00000039328' (zfill).
+        # Preservar o mascaramento permite extrair_cpf_parcial achar '39328'
+        # depois, e impede falso match no nivel 1 (CPF exato).
+        self.assertEqual(normalizar_cpf("39328XXX"), "39328XXX")
+        self.assertEqual(normalizar_cpf("393.28?-??"), "393.28?-??")
+
+    def test_extrair_cpf_parcial_funciona_com_mascarado_preservado(self):
+        # Pipeline real: normalizar preserva mascarado, extrair_cpf_parcial
+        # devolve os digitos contiguos.
+        s = normalizar_cpf("39328XXX")
+        self.assertEqual(extrair_cpf_parcial(s), "39328")
+
 
 class TestCascataMatching(unittest.TestCase):
     """Cada teste exercita um nivel da cascata isoladamente."""
@@ -123,6 +136,15 @@ class TestCascataMatching(unittest.TestCase):
         r = self.s.vincular(cpf_mascarado="11111XXX", nome="JOAO SILVA")
         self.assertEqual(r.metodo, METODO_CPF_PARCIAL_NOME)
         self.assertEqual(r.score, SCORE_CPF_PARCIAL_NOME)
+        self.assertEqual(r.matricula, "MAT1")
+
+    def test_n3_pipeline_real_cpf_mascarado_preservado(self):
+        # Cenario real do SICA_RA: vincular_multi_chave passa o CPF como veio
+        # do banco (preservado mascarado). Cascata deve pular nivel 1
+        # (len != 11), pular nivel 2 (sem email) e cair em nivel 3.
+        r = self.s.vincular(cpf="11111XXX", cpf_mascarado="11111XXX",
+                            nome="JOAO SILVA")
+        self.assertEqual(r.metodo, METODO_CPF_PARCIAL_NOME)
         self.assertEqual(r.matricula, "MAT1")
 
     def test_n3_cpf_parcial_sem_nome_nao_resolve(self):

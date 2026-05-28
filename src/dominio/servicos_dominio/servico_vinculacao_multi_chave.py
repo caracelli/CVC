@@ -76,11 +76,14 @@ class ResultadoVinculacao:
 # ---- normalizacao --------------------------------------------------------
 
 def normalizar_cpf(v) -> str:
-    """11 digitos com zero a esquerda. '' se nao tem digito."""
-    if v is None:
-        return ""
-    d = re.sub(r"\D", "", str(v))
-    return d.zfill(11) if d else ""
+    """11 digitos com zero a esquerda — ou string original se mascarado.
+
+    Delega ao ServicoPadronizacao para manter UMA semantica unica de
+    normalizacao em todo o codigo. CPF mascarado ('39328XXX') e' preservado
+    para que extrair_cpf_parcial funcione no nivel 3 da cascata.
+    """
+    from .servico_padronizacao import ServicoPadronizacao
+    return ServicoPadronizacao.normalizar_cpf(v)
 
 
 def extrair_cpf_parcial(v) -> str:

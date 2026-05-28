@@ -14,6 +14,7 @@ from infraestrutura.ui_web import janela_processador as ui
 from aplicacao.casos_de_uso.importar_rh import ImportarRh
 from aplicacao.casos_de_uso.padronizar_rh import PadronizarRh
 from aplicacao.casos_de_uso.importar_sistema import ImportarSistema
+from aplicacao.casos_de_uso.importar_sig import ImportarSig
 from aplicacao.casos_de_uso.importar_matrizes import ImportarMatrizes
 from aplicacao.casos_de_uso.vincular_acessos_rh import VincularAcessosRh
 from aplicacao.casos_de_uso.analisar_divergencias import AnalisarDivergencias
@@ -178,6 +179,19 @@ def _executar(caminho_config: Path) -> int:
             conexao=conexao,
             sistema=Sistema.SYSTUR,
             pasta_entrada=str(app_raiz / sis_cfg.caminho_entrada),
+            pasta_processados=pasta_proc,
+            pasta_erros=pasta_err,
+        ).executar()
+
+    # Card 12 — SIG (matricial + de-para). Condicional: roda so se houver
+    # pasta de entrada configurada E ativo. Nao bloqueia o pipeline se faltar
+    # arquivo (ImportarSig loga "nao em uso" e segue).
+    sig_cfg = cfg.sistemas.get("SIG")
+    if sig_cfg and sig_cfg.ativo and sig_cfg.caminho_entrada:
+        ImportarSig(
+            conexao=conexao,
+            pasta_extratos=str(app_raiz / sig_cfg.caminho_entrada),
+            pasta_de_para=str(app_raiz / sig_cfg.caminho_de_para) if sig_cfg.caminho_de_para else "",
             pasta_processados=pasta_proc,
             pasta_erros=pasta_err,
         ).executar()
