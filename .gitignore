@@ -92,3 +92,4 @@ CVC_IAM_ANALYTICS/.pbi_local
 
 # Log de execucao do visualizador — versionado para diagnostico remoto
 # src/visualizador/visualizador_log.txt
+src/DADOS/

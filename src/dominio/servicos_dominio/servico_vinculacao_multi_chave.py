@@ -125,8 +125,12 @@ class ServicoVinculacaoMultiChave:
         self._por_nome: Dict[str, List[str]] = defaultdict(list)
         # (cpf_parcial, nome) -> matriculas
         self._por_parcial_nome: Dict[Tuple[str, str], List[str]] = defaultdict(list)
-        # lista de (nome_normalizado, matricula) pra fuzzy
-        self._nomes_para_fuzzy: List[Tuple[str, str]] = []
+        # Indice por primeiro token do nome -> lista de (nome_completo, matricula).
+        # Reduz drasticamente o universo do fuzzy: em vez de comparar contra
+        # 11k+ funcionarios, compara so contra os ~50-200 que comecam pelo
+        # mesmo primeiro nome. Custo de indexacao: O(N). Beneficio: fuzzy de
+        # O(N*M*L) para ~O(N*M/K*L), onde K=num primeiros nomes distintos.
+        self._nomes_por_token: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
 
         for f in funcionarios:
             if f.cpf:
@@ -135,7 +139,9 @@ class ServicoVinculacaoMultiChave:
                 self._por_email[f.email].append(f.matricula)
             if f.nome:
                 self._por_nome[f.nome].append(f.matricula)
-                self._nomes_para_fuzzy.append((f.nome, f.matricula))
+                token = f.nome.split(" ", 1)[0] if f.nome else ""
+                if token:
+                    self._nomes_por_token[token].append((f.nome, f.matricula))
                 if f.cpf:
                     # registra (5 primeiros do CPF, nome) -> matricula
                     parcial = f.cpf[:_MIN_DIG_PARCIAL]
@@ -194,11 +200,23 @@ class ServicoVinculacaoMultiChave:
         return ResultadoVinculacao(METODO_NAO_VINCULADO, SCORE_NAO_VINCULADO, matricula=None)
 
     def _fuzzy_top(self, alvo: str, max_n: int = 3) -> List[str]:
-        if not self._nomes_para_fuzzy:
+        # Filtro O(1): so compara com nomes que comecam pelo mesmo PRIMEIRO
+        # token. Reduz universo de 11k+ para ~50-200 candidatos. Trade-off:
+        # nao pega casos com primeiro nome trocado por apelido ou troca de
+        # ordem ('Silva Joao'), mas para corporativo esses casos sao raros.
+        token = alvo.split(" ", 1)[0] if alvo else ""
+        candidatos_fuzzy = self._nomes_por_token.get(token, [])
+        if not candidatos_fuzzy:
             return []
         pares = []
-        for nome, matricula in self._nomes_para_fuzzy:
-            r = difflib.SequenceMatcher(None, alvo, nome).ratio()
+        matcher = difflib.SequenceMatcher(None, alvo, "")
+        for nome, matricula in candidatos_fuzzy:
+            matcher.set_seq2(nome)
+            # quick_ratio e' um upper bound barato — se nem isso passa do
+            # threshold, nao calcula o ratio real
+            if matcher.quick_ratio() < _FUZZY_THRESHOLD:
+                continue
+            r = matcher.ratio()
             if r >= _FUZZY_THRESHOLD:
                 pares.append((r, matricula))
         if not pares:
