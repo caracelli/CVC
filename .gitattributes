@@ -1,1 +1,2 @@
-ENTREGA/*.zip filter=lfs diff=lfs merge=lfs -text
+# Vazio: nao ha mais arquivos versionados via LFS.
+# Zips de ENTREGA/ deixaram de ser versionados (ver .gitignore).

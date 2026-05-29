@@ -74,8 +74,13 @@ CVC_IAM_ANALYTICS/EXECUTAVEIS/*.db-shm
 deploy/_build/
 deploy/_build_visualizador/
 
-# Zip "completo" (~116 MB): versionado via Git LFS (.gitattributes).
-# Outra maquina precisa de `git lfs install` antes do clone/pull.
+# Zips de entrega — NAO versionados. Sao binarios gerados pelos scripts
+# deploy/build_*.py a partir dos exes + Arquivos_origem/. Para reproduzir:
+#   1. python deploy/build_all.py        (gera os 5 exes)
+#   2. python deploy/build_mockup.py     (gera Mockup CVC.zip)
+#      python deploy/build_mockup_systur.py
+#      python deploy/build_entrega.py    (gera Projeto/Processador CVC.zip)
+ENTREGA/*.zip
 
 # Configurações locais do Claude
 .claude/
