@@ -109,7 +109,7 @@ class ImportarSig:
                 f"despivotadas e movido para PROCESSADOS."
             )
 
-        total_no_banco = len(self._repo_acesso.obter_por_sistema(Sistema.SIG))
+        total_no_banco = self._repo_acesso.contar_por_sistema(Sistema.SIG)
         logger.info(
             f"=== SIG: {len(arquivos)} arquivo(s) processado(s); "
             f"{total_no_banco} acessos no banco (estado final) ==="

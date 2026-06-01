@@ -82,6 +82,21 @@ class TestPKMultiPerfilEEmail(unittest.TestCase):
         salvos = self.repo.obter_por_sistema(Sistema.SYSTUR)
         self.assertIsNone(salvos[0].email)
 
+    # ---- Contagem ----
+    def test_contar_por_sistema_bate_com_len_e_isola_sistema(self):
+        self.repo.substituir_sistema(Sistema.SYSTUR, [
+            _p("u1", "P1", cpf="1"), _p("u1", "P2", cpf="1"), _p("u2", "P1", cpf="2"),
+        ], "systur.csv")
+        self.repo.substituir_sistema(Sistema.SIGOT, [
+            _p("u9", "PX", sistema=Sistema.SIGOT, cpf="9"),
+        ], "sigot.csv")
+        # bate com o len de obter_por_sistema
+        self.assertEqual(self.repo.contar_por_sistema(Sistema.SYSTUR), 3)
+        self.assertEqual(self.repo.contar_por_sistema(Sistema.SYSTUR),
+                         len(self.repo.obter_por_sistema(Sistema.SYSTUR)))
+        # isola por sistema
+        self.assertEqual(self.repo.contar_por_sistema(Sistema.SIGOT), 1)
+
     # ---- Dedup ----
     def test_dedup_por_trio_mantem_ultimo(self):
         # Mesmo trio aparece 2x no arquivo: mantem o ultimo

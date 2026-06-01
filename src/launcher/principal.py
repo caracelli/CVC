@@ -15,7 +15,6 @@ Fluxo:
 Nenhuma lógica de servidor HTTP, nenhum self-update, nenhum import pesado.
 Mantem o principal pequeno e estavel — raramente precisa mudar.
 """
-import os
 import shutil
 import subprocess
 import sys

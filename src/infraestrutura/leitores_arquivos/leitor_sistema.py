@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
-from loguru import logger
 
 from .leitor_base import LeitorArquivoBase
 from .configs_sistemas import ConfigLeitorSistema

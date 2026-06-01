@@ -9,7 +9,7 @@ from dominio.interfaces.i_repositorio_acesso import IRepositorioAcesso
 from dominio.objetos_valor.sistema import Sistema
 from dominio.servicos_dominio.servico_vinculacao_multi_chave import (
     FuncionarioRef, ResultadoVinculacao, ServicoVinculacaoMultiChave,
-    METODO_CPF, METODO_NAO_VINCULADO, SCORE_CPF, SCORE_NAO_VINCULADO,
+    METODO_CPF, SCORE_CPF,
 )
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.schema import AcessoSistema
@@ -88,6 +88,12 @@ class RepositorioAcessoSqlite(IRepositorioAcesso):
         with self._conexao.sessao() as sessao:
             rows = sessao.query(AcessoSistema).filter_by(sistema=sistema.value).all()
             return [self._para_perfil(r) for r in rows]
+
+    def contar_por_sistema(self, sistema: Sistema) -> int:
+        """COUNT(*) do sistema — evita materializar todas as linhas em objetos
+        ORM so pra contar (relevante no SIG: dezenas de milhares de acessos)."""
+        with self._conexao.sessao() as sessao:
+            return sessao.query(AcessoSistema).filter_by(sistema=sistema.value).count()
 
     def obter_por_usuario(self, usuario: str) -> List[PerfilAcesso]:
         with self._conexao.sessao() as sessao:

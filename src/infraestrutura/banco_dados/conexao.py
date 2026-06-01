@@ -124,7 +124,6 @@ class ConexaoBancoDados:
         ja_tem = conn.execute(text("SELECT COUNT(*) FROM historico")).scalar() or 0
         if ja_tem == 0:
             # Copia dados do historico_rh -> historico
-            sel_extra = ""
             for col_compat in ("tipo", "matricula", "campos_alterados", "dados_anterior", "dados_novo"):
                 if col_compat not in cols_old:
                     cols_old.add(col_compat)  # so pra evitar erro abaixo

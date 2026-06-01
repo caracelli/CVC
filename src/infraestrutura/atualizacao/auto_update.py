@@ -2,7 +2,7 @@
 """Auto-atualizacao dos executaveis (versao local x rede).
 
 Ao iniciar a partir de uma COPIA LOCAL, compara a <versao> do config.xml local
-com a do config.xml na rede (<rede><base>\\EXECUTAVEIS\\CONFIG\\config.xml).
+com a do config.xml na rede (<rede><raiz>\\EXECUTAVEIS\\CONFIG\\config.xml).
 Se diferirem, copia a pasta EXECUTAVEIS da rede por cima da local e re-executa
 o proprio exe.
 

@@ -12,9 +12,8 @@ tb_sys_sec_role). Celula 'X' = usuario tem aquele acesso.
 Despivot: cada linha vira N PerfilAcesso (um por 'X'). Os codigos sao
 traduzidos para nome legivel via catalogo (de-para no XLSX separado).
 """
-import re
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Dict, List
 
 import pandas as pd
 from loguru import logger

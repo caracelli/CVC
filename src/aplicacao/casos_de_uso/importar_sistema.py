@@ -74,7 +74,7 @@ class ImportarSistema:
                 f"({len(perfis)} linhas) e movido para PROCESSADOS."
             )
 
-        total = len(self._repositorio.obter_por_sistema(self._sistema))
+        total = self._repositorio.contar_por_sistema(self._sistema)
         logger.info(
             f"=== {self._sistema.value}: {len(arquivos)} arquivo(s) processado(s); "
             f"{total} acessos no banco (estado final) ==="

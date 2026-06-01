@@ -10,7 +10,6 @@ NAO spawna o core — quem faz isso e' o principal apos esta execucao terminar.
 Mora em: EXECUTAVEIS\\launcher\\launcher_atualizador.exe.
 """
 import argparse
-import os
 import shutil
 import sys
 import tempfile
