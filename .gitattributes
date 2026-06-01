@@ -1,2 +1,4 @@
-# Vazio: nao ha mais arquivos versionados via LFS.
-# Zips de ENTREGA/ deixaram de ser versionados (ver .gitignore).
+# Zips de entrega versionados via Git LFS (pull pronto na maquina de deploy).
+# Regra: limpar os zips antigos e gerar os novos a cada release, para nao
+# acumular versoes grandes no LFS.
+ENTREGA/*.zip filter=lfs diff=lfs merge=lfs -text

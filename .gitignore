@@ -74,13 +74,9 @@ CVC_IAM_ANALYTICS/EXECUTAVEIS/*.db-shm
 deploy/_build/
 deploy/_build_visualizador/
 
-# Zips de entrega — NAO versionados. Sao binarios gerados pelos scripts
-# deploy/build_*.py a partir dos exes + Arquivos_origem/. Para reproduzir:
-#   1. python deploy/build_all.py        (gera os 5 exes)
-#   2. python deploy/build_mockup.py     (gera Mockup CVC.zip)
-#      python deploy/build_mockup_systur.py
-#      python deploy/build_entrega.py    (gera Projeto/Processador CVC.zip)
-ENTREGA/*.zip
+# Zips de entrega — VERSIONADOS via Git LFS (ver .gitattributes), para pull
+# pronto na maquina de deploy. Regra: limpar os zips antigos e gerar os novos
+# a cada release (nao acumular). Gerados por build_all.py + build_entrega_rede.py.
 
 # Configurações locais do Claude
 .claude/
