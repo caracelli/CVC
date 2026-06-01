@@ -172,6 +172,10 @@ def carregar_config():
 
 REDE_RAIZ, BANCO_SUB, SISTEMA, QUAR_DIAS, CONFIG_SRC = carregar_config()
 
+# Visão Geral: janela movel (dias) dos blocos de FLUXO (Chamados, Movimentação).
+# Fixo por enquanto; tornar parametrizavel e' item do docs/ROADMAP_VISAO_GERAL.md.
+VG_JANELA_DIAS = 30
+
 
 def _precisa_sincronizar(rede_db: str, local_db: str) -> bool:
     """True se o cache local esta defasado em relacao ao da rede.
@@ -791,9 +795,19 @@ def construir_db():
             users.append(uc)
         else:
             users.append(u)
-    # Visão Geral: copia o vg estatico e injeta quarentena_ativa (dinamico)
+    # Visão Geral: copia o vg estatico e injeta os campos DINAMICOS.
     vg = dict(_BASE.get("vg", {}))
     vg["quarentena_ativa"] = len(em_quar)
+    # Resolvidos recalculados AO VIVO (dobrado + interacoes da rede), nao o
+    # snapshot cacheado em _BASE — assim a VG atualiza assim que algo e'
+    # resolvido, sem reiniciar. Mesma janela movel de N dias do _calcular_visao_geral.
+    _corte = (datetime.now() - timedelta(days=VG_JANELA_DIAS)).strftime("%Y-%m-%d")
+    n_resolv = sum(1 for r in resolvidos.values()
+                   if str(r.get("em", ""))[:10] >= _corte)
+    ch = dict(vg.get("chamados") or
+              {"identificados": 0, "resolvidos": 0, "tempo_medio_dias": 0})
+    ch["resolvidos"] = n_resolv
+    vg["chamados"] = ch
     return {"kpis": _BASE["kpis"], "acao_dist": _BASE["acao_dist"],
             "sis_dist": _BASE["sis_dist"], "meta": _BASE["meta"],
             "users": users, "vg": vg}
@@ -1017,22 +1031,23 @@ def _calcular_visao_geral(c, sistema=""):
         pass  # tabela historico pode nem existir em banco antigo
     out["mov_rh"] = mov
 
-    # Chamados do mês (identificados x resolvidos)
-    # Identificados = validacao_acessos criadas no mês atual
-    # Resolvidos = resolucoes com resolvido_em no mês atual
+    # Chamados — janela movel de ULTIMOS N dias (VG_JANELA_DIAS), nao
+    # mes-calendario: na virada do mes (dia 1) o calendario zerava e a tela
+    # vinha vazia. 30 dias terminando hoje sempre mostra o recente. (Mesma
+    # janela da Movimentação RH.) Parametrizar a janela: ver docs/ROADMAP_VISAO_GERAL.
     chamados = {"identificados": 0, "resolvidos": 0, "tempo_medio_dias": 0}
-    inicio_mes = hoje.replace(day=1).isoformat()
+    corte = (hoje - datetime.timedelta(days=VG_JANELA_DIAS)).isoformat()
     try:
         chamados["identificados"] = c.execute(
             "SELECT COUNT(*) FROM validacao_acessos "
-            "WHERE date(dt_processamento) >= ?", (inicio_mes,)
+            "WHERE date(dt_processamento) >= ?", (corte,)
         ).fetchone()[0]
     except Exception:
         pass
     try:
         chamados["resolvidos"] = c.execute(
             "SELECT COUNT(*) FROM resolucoes "
-            "WHERE date(resolvido_em) >= ?", (inicio_mes,)
+            "WHERE date(resolvido_em) >= ?", (corte,)
         ).fetchone()[0]
     except Exception:
         pass  # tabela resolucoes ainda nao existe em banco virgem
