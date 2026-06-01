@@ -15,6 +15,7 @@ Fluxo:
 Nenhuma lógica de servidor HTTP, nenhum self-update, nenhum import pesado.
 Mantem o principal pequeno e estavel — raramente precisa mudar.
 """
+import os
 import shutil
 import subprocess
 import sys
@@ -71,6 +72,7 @@ def main() -> int:
     atualizador_local = launcher_dir / "launcher_atualizador.exe"
     core_local = launcher_dir / f"launcher_{alvo}.exe"
 
+    houve_update = False
     rede_raiz = _texto(cfg_local, "rede/raiz")
     if rede_raiz:
         rede_exec_sub = _texto(cfg_local, "rede/executaveis") or "EXECUTAVEIS"
@@ -96,6 +98,7 @@ def main() -> int:
                         subprocess.run([str(atualizador_local),
                                         "--alvo", alvo],
                                        cwd=str(launcher_dir))
+                        houve_update = True   # splash exibido: a aba dele vira o painel
                     except Exception as e:
                         print(f"[principal] falha ao rodar atualizador: {e!r}")
                 else:
@@ -106,9 +109,17 @@ def main() -> int:
     if not core_local.exists():
         print(f"[principal] core ausente: {core_local}")
         return 1
+    # Apos atualizacao, o splash do atualizador ja redireciona a PROPRIA aba
+    # para o painel (8800). Entao o visualizador NAO deve abrir uma 2a aba —
+    # senao o usuario fica com o painel DUPLICADO. Em abertura normal (sem
+    # update), o core abre o navegador como sempre.
+    env = os.environ.copy()
+    if houve_update and alvo == "visualizador":
+        env["VISUALIZADOR_NOBROWSER"] = "1"
     try:
         subprocess.Popen([str(core_local)], cwd=str(launcher_dir),
-                         creationflags=_flags_detached(), close_fds=True)
+                         creationflags=_flags_detached(), close_fds=True,
+                         env=env)
     except Exception as e:
         print(f"[principal] falha ao spawnar core: {e!r}")
         return 1
