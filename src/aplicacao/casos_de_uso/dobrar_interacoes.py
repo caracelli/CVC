@@ -69,6 +69,18 @@ CREATE TABLE IF NOT EXISTS resolucoes (
 )
 """
 
+_SQL_ATALHOS = """
+CREATE TABLE IF NOT EXISTS atalhos (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  origem TEXT,
+  filtros TEXT NOT NULL,
+  criado_por TEXT,
+  criado_em TEXT,
+  dobrado_em TEXT
+)
+"""
+
 
 class DobrarInteracoes:
     """Consolida as interacoes da rede nas tabelas de quarentena do banco."""
@@ -142,6 +154,20 @@ class DobrarInteracoes:
                     ant.get("data_acao", "")):
                 res_reg[str(rid)] = it
 
+        # ATALHO: para cada id, vence a interacao de data_acao mais recente
+        # (acao=CRIAR ou EXCLUIR). Idempotente.
+        atalho_reg: dict = {}
+        for it in interacoes:
+            if it.get("tipo_interacao") != "ATALHO":
+                continue
+            rid = it.get("registro_id")
+            if not rid:
+                continue
+            ant = atalho_reg.get(str(rid))
+            if ant is None or str(it.get("data_acao", "")) >= str(
+                    ant.get("data_acao", "")):
+                atalho_reg[str(rid)] = it
+
         c = sqlite3.connect(self._banco, timeout=15)
         try:
             c.execute("PRAGMA journal_mode=WAL")
@@ -149,6 +175,7 @@ class DobrarInteracoes:
             c.executescript(_SQL_QUAR)
             c.executescript(_SQL_HIST)
             c.executescript(_SQL_RES)
+            c.executescript(_SQL_ATALHOS)
             n_env = n_res = 0
             for rid, its in por_reg.items():
                 its.sort(key=lambda x: str(x.get("data_acao", "")))
@@ -176,10 +203,30 @@ class DobrarInteracoes:
                      it.get("nome") or "", it.get("usuario") or "",
                      it.get("data_acao") or "", agora])
                 n_resol += 1
+
+            n_atalho_cri = n_atalho_exc = 0
+            for rid, it in atalho_reg.items():
+                ex = it.get("extras") or {}
+                acao = it.get("acao", "")
+                if acao == "EXCLUIR":
+                    rc = c.execute("DELETE FROM atalhos WHERE id=?", [rid]).rowcount
+                    if rc:
+                        n_atalho_exc += 1
+                else:  # CRIAR (default) — upsert
+                    c.execute(
+                        "INSERT OR REPLACE INTO atalhos (id,nome,origem,filtros,"
+                        "criado_por,criado_em,dobrado_em) VALUES (?,?,?,?,?,?,?)",
+                        [rid, ex.get("nome") or rid, ex.get("origem") or "",
+                         json.dumps(ex.get("filtros") or [], ensure_ascii=False),
+                         it.get("usuario") or "", it.get("data_acao") or "", agora])
+                    n_atalho_cri += 1
+
             c.commit()
             logger.info(
                 f"Dobra: {n_env} em quarentena, {n_res} resolvido(s), "
-                f"{n_resol} resolucao(oes) de pendencia aplicadas na base.")
+                f"{n_resol} resolucao(oes) de pendencia, "
+                f"{n_atalho_cri} atalho(s) criado/atualizado, "
+                f"{n_atalho_exc} atalho(s) excluido(s) aplicado(s) na base.")
         finally:
             c.close()
 

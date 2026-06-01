@@ -95,6 +95,33 @@ podem ser renomeados nem ter tipo trocado**.
 
 `acao` válidas: `RESOLVER`.
 
+#### ATALHO
+
+Atalho personalizado de filtros, salvo pelo usuário no painel. Mesma
+mecânica de quarentena: gravar no JSONL local, consolidar na tabela
+`atalhos` no próximo Processador.
+
+```json
+{
+  "schema_version": 1, "tipo_interacao": "ATALHO",
+  "registro_id": "atl_1717012345",
+  "acao": "CRIAR",
+  "usuario": "joao.silva", "data_acao": "2026-05-29T16:42:18",
+  "extras": {
+    "nome": "Desligados SYSTUR p/ resolver hoje",
+    "origem": "incl",
+    "filtros": [["tipo","Sem Vínculo RH"], ["sistema","SYSTUR"]]
+  }
+}
+```
+
+`acao` válidas: `CRIAR`, `EXCLUIR`.
+
+- `CRIAR` → INSERT OR REPLACE em `atalhos` (cria/atualiza)
+- `EXCLUIR` → DELETE FROM atalhos WHERE id=registro_id
+- Dedup por (registro_id, data_acao): vence a interação mais recente
+- Limite servidor: 9 atalhos por aba/origem, por usuário (`LIMITE_ATALHOS_POR_ABA`)
+
 ---
 
 ## Regras que não podem mudar

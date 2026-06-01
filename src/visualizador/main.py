@@ -22,7 +22,7 @@ config.xml (ao lado do exe):
   </config>
 """
 import sys, os, io, json, time, socket, sqlite3, threading, webbrowser, getpass, zipfile
-import shutil, subprocess, tempfile
+import subprocess
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -283,10 +283,12 @@ def _interacoes_ler():
     return todas
 
 
-def _quarentena_viva():
-    """Estado vivo {registro_id: interacao mais recente} do tipo QUARENTENA."""
+def _quarentena_viva(interacoes=None):
+    """Estado vivo {registro_id: interacao mais recente} do tipo QUARENTENA.
+    Aceita uma lista de interacoes ja lida (coalesce: evita reler a pasta da
+    rede no mesmo request); se None, le da rede."""
     atual = {}
-    for it in _interacoes_ler():
+    for it in (interacoes if interacoes is not None else _interacoes_ler()):
         if it.get("tipo_interacao") != "QUARENTENA":
             continue
         rid = it.get("registro_id")
@@ -313,10 +315,11 @@ def _meta_divergencia(rid):
     return rid, "", ""
 
 
-def _resolucao_viva():
-    """Estado vivo {registro_id: interacao} das interacoes RESOLUCAO da rede."""
+def _resolucao_viva(interacoes=None):
+    """Estado vivo {registro_id: interacao} das interacoes RESOLUCAO da rede.
+    Aceita interacoes ja lidas (coalesce de leitura no mesmo request)."""
     atual = {}
-    for it in _interacoes_ler():
+    for it in (interacoes if interacoes is not None else _interacoes_ler()):
         if it.get("tipo_interacao") != "RESOLUCAO":
             continue
         rid = it.get("registro_id")
@@ -359,11 +362,12 @@ def _resolucoes_db():
         c.close()
 
 
-def _resolucoes_mescladas():
+def _resolucoes_mescladas(interacoes=None):
     """{registro_id: dados da resolucao} — banco dobrado + interacoes vivas da
-    rede (a viva, mais recente, sobrepoe a dobrada)."""
+    rede (a viva, mais recente, sobrepoe a dobrada). `interacoes` opcional
+    para coalescer a leitura da rede no mesmo request."""
     out = dict(_resolucoes_db())
-    for rid, it in _resolucao_viva().items():
+    for rid, it in _resolucao_viva(interacoes).items():
         out[rid] = {
             "ticket": it.get("ticket") or "",
             "ticket_url": it.get("ticket_url") or "",
@@ -539,10 +543,21 @@ def sweep_expiradas(c=None):
     """Move ao historico as quarentenas cujo prazo (data_fim) ja venceu,
     com motivo 'Prazo vencido'. Idempotente."""
     own = c is None
+    hoje = datetime.now().strftime("%Y-%m-%d")
     if own:
+        # Pre-check barato em read-only: no caso comum (nada vencido) evita
+        # abrir conexao de escrita (WAL) a cada /api/dados.
+        cro = conn_ro()
+        try:
+            tem = cro.execute(
+                "SELECT 1 FROM quarentena WHERE substr(data_fim,1,10) < ? "
+                "LIMIT 1", [hoje]).fetchone()
+        finally:
+            cro.close()
+        if not tem:
+            return 0
         c = conn_rw()
     try:
-        hoje = datetime.now().strftime("%Y-%m-%d")
         agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         venc = c.execute(
             "SELECT id,usuario,nome_usuario,sistema,matricula,origem,data_inicio,"
@@ -751,15 +766,18 @@ def construir_db():
         em_quar = {r[0] for r in cro.execute("SELECT usuario FROM quarentena")}
     finally:
         cro.close()
+    # Le as interacoes da rede UMA vez por request e reaproveita nos dois
+    # estados vivos abaixo (antes eram 2 varreduras completas da pasta SMB).
+    _interacoes = _interacoes_ler()
     # sobrepoe as interacoes vivas da rede (ENVIAR entra, RESOLVER sai)
-    for rid, it in _quarentena_viva().items():
+    for rid, it in _quarentena_viva(_interacoes).items():
         if it.get("acao") == "ENVIAR":
             em_quar.add(rid)
         elif it.get("acao") == "RESOLVER":
             em_quar.discard(rid)
     # sobrepoe as resolucoes (banco dobrado + interacoes vivas): o funcionario
     # resolvido ganha u.resolvido + u.resolucao e todas as divs viram Resolvido.
-    resolvidos = _resolucoes_mescladas()
+    resolvidos = _resolucoes_mescladas(_interacoes)
     users = []
     for u in _BASE["users"]:
         if u["u"] in em_quar:
@@ -773,9 +791,12 @@ def construir_db():
             users.append(uc)
         else:
             users.append(u)
+    # Visão Geral: copia o vg estatico e injeta quarentena_ativa (dinamico)
+    vg = dict(_BASE.get("vg", {}))
+    vg["quarentena_ativa"] = len(em_quar)
     return {"kpis": _BASE["kpis"], "acao_dist": _BASE["acao_dist"],
             "sis_dist": _BASE["sis_dist"], "meta": _BASE["meta"],
-            "users": users}
+            "users": users, "vg": vg}
 
 
 def _montar_base():
@@ -819,7 +840,9 @@ def _montar_base():
                        COALESCE(r.cargo_descricao,'') cargo,
                        COALESCE(r.departamento,'')   depto,
                        COALESCE(r.centro_custo_codigo,'') cc_cod,
-                       COALESCE(r.centro_custo_nome,'')   cc_nome
+                       COALESCE(r.centro_custo_nome,'')   cc_nome,
+                       COALESCE(r.cpf,'')   cpf,
+                       COALESCE(r.email,'') email
                 FROM bi_divergencias b
                 LEFT JOIN rh_ativos r ON r.matricula = b.matricula
                 {wsql}
@@ -832,6 +855,7 @@ def _montar_base():
                 u = {"u": r["usuario"], "n": r["nome_usuario"] or r["usuario"],
                      "m": r["matricula"] or "", "c": r["cargo"], "d": r["depto"],
                      "cc": (r["cc_cod"] + " - " + r["cc_nome"]).strip(" -"),
+                     "cpf": r["cpf"] or "", "email": r["email"] or "",
                      "divs": []}
                 users[r["usuario"]] = u
             tp = r["tipo"]
@@ -851,10 +875,162 @@ def _montar_base():
             "SELECT MAX(data_identificacao) FROM bi_divergencias "
             "WHERE data_identificacao <> ''").fetchone()[0] or ""
         meta = {"referencia": _mes_ref(maxdt), "atualizacao": _fmt_dt(maxdt)}
+
+        # ── Visão Geral (campos adicionais para a aba pg-vg) ──────────────
+        # Filtra por SISTEMA do config (mesmo escopo da grid de Inclusão).
+        # Resiliente a drift de schema: se a VG falhar (ex.: banco antigo sem
+        # alguma coluna/tabela), o painel principal segue de pe com vg vazio.
+        try:
+            vg = _calcular_visao_geral(c, sistema=SISTEMA)
+        except Exception as e:
+            print(f"  [vg] falha ao calcular Visão Geral: {e!r} — vg vazio")
+            vg = {}
         return {"kpis": kpis, "acao_dist": acao_dist, "sis_dist": sis_dist,
-                "users": list(users.values()), "meta": meta}
+                "users": list(users.values()), "meta": meta, "vg": vg}
     finally:
         c.close()
+
+
+def _calcular_visao_geral(c, sistema=""):
+    """Coleta os blocos da aba Visão Geral.
+
+    Tudo em SQL simples sobre o banco do Processador. Quando `sistema` for
+    informado, os KPIs e contagens filtram pelo mesmo escopo da aba Inclusão
+    (para os números baterem).
+    """
+    import datetime
+    out = {}
+    # Filtro de sistema (mesmo escopo da grid de Inclusão / Alteração)
+    whereS = " AND sistema = ?" if sistema else ""
+    argS = (sistema,) if sistema else ()
+
+    # KPIs principais — todos filtrados por `sistema` (primeira entrega = SYSTUR)
+    # "Pendências Abertas" — TOTAL exibido na aba Inclusão / Alteração.
+    # Fonte: bi_divergencias (validacao_acessos com ação + ACESSO_SEM_VINCULO_RH).
+    try:
+        out["pendentes"] = c.execute(
+            f"SELECT COUNT(*) FROM bi_divergencias WHERE resolvida=0{whereS}",
+            argS).fetchone()[0]
+    except Exception:
+        out["pendentes"] = c.execute(
+            "SELECT COUNT(*) FROM validacao_acessos "
+            "WHERE situacao_acao='PENDENTE'").fetchone()[0]
+    # Acessos de desligado: limita ao sistema do escopo
+    wsis = "WHERE a.sistema = ?" if sistema else ""
+    out["acessos_deslig"] = c.execute(
+        f"SELECT COUNT(*) FROM acessos_sistemas a "
+        f"JOIN rh_desligados d ON a.matricula_vinculada = d.matricula {wsis}",
+        argS).fetchone()[0]
+    # Cobertura RH: também só do sistema do escopo
+    wsis_simples = "WHERE sistema = ?" if sistema else ""
+    total = c.execute(
+        f"SELECT COUNT(*) FROM acessos_sistemas {wsis_simples}",
+        argS).fetchone()[0]
+    vinc = c.execute(
+        f"SELECT COUNT(*) FROM acessos_sistemas "
+        f"WHERE matricula_vinculada IS NOT NULL "
+        f"AND metodo_vinculacao NOT IN ('NAO_VINCULADO','FUZZY','')"
+        + (" AND sistema = ?" if sistema else ""),
+        argS).fetchone()[0]
+    out["cobertura_pct"] = round(100 * vinc / total, 1) if total else 0
+    out["acessos_vinc"] = vinc
+    out["total_acessos"] = total
+    # quarentena_ativa: preenchido no construir_db (depende do set em_quar)
+
+    # Universo RH (banner) — RH é global (sem filtro de sistema)
+    out["rh_ativos"] = c.execute("SELECT COUNT(*) FROM rh_ativos").fetchone()[0]
+    out["rh_desligados"] = c.execute("SELECT COUNT(*) FROM rh_desligados").fetchone()[0]
+
+    # Divergências por tipo (do sistema do escopo)
+    out["div_tipos"] = {r[0]: r[1] for r in c.execute(
+        f"SELECT tipo, COUNT(*) FROM divergencias "
+        + (" WHERE sistema = ?" if sistema else "") + " GROUP BY tipo",
+        argS)}
+    # Concentração por sistema (mantem todos os sistemas — visão de proporção)
+    out["div_sistemas"] = {r[0]: r[1] for r in c.execute(
+        "SELECT sistema, COUNT(*) FROM divergencias GROUP BY sistema ORDER BY 2 DESC")}
+
+    # Top 10 desligados recentes ainda com acesso ativo NO SISTEMA do escopo
+    hoje = datetime.date.today()
+    top = []
+    wsis_top = "AND a.sistema = ?" if sistema else ""
+    for r in c.execute(f"""
+        SELECT d.nome, d.data_desligamento, d.cargo_descricao,
+               COUNT(DISTINCT a.sistema) AS sistemas, COUNT(*) AS perfis
+        FROM rh_desligados d
+        JOIN acessos_sistemas a ON a.matricula_vinculada = d.matricula
+        WHERE d.data_desligamento IS NOT NULL {wsis_top}
+        GROUP BY d.matricula
+        ORDER BY d.data_desligamento DESC LIMIT 10
+    """, argS):
+        try:
+            dias = (hoje - datetime.date.fromisoformat(r[1])).days
+        except Exception:
+            dias = None
+        top.append({"nome": r[0], "data": r[1], "dias": dias,
+                    "cargo": r[2], "sistemas": r[3], "perfis": r[4]})
+    out["top_urgentes"] = top
+
+    # Aging: agrupa validacao_acessos PENDENTE por faixa etária (dt_processamento)
+    aging = {"0-7": 0, "8-30": 0, "31-90": 0, "90+": 0}
+    for r in c.execute("""
+        SELECT dt_processamento FROM validacao_acessos
+        WHERE situacao_acao='PENDENTE' AND dt_processamento IS NOT NULL
+    """):
+        try:
+            dt = datetime.datetime.fromisoformat(str(r[0])[:19]).date()
+            dias = (hoje - dt).days
+        except Exception:
+            continue
+        if dias <= 7: aging["0-7"] += 1
+        elif dias <= 30: aging["8-30"] += 1
+        elif dias <= 90: aging["31-90"] += 1
+        else: aging["90+"] += 1
+    out["aging"] = aging
+
+    # Movimentação RH (CDC últimos 30 dias). Sem CDC = zeros (placeholder).
+    mov = {"admissoes": 0, "alteracoes": 0, "desligamentos": 0}
+    try:
+        d_corte = (hoje - datetime.timedelta(days=30)).isoformat()
+        rows = c.execute("""
+            SELECT entidade, tipo_mudanca, COUNT(*)
+            FROM historico
+            WHERE date(data_snapshot) >= ?
+            GROUP BY entidade, tipo_mudanca
+        """, (d_corte,)).fetchall()
+        for ent, tipo, n in rows:
+            if ent == "RH_ATIVO" and tipo == "NOVO":
+                mov["admissoes"] += n
+            elif ent == "RH_ATIVO" and tipo == "ALTERADO":
+                mov["alteracoes"] += n
+            elif ent == "RH_DESLIGADO" and tipo == "NOVO":
+                mov["desligamentos"] += n
+    except Exception:
+        pass  # tabela historico pode nem existir em banco antigo
+    out["mov_rh"] = mov
+
+    # Chamados do mês (identificados x resolvidos)
+    # Identificados = validacao_acessos criadas no mês atual
+    # Resolvidos = resolucoes com resolvido_em no mês atual
+    chamados = {"identificados": 0, "resolvidos": 0, "tempo_medio_dias": 0}
+    inicio_mes = hoje.replace(day=1).isoformat()
+    try:
+        chamados["identificados"] = c.execute(
+            "SELECT COUNT(*) FROM validacao_acessos "
+            "WHERE date(dt_processamento) >= ?", (inicio_mes,)
+        ).fetchone()[0]
+    except Exception:
+        pass
+    try:
+        chamados["resolvidos"] = c.execute(
+            "SELECT COUNT(*) FROM resolucoes "
+            "WHERE date(resolvido_em) >= ?", (inicio_mes,)
+        ).fetchone()[0]
+    except Exception:
+        pass  # tabela resolucoes ainda nao existe em banco virgem
+    out["chamados"] = chamados
+
+    return out
 
 
 def enviar_quarentena(usuarios, origem="Inclusão / Alteração"):
@@ -1104,6 +1280,18 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/api/historico":
                 self._send(200, json.dumps(listar_historico_rh(), ensure_ascii=False),
                            "application/json; charset=utf-8")
+            elif self.path.split("?")[0] == "/api/atalhos":
+                # ?origem=incl|consulta — filtra; sem origem lista de todas as abas
+                origem = ""
+                if "?" in self.path:
+                    for par in self.path.split("?", 1)[1].split("&"):
+                        if par.startswith("origem="):
+                            origem = par[7:].strip()
+                self._send(200, json.dumps(
+                    {"usuario": USUARIO,
+                     "limite": LIMITE_ATALHOS_POR_ABA,
+                     "atalhos": listar_atalhos(USUARIO, origem)},
+                    ensure_ascii=False), "application/json; charset=utf-8")
             elif self.path.split("?")[0] == "/api/ping":
                 _last_seen = time.time(); _armed = True; _enc_em = None
                 if "?" in self.path:
@@ -1186,6 +1374,30 @@ class H(BaseHTTPRequestHandler):
                      "dados": construir_db()}, ensure_ascii=False),
                     "application/json; charset=utf-8")
                 return
+            if self.path == "/api/atalho":
+                n = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+                ok, msg, atalho = criar_atalho(
+                    USUARIO,
+                    payload.get("nome"),
+                    payload.get("origem"),
+                    payload.get("filtros") or [],
+                )
+                self._send(200 if ok else 422, json.dumps(
+                    {"ok": ok, "erro": None if ok else msg, "atalho": atalho,
+                     "atalhos": listar_atalhos(USUARIO, payload.get("origem") or "")},
+                    ensure_ascii=False), "application/json; charset=utf-8")
+                return
+            if self.path == "/api/atalho/excluir":
+                n = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+                ok, msg = excluir_atalho(USUARIO, payload.get("id"))
+                origem = payload.get("origem") or ""
+                self._send(200 if ok else 404, json.dumps(
+                    {"ok": ok, "erro": None if ok else msg,
+                     "atalhos": listar_atalhos(USUARIO, origem)},
+                    ensure_ascii=False), "application/json; charset=utf-8")
+                return
             if self.path == "/api/exportar":
                 n = int(self.headers.get("Content-Length", 0))
                 payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
@@ -1209,6 +1421,159 @@ class H(BaseHTTPRequestHandler):
         except Exception as e:
             print(f"  [ERRO POST {self.path}] {e!r}")
             self._send(500, json.dumps({"erro": repr(e)}), "application/json")
+
+
+# ── Atalhos personalizados (mesmo padrão de quarentena/resolução) ──────
+LIMITE_ATALHOS_POR_ABA = 9
+
+
+def _atalhos_db():
+    """Lista de atalhos consolidados na tabela 'atalhos' (banco dobrado).
+    Retorna [] se a tabela ainda nao existe (banco pre-1a dobra)."""
+    out = []
+    try:
+        c = conn_ro()
+        try:
+            for r in c.execute("SELECT id, nome, origem, filtros, criado_por, "
+                               "criado_em FROM atalhos"):
+                try:
+                    filtros = json.loads(r["filtros"] or "[]")
+                except Exception:
+                    filtros = []
+                out.append({
+                    "id": r["id"], "nome": r["nome"], "origem": r["origem"] or "",
+                    "filtros": filtros, "criado_por": r["criado_por"] or "",
+                    "criado_em": r["criado_em"] or "",
+                })
+        finally:
+            c.close()
+    except Exception:
+        pass
+    return out
+
+
+def _atalhos_vivos():
+    """Estado vivo {id: ultima_interacao} do tipo ATALHO. CRIAR e EXCLUIR
+    competem por id — vence a interacao de data_acao mais recente."""
+    atual = {}
+    for it in _interacoes_ler():
+        if it.get("tipo_interacao") != "ATALHO":
+            continue
+        rid = it.get("registro_id")
+        if not rid:
+            continue
+        ant = atual.get(rid)
+        if ant is None or str(it.get("data_acao", "")) >= str(ant.get("data_acao", "")):
+            atual[rid] = it
+    return atual
+
+
+def listar_atalhos(usuario, origem=""):
+    """Lista atalhos visiveis pro `usuario` na aba `origem` (incl|consulta).
+    Mescla tabela dobrada + interacoes vivas da rede (vivas sobrepoem)."""
+    final = {}
+    for a in _atalhos_db():
+        if a["criado_por"] == usuario and (not origem or a["origem"] == origem):
+            final[a["id"]] = a
+    for rid, it in _atalhos_vivos().items():
+        # so do usuario atual
+        if (it.get("usuario") or "") != usuario:
+            continue
+        ex = it.get("extras") or {}
+        if origem and ex.get("origem") != origem:
+            continue
+        if it.get("acao") == "EXCLUIR":
+            final.pop(rid, None)
+        else:  # CRIAR
+            final[rid] = {
+                "id": rid, "nome": ex.get("nome") or rid,
+                "origem": ex.get("origem") or "",
+                "filtros": ex.get("filtros") or [],
+                "criado_por": it.get("usuario") or "",
+                "criado_em": it.get("data_acao") or "",
+            }
+    return sorted(final.values(), key=lambda a: a.get("criado_em") or "")
+
+
+def _normalizar_filtros(filtros):
+    """Devolve tupla ordenada de pares (fid, valor) — para comparar como
+    CONJUNTO (ordem dos pares e ordem dos valores dentro nao importam)."""
+    if not filtros:
+        return tuple()
+    return tuple(sorted((str(f), str(v)) for f, v in filtros))
+
+
+def criar_atalho(usuario, nome, origem, filtros):
+    """Grava interacao ATALHO/CRIAR no JSONL do usuario.
+    Aplica:
+      - limite de LIMITE_ATALHOS_POR_ABA por (usuario, origem)
+      - validacao de duplicacao: rejeita se ja existe filtro do usuario com
+        os mesmos criterios (mesmo conjunto de filtros)
+    Retorna (ok: bool, mensagem: str, atalho: dict|None)."""
+    nome = (nome or "").strip()
+    origem = (origem or "").strip()
+    if not nome:
+        return False, "nome obrigatório", None
+    if origem not in ("incl", "hist", "consulta"):
+        return False, "origem inválida (use 'incl', 'hist' ou 'consulta')", None
+    if not isinstance(filtros, list):
+        return False, "filtros precisa ser lista", None
+    atuais = listar_atalhos(usuario, origem)
+    # Validacao 1: limite
+    if len(atuais) >= LIMITE_ATALHOS_POR_ABA:
+        return False, (f"limite de {LIMITE_ATALHOS_POR_ABA} filtros nesta "
+                       f"aba atingido — exclua algum antes"), None
+    # Validacao 2: duplicacao de criterios
+    chave_nova = _normalizar_filtros(filtros)
+    for a in atuais:
+        if _normalizar_filtros(a.get("filtros") or []) == chave_nova:
+            return False, (f"Já existe um filtro salvo com esses mesmos "
+                           f"critérios: \"{a['nome']}\". "
+                           f"Abra 'Meus filtros' para ver/usar."), None
+    rid = f"atl_{int(time.time()*1000)}"
+    interacao = {
+        "schema_version": 1,
+        "tipo_interacao": "ATALHO",
+        "registro_id": rid,
+        "acao": "CRIAR",
+        "usuario": usuario,
+        "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "extras": {"nome": nome, "origem": origem, "filtros": filtros},
+    }
+    try:
+        _interacao_gravar(interacao)
+    except Exception as e:
+        return False, f"falha ao gravar: {e!r}", None
+    return True, "ok", {
+        "id": rid, "nome": nome, "origem": origem, "filtros": filtros,
+        "criado_por": usuario, "criado_em": interacao["data_acao"],
+    }
+
+
+def excluir_atalho(usuario, atalho_id):
+    """Grava interacao ATALHO/EXCLUIR no JSONL do usuario. So permite excluir
+    atalho do PROPRIO usuario (autoridade local)."""
+    rid = str(atalho_id or "").strip()
+    if not rid:
+        return False, "id obrigatório"
+    # Confere que o atalho existe e e' do usuario (evita EXCLUIR alheio)
+    visiveis = {a["id"] for a in listar_atalhos(usuario)}
+    if rid not in visiveis:
+        return False, "atalho não encontrado para este usuário"
+    interacao = {
+        "schema_version": 1,
+        "tipo_interacao": "ATALHO",
+        "registro_id": rid,
+        "acao": "EXCLUIR",
+        "usuario": usuario,
+        "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "extras": {},
+    }
+    try:
+        _interacao_gravar(interacao)
+    except Exception as e:
+        return False, f"falha ao gravar: {e!r}"
+    return True, "ok"
 
 
 def banner():
@@ -1246,10 +1611,18 @@ def _rodar_processador_se_necessario():
     print(f"  [primeiro-uso] banco ausente — rodando {proc_exe}")
     try:
         env = os.environ.copy()
-        env["PROCESSADOR_ON_DONE"] = f"http://{HOST}:{PORT}/"
+        # Sinaliza pro Processador que foi chamado pelo Visualizador. A pagina
+        # HTML mostra "Clique em Fechar para abrir o painel" e o botao Fechar
+        # redireciona pra URL do painel apos sinalizar /encerrar.
+        env["PROCESSADOR_CHAMADO_POR"] = "visualizador"
+        env["PROCESSADOR_URL_PAINEL"] = f"http://{HOST}:{PORT}/"
         cp = subprocess.run([proc_exe], cwd=os.path.dirname(proc_exe), env=env)
         print(f"  [primeiro-uso] Processador retornou {cp.returncode}")
-        os.environ["VISUALIZADOR_NOBROWSER"] = "1"
+        # NAO setamos VISUALIZADOR_NOBROWSER: queremos que o main() abra o
+        # navegador normalmente quando subir o servidor 8800 — assim o usuario
+        # tem GARANTIA de ver o painel, mesmo se a aba do Processador foi
+        # fechada/perdida. A aba do Processador, se ainda aberta, redireciona
+        # pra mesma URL ao clicar Fechar (sem duplicar — replace na URL atual).
     except Exception as e:
         print(f"  [primeiro-uso] erro ao rodar Processador: {e!r}")
         return False

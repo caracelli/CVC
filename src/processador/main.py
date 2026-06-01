@@ -82,11 +82,14 @@ def main():
     # Sobe a janela HTML (substitui o terminal — Processador.exe e' --noconsole).
     # Em dev (script .py), tambem abre, util pra depurar.
     abre_navegador = os.environ.get("PROCESSADOR_NOBROWSER") != "1"
-    # Se o visualizador nos lancou, ele setou PROCESSADOR_ON_DONE com a URL do
-    # painel — a aba do Processador redireciona pra la quando terminar.
-    on_done = os.environ.get("PROCESSADOR_ON_DONE", "")
+    # Se o visualizador nos lancou, ele setou PROCESSADOR_CHAMADO_POR=visualizador
+    # e PROCESSADOR_URL_PAINEL com a URL do painel. A pagina do Processador
+    # entao mostra "Clique em Fechar para abrir o painel" e ao clicar redireciona.
+    chamado_por = os.environ.get("PROCESSADOR_CHAMADO_POR", "")
+    url_painel = os.environ.get("PROCESSADOR_URL_PAINEL", "")
     try:
-        ui.iniciar(abrir_navegador=abre_navegador, on_done_url=on_done)
+        ui.iniciar(abrir_navegador=abre_navegador,
+                   chamado_por=chamado_por, url_painel=url_painel)
     except Exception as e:
         print(f"[ui] falha ao iniciar janela HTML: {e!r}")
     _ligar_sink_ui()
@@ -105,8 +108,14 @@ def main():
         logger.error(traceback.format_exc())
     finally:
         ui.concluir(erro=erro)
-        # Da tempo do usuario ler a mensagem final antes do servidor cair
-        ui.aguardar_e_encerrar(segundos=10)
+        # Bloqueia ate o usuario clicar em Fechar / fechar a aba — depois
+        # o servidor cai. Timeout de 1h evita zumbi se o beacon falhar.
+        # Em modo headless (PROCESSADOR_NOBROWSER=1) ninguem clica Fechar:
+        # encerra rapido pra nao virar processo zumbi de 1h em runs agendados.
+        if abre_navegador:
+            ui.aguardar_e_encerrar(timeout_segundos=3600)
+        else:
+            ui.aguardar_e_encerrar(timeout_segundos=2)
 
 
 def _executar(caminho_config: Path) -> int:

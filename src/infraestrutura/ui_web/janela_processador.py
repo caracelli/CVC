@@ -9,20 +9,31 @@ Como funciona:
     (porta livre proxima de 8801) e abre o navegador na pagina.
   - A pagina faz polling em /log a cada 500ms; cada linha gravada
     via `escrever()` aparece na textarea.
-  - Quando o processador termina, `marcar_concluido()` faz a pagina
-    mostrar "Concluido" e ativa o botao "Fechar".
-  - `encerrar()` para o servidor.
+  - Quando o processador termina, `concluir()` faz a pagina mostrar
+    "Concluido" e ativa o botao "Fechar".
+  - O usuario clica "Fechar" (ou fecha a aba) -> JS chama /encerrar ->
+    sinaliza o evento de encerramento -> `aguardar_e_encerrar` retorna
+    -> processo do Processador termina.
+  - Fluxo "chamado pelo visualizador" (chamado_por='visualizador'):
+    mensagem deixa explicito que ao fechar abre o painel.
 
-Nao tem dependencias alem da stdlib (combinado com o resto do projeto
-e' o que permite o Processador rodar sem instalar nada na maquina).
+Nao tem dependencias alem da stdlib.
 """
 import json
 import threading
-import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-_HTML = """<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+# Texto que sera renderizado no HTML — substituido em iniciar() conforme contexto
+_MSG_CONCLUIDO_PADRAO = "Concluído. Clique em Fechar para encerrar."
+_MSG_CONCLUIDO_VISUALIZADOR = ("Concluído. Clique em Fechar (ou feche esta aba) "
+                                "para abrir o painel.")
+
+# Evento sinalizado quando o usuario clica em Fechar / fecha a aba.
+# aguardar_e_encerrar() bloqueia ate ele ser setado.
+_ENCERRAR_PEDIDO = threading.Event()
+
+_HTML_TEMPLATE = """<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Processador IAM Analytics</title><style>
 *{box-sizing:border-box}
 body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;
@@ -62,7 +73,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </div>
 <pre id="log"></pre>
 <div class="ft">
-  <button id="btn-fechar" disabled onclick="fechar()">Fechar</button>
+  <button id="btn-fechar" class="primary" disabled onclick="fechar()">Fechar</button>
 </div>
 </div>
 <script>
@@ -72,9 +83,13 @@ const stEl = document.getElementById('status');
 const card = document.getElementById('card');
 const btn = document.getElementById('btn-fechar');
 
-// Status base sem reticencias finais; os dots animados sao adicionados pelo
-// setInterval abaixo (cresce de . ate ......) — assim o usuario ve algo se
-// movendo mesmo quando a etapa atual demora alguns segundos.
+// Mensagem de conclusao injetada pelo servidor (varia por contexto)
+const MSG_CONCLUIDO = __MSG_CONCLUIDO__;
+// True quando o Processador foi disparado pelo Visualizador
+const VAI_ABRIR_PAINEL = __VAI_ABRIR_PAINEL__;
+// URL do painel (so usada se VAI_ABRIR_PAINEL=true)
+const URL_PAINEL = __URL_PAINEL__;
+
 let baseStatus = 'Iniciando';
 let dotN = 0;
 setInterval(() => {
@@ -94,14 +109,7 @@ function tick(){
     if (d.done){
       card.classList.add(d.erro ? 'err' : 'done');
       btn.disabled = false;
-      if (d.on_done_url && !d.erro) {
-        // Auto-launch pelo visualizador: a aba do Processador "vira" a aba do
-        // painel quando este responder. Polla via <script src=...> (sem CORS).
-        stEl.textContent = 'Concluído. Aguardando o painel...';
-        pollar_painel(d.on_done_url);
-      } else {
-        stEl.textContent = baseStatus;  // texto final estatico
-      }
+      stEl.textContent = d.erro ? baseStatus : MSG_CONCLUIDO;
       return;
     }
     setTimeout(tick, 500);
@@ -109,22 +117,39 @@ function tick(){
 }
 tick();
 
-function pollar_painel(url){
-  const base = url.endsWith('/') ? url : url + '/';
-  const s = document.createElement('script');
-  s.onload = () => window.location.replace(base);
-  s.onerror = () => { s.remove(); setTimeout(() => pollar_painel(url), 700); };
-  s.src = base + 'chart.umd.min.js?_=' + Date.now();
-  document.head.appendChild(s);
-}
+// Aviso de "fechar a aba" — sinaliza o servidor antes de sair.
+// Usa sendBeacon: enfileira a request mesmo quando a pagina ja esta
+// descarregando. /encerrar e' idempotente.
+window.addEventListener('beforeunload', () => {
+  try { navigator.sendBeacon('/encerrar'); } catch(e) {}
+});
 
 function fechar(){
-  // window.close() so funciona em janelas abertas por JS; em aba normal
-  // o navegador bloqueia. Como fallback, navegamos para about:blank.
+  // 1. Sinaliza o servidor para encerrar (libera o aguardar_e_encerrar)
+  // 2. Se chamado pelo visualizador, ja navega pra URL do painel — o
+  //    visualizador ja esta no ar quando isso acontece (NOBROWSER=0 abriu
+  //    o navegador na hora em que o subprocess do Processador terminou,
+  //    mas como esta janela continua aberta, sobrescrevemos a URL aqui).
+  // 3. Senao, fecha a aba (window.close() so funciona em janelas abertas
+  //    por JS; em aba normal o navegador bloqueia. Fallback: about:blank).
+  fetch('/encerrar', {method: 'POST'}).catch(()=>{});
+  if (VAI_ABRIR_PAINEL && URL_PAINEL) {
+    window.location.replace(URL_PAINEL);
+    return;
+  }
   try { window.close(); } catch(e) {}
   setTimeout(() => { window.location.replace('about:blank'); }, 100);
 }
 </script></body></html>"""
+
+
+def _renderizar_html(chamado_por: str, url_painel: str) -> str:
+    vai_abrir_painel = (chamado_por == "visualizador" and bool(url_painel))
+    msg = _MSG_CONCLUIDO_VISUALIZADOR if vai_abrir_painel else _MSG_CONCLUIDO_PADRAO
+    return (_HTML_TEMPLATE
+            .replace("__MSG_CONCLUIDO__", json.dumps(msg, ensure_ascii=False))
+            .replace("__VAI_ABRIR_PAINEL__", "true" if vai_abrir_painel else "false")
+            .replace("__URL_PAINEL__", json.dumps(url_painel or "")))
 
 
 class _Estado:
@@ -160,13 +185,12 @@ class _Estado:
                 "done": self._done,
                 "erro": self._erro,
                 "status": self._status,
-                "on_done_url": _ON_DONE_URL,
             }
 
 
 _ESTADO = _Estado()
 _SRV = None
-_ON_DONE_URL = ""    # se setado, a pagina redireciona pra ca quando done=True
+_HTML_RENDERIZADO = ""    # gerado em iniciar() com contexto correto
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -176,7 +200,7 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             if self.path == "/" or self.path.startswith("/?"):
-                self._send(200, _HTML, "text/html; charset=utf-8")
+                self._send(200, _HTML_RENDERIZADO, "text/html; charset=utf-8")
             elif self.path.startswith("/log"):
                 desde = 0
                 if "?" in self.path:
@@ -188,6 +212,9 @@ class _Handler(BaseHTTPRequestHandler):
                                 pass
                 payload = json.dumps(_ESTADO.snapshot(desde), ensure_ascii=False)
                 self._send(200, payload, "application/json; charset=utf-8")
+            elif self.path == "/encerrar":
+                _ENCERRAR_PEDIDO.set()
+                self._send(200, b'{"ok":true}', "application/json")
             elif self.path == "/favicon.ico":
                 self._send(204, b"")
             else:
@@ -197,6 +224,14 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(500, b"")
             except Exception:
                 pass
+
+    def do_POST(self):
+        # /encerrar tambem aceita POST (usado pelo botao Fechar + sendBeacon)
+        if self.path == "/encerrar":
+            _ENCERRAR_PEDIDO.set()
+            self._send(200, b'{"ok":true}', "application/json")
+        else:
+            self._send(404, b"")
 
     def _send(self, status, body, ct="text/plain"):
         if isinstance(body, str):
@@ -210,14 +245,17 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 def iniciar(porta_inicial: int = 8801, abrir_navegador: bool = True,
-            on_done_url: str = "") -> str:
+            chamado_por: str = "", url_painel: str = "") -> str:
     """Sobe o servidor da UI e abre o navegador. Devolve a URL final.
 
-    Se `on_done_url` for passada, a pagina redireciona pra essa URL quando
-    a execucao terminar (usado pelo visualizador para reaproveitar a aba
-    do Processador como aba do painel)."""
-    global _SRV, _ON_DONE_URL
-    _ON_DONE_URL = on_done_url or ""
+    chamado_por: 'visualizador' altera a mensagem de conclusao para
+        deixar claro que ao fechar a aba o painel sera aberto.
+    url_painel: URL do visualizador (so usada quando chamado_por='visualizador');
+        o botao Fechar redireciona a aba pra essa URL apos sinalizar /encerrar.
+    """
+    global _SRV, _HTML_RENDERIZADO
+    _ENCERRAR_PEDIDO.clear()
+    _HTML_RENDERIZADO = _renderizar_html(chamado_por, url_painel)
     porta = None
     for tentativa in range(porta_inicial, porta_inicial + 10):
         try:
@@ -251,9 +289,15 @@ def concluir(erro: bool = False) -> None:
     _ESTADO.concluir(erro=erro)
 
 
-def aguardar_e_encerrar(segundos: int = 5) -> None:
-    """Da tempo para o usuario ver o resultado e fecha o servidor."""
-    time.sleep(segundos)
+def aguardar_e_encerrar(timeout_segundos: int = 3600) -> None:
+    """Bloqueia ate o usuario sinalizar encerramento (clicar Fechar ou fechar
+    a aba) OU ate o timeout. Depois desliga o servidor.
+
+    Timeout default de 1h evita o processo virar zumbi se o navegador
+    nao conseguir disparar o beacon (ex.: aba ja fechada quando concluir
+    foi chamado).
+    """
+    _ENCERRAR_PEDIDO.wait(timeout=timeout_segundos)
     encerrar()
 
 

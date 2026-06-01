@@ -72,7 +72,7 @@ body{
   flex-direction:column;gap:13px;padding:16px;
 }
 .page.active{display:flex;}
-.page.active>*:not(.kpi-row){animation:rise .46s cubic-bezier(.22,.68,.24,1) both .12s;}
+.page.active>*:not(.kpi-row):not(.cs-drawer):not(.cs-drawer-bg){animation:rise .46s cubic-bezier(.22,.68,.24,1) both .12s;}
 .page.active .kpi{animation:pop .42s cubic-bezier(.22,.68,.24,1) both;}
 .page.active .kpi:nth-child(1){animation-delay:.03s;}
 .page.active .kpi:nth-child(2){animation-delay:.07s;}
@@ -291,6 +291,7 @@ table{border-collapse:collapse;width:100%;font-size:11px;}
 #matrix-tbl{table-layout:fixed;min-width:1240px;}
 #sv-tbl{table-layout:fixed;min-width:1040px;}
 #quar-tbl{table-layout:fixed;min-width:1040px;}
+#cs-tbl{table-layout:fixed;min-width:1504px;}
 thead th{
   position:sticky;top:0;z-index:2;
   background:linear-gradient(180deg,#2C3D72,#1F2D5C);color:#fff;
@@ -352,6 +353,94 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   padding:12px 8px 4px;letter-spacing:.2px;}
 .chart-title.orange{color:#E67E22;}
 .chart-box{flex:1;min-height:0;position:relative;margin:2px 12px 12px;}
+
+/* ── Aba Visão Geral (paleta CVC navy/gold, blocos compactos) ───────── */
+/* A pg-vg tem varias rows que somam mais altura que o viewport. Ativar
+   scroll vertical aqui (as outras abas tem scroll nas tabelas internas). */
+#pg-vg.active{overflow-y:auto;overflow-x:hidden;}
+#pg-vg::-webkit-scrollbar{width:10px;}
+#pg-vg::-webkit-scrollbar-track{background:transparent;}
+#pg-vg::-webkit-scrollbar-thumb{background:rgba(31,45,92,.26);border-radius:5px;}
+#pg-vg::-webkit-scrollbar-thumb:hover{background:rgba(31,45,92,.45);}
+.vg-row{display:flex;gap:13px;flex:none;}
+.vg-2col>.panel,.vg-2col-bg>.panel{flex:1;min-width:0;}
+.vg-2col-bg>.panel:nth-child(1){flex:0 0 40%;}
+.vg-panel{padding:14px 16px;display:flex;flex-direction:column;min-height:0;}
+.vg-title{font-size:13px;font-weight:700;color:var(--navy);
+  letter-spacing:.2px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.vg-title .vg-soft{font-weight:400;color:#7B8294;font-size:11.5px;}
+.vg-soft{color:#7B8294;font-size:11.5px;}
+.vg-foot-note{margin-top:10px;}
+.vg-kpi .kpi-val{font-size:27px;}
+
+/* Chamados (barras horizontais) */
+.vg-chamado-row{display:grid;grid-template-columns:100px 1fr 60px;gap:8px;
+  align-items:center;padding:5px 0;font-size:12px;}
+.vg-chamado-lbl{color:#5A6377;font-weight:600;}
+.vg-bar-track{background:rgba(31,45,92,.07);height:20px;border-radius:5px;overflow:hidden;}
+.vg-bar-fill{height:100%;border-radius:5px;transition:width .5s cubic-bezier(.22,.68,.24,1);}
+.vg-bar-val{text-align:right;font-weight:700;color:var(--navy);font-size:12.5px;}
+.vg-saldo{margin-top:10px;padding-top:10px;border-top:1px solid rgba(31,45,92,.10);
+  display:flex;justify-content:space-between;font-size:11.5px;color:#5A6377;}
+.vg-saldo-pos{color:#B33A3A;font-weight:700;}
+.vg-saldo-neg{color:#1E8449;font-weight:700;}
+
+/* Movimentação RH (barra empilhada) */
+.vg-mov-bar{display:flex;height:30px;border-radius:6px;overflow:hidden;margin-bottom:10px;
+  box-shadow:0 1px 2px rgba(20,28,55,.10) inset;}
+.vg-mov-seg{display:flex;align-items:center;justify-content:center;color:#fff;
+  font:700 12px 'Segoe UI';transition:filter .15s;}
+.vg-mov-seg:hover{filter:brightness(1.08);}
+.vg-mov-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;}
+.vg-mov-leg span{display:flex;align-items:center;gap:5px;color:#5A6377;}
+.vg-mov-leg .dot{width:9px;height:9px;border-radius:2px;}
+.vg-mov-foot{margin-top:10px;font-size:11.5px;color:#5A6377;}
+
+/* Donut SVG + legenda */
+.vg-donut-wrap{display:flex;gap:18px;align-items:center;}
+.vg-donut svg{width:140px;height:140px;}
+.vg-legenda{flex:1;display:flex;flex-direction:column;gap:7px;}
+.vg-leg-item{display:grid;grid-template-columns:12px 1fr auto;gap:8px;
+  align-items:center;font-size:12px;}
+.vg-leg-item .dot{width:10px;height:10px;border-radius:50%;}
+.vg-leg-val{font-weight:700;color:var(--navy);}
+.vg-leg-val small{color:#7B8294;font-weight:500;}
+
+/* Barras horizontais genéricas (sistemas, aging) */
+.vg-bars{display:flex;flex-direction:column;gap:7px;}
+.vg-bar-row{display:grid;grid-template-columns:90px 1fr 70px;gap:8px;
+  align-items:center;font-size:12px;}
+.vg-bar-row .vg-bar-lbl{color:#5A6377;font-weight:600;}
+
+/* Tabela top urgentes */
+.vg-tbl-wrap{flex:1;overflow:auto;}
+.vg-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.vg-tbl th{padding:7px 8px;text-align:left;color:#5A6377;
+  text-transform:uppercase;font-size:10px;letter-spacing:.06em;
+  background:rgba(31,45,92,.06);border-bottom:1px solid rgba(31,45,92,.10);}
+.vg-tbl td{padding:8px;border-bottom:1px solid rgba(31,45,92,.06);}
+.vg-tbl td:first-child{font-weight:600;color:var(--navy);}
+.vg-tbl .dias{color:#7B8294;font-size:11px;}
+.vg-badge{display:inline-block;min-width:32px;padding:2px 8px;border-radius:5px;
+  font:700 11.5px 'Segoe UI';text-align:center;}
+.vg-risco-alto{background:#FBE5E5;color:#B33A3A;}
+.vg-risco-medio{background:#FFF4DD;color:#A07000;}
+.vg-risco-baixo{background:#E5F3E5;color:#1E8449;}
+.vg-btn-acao{background:var(--navy);color:#fff;border:none;padding:4px 11px;
+  border-radius:5px;font:700 11px 'Segoe UI';cursor:pointer;transition:filter .15s;}
+.vg-btn-acao:hover{filter:brightness(1.15);}
+.vg-ver-todos{padding-top:10px;margin-top:8px;text-align:right;
+  border-top:1px solid rgba(31,45,92,.08);}
+.vg-ver-todos a{color:var(--navy);font-size:12px;font-weight:700;text-decoration:none;}
+.vg-ver-todos a:hover{color:var(--gold);}
+
+/* Sugestões / atalhos */
+.vg-sug-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.vg-sug{background:rgba(31,45,92,.06);padding:10px 12px;border-radius:7px;
+  font-size:11.5px;cursor:pointer;border-left:3px solid var(--gold);
+  transition:background .15s,transform .15s;}
+.vg-sug:hover{background:rgba(31,45,92,.12);transform:translateX(2px);}
+.vg-sug b{color:var(--navy);}
 
 /* ── Aba Quarentena ─────────────────────────────────────────────────── */
 .quar-toolbar{flex:none;display:flex;align-items:center;}
@@ -470,6 +559,259 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   40%    {transform:scale(1);  opacity:1;}
 }
 
+/* ── Atalhos personalizados (Opção C: 2 botões + dropdown) ─────────── */
+.atl-actions{display:inline-flex;align-items:center;gap:6px;
+  margin:0 6px 0 12px;position:relative;}
+.atl-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:#fff;border:1px solid #C9D2E3;color:var(--navy);
+  border-radius:6px;padding:6px 11px;font:700 11.5px 'Segoe UI';
+  cursor:pointer;transition:all .14s;
+}
+.atl-btn:hover{background:#EEF1F8;border-color:var(--navy);}
+.atl-btn[disabled]{opacity:.45;cursor:not-allowed;}
+.atl-btn .caret{font-size:9px;opacity:.7;margin-left:3px;}
+.atl-btn .badge-n{
+  background:var(--gold);color:var(--navy);border-radius:9px;
+  padding:1px 6px;font:800 10px 'Segoe UI';margin-left:3px;
+}
+/* Badge "Aplicado: <nome>" — visivel quando um filtro salvo bate exato */
+.atl-aplicado{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#E5F3E5;border:1px solid #A9DFBF;color:#1E7B43;
+  border-radius:6px;padding:5px 9px;font:600 11.5px 'Segoe UI';
+  margin-right:4px;
+}
+.atl-aplicado b{color:#1E7B43;font-weight:800;}
+.atl-aplicado-x{
+  width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:50%;background:rgba(30,123,67,.18);color:#1E7B43;
+  font:700 13px 'Segoe UI';cursor:pointer;line-height:1;
+  transition:background .14s,color .14s;
+}
+.atl-aplicado-x:hover{background:#B33A3A;color:#fff;}
+.atl-aplicado-i{
+  width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:50%;background:rgba(30,123,67,.18);color:#1E7B43;
+  font:700 11px Georgia,serif;cursor:help;line-height:1;font-style:italic;
+}
+.atl-aplicado-i:hover{background:rgba(30,123,67,.32);}
+
+/* Popover do filtro especial de Data (col 1 da grid) */
+.dm-menu{width:260px;padding:8px 10px;}
+.dm-menu .dm-h{font:700 10px 'Segoe UI';color:#7B8294;letter-spacing:.05em;
+  text-transform:uppercase;margin:4px 2px 6px;}
+.dm-menu .dm-r{display:flex;align-items:center;gap:7px;padding:5px 4px;
+  font:600 11.5px 'Segoe UI';color:var(--navy);cursor:pointer;border-radius:4px;}
+.dm-menu .dm-r:hover{background:#EEF1F8;}
+.dm-menu .dm-r input{margin:0;cursor:pointer;}
+.dm-menu .dm-sep{height:1px;background:#E7EBF2;margin:8px 2px;}
+.dm-menu .dm-range{display:flex;flex-direction:column;gap:5px;
+  padding:4px 22px 4px;}
+.dm-menu .dm-range label{display:flex;align-items:center;gap:7px;
+  font:600 11px 'Segoe UI';color:#5A6377;}
+.dm-menu .dm-range input[type="date"]{flex:1;border:1px solid #CBD3E0;
+  border-radius:5px;padding:4px 7px;font:500 11.5px 'Segoe UI';color:var(--navy);}
+.dm-menu .dm-ft{display:flex;gap:6px;justify-content:flex-end;
+  padding-top:8px;margin-top:8px;border-top:1px solid #E7EBF2;}
+.dm-menu .dm-aplicar,.dm-menu .dm-limpar{
+  border:none;border-radius:5px;padding:6px 14px;
+  font:700 11px 'Segoe UI';cursor:pointer;}
+.dm-menu .dm-aplicar{background:var(--navy);color:#fff;}
+.dm-menu .dm-aplicar:hover{filter:brightness(1.1);}
+.dm-menu .dm-limpar{background:#ECEFF4;color:#5A6377;}
+.dm-menu .dm-limpar:hover{background:#DDE3EC;}
+
+/* ── Aba Consulta (busca livre + tabela agregada + drawer drill-down) ─ */
+#pg-consulta{padding:16px;display:none;flex-direction:column;gap:12px;}
+#pg-consulta.active{display:flex;}
+.cs-topbar{flex:none;display:flex;align-items:center;gap:10px;
+  position:relative;z-index:50;
+  background:rgba(255,255,255,.72);
+  -webkit-backdrop-filter:blur(12px) saturate(150%);
+  backdrop-filter:blur(12px) saturate(150%);
+  border:1px solid rgba(255,255,255,.65);
+  border-radius:10px;padding:8px 12px;box-shadow:var(--sh-1);}
+.cs-busca-wrap{flex:1;min-width:260px;position:relative;display:flex;
+  align-items:center;background:#fff;border:1px solid #C9D2E3;border-radius:8px;
+  padding:5px 10px;transition:border-color .15s,box-shadow .15s;}
+.cs-busca-wrap:focus-within{border-color:var(--navy);
+  box-shadow:0 0 0 3px rgba(31,45,92,.10);}
+.cs-busca-ico{color:#7B8294;font-size:14px;margin-right:6px;}
+#cs-busca{flex:1;border:none;outline:none;background:transparent;
+  font:500 13px 'Segoe UI';color:var(--navy);padding:5px 0;}
+#cs-busca::placeholder{color:#A0A6B8;}
+#cs-busca-clear{background:none;border:none;color:#7B8294;font:700 18px Arial;
+  cursor:pointer;padding:0 4px;line-height:1;display:none;}
+#cs-busca-clear.show{display:inline-block;}
+#cs-busca-clear:hover{color:#B33A3A;}
+.cs-content{flex:1;min-height:0;}
+#cs-tbl tbody tr{transition:background .12s;}
+#cs-tbl tbody tr:hover{background:#F4F6FB;}
+#cs-tbl tbody tr.cs-sub:hover{background:#FBFCFE;}
+#cs-tbl tbody tr.cs-row-ativa{background:#FFF8E6;box-shadow:inset 3px 0 0 var(--gold);}
+#cs-tbl tbody tr.cs-row-ativa:hover{background:#FFF1CC;}
+/* Botões P/H na coluna Abas da Consulta */
+.cs-aba-btns{display:inline-flex;gap:4px;}
+.cs-aba-btn{display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:24px;border-radius:5px;cursor:pointer;
+  font:800 11.5px 'Segoe UI';border:1px solid transparent;
+  transition:transform .08s,filter .14s,box-shadow .14s;}
+.cs-aba-btn.p{background:linear-gradient(180deg,#FDE7E9,#F8CDD2);
+  color:#A4262C;border-color:#F1A8B0;}
+.cs-aba-btn.p:hover{filter:brightness(1.04);
+  box-shadow:0 2px 6px rgba(164,38,44,.25);}
+.cs-aba-btn.h{background:linear-gradient(180deg,#E2ECFB,#C6D8F4);
+  color:#15428B;border-color:#A8C0E8;}
+.cs-aba-btn.h:hover{filter:brightness(1.04);
+  box-shadow:0 2px 6px rgba(21,66,139,.25);}
+.cs-aba-btn:active{transform:translateY(1px);}
+.cs-aba-btn[disabled]{opacity:.42;cursor:not-allowed;pointer-events:none;}
+.cs-vazio{text-align:center;padding:38px 18px;color:#7B8294;
+  font:500 13px 'Segoe UI';}
+.cs-vazio b{color:var(--navy);font-weight:700;}
+.cs-pill{display:inline-block;padding:2px 8px;border-radius:9px;
+  font:700 10px 'Segoe UI';}
+.cs-pill.pend{background:#FBE5E5;color:#B33A3A;}
+.cs-pill.ok{background:#E5F3E5;color:#1E7B43;}
+.cs-pill.deslig{background:#FFF4DD;color:#A07000;}
+
+/* Popup flutuante da Consulta (não bloqueia a grid) */
+.cs-drawer-bg{display:none;} /* legado — overlay removido */
+.cs-drawer{position:fixed;top:88px;right:24px;
+  width:720px;max-width:calc(100vw - 48px);
+  height:calc(100vh - 120px);max-height:720px;
+  background:#fff;z-index:9010;
+  border-radius:14px;
+  border:1px solid #E1E5EF;
+  box-shadow:0 18px 48px rgba(20,28,55,.24),0 4px 14px rgba(20,28,55,.12);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:translateY(-12px) scale(.98);opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease,transform .18s cubic-bezier(.22,.68,.24,1);}
+.cs-drawer.show{transform:translateY(0) scale(1);opacity:1;pointer-events:auto;}
+.cs-drawer::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:linear-gradient(180deg,var(--gold),#D49A00);
+  border-radius:14px 0 0 14px;}
+
+/* Linha de expansão inline (+) */
+.cs-sub{background:#FBFCFE;}
+.cs-sub-wrap{padding:10px 14px 14px;border-top:1px solid #E7EBF2;
+  border-bottom:1px solid #E7EBF2;font:500 12px 'Segoe UI';color:#3A3F4C;}
+.cs-sub-titulo{font:800 10.5px 'Segoe UI';color:var(--navy);
+  letter-spacing:.05em;text-transform:uppercase;margin:6px 0 6px;}
+.cs-sub-acc{background:#fff;border:1px solid #E7EBF2;border-radius:6px;
+  padding:8px 10px;margin-bottom:6px;}
+.cs-sub-acc-h{display:flex;justify-content:space-between;align-items:center;
+  font:700 11px 'Segoe UI';color:var(--navy);margin-bottom:4px;}
+.cs-sub-acc-h .cs-sub-sis{background:var(--navy);color:#fff;
+  padding:2px 8px;border-radius:4px;font-size:10px;}
+.cs-sub-acc-p{font:500 11.5px 'Segoe UI';color:#3A3F4C;
+  display:flex;justify-content:space-between;padding:3px 0;
+  border-top:1px dashed #E7EBF2;}
+.cs-sub-acc-p:first-of-type{border-top:none;}
+.cs-sub-acc-p .cs-sub-st{font-size:10.5px;font-weight:700;}
+.cs-expand-btn{cursor:pointer;color:var(--navy);font:700 14px Arial;
+  text-align:center;user-select:none;transition:transform .15s;}
+.cs-expand-btn.aberto{transform:rotate(45deg);color:#B33A3A;}
+.cs-nome-link{cursor:pointer;color:var(--navy);font-weight:700;
+  border-bottom:1px dashed transparent;transition:border-color .14s;}
+.cs-nome-link:hover{border-bottom-color:var(--gold);}
+.cs-drawer-hd{padding:16px 20px 12px;border-bottom:1px solid #E7EBF2;
+  display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+  background:linear-gradient(180deg,#fff,#F5F6FA);}
+.cs-drawer-titulo{font:700 16px 'Segoe UI';color:var(--navy);}
+.cs-drawer-sub{font:500 11.5px 'Segoe UI';color:#7B8294;margin-top:3px;}
+.cs-drawer-fechar{background:#ECEFF4;border:none;width:30px;height:30px;
+  border-radius:50%;color:#5A6377;font:700 18px Arial;cursor:pointer;
+  line-height:1;transition:background .14s,color .14s;}
+.cs-drawer-fechar:hover{background:#B33A3A;color:#fff;}
+.cs-drawer-tabs{flex:none;display:flex;border-bottom:1px solid #E7EBF2;
+  padding:0 12px;background:#FBFCFE;}
+.cs-drawer-tab{flex:none;padding:10px 16px;background:transparent;border:none;
+  color:#7B8294;font:600 12px 'Segoe UI';cursor:pointer;
+  border-bottom:3px solid transparent;transition:all .14s;}
+.cs-drawer-tab:hover{color:var(--navy);}
+.cs-drawer-tab.active{color:var(--navy);border-bottom-color:var(--gold);
+  font-weight:700;}
+.cs-drawer-bd{flex:1;overflow-y:auto;padding:16px 20px;
+  font:500 12.5px/1.55 'Segoe UI';color:#3A3F4C;}
+.cs-drawer-bd .cs-sec{font:800 10px 'Segoe UI';color:var(--navy);
+  letter-spacing:.05em;text-transform:uppercase;margin-top:14px;margin-bottom:6px;
+  padding-bottom:4px;border-bottom:1px solid #E7EBF2;}
+.cs-drawer-bd .cs-sec:first-child{margin-top:0;}
+.cs-drawer-bd .cs-row{display:grid;grid-template-columns:130px 1fr;gap:8px;
+  padding:5px 0;font-size:12px;}
+.cs-drawer-bd .cs-row .cs-k{color:#7B8294;font-weight:600;}
+.cs-drawer-bd .cs-row .cs-v{color:var(--navy);font-weight:600;word-break:break-word;}
+.cs-drawer-bd .cs-empty{font-style:italic;color:#7B8294;padding:14px 4px;}
+.cs-drawer-bd .cs-acc{background:#F7F8FB;border:1px solid #E7EBF2;
+  border-radius:6px;padding:9px 11px;margin-bottom:6px;}
+.cs-drawer-bd .cs-acc-h{display:flex;justify-content:space-between;
+  align-items:center;font:700 11px 'Segoe UI';color:var(--navy);
+  margin-bottom:5px;}
+.cs-drawer-bd .cs-acc-h .cs-acc-sis{background:var(--navy);color:#fff;
+  padding:2px 8px;border-radius:4px;font-size:10px;}
+.cs-drawer-bd .cs-acc-p{font:500 11.5px 'Segoe UI';color:#3A3F4C;
+  display:flex;justify-content:space-between;padding:3px 0;
+  border-top:1px dashed #E7EBF2;}
+.cs-drawer-bd .cs-acc-p:first-of-type{border-top:none;}
+.cs-drawer-bd .cs-acc-p .cs-acc-st{font-size:10.5px;font-weight:700;}
+.atl-btn.salvar{background:linear-gradient(180deg,var(--gold-l),var(--gold));
+  border-color:var(--gold);color:var(--navy);
+  box-shadow:0 2px 6px rgba(245,184,0,.35);}
+.atl-btn.salvar:hover{filter:brightness(1.05);border-color:var(--gold);}
+
+/* Dropdown da lista de atalhos */
+.atl-drop{
+  display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:9000;
+  min-width:280px;max-width:380px;
+  background:#fff;border-radius:8px;border:1px solid #C9D2E3;
+  box-shadow:0 12px 32px rgba(20,28,55,.20);
+  padding:8px 0;animation:atlDrop .15s ease both;
+}
+@keyframes atlDrop{from{opacity:0;transform:translateY(-4px);}
+  to{opacity:1;transform:translateY(0);}}
+.atl-drop.show{display:block;}
+.atl-drop-hd{
+  padding:6px 14px 8px;border-bottom:1px solid #E7EBF2;
+  font:700 10.5px 'Segoe UI';color:#7B8294;letter-spacing:.05em;
+  text-transform:uppercase;display:flex;justify-content:space-between;
+}
+.atl-drop-bd{padding:6px 0;max-height:300px;overflow-y:auto;}
+.atl-drop-item{
+  display:flex;align-items:center;gap:8px;padding:7px 14px;
+  cursor:pointer;font:600 12px 'Segoe UI';color:var(--navy);
+  transition:background .12s;
+}
+.atl-drop-item:hover{background:#EEF1F8;}
+.atl-drop-item .atl-ico{color:var(--gold);font-size:13px;}
+.atl-drop-item .atl-nome{flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.atl-drop-item .atl-x{
+  width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:50%;background:#EEF1F8;color:#5A6377;font:700 14px 'Segoe UI';
+  cursor:pointer;line-height:1;transition:background .14s,color .14s;flex:none;
+}
+.atl-drop-item .atl-x:hover{background:#B33A3A;color:#fff;}
+.atl-drop-vazio{padding:18px 14px;text-align:center;
+  font:500 11.5px 'Segoe UI';color:#7B8294;font-style:italic;}
+
+/* ── Modal de confirmação (Excluir) — variante compacta ─────────────── */
+.modal-card.confirm{width:380px;}
+.modal-card.confirm .modal-hd{border-top:3px solid #B33A3A;border-bottom:none;
+  padding:18px 22px 6px;}
+.modal-card.confirm .modal-hd h3{color:#B33A3A;}
+.mf-ok.danger{background:#B33A3A;color:#fff;}
+.mf-ok.danger:hover{background:#A02828;filter:none;}
+
+/* ── Preview de filtros dentro do modal Salvar Atalho ───────────────── */
+.atl-prev-list{display:flex;flex-direction:column;gap:6px;margin-top:6px;
+  background:#F7F8FB;border:1px solid #E7EBF2;border-radius:6px;padding:9px 11px;}
+.atl-prev-item{font:600 11px 'Segoe UI';color:#1F2D5C;}
+.atl-prev-item span{color:#7B8294;font-weight:500;}
+.atl-prev-vazio{font:500 11px 'Segoe UI';color:#A04040;font-style:italic;}
+
 /* ── Placeholder ────────────────────────────────────────────────────── */
 .ph{
   flex:1;display:flex;flex-direction:column;
@@ -493,9 +835,9 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 </header>
 
 <nav class="nav">
-  <div class="tab"        data-tab="vg">Visão Geral</div>
+  <div class="tab active" data-tab="vg">Visão Geral</div>
   <div class="tab"        data-tab="consulta">Consulta</div>
-  <div class="tab active" data-tab="incl">Pendências</div>
+  <div class="tab"        data-tab="incl">Pendências</div>
   <div class="tab"        data-tab="hist">Histórico</div>
   <div class="tab"        data-tab="quar">Quarentena</div>
 </nav>
@@ -503,39 +845,99 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 <div class="pages">
 
   <!-- ═══ VISÃO GERAL ═══ -->
-  <div class="page" id="pg-vg">
+  <div class="page active" id="pg-vg">
+    <!-- KPIs principais — paleta CVC (navy/gold) com acentos sóbrios de status -->
     <div class="kpi-row">
-      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2980B9;">
-        <div class="kpi-val" style="color:#2980B9;">562</div>
-        <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso</div>
+      <div class="kpi vg-kpi" style="background:#FFF7E0;border:1px solid #F5D77A;--kpi-bar:#F5B800;">
+        <div class="kpi-val" style="color:#1F2D5C;" id="vg-k-pend">—</div>
+        <div class="kpi-lbl" style="color:#1F2D5C;">Pendências Abertas</div>
       </div>
-      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#154360;">
-        <div class="kpi-val" style="color:#154360;">41</div>
-        <div class="kpi-lbl" style="color:#154360;">Alterar Perfil</div>
+      <div class="kpi vg-kpi" style="background:#FBEAEA;border:1px solid #ECC2C2;--kpi-bar:#B33A3A;">
+        <div class="kpi-val" style="color:#B33A3A;" id="vg-k-desl">—</div>
+        <div class="kpi-lbl" style="color:#B33A3A;">Acessos de Desligado</div>
       </div>
-      <div class="kpi" style="background:#FEF3E2;border:1px solid #F9D5A7;--kpi-bar:#E67E22;">
-        <div class="kpi-val" style="color:#E67E22;">798</div>
-        <div class="kpi-lbl" style="color:#E67E22;">Em Análise</div>
+      <div class="kpi vg-kpi" style="background:#E8EEF7;border:1px solid #C5D2EA;--kpi-bar:#1F2D5C;">
+        <div class="kpi-val" style="color:#1F2D5C;" id="vg-k-cob">—</div>
+        <div class="kpi-lbl" style="color:#1F2D5C;">Cobertura RH (%)</div>
       </div>
-      <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;--kpi-bar:#7D3C98;">
-        <div class="kpi-val" style="color:#7D3C98;">4.957</div>
-        <div class="kpi-lbl" style="color:#7D3C98;">Total Não Mapeados</div>
-      </div>
-    </div>
-    <div class="chart-row">
-      <div class="chart-panel">
-        <div class="chart-title">Ações Pendentes por Sistema</div>
-        <div class="chart-box"><canvas id="ch-sis-vg"></canvas></div>
-      </div>
-      <div class="chart-panel">
-        <div class="chart-title orange">Distribuição por Tipo de Ação</div>
-        <div class="chart-box"><canvas id="ch-acao-vg"></canvas></div>
+      <div class="kpi vg-kpi" style="background:#EDE9F7;border:1px solid #C5BCE3;--kpi-bar:#5B47A8;">
+        <div class="kpi-val" style="color:#5B47A8;" id="vg-k-quar">—</div>
+        <div class="kpi-lbl" style="color:#5B47A8;">Em Quarentena</div>
       </div>
     </div>
+
+    <!-- Linha 2 — Chamados do mês + Movimentação RH -->
+    <div class="vg-row vg-2col">
+      <div class="panel vg-panel">
+        <div class="vg-title">📨 Chamados do Mês</div>
+        <div class="vg-chamado-row">
+          <span class="vg-chamado-lbl">Identificados</span>
+          <div class="vg-bar-track"><div class="vg-bar-fill" id="vg-ch-id" style="background:#2C3D72;width:0%;"></div></div>
+          <span class="vg-bar-val" id="vg-ch-id-v">—</span>
+        </div>
+        <div class="vg-chamado-row">
+          <span class="vg-chamado-lbl">Resolvidos</span>
+          <div class="vg-bar-track"><div class="vg-bar-fill" id="vg-ch-re" style="background:#F5B800;width:0%;"></div></div>
+          <span class="vg-bar-val" id="vg-ch-re-v">—</span>
+        </div>
+        <div class="vg-saldo">
+          <span>Saldo aberto: <span id="vg-saldo">—</span></span>
+          <span class="vg-soft">Tempo médio resolução: <b id="vg-tmr">—</b></span>
+        </div>
+      </div>
+
+      <div class="panel vg-panel">
+        <div class="vg-title">👥 Movimentação RH <span class="vg-soft">(últimos 30 dias)</span></div>
+        <div class="vg-mov-bar" id="vg-mov-bar"></div>
+        <div class="vg-mov-leg" id="vg-mov-leg"></div>
+        <div class="vg-mov-foot" id="vg-mov-foot"></div>
+      </div>
+    </div>
+
+    <!-- Linha 3 — Divergências por tipo + Concentração por sistema -->
+    <div class="vg-row vg-2col-bg">
+      <div class="panel vg-panel">
+        <div class="vg-title">🥧 Divergências por Tipo</div>
+        <div class="vg-donut-wrap">
+          <div id="vg-donut" class="vg-donut"></div>
+          <div class="vg-legenda" id="vg-donut-leg"></div>
+        </div>
+      </div>
+      <div class="panel vg-panel">
+        <div class="vg-title">📊 Concentração por Sistema</div>
+        <div id="vg-sistemas" class="vg-bars"></div>
+        <p class="vg-soft vg-foot-note">→ Clique num sistema para abrir a Inclusão / Alteração filtrada.</p>
+      </div>
+    </div>
+
+    <!-- Linha 4 — Aging + Top 10 desligados -->
+    <div class="vg-row vg-2col-bg">
+      <div class="panel vg-panel">
+        <div class="vg-title">⏳ Aging das Pendências</div>
+        <div id="vg-aging" class="vg-bars"></div>
+        <p class="vg-soft vg-foot-note">A faixa <b style="color:#B33A3A">90+ dias</b> é o alarme silencioso — resolver ou justificar formalmente.</p>
+      </div>
+      <div class="panel vg-panel">
+        <div class="vg-title">🚨 Ação Imediata — Recém-desligados ainda com Acesso <span class="vg-soft">(Top 10)</span></div>
+        <div class="vg-tbl-wrap">
+          <table class="vg-tbl">
+            <thead><tr>
+              <th>Nome</th><th>Desligamento</th><th>Cargo</th>
+              <th style="text-align:center">Sis.</th><th style="text-align:center">Perfis</th><th></th>
+            </tr></thead>
+            <tbody id="vg-top-body"></tbody>
+          </table>
+        </div>
+        <div class="vg-ver-todos">
+          <a href="#" onclick="showPage('incl');return false;">Ver todos os acessos de desligado na Inclusão / Alteração →</a>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ═══ INCLUSÃO / ALTERAÇÃO ═══ -->
-  <div class="page active" id="pg-incl">
+  <div class="page" id="pg-incl">
     <div class="kpi-row">
       <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2980B9;">
         <div class="kpi-val" style="color:#2980B9;">562</div>
@@ -563,43 +965,43 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
         <div id="filtros"></div>
       </div>
       <div class="incl-main">
-        <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="por-pagina" onchange="mudarPorPagina(this.value)"><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="pager"></span><span class="lista-total" id="incl-total"></span><button class="btn-exp" onclick="exportarInclusao()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+        <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="por-pagina" onchange="mudarPorPagina(this.value)"><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="pager"></span><span class="lista-total" id="incl-total"></span><span class="cs-vinculo-host" id="cs-vinculo-incl"></span><div class="atl-actions" id="atl-actions-incl"></div><button class="btn-exp" onclick="exportarInclusao()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
       <div class="content-panel">
         <div class="tbl-wrap">
           <table id="matrix-tbl">
             <colgroup>
-              <col style="width:84px">    <!-- Quarentena -->
-              <col style="width:30px">    <!-- expand -->
-              <col style="width:104px">   <!-- Vínculo -->
-              <col style="width:124px">   <!-- Usuário -->
-              <col style="width:58px">    <!-- Qtd -->
-              <col style="width:230px">   <!-- Nome -->
-              <col style="width:96px">    <!-- Matrícula -->
-              <col style="width:150px">   <!-- Departamento -->
-              <col style="width:160px">   <!-- Cargo -->
-              <col style="width:120px">   <!-- Tipo -->
-              <col style="width:150px">   <!-- Perfil Encontrado -->
-              <col style="width:150px">   <!-- Perfil Esperado -->
-              <col style="width:82px">    <!-- Data -->
-              <col style="width:150px">   <!-- Status -->
-              <col style="width:96px">    <!-- Origem -->
+              <col style="width:148px">   <!-- 0  Data (dd/mm/aaaa hh:mm:ss) -->
+              <col style="width:84px">    <!-- 1  Quarentena -->
+              <col style="width:104px">   <!-- 2  Vínculo -->
+              <col style="width:30px">    <!-- 3  expand (+) -->
+              <col style="width:150px">   <!-- 4  Status -->
+              <col style="width:230px">   <!-- 5  Nome -->
+              <col style="width:96px">    <!-- 6  Matrícula -->
+              <col style="width:124px">   <!-- 7  Usuário -->
+              <col style="width:58px">    <!-- 8  Qtd -->
+              <col style="width:150px">   <!-- 9  Departamento -->
+              <col style="width:160px">   <!-- 10 Cargo -->
+              <col style="width:120px">   <!-- 11 Tipo -->
+              <col style="width:150px">   <!-- 12 Perfil Encontrado -->
+              <col style="width:150px">   <!-- 13 Perfil Esperado -->
+              <col style="width:96px">    <!-- 14 Origem -->
             </colgroup>
             <thead>
               <tr>
+                <th>Data</th>
                 <th style="text-align:center;">Quarentena</th>
-                <th></th>
                 <th>Vínculo</th>
-                <th>Usuário/Acesso</th>
-                <th style="text-align:center;">Qtd</th>
+                <th></th>
+                <th>Status</th>
                 <th>Nome</th>
                 <th>Matrícula</th>
+                <th>Usuário/Acesso</th>
+                <th style="text-align:center;">Qtd</th>
                 <th>Departamento</th>
                 <th>Cargo</th>
                 <th>Tipo</th>
                 <th>Perfil Encontrado</th>
                 <th>Perfil Esperado</th>
-                <th>Data</th>
-                <th>Status</th>
                 <th style="text-align:center;">Origem</th>
               </tr>
             </thead>
@@ -613,16 +1015,83 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 
   <!-- ═══ CONSULTA ═══ -->
   <div class="page" id="pg-consulta">
-    <div class="ph">
-      <h2>Consulta</h2>
-      <p>Grade de consulta com filtros — em construção. Os filtros serão
-         definidos e adicionados em seguida.</p>
+    <!-- Topbar: busca livre + atalhos salvos + exportar -->
+    <div class="cs-topbar">
+      <div class="cs-busca-wrap">
+        <span class="cs-busca-ico">🔎</span>
+        <input id="cs-busca" type="text" placeholder="Buscar por nome, matrícula, CPF, login ou e-mail..." />
+        <button id="cs-busca-clear" onclick="csLimparBusca()" title="Limpar">×</button>
+      </div>
+      <span class="lista-total" id="cs-total"></span>
+      <div class="atl-actions" id="atl-actions-consulta"></div>
+      <button class="btn-exp" onclick="csExportar()">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>
+        Exportar Excel
+      </button>
+    </div>
+
+    <div class="content-panel cs-content">
+      <div class="tbl-wrap">
+        <table id="cs-tbl">
+          <colgroup>
+            <col style="width:30px"><!-- (+) expand -->
+            <col style="width:84px"><!-- Abas (P/H) -->
+            <col style="width:96px"><!-- Matrícula -->
+            <col style="width:220px"><!-- Nome -->
+            <col style="width:108px"><!-- Login -->
+            <col style="width:108px"><!-- CPF -->
+            <col style="width:180px"><!-- Cargo -->
+            <col style="width:140px"><!-- Departamento -->
+            <col style="width:130px"><!-- Centro de Custo -->
+            <col style="width:70px"><!-- Sistemas -->
+            <col style="width:80px"><!-- Pendências -->
+            <col style="width:130px"><!-- Última divergência -->
+            <col style="width:120px"><!-- Status -->
+          </colgroup>
+          <thead>
+            <tr>
+              <th></th>
+              <th style="text-align:center;">Abas</th>
+              <th>Matrícula</th>
+              <th>Nome</th>
+              <th>Login</th>
+              <th>CPF</th>
+              <th>Cargo</th>
+              <th>Departamento</th>
+              <th>Centro de Custo</th>
+              <th style="text-align:center;">Sistemas</th>
+              <th style="text-align:center;">Pendências</th>
+              <th style="text-align:center;">Última divergência</th>
+              <th style="text-align:center;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="cs-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Popup lateral (drill-down do funcionário) — sem overlay, não bloqueia a grid -->
+    <div class="cs-drawer" id="cs-drawer">
+      <div class="cs-drawer-hd">
+        <div>
+          <div class="cs-drawer-titulo" id="cs-drawer-nome">—</div>
+          <div class="cs-drawer-sub" id="cs-drawer-meta">—</div>
+        </div>
+        <button class="cs-drawer-fechar" onclick="csFecharDrawer()" title="Fechar">×</button>
+      </div>
+      <div class="cs-drawer-tabs">
+        <button class="cs-drawer-tab active" data-cstab="ident" onclick="csDrawerTab('ident')">Identidade</button>
+        <button class="cs-drawer-tab" data-cstab="acessos" onclick="csDrawerTab('acessos')">Acessos</button>
+        <button class="cs-drawer-tab" data-cstab="hist" onclick="csDrawerTab('hist')">Histórico</button>
+        <button class="cs-drawer-tab" data-cstab="quar" onclick="csDrawerTab('quar')">Quarentena</button>
+      </div>
+      <div class="cs-drawer-bd" id="cs-drawer-body">—</div>
     </div>
   </div>
 
   <!-- ═══ HISTÓRICO ═══ -->
   <div class="page" id="pg-hist">
-    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="hist-pp" onchange="histPP(this.value)"><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="hist-pager"></span><span class="lista-total" id="hist-count"></span><button class="btn-exp" onclick="exportarHistorico()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="hist-pp" onchange="histPP(this.value)"><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="hist-pager"></span><span class="lista-total" id="hist-count"></span><span class="cs-vinculo-host" id="cs-vinculo-hist"></span><div class="atl-actions" id="atl-actions-hist"></div><button class="btn-exp" onclick="exportarHistorico()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
     <div class="content-panel">
       <div class="tbl-wrap">
         <table id="hist-tbl">
@@ -690,6 +1159,9 @@ proc(true);   /* overlay "Processando" visível desde a abertura da página */
 function showPage(tab){
   _tabAtual = tab;
   proc(true);
+  // Garante drawer da Consulta SEMPRE fechado ao trocar de aba — so abre
+  // por click explicito numa linha (csAbrirDrawer)
+  if (typeof csFecharDrawer === 'function') csFecharDrawer();
   // 2 frames: deixa o overlay PINTAR antes do trabalho pesado da troca
   requestAnimationFrame(() => requestAnimationFrame(async () => {
     document.querySelectorAll('.tab').forEach(t =>
@@ -698,12 +1170,11 @@ function showPage(tab){
       p.classList.toggle('active', p.id === 'pg-' + tab));
     await refreshDB();   // releitura por evento: traz interacoes novas da rede
     if (tab === 'quar') await renderQuarentena();
-    else if (tab === 'hist') await renderHistorico();
-    else if (tab !== 'consulta') { renderMatrix(); aplicarKPIs(); atualizarCharts(); }
-    ['ch-sis-vg','ch-acao-vg'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && el._chart) el._chart.resize();
-    });
+    else if (tab === 'hist') { await renderHistorico(); carregarAtalhos('hist', true); }
+    else if (tab === 'vg')   { renderVisaoGeral(); }
+    else if (tab === 'incl') { renderMatrix(); aplicarKPIs(); carregarAtalhos('incl', true); }
+    else if (tab === 'consulta') { renderConsulta(); carregarAtalhos('consulta', true); }
+    if (tab === 'incl' || tab === 'hist') _renderBadgeVindoConsulta();
     await proc(false);
   }));
 }
@@ -818,6 +1289,41 @@ async function aplicarFiltro(){
   paginaAtual = 1;
   await refreshDB();   // releitura por evento: traz interacoes novas da rede
   comHandling(renderMatrix);
+  // Atualiza o badge "Aplicado: <nome>" da aba ativa —
+  // o estado dos filtros mudou, pode ter virado/saido de um filtro salvo
+  if (_tabAtual === 'incl' || _tabAtual === 'consulta' || _tabAtual === 'hist') {
+    const origem = _origemAtual();
+    renderAtalhosOpcaoC(origem);
+    _persistirFiltroAplicado(origem);
+  }
+}
+
+/* ── Persistencia do "filtro aplicado" entre F5s (localStorage) ──────── */
+function _chaveLS(origem){ return `vg_filtroAplicado_${origem}`; }
+
+function _persistirFiltroAplicado(origem){
+  const aplicado = _filtroAplicadoAtual(origem);
+  try {
+    if (aplicado) localStorage.setItem(_chaveLS(origem), aplicado.id);
+    else          localStorage.removeItem(_chaveLS(origem));
+  } catch(e) {}
+}
+
+async function _reaplicarFiltroAplicado(origem){
+  /* Chamado depois de carregarAtalhos no boot: se o usuario tinha um filtro
+     salvo aplicado antes do F5, re-aplica e mostra o badge. */
+  let id;
+  try { id = localStorage.getItem(_chaveLS(origem)); } catch(e) { return; }
+  if (!id) return;
+  const a = (ATL[origem] || []).find(x => x.id === id);
+  if (!a) {
+    // atalho foi excluido por outro dispositivo — limpa a chave
+    try { localStorage.removeItem(_chaveLS(origem)); } catch(e) {}
+    return;
+  }
+  // Re-aplica preservando o rastreio do badge
+  aplicarFiltrosAtalho(a.filtros || [], a.id);
+  renderAtalhosOpcaoC(origem);
 }
 
 /* ── Dados (substituídos ao vivo pelo servidor; amostra genérica = fallback) */
@@ -847,6 +1353,15 @@ function fmtDH(iso){
   return `${p[2]}/${p[1]}/${p[0]} ${hms}`;
 }
 function fmtDate(iso){ return fmtDH(iso); }
+/* Versao compacta — somente dd/mm/aaaa. Usada na grid de Inclusão/Alteração,
+   onde a coluna Data tem largura limitada. A hora aparece como tooltip
+   (title=) com a versao completa. */
+function fmtDataCurta(iso){
+  if(!iso) return '';
+  const s = String(iso).slice(0,10).split('-');
+  if(s.length !== 3) return iso;
+  return `${s[2]}/${s[1]}/${s[0]}`;
+}
 function fmtDT(iso){ return fmtDH(iso); }
 function esc(v)          { return (v||'—').replace(/</g,'&lt;'); }
 
@@ -963,10 +1478,20 @@ function _gxMenu(tableId,c,th){
 }
 
 /* Pendências (grid agrupada): ordenação por coluna no clique do cabeçalho */
-const _PEND_KEY={2:u=>u.divs[0].vinc,3:u=>u.u,4:u=>u.divs.length,5:u=>u.n,
-  6:u=>u.m,7:u=>u.d,8:u=>u.c,
-  9:u=>u.divs[0].tl,10:u=>u.divs[0].pe,11:u=>u.divs[0].pp,12:u=>u.divs[0].dt,
-  13:u=>u.divs[0].s,14:u=>u.divs[0].o};
+/* Indices das colunas APOS reordenacao
+   Ordem (0..14):
+     0=Data, 1=Quarentena, 2=Vinculo, 3=+(expand), 4=Status, 5=Nome,
+     6=Matricula, 7=Usuario, 8=Qtd, 9=Departamento, 10=Cargo, 11=Tipo,
+     12=PerfilEnc, 13=PerfilEsp, 14=Origem
+   Colunas SEM extracao de dado (Quarentena=1, +=3) ficam fora do _PEND_KEY. */
+const _PEND_KEY={
+  0:u=>u.divs[0].dt,
+  2:u=>u.divs[0].vinc,
+  4:u=>u.divs[0].s,
+  5:u=>u.n, 6:u=>u.m, 7:u=>u.u, 8:u=>u.divs.length,
+  9:u=>u.d, 10:u=>u.c,
+  11:u=>u.divs[0].tl, 12:u=>u.divs[0].pe, 13:u=>u.divs[0].pp,
+  14:u=>u.divs[0].o};
 let _ordPend=null;
 const _filtPend={};
 function _ordenarPend(arr){
@@ -976,14 +1501,121 @@ function _ordenarPend(arr){
   } else arr.sort((a,b)=>b.divs.length-a.divs.length);
 }
 function _pendDisp(c,u){
-  if(c===12) return fmtDate(u.divs[0].dt)||'—';
-  if(c===4) return String(u.divs.length);
+  if(c===0) return fmtDH(u.divs[0].dt)||'—';   // Data: formato completo
+  if(c===8) return String(u.divs.length);       // Qtd: numero
   const v=_PEND_KEY[c](u);
   return (v==null||v==='')?'—':String(v);
 }
-/* Vínculo (2), Tipo (9) e Status (13) têm card de filtro no topo — na grid só ordenam. */
-const _PEND_SO_ORD=new Set([2,9,13]);
+/* Status (4), Vinculo (2), Tipo (11) tem chips no topo — na grid so ORDENAM.
+   Data (0) tem filtro PROPRIO (atalhos + range). Demais usam funil padrao. */
+const _PEND_SO_ORD=new Set([2,4,11]);
+
+/* Estado do filtro especial de Data (col 1).
+   tipo: "" (sem filtro) | "hoje" | "7d" | "mes" | "ano" | "range"
+   de/ate: usado apenas quando tipo="range" (formato ISO YYYY-MM-DD) */
+let _filtData = {tipo:"", de:"", ate:""};
+
+function _calcularRangeData(){
+  /* Devolve {de, ate} em YYYY-MM-DD a partir do _filtData (atalho ou range). */
+  if (!_filtData.tipo) return null;
+  const hoje = new Date();
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const dec = (d,n) => { const x=new Date(d); x.setDate(x.getDate()-n); return x; };
+  switch (_filtData.tipo) {
+    case "hoje": return {de: fmt(hoje),         ate: fmt(hoje)};
+    case "7d":   return {de: fmt(dec(hoje,6)),  ate: fmt(hoje)};
+    case "mes":  return {de: fmt(new Date(hoje.getFullYear(), hoje.getMonth(), 1)),
+                          ate: fmt(hoje)};
+    case "ano":  return {de: fmt(new Date(hoje.getFullYear(), 0, 1)),
+                          ate: fmt(hoje)};
+    case "range": return {de: _filtData.de || "", ate: _filtData.ate || ""};
+  }
+  return null;
+}
+
+function _dtPassaRange(dtIso, range){
+  /* dtIso: "2026-05-28 18:32:..." — usa so a parte de data (10 chars).
+     range: {de, ate} — incl/incl. Vazios = sem limite naquele lado. */
+  if (!range) return true;
+  const d = String(dtIso || "").slice(0,10);
+  if (!d || d.length !== 10) return true;  // sem data: nao filtra
+  if (range.de && d < range.de) return false;
+  if (range.ate && d > range.ate) return false;
+  return true;
+}
+
+function _filtroDataAtivo(){
+  if (!_filtData.tipo) return false;
+  if (_filtData.tipo === "range" && !_filtData.de && !_filtData.ate) return false;
+  return true;
+}
+
+/* Popover especial pra coluna Data (atalhos rapidos + range custom).
+   Aberto por _pendMenu quando c===0 (Data). */
+function _pendMenuData(th){
+  _gxFechar();
+  const m = document.createElement('div');
+  m.className = 'gx-menu dm-menu';
+  m.id = 'gx-menu';
+  const rad = (v, lab) =>
+    `<label class="dm-r"><input type="radio" name="dm-tipo" value="${v}" `
+    + (_filtData.tipo === v ? 'checked' : '') + `> ${lab}</label>`;
+  m.innerHTML =
+      '<div class="dm-h">Períodos rápidos</div>'
+    + rad('',     'Tudo (sem filtro)')
+    + rad('hoje', 'Hoje')
+    + rad('7d',   'Últimos 7 dias')
+    + rad('mes',  'Este mês')
+    + rad('ano',  'Este ano')
+    + '<div class="dm-sep"></div>'
+    + '<div class="dm-h">Personalizado</div>'
+    + rad('range', 'Entre datas:')
+    + '<div class="dm-range">'
+    +   '<label>De  <input type="date" id="dm-de" value="' + (_filtData.de || '') + '"></label>'
+    +   '<label>Até <input type="date" id="dm-ate" value="' + (_filtData.ate || '') + '"></label>'
+    + '</div>'
+    + '<div class="dm-ft">'
+    +   '<button class="gx-ok dm-aplicar" onclick="_aplicarFiltroData()">Aplicar</button>'
+    +   '<button class="gx-limpar dm-limpar" onclick="_limparFiltroData()">Limpar</button>'
+    + '</div>';
+  document.body.appendChild(m);
+  const r = th.getBoundingClientRect();
+  m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 290)) + 'px';
+  m.style.top  = Math.min(r.bottom + 2, window.innerHeight - m.offsetHeight - 6) + 'px';
+  // Marca "range" automaticamente quando o usuario interage com os inputs de data
+  ['dm-de','dm-ate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change',
+      () => m.querySelector('input[value="range"]').checked = true);
+  });
+  setTimeout(() => document.addEventListener('mousedown', _gxFora), 0);
+}
+
+function _aplicarFiltroData(){
+  const sel = document.querySelector('input[name="dm-tipo"]:checked');
+  const tipo = sel ? sel.value : '';
+  _filtData.tipo = tipo;
+  if (tipo === 'range') {
+    _filtData.de  = (document.getElementById('dm-de')  || {}).value || '';
+    _filtData.ate = (document.getElementById('dm-ate') || {}).value || '';
+  } else {
+    _filtData.de = ''; _filtData.ate = '';
+  }
+  _gxFechar();
+  paginaAtual = 1;
+  comHandling(renderMatrix);
+}
+
+function _limparFiltroData(){
+  _filtData = {tipo:'', de:'', ate:''};
+  _gxFechar();
+  paginaAtual = 1;
+  comHandling(renderMatrix);
+}
+
 function _pendMenu(c,th){
+  // Coluna 0 (Data) tem popover proprio (atalhos + range)
+  if (c === 0) { _pendMenuData(th); return; }
   _gxFechar();
   const base=DB.users.filter(u=>u.divs.some(divPassa));
   const sv=new Set(); base.forEach(u=>sv.add(_pendDisp(c,u)));
@@ -1037,7 +1669,10 @@ function equiparPend(){
         mk.innerHTML=_SVG_FUNIL;
         mk.onclick=ev=>{ ev.stopPropagation(); _pendMenu(c,th); };
         th.appendChild(mk); }
-      mk.classList.toggle('mk-filtrado', !!_filtPend[c]);
+      // Coluna 0 (Data) tem filtro proprio em _filtData; pinta o funil
+      // amarelo quando _filtroDataAtivo (sem usar _filtPend).
+      const filtrada = (c === 0) ? _filtroDataAtivo() : !!_filtPend[c];
+      mk.classList.toggle('mk-filtrado', filtrada);
     }
   });
 }
@@ -1047,6 +1682,12 @@ function renderMatrix(){
   const fp = Object.entries(_filtPend);
   if(fp.length) _usersFiltrados = _usersFiltrados.filter(u =>
     fp.every(([c,set]) => set.has(_pendDisp(+c,u))));
+  // Filtro especial de Data (col 0): aplica range derivado de _filtData
+  if (_filtroDataAtivo()) {
+    const r = _calcularRangeData();
+    if (r) _usersFiltrados = _usersFiltrados.filter(
+      u => _dtPassaRange(u.divs[0].dt, r));
+  }
   _ordenarPend(_usersFiltrados);
   const totPag = Math.max(1, Math.ceil(_usersFiltrados.length / porPagina));
   if(paginaAtual > totPag) paginaAtual = totPag;
@@ -1064,35 +1705,37 @@ function pintarPagina(){
     const hasMore = u.divs.length > 1;
     const d0 = u.divs[0];
     h += `<tr data-u="${esc(u.u)}" data-n="${esc(u.n)}">
+      <td>${fmtDH(d0.dt)}</td>
       <td style="text-align:center;"><button class="qbtn" title="Enviar para quarentena" aria-label="Enviar para quarentena" onclick="quarentenar('${u.u}')"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V7"/><path d="M6 13l6-6 6 6"/><path d="M5 21h14"/></svg></button></td>
-      <td style="text-align:center;">${hasMore ? `<button class="expand-btn" data-row="${rowIdx}" onclick="toggleSubs(this)">+</button>` : ''}</td>
       <td>${esc(d0.vinc)||'—'}</td>
-      <td><strong style="color:#1F2D5C;">${esc(u.u)}</strong></td>
-      <td style="text-align:center;font-weight:700;color:#1F2D5C;">${u.divs.length}</td>
+      <td style="text-align:center;">${hasMore ? `<button class="expand-btn" data-row="${rowIdx}" onclick="toggleSubs(this)">+</button>` : ''}</td>
+      <td>${stBadge(d0.s)}${btnRes(u)}</td>
       <td>${esc(u.n)}</td>
       <td>${esc(u.m)||'—'}</td>
+      <td><strong style="color:#1F2D5C;">${esc(u.u)}</strong></td>
+      <td style="text-align:center;font-weight:700;color:#1F2D5C;">${u.divs.length}</td>
       <td>${esc(u.d)||'—'}</td>
       <td>${esc(u.c)||'—'}</td>
       <td>${tipoBadge(d0.t,d0.tl)}</td>
       <td>${esc(d0.pe)||'—'}</td>
       <td>${esc(d0.pp)||'—'}</td>
-      <td>${fmtDate(d0.dt)}</td>
-      <td>${stBadge(d0.s)}${btnRes(u)}</td>
       <td style="text-align:center;">${esc(d0.o)||'—'}</td>
     </tr>`;
     u.divs.slice(1).forEach(d => {
       h += `<tr class="sub-row" data-u="${esc(u.u)}" data-n="${esc(u.n)}" data-sub="${rowIdx}" style="display:none;">
+        <td>${fmtDH(d.dt)}</td>
         <td></td>
         <td></td>
         <td></td>
+        <td>${stBadge(d.s)}</td>
         <td style="padding-left:14px;color:#7B8085;font-size:10.5px;">↳ ${esc(d.pp||'—')}</td>
+        <td>—</td>
+        <td>—</td>
         <td style="text-align:center;">1</td>
-        <td>—</td><td>—</td><td>—</td><td>—</td>
+        <td>—</td><td>—</td>
         <td>${tipoBadge(d.t,d.tl)}</td>
         <td>${esc(d.pe)||'—'}</td>
         <td>${esc(d.pp)||'—'}</td>
-        <td>${fmtDate(d.dt)}</td>
-        <td>${stBadge(d.s)}</td>
         <td style="text-align:center;">${esc(d.o)||'—'}</td>
       </tr>`;
     });
@@ -1170,17 +1813,723 @@ function atualizarHeaderMeta(){
   if (elUpd) elUpd.textContent = 'Última atualização: ' + (M.atualizacao || '—');
 }
 function atualizarCharts(){
-  if (!document.getElementById('ch-sis-vg')) return;
-  const s = distOrdenada(DB.sis_dist);
-  mkChart('ch-sis-vg', s.labels, s.data);
-  const a = distOrdenada(DB.acao_dist);
-  mkChart('ch-acao-vg', a.labels, a.data, 0.22);
+  // Aba Visão Geral foi reformulada: tudo via renderVisaoGeral()
+  renderVisaoGeral();
+}
+
+/* ── Render da aba Visão Geral (sem deps externas, SVG + DOM puro) ───── */
+function _vgFmt(n){
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString('pt-BR');
+}
+function _vgKpi(id, val){
+  const el = document.getElementById(id);
+  if (el) el.textContent = _vgFmt(val);
+}
+function _vgDonut(div_tipos){
+  const cores = {
+    'ACESSO_DESLIGADO':       '#B33A3A',
+    'ACESSO_SEM_VINCULO_RH':  '#F5B800',
+    'PERFIL_INVALIDO':        '#5B47A8',
+  };
+  const rotulos = {
+    'ACESSO_DESLIGADO':       'Acesso de Desligado',
+    'ACESSO_SEM_VINCULO_RH':  'Sem Vínculo RH',
+    'PERFIL_INVALIDO':        'Perfil Inválido',
+  };
+  const tot = Object.values(div_tipos).reduce((a,b)=>a+b, 0) || 1;
+  const cx = 70, cy = 70, r = 52, perim = 2 * Math.PI * r;
+  let inicio = -90, arcs = '', leg = '';
+  const ordenado = Object.entries(div_tipos).sort((a,b)=>b[1]-a[1]);
+  for (const [tipo, qtd] of ordenado) {
+    const frac = qtd / tot;
+    const pct = (frac * 100).toFixed(1);
+    const cor = cores[tipo] || '#999';
+    const dash = frac * perim, gap = perim - dash;
+    const offVis = -inicio * (perim / 360);
+    arcs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${cor}" `
+         + `stroke-width="20" stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" `
+         + `stroke-dashoffset="${offVis.toFixed(1)}" `
+         + `transform="rotate(-90 ${cx} ${cy})" />`;
+    inicio += frac * 360;
+    leg += `<div class="vg-leg-item"><span class="dot" style="background:${cor}"></span>`
+         + `<span>${rotulos[tipo] || tipo}</span>`
+         + `<span class="vg-leg-val">${_vgFmt(qtd)} <small>(${pct}%)</small></span></div>`;
+  }
+  const svg = `<svg viewBox="0 0 140 140">`
+    + `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(31,45,92,.08)" stroke-width="20" />`
+    + arcs
+    + `<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="19" font-weight="700" fill="#1F2D5C">${_vgFmt(tot)}</text>`
+    + `<text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="8.5" fill="#7B8294">divergências</text>`
+    + `</svg>`;
+  return { svg, leg };
+}
+function _vgBarras(host, dados, opcoesCorPorChave){
+  if (!dados || !Object.keys(dados).length) { host.innerHTML = '<div class="vg-soft">sem dados</div>'; return; }
+  const max = Math.max(...Object.values(dados));
+  const items = Object.entries(dados);
+  host.innerHTML = items.map(([k, v]) => {
+    const pct = max ? (100 * v / max) : 0;
+    const cor = (opcoesCorPorChave && opcoesCorPorChave[k]) || '#1F2D5C';
+    return `<div class="vg-bar-row"><span class="vg-bar-lbl">${k}</span>`
+         + `<div class="vg-bar-track"><div class="vg-bar-fill" style="background:${cor};width:${pct.toFixed(1)}%"></div></div>`
+         + `<span class="vg-bar-val">${_vgFmt(v)}</span></div>`;
+  }).join('');
+}
+function _vgRiscoClasse(p){
+  if (p > 50) return 'vg-risco-alto';
+  if (p > 10) return 'vg-risco-medio';
+  return 'vg-risco-baixo';
+}
+function _vgTopUrgentes(host, lista){
+  if (!lista || !lista.length) { host.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#7B8294;padding:20px">Sem desligados com acesso ativo</td></tr>'; return; }
+  host.innerHTML = lista.map(t => {
+    const diasStr = t.dias != null ? `${t.dias}d atrás` : '—';
+    return `<tr>`
+      + `<td>${esc(t.nome)}</td>`
+      + `<td><span class="dias">${diasStr}</span></td>`
+      + `<td>${esc(t.cargo)}</td>`
+      + `<td style="text-align:center">${t.sistemas}</td>`
+      + `<td style="text-align:center"><span class="vg-badge ${_vgRiscoClasse(t.perfis)}">${t.perfis}</span></td>`
+      + `<td><button class="vg-btn-acao" onclick="showPage('incl')">Ver</button></td>`
+      + `</tr>`;
+  }).join('');
+}
+function _vgMovimentacao(vg){
+  const m = vg.mov_rh || {admissoes:0, alteracoes:0, desligamentos:0};
+  const tot = (m.admissoes + m.alteracoes + m.desligamentos) || 1;
+  const pa = 100 * m.admissoes / tot;
+  const pe = 100 * m.alteracoes / tot;
+  const pd = 100 * m.desligamentos / tot;
+  const bar = document.getElementById('vg-mov-bar');
+  const leg = document.getElementById('vg-mov-leg');
+  const foot = document.getElementById('vg-mov-foot');
+  if (m.admissoes + m.alteracoes + m.desligamentos === 0) {
+    bar.innerHTML = '<div class="vg-mov-seg" style="width:100%;background:rgba(31,45,92,.15);color:#5A6377;">Sem movimentação no período</div>';
+    leg.innerHTML = '';
+    foot.innerHTML = '<span class="vg-soft">A trilha CDC (admissões / alterações / desligamentos) aparecerá após a 2ª importação do RH.</span>';
+    return;
+  }
+  bar.innerHTML =
+      `<div class="vg-mov-seg" style="width:${pa.toFixed(1)}%;background:#1E8449" title="Admissões">${m.admissoes}</div>`
+    + `<div class="vg-mov-seg" style="width:${pe.toFixed(1)}%;background:#2C3D72" title="Alterações">${m.alteracoes}</div>`
+    + `<div class="vg-mov-seg" style="width:${pd.toFixed(1)}%;background:#B33A3A" title="Desligamentos">${m.desligamentos}</div>`;
+  leg.innerHTML =
+      `<span><div class="dot" style="background:#1E8449"></div> Admissões: <b>${m.admissoes}</b></span>`
+    + `<span><div class="dot" style="background:#2C3D72"></div> Alterações: <b>${m.alteracoes}</b></span>`
+    + `<span><div class="dot" style="background:#B33A3A"></div> Desligamentos: <b>${m.desligamentos}</b></span>`;
+  foot.innerHTML = '';
+}
+function _vgChamados(vg){
+  const ch = vg.chamados || {identificados:0, resolvidos:0, tempo_medio_dias:0};
+  const max = Math.max(ch.identificados, ch.resolvidos, 1);
+  const pId = 100 * ch.identificados / max;
+  const pRe = 100 * ch.resolvidos / max;
+  document.getElementById('vg-ch-id').style.width = pId.toFixed(1) + '%';
+  document.getElementById('vg-ch-re').style.width = pRe.toFixed(1) + '%';
+  document.getElementById('vg-ch-id-v').textContent = _vgFmt(ch.identificados);
+  document.getElementById('vg-ch-re-v').textContent = _vgFmt(ch.resolvidos);
+  const saldo = ch.identificados - ch.resolvidos;
+  const sinal = saldo > 0 ? '+' : '';
+  const cls = saldo > 0 ? 'vg-saldo-pos' : (saldo < 0 ? 'vg-saldo-neg' : '');
+  document.getElementById('vg-saldo').innerHTML = `<span class="${cls}">${sinal}${_vgFmt(saldo)}</span>`;
+  document.getElementById('vg-tmr').textContent = ch.tempo_medio_dias ? `${ch.tempo_medio_dias} dias` : '—';
+}
+/* ── Atalhos personalizados (gravados via /api, padrão JSONL) ──────── */
+const ATL = { incl: [], consulta: [], hist: [], limite: 9, usuario: '' };
+
+async function carregarAtalhos(origem, reaplicarUltimo=false){
+  try {
+    const r = await fetch('/api/atalhos?origem=' + encodeURIComponent(origem));
+    const d = await r.json();
+    ATL[origem] = d.atalhos || [];
+    ATL.limite = d.limite || 9;
+    ATL.usuario = d.usuario || '';
+  } catch(e) {
+    ATL[origem] = [];
+  }
+  renderAtalhosOpcaoC(origem);
+  // Boot: re-aplica o ultimo filtro salvo aplicado (persistido em localStorage)
+  if (reaplicarUltimo) await _reaplicarFiltroAplicado(origem);
+}
+
+/* Rastreio EXPLICITO de qual filtro salvo o usuario clicou por ultimo.
+   - Setado quando user clica num filtro salvo (aplicarFiltrosAtalho)
+   - Resetado quando user mexe num filtro manual (filtros nao batem mais)
+   - Persistido em localStorage por origem ('incl' ou 'consulta')
+   Diferente de "filtros atuais batem por coincidencia" — o badge so aparece
+   se o usuario *deliberadamente* clicou no filtro salvo. */
+const _atalhoAplicadoId = {incl: null, hist: null};
+
+/* Devolve o filtro salvo APLICADO EXPLICITAMENTE pelo usuario.
+   Se os filtros atuais nao batem mais com ele (user modificou algum filtro
+   manualmente depois), retorna null e zera o rastreio. */
+function _filtroAplicadoAtual(origem){
+  const id = _atalhoAplicadoId[origem];
+  if (!id) return null;
+  const a = (ATL[origem] || []).find(x => x.id === id);
+  if (!a) {
+    _atalhoAplicadoId[origem] = null;
+    return null;
+  }
+  // Confere se os filtros aplicados ainda batem com o filtro salvo
+  if (!_filtrosIguais(_filtrosAtivosAtuais(), a.filtros || [])) {
+    _atalhoAplicadoId[origem] = null;
+    return null;
+  }
+  return a;
+}
+
+/* Opção C: badge "Aplicado" + 2 botões:
+   - "✓ Aplicado: <nome> ✕"    → badge visivel SE algum filtro salvo bate
+   - "🎯 Meus filtros (3) ▾"   → abre dropdown com a lista
+   - "💾 Salvar filtro"        → abre modal direto                  */
+function renderAtalhosOpcaoC(origem){
+  const host = document.getElementById('atl-actions-' + origem);
+  if (!host) return;
+  const lista = ATL[origem] || [];
+  const cheio = lista.length >= ATL.limite;
+  const aplicado = _filtroAplicadoAtual(origem);
+  const dropId = `atl-drop-${origem}`;
+  const badge = aplicado
+    ? `<span class="atl-aplicado" title="Filtro salvo aplicado agora">`
+      + `✓ Aplicado: <b>${esc(aplicado.nome)}</b>`
+      + `<span class="atl-aplicado-i" title="${esc(_descreverCriterios(aplicado.filtros))}">i</span>`
+      + `<span class="atl-aplicado-x" onclick="limparFiltroAplicado()" `
+      +     `title="Limpar filtros (volta ao estado padrão)">×</span>`
+      + `</span>`
+    : '';
+  host.innerHTML = badge
+    + `<button class="atl-btn" id="atl-btn-list-${origem}" `
+    +    `onclick="toggleAtalhoDrop('${origem}', event)">`
+    + `🎯 Meus filtros`
+    + (lista.length ? `<span class="badge-n">${lista.length}</span>` : '')
+    + `<span class="caret">▾</span></button>`
+    + `<button class="atl-btn salvar" `
+    +    `onclick="abrirModalSalvarAtalho('${origem}')" `
+    +    (cheio ? `disabled title="Limite de ${ATL.limite} atingido — exclua antes"` : '')
+    +    `>💾 Salvar filtro</button>`
+    + `<div class="atl-drop" id="${dropId}">`
+    +   `<div class="atl-drop-hd">Meus filtros `
+    +     `<span style="font-weight:600;color:var(--navy)">${lista.length}/${ATL.limite}</span></div>`
+    +   `<div class="atl-drop-bd" id="${dropId}-body"></div>`
+    + `</div>`;
+  // Conteúdo da lista
+  const body = document.getElementById(`${dropId}-body`);
+  if (!lista.length) {
+    body.innerHTML = `<div class="atl-drop-vazio">Nenhum filtro salvo nesta aba.<br>`
+                   + `Use <b>💾 Salvar filtro</b> com filtros aplicados.</div>`;
+  } else {
+    body.innerHTML = lista.map(a =>
+      `<div class="atl-drop-item" data-id="${esc(a.id)}" `
+    +    `data-filtros='${esc(JSON.stringify(a.filtros))}'>`
+    +   `<span class="atl-ico">🎯</span>`
+    +   `<span class="atl-nome" title="${esc(a.nome)}">${esc(a.nome)}</span>`
+    +   `<span class="atl-x" title="Excluir filtro" `
+    +     `data-del-id="${esc(a.id)}" data-del-nome="${esc(a.nome)}">×</span>`
+    + `</div>`).join('');
+  }
+  // Listeners (clique no item aplica; X confirma exclusão)
+  body.querySelectorAll('.atl-drop-item').forEach(el => {
+    el.addEventListener('click', ev => {
+      // Se clicou no X, o handler proprio dele cuida (com stopPropagation).
+      // Senao, aplica os filtros do atalho.
+      if (ev.target.closest('.atl-x')) return;
+      try {
+        const filtros = JSON.parse(el.dataset.filtros);
+        const idAtalho = el.dataset.id;
+        // Passa o id pra ativar o badge "Aplicado: <nome>"
+        aplicarFiltrosAtalho(filtros, idAtalho);
+        fecharAtalhoDrop();
+        // Re-render imediato pra mostrar o badge sem esperar evento de filtro
+        renderAtalhosOpcaoC(_origemAtual());
+      } catch(e) { console.error('atalho aplicar', e); }
+    });
+  });
+  body.querySelectorAll('.atl-x').forEach(el => {
+    el.addEventListener('click', ev => {
+      ev.stopPropagation();
+      ev.preventDefault();
+      // Fecha o dropdown antes de abrir o modal — evita sobreposição visual
+      fecharAtalhoDrop();
+      // Descobre os filtros desse atalho (pra decidir se ele esta "ativo")
+      const item = el.closest('.atl-drop-item');
+      let filtros = [];
+      try { filtros = JSON.parse(item.dataset.filtros); } catch(e) {}
+      confirmarExcluirAtalho(origem, el.dataset.delId, el.dataset.delNome, filtros);
+    });
+  });
+}
+
+/* Compara 2 listas de [fid, valor] como CONJUNTOS (ordem irrelevante).
+   Retorna true se as listas representam os MESMOS filtros aplicados. */
+function _filtrosIguais(a, b){
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+  const norm = arr => arr.map(([f, v]) => `${f}\x01${v}`).sort();
+  const na = norm(a), nb = norm(b);
+  return na.every((x, i) => x === nb[i]);
+}
+
+/* Descreve os critérios de um filtro salvo em texto legivel para o tooltip (i).
+   Agrupa por chave e enumera valores. Ex.:
+   "Sistema: SYSTUR | Cargo: ANALISTA, COORDENADOR | Status: Pendente" */
+function _descreverCriterios(filtros){
+  if (!Array.isArray(filtros) || !filtros.length) return 'Sem critérios';
+  const rotulos = {
+    vinculo:'Vínculo', acao:'Ação', status:'Status', tipo:'Tipo', sistema:'Sistema',
+  };
+  const grupos = {};
+  filtros.forEach(([fid, v]) => {
+    if (!fid) return;
+    let label;
+    if (fid.startsWith('grid:'))      label = fid.slice(5);
+    else if (fid.startsWith('hist:')) label = fid.slice(5);
+    else if (fid.startsWith('cs:'))   label = fid.slice(3);
+    else label = rotulos[fid] || fid;
+    (grupos[label] = grupos[label] || []).push(String(v));
+  });
+  return Object.entries(grupos)
+    .map(([k, vs]) => `${k}: ${vs.join(', ')}`)
+    .join(' | ');
+}
+
+/* Devolve a origem (aba) atualmente em foco para fins de atalhos. */
+function _origemAtual(){
+  if (_tabAtual === 'hist') return 'hist';
+  if (_tabAtual === 'consulta') return 'consulta';
+  return 'incl';
+}
+
+/* Wrapper exposto no onclick do X do badge "Aplicado".
+   Limpa todos os filtros (volta ao estado padrao) + remove do localStorage. */
+function limparFiltroAplicado(){
+  _resetTodosFiltros();
+  const origem = _origemAtual();
+  _atalhoAplicadoId[origem] = null;
+  renderAtalhosOpcaoC(origem);
+  try { localStorage.removeItem(_chaveLS(origem)); } catch(e) {}
+}
+
+/* Reseta TODOS os filtros (da aba em foco) e re-renderiza a grid. */
+function _resetTodosFiltros(){
+  if (_tabAtual === 'hist') {
+    if (typeof _histFilt === 'object' && _histFilt)
+      Object.keys(_histFilt).forEach(k => delete _histFilt[k]);
+    _histPag = 1;
+    comHandling(pintarHistorico);
+    return;
+  }
+  if (_tabAtual === 'consulta') {
+    if (typeof _csFilt === 'object' && _csFilt)
+      Object.keys(_csFilt).forEach(k => delete _csFilt[k]);
+    if (typeof renderConsulta === 'function') renderConsulta();
+    return;
+  }
+  document.querySelectorAll('.slicer[data-filtro]').forEach(grupo => {
+    const fid = grupo.dataset.filtro;
+    const sel = filtroSel[fid];
+    if (!sel) return;
+    sel.clear();
+    grupo.querySelectorAll('.pill[data-v]').forEach(p => {
+      p.classList.remove('gray');
+      p.classList.add('yellow');
+      sel.add(p.dataset.v);
+    });
+    sincTodos(fid);
+  });
+  if (typeof _filtPend === 'object' && _filtPend) {
+    Object.keys(_filtPend).forEach(k => delete _filtPend[k]);
+  }
+  if (typeof _filtData === 'object' && _filtData) {
+    _filtData.tipo = ''; _filtData.de = ''; _filtData.ate = '';
+  }
+  paginaAtual = 1;
+  comHandling(renderMatrix);
+}
+
+let _atlDropAberto = null;
+function toggleAtalhoDrop(origem, ev){
+  ev.stopPropagation();
+  const el = document.getElementById('atl-drop-' + origem);
+  if (!el) return;
+  if (el.classList.contains('show')) {
+    el.classList.remove('show');
+    _atlDropAberto = null;
+    return;
+  }
+  fecharAtalhoDrop();  // fecha qualquer outro
+  el.classList.add('show');
+  _atlDropAberto = el;
+  setTimeout(() => document.addEventListener('mousedown', _atlDropFora), 0);
+}
+function fecharAtalhoDrop(){
+  if (_atlDropAberto) {
+    _atlDropAberto.classList.remove('show');
+    _atlDropAberto = null;
+  }
+  document.removeEventListener('mousedown', _atlDropFora);
+}
+function _atlDropFora(ev){
+  if (_atlDropAberto && !_atlDropAberto.contains(ev.target)
+      && !ev.target.closest('.atl-btn')) {
+    fecharAtalhoDrop();
+  }
+}
+
+/* Mapeamento col → nome do header da grid Inclusão/Alteração.
+   Usado para serializar filtros do funil da grid de forma legível no atalho.
+   Ordem atual (0..14): Data, Quarentena, Vínculo, +, Status, Nome, Matrícula,
+   Usuário, Qtd, Departamento, Cargo, Tipo, Perfil Encontrado, Perfil Esperado, Origem.
+   Colunas SO_ORD (2=Vínculo, 4=Status, 11=Tipo) ficam fora — sao chips no topo. */
+const _GRID_COL_NOME = {
+  0:'Data', 5:'Nome', 6:'Matrícula', 7:'Usuário', 8:'Qtd',
+  9:'Departamento', 10:'Cargo', 12:'Perfil Encontrado',
+  13:'Perfil Esperado', 14:'Origem',
+};
+const _GRID_NOME_COL = Object.fromEntries(
+  Object.entries(_GRID_COL_NOME).map(([c, n]) => [n, +c]));
+
+/* Mapeamento col → nome do header da grid Histórico.
+   Ordem (0..5): +(expand), Matrícula, Nome, Movimentação, Data, Detalhe. */
+const _HIST_COL_NOME = {
+  1:'Matrícula', 2:'Nome', 3:'Movimentação', 4:'Data', 5:'Detalhe',
+};
+const _HIST_NOME_COL = Object.fromEntries(
+  Object.entries(_HIST_COL_NOME).map(([c, n]) => [n, +c]));
+
+/* Mapeamento col → nome do header da grid Consulta.
+   Ordem (0..12): +, Abas, Matrícula, Nome, Login, CPF, Cargo, Departamento,
+                  Centro de Custo, Sistemas, Pendências, Última divergência, Status.
+   Colunas únicas (Matrícula/Nome/Login/CPF) ficam fora — uso da busca livre.
+   Cols filtraveis: 6 Cargo, 7 Departamento, 8 Centro de Custo, 9 Sistemas,
+                    10 Pendências, 11 Última divergência, 12 Status. */
+const _CS_COL_NOME = {
+  6:'Cargo', 7:'Departamento', 8:'Centro de Custo',
+  9:'Sistemas', 10:'Pendências', 11:'Última divergência', 12:'Status',
+};
+const _CS_NOME_COL = Object.fromEntries(
+  Object.entries(_CS_COL_NOME).map(([c, n]) => [n, +c]));
+const _csFilt = {};
+let _csOrd = null;
+
+/* Le os filtros ativos atuais — conforme a aba em foco.
+   - incl: filtros laterais ([fid, v]) + funil da grid ("grid:<Col>", v)
+   - hist: funil do Histórico                ("hist:<Col>", v)
+   - consulta: funil da Consulta             ("cs:<Col>", v)
+   Filtros "cheios" (todos os valores marcados) sao tratados como SEM
+   RESTRICAO e nao entram. */
+function _filtrosAtivosAtuais(){
+  const out = [];
+  const t = _tabAtual;
+  if (t === 'hist') {
+    if (typeof _histFilt === 'object' && _histFilt) {
+      Object.entries(_histFilt).forEach(([col, sel]) => {
+        const nome = _HIST_COL_NOME[+col];
+        if (!nome || !sel) return;
+        for (const v of sel) out.push(['hist:' + nome, v]);
+      });
+    }
+    return out;
+  }
+  if (t === 'consulta') {
+    if (typeof _csFilt === 'object' && _csFilt) {
+      Object.entries(_csFilt).forEach(([col, sel]) => {
+        const nome = _CS_COL_NOME[+col];
+        if (!nome || !sel) return;
+        for (const v of sel) out.push(['cs:' + nome, v]);
+      });
+    }
+    return out;
+  }
+  // incl: laterais + funil da grid
+  FILTROS.forEach(f => {
+    const sel = filtroSel[f.id];
+    if (!sel || sel.size === 0) return;
+    const todos = f.id === 'status'
+      ? ['Pendente', 'Resolvido']
+      : valoresFiltro(f.campo);
+    if (sel.size === todos.length) return;  // sem filtro restritivo
+    for (const v of sel) out.push([f.id, v]);
+  });
+  if (typeof _filtPend === 'object' && _filtPend) {
+    Object.entries(_filtPend).forEach(([col, sel]) => {
+      const nome = _GRID_COL_NOME[+col];
+      if (!nome || !sel) return;
+      for (const v of sel) out.push(['grid:' + nome, v]);
+    });
+  }
+  return out;
+}
+
+/* Modal Salvar Atalho — pede nome + mostra preview dos filtros que serao salvos */
+function abrirModalSalvarAtalho(origem){
+  const filtros = _filtrosAtivosAtuais();
+  const semFiltro = filtros.length === 0;
+  // Agrupa pra exibir
+  const porGrupo = {};
+  filtros.forEach(([fid, v]) => (porGrupo[fid] = porGrupo[fid] || []).push(v));
+  const rotuloFid = {vinculo:'Vínculo', acao:'Ação', status:'Status',
+                     tipo:'Tipo', sistema:'Sistema'};
+  let preview;
+  if (semFiltro) {
+    preview = '<div class="atl-prev-vazio">⚠ Nenhum filtro aplicado — '
+            + 'o atalho não terá efeito. Aplique pelo menos 1 filtro antes.</div>';
+  } else {
+    preview = '<div class="atl-prev-list">' +
+      Object.entries(porGrupo).map(([fid, vs]) =>
+        `<div class="atl-prev-item">${rotuloFid[fid] || fid}: `
+        + `<span>${vs.map(esc).join(', ')}</span></div>`).join('') +
+      '</div>';
+  }
+  const html =
+      '<div class="modal-hd"><h3>💾 Salvar filtro</h3>'
+    + '<p>Cria um botão na barra desta aba que aplica esses filtros com 1 clique.</p></div>'
+    + '<div class="modal-bd">'
+    + '<label>Nome do atalho <span class="req">*</span></label>'
+    + '<input id="atl-input-nome" maxlength="50" '
+    + 'placeholder="Ex.: Desligados SYSTUR p/ resolver hoje">'
+    + '<label style="margin-top:14px">Filtros que serão aplicados</label>'
+    + preview
+    + '<p class="modal-err" id="atl-modal-err"></p>'
+    + '</div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
+    + (semFiltro
+        ? '<button class="mf-ok" disabled>Salvar</button>'
+        : `<button class="mf-ok" onclick="confirmarSalvarAtalho('${origem}')">Salvar</button>`)
+    + '</div>';
+  _modal(html);
+  setTimeout(() => {
+    const i = document.getElementById('atl-input-nome');
+    if (i) i.focus();
+  }, 50);
+}
+
+async function confirmarSalvarAtalho(origem){
+  const nome = (document.getElementById('atl-input-nome').value || '').trim();
+  const err = document.getElementById('atl-modal-err');
+  err.textContent = '';
+  if (!nome) { err.textContent = 'Informe um nome.'; return; }
+  const filtros = _filtrosAtivosAtuais();
+  try {
+    const r = await fetch('/api/atalho', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({nome, origem, filtros})
+    });
+    const d = await r.json();
+    if (!d.ok) { err.textContent = d.erro || 'Falha ao salvar.'; return; }
+    ATL[origem] = d.atalhos || [];
+    renderAtalhosOpcaoC(origem);
+    fecharModal();
+  } catch(e) { err.textContent = 'Erro de rede.'; }
+}
+
+/* Modal de confirmação de exclusão (compacto).
+   Detecta se o atalho esta APLICADO agora e avisa que excluir limpa a tela. */
+/* Estado temporario do modal de exclusao (evita passar JSON dentro de atributo
+   HTML, que quebra com aspas duplas dos filtros). */
+let _atlExcluirCtx = null;
+
+function confirmarExcluirAtalho(origem, id, nome, filtrosDoAtalho){
+  _atlExcluirCtx = {origem, id, filtros: filtrosDoAtalho || []};
+  const ativo = _filtrosIguais(_filtrosAtivosAtuais(), filtrosDoAtalho || []);
+  const aviso = ativo
+    ? '<p style="font:600 11.5px Arial;color:#B33A3A;margin-top:10px;'
+      + 'background:#FBE5E5;border-radius:5px;padding:8px 10px">'
+      + '⚠ Este filtro está aplicado agora. Ao excluir, todos os filtros '
+      + 'da aba serão limpos.</p>'
+    : '';
+  const html =
+      '<div class="modal-hd"><h3>Excluir filtro?</h3></div>'
+    + '<div class="modal-bd">'
+    + `<p style="font:400 12.5px/1.5 Arial;color:#3A3F4C">`
+    + `Deseja realmente excluir o atalho <b>${esc(nome)}</b>?</p>`
+    + '<p style="font:500 11px Arial;color:#7B8294;margin-top:8px">'
+    + 'A instrução é gravada no arquivo de interações da rede '
+    + '(igual quarentena). Não dá pra desfazer.</p>'
+    + aviso
+    + '</div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
+    + '<button class="mf-ok danger" onclick="executarExcluirAtalho()">Excluir</button>'
+    + '</div>';
+  _modal(html, 'confirm');
+}
+
+async function executarExcluirAtalho(){
+  const ctx = _atlExcluirCtx;
+  if (!ctx) { fecharModal(); return; }
+  const {origem, id, filtros} = ctx;
+  // Captura se o atalho excluido era o que estava aplicado ANTES da exclusao
+  const eraAtivo = _filtrosIguais(_filtrosAtivosAtuais(), filtros);
+  try {
+    const r = await fetch('/api/atalho/excluir', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({id, origem})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      ATL[origem] = d.atalhos || [];
+      renderAtalhosOpcaoC(origem);
+      // Se o atalho excluido era o que estava aplicado, limpa os filtros
+      if (eraAtivo) _resetTodosFiltros();
+    } else {
+      console.error('atalho excluir falhou:', d.erro);
+    }
+  } catch(e) { console.error('atalho excluir', e); }
+  _atlExcluirCtx = null;
+  fecharModal();
+}
+
+/* Aplica uma lista de [fid, valor] no painel atual (Inclusão ou Consulta).
+
+   Comportamento "snapshot" (Opção B): RESETA todos os filtros (marca todos
+   os valores = sem restrição) antes de aplicar os do atalho. Garante que
+   o resultado é exatamente o que estava quando o atalho foi salvo, sem
+   herdar nada do estado anterior. Padrão Jira/Linear.
+
+   Filtros que não existem na aba destino são ignorados silenciosamente.   */
+function aplicarFiltrosAtalho(filtros, idAtalho){
+  if (!Array.isArray(filtros)) return;
+  // Rastreio explicito de qual filtro salvo foi clicado (pra o badge).
+  // Setado SO quando vem com idAtalho — chamadas internas (sem id) nao tocam.
+  if (idAtalho) {
+    const origem = _origemAtual();
+    _atalhoAplicadoId[origem] = idAtalho;
+    try { localStorage.setItem(_chaveLS(origem), idAtalho); } catch(e) {}
+  }
+
+  // Detecta a aba ALVO pelo prefixo dos filtros (hist:/cs:) ou cai em incl
+  const temHist = filtros.some(([fid]) => typeof fid === 'string' && fid.startsWith('hist:'));
+  const temCs   = filtros.some(([fid]) => typeof fid === 'string' && fid.startsWith('cs:'));
+
+  if (temHist) {
+    // Aplica em _histFilt
+    if (typeof _histFilt === 'object' && _histFilt)
+      Object.keys(_histFilt).forEach(k => delete _histFilt[k]);
+    const porCol = {};
+    filtros.forEach(([fid, v]) => {
+      if (!fid || !fid.startsWith('hist:')) return;
+      const nome = fid.slice(5);
+      const col = _HIST_NOME_COL[nome];
+      if (col == null) return;
+      (porCol[col] = porCol[col] || new Set()).add(String(v));
+    });
+    Object.entries(porCol).forEach(([col, set]) => { _histFilt[+col] = set; });
+    _histPag = 1;
+    if (typeof pintarHistorico === 'function') comHandling(pintarHistorico);
+    return;
+  }
+
+  if (temCs) {
+    if (typeof _csFilt === 'object' && _csFilt)
+      Object.keys(_csFilt).forEach(k => delete _csFilt[k]);
+    const porCol = {};
+    filtros.forEach(([fid, v]) => {
+      if (!fid || !fid.startsWith('cs:')) return;
+      const nome = fid.slice(3);
+      const col = _CS_NOME_COL[nome];
+      if (col == null) return;
+      (porCol[col] = porCol[col] || new Set()).add(String(v));
+    });
+    Object.entries(porCol).forEach(([col, set]) => { _csFilt[+col] = set; });
+    if (typeof renderConsulta === 'function') renderConsulta();
+    return;
+  }
+
+  // incl: 1. Reset SILENCIOSO de TODOS os filtros laterais (marca todos os valores)
+  document.querySelectorAll('.slicer[data-filtro]').forEach(grupo => {
+    const fid = grupo.dataset.filtro;
+    const sel = filtroSel[fid];
+    if (!sel) return;
+    sel.clear();
+    grupo.querySelectorAll('.pill[data-v]').forEach(p => {
+      p.classList.remove('gray');
+      p.classList.add('yellow');
+      sel.add(p.dataset.v);
+    });
+    sincTodos(fid);
+  });
+  // 1b. Reset dos filtros do funil da grid (_filtPend)
+  if (typeof _filtPend === 'object' && _filtPend) {
+    Object.keys(_filtPend).forEach(k => delete _filtPend[k]);
+  }
+
+  // 2. Agrupa filtros do atalho por id (lateral) ou nome de coluna (grid)
+  const porGrupo = {};
+  const porGrid = {};
+  filtros.forEach(([fid, v]) => {
+    if (!fid || v == null) return;
+    if (fid.startsWith('grid:')) {
+      const nome = fid.slice(5);
+      (porGrid[nome] = porGrid[nome] || []).push(String(v));
+    } else {
+      (porGrupo[fid] = porGrupo[fid] || []).push(v);
+    }
+  });
+
+  // 3a. Aplica filtros laterais (cada grupo: 1o isola, demais combinam)
+  const gruposLat = Object.entries(porGrupo);
+  if (gruposLat.length === 0 && Object.keys(porGrid).length === 0) {
+    aplicarFiltro();
+    return;
+  }
+  gruposLat.forEach(([fid, vals]) => {
+    const grupo = document.querySelector(`.slicer[data-filtro="${fid}"]`);
+    if (!grupo) return;  // filtro nao existe nesta aba — ignora
+    vals.forEach((v, idx) => {
+      const pill = grupo.querySelector(`.pill[data-v="${CSS.escape(v)}"]`);
+      if (!pill) return;
+      filtroPill({ctrlKey: idx > 0}, fid, pill);
+    });
+  });
+
+  // 3b. Aplica filtros da grid (popula _filtPend diretamente)
+  Object.entries(porGrid).forEach(([nome, vals]) => {
+    const col = _GRID_NOME_COL[nome];
+    if (!col) return;  // coluna nao existe — ignora
+    _filtPend[col] = new Set(vals);
+  });
+
+  // 4. Se mexeu na grid OU nao mexeu em lateral, força um refresh
+  if (Object.keys(porGrid).length > 0) {
+    paginaAtual = 1;
+    comHandling(renderMatrix);
+  }
+}
+function renderVisaoGeral(){
+  const vg = DB.vg;
+  if (!vg) return;  // banco antigo sem campo vg
+  // KPIs
+  _vgKpi('vg-k-pend', vg.pendentes);
+  _vgKpi('vg-k-desl', vg.acessos_deslig);
+  const k = document.getElementById('vg-k-cob');
+  if (k) k.textContent = (vg.cobertura_pct != null) ? vg.cobertura_pct.toFixed(1) + '%' : '—';
+  _vgKpi('vg-k-quar', vg.quarentena_ativa);
+  // Chamados
+  _vgChamados(vg);
+  // Movimentação RH
+  _vgMovimentacao(vg);
+  // Donut tipos
+  const dt = vg.div_tipos || {};
+  const r = _vgDonut(dt);
+  document.getElementById('vg-donut').innerHTML = r.svg;
+  document.getElementById('vg-donut-leg').innerHTML = r.leg;
+  // Concentração por sistema
+  _vgBarras(document.getElementById('vg-sistemas'), vg.div_sistemas, {});
+  // Aging
+  const corAging = {'0-7':'#5B47A8','8-30':'#2C3D72','31-90':'#F5B800','90+':'#B33A3A'};
+  _vgBarras(document.getElementById('vg-aging'), vg.aging, corAging);
+  // Top urgentes
+  _vgTopUrgentes(document.getElementById('vg-top-body'), vg.top_urgentes);
 }
 async function recarregarAbaAtual(){
   await refreshDB();
   if (_tabAtual === 'quar') await renderQuarentena();
   else if (_tabAtual === 'hist') await renderHistorico();
-  else if (_tabAtual !== 'consulta') { renderMatrix(); aplicarKPIs(); atualizarCharts(); }
+  else if (_tabAtual === 'vg') renderVisaoGeral();
+  else if (_tabAtual !== 'consulta') { renderMatrix(); aplicarKPIs(); }
 }
 
 /* ── Quarentena (botão na grid → grava no SQLite via servidor) ─────────── */
@@ -1191,6 +2540,7 @@ async function refreshDB(){
     DB.kpis = d.kpis; DB.acao_dist = d.acao_dist;
     DB.sis_dist = d.sis_dist; DB.users = d.users;
     if (d.meta) DB.meta = d.meta;
+    if (d.vg) DB.vg = d.vg;
     atualizarHeaderMeta();
   }catch(e){ /* mantém dados atuais se falhar */ }
   agendarAutoRefresh();   // toda interacao reseta a contagem de 10s
@@ -1402,9 +2752,30 @@ function verResolucao(uid){
 }
 
 document.addEventListener('keydown', e => {
-  if(e.key === 'Escape' &&
-     document.getElementById('modal-bg').classList.contains('show')) fecharModal();
+  if (e.key === 'Escape') {
+    if (document.getElementById('modal-bg').classList.contains('show'))
+      fecharModal();
+    if (document.getElementById('cs-drawer')
+        && document.getElementById('cs-drawer').classList.contains('show'))
+      csFecharDrawer();
+  }
 });
+
+/* Listener do input de busca da Consulta — debounce 200ms */
+(() => {
+  let t = null;
+  document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('cs-busca');
+    if (!inp) return;
+    inp.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        _csBusca = inp.value || '';
+        renderConsulta();
+      }, 200);
+    });
+  });
+})();
 
 /* ── Aba Quarentena (Ativas / Histórico) ──────────────────────────────── */
 let quarData = null, quarVista = 'ativas';
@@ -1719,10 +3090,12 @@ function _histMenu(c,th){
     const marc=[...m.querySelectorAll('.gx-vals input:checked')].map(i=>lista[+i.value]);
     if(marc.length>=lista.length) delete _histFilt[c];
     else _histFilt[c]=new Set(marc);
-    _histPag=1; _gxFechar(); comHandling(pintarHistorico); };
+    _histPag=1; _gxFechar(); comHandling(pintarHistorico);
+    if (_tabAtual === 'hist') { renderAtalhosOpcaoC('hist'); _persistirFiltroAplicado('hist'); } };
   m.querySelector('.gx-limpar').onclick=()=>{
     delete _histFilt[c];
-    _histPag=1; _gxFechar(); comHandling(pintarHistorico); };
+    _histPag=1; _gxFechar(); comHandling(pintarHistorico);
+    if (_tabAtual === 'hist') { renderAtalhosOpcaoC('hist'); _persistirFiltroAplicado('hist'); } };
   setTimeout(()=>document.addEventListener('mousedown',_gxFora),0);
 }
 function equiparHist(){
@@ -1762,6 +3135,454 @@ async function baixarExcel(arquivo, colunas, linhas, niveis, formatos){
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }catch(e){ alert('Sem conexão com o visualizador — ele pode ter sido encerrado. Abra o visualizador.exe novamente.'); }
   finally{ await proc(false); }
+}
+
+/* ── Aba Consulta (busca livre + tabela agregada + drawer drill-down) ─ */
+let _csBusca = '';
+let _csUserAtivo = null;   // user object aberto no drawer
+let _csTab = 'ident';
+
+function _csNorm(s){
+  // Remove acentos + lower + colapsa espacos
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function _csFiltrarUsers(){
+  // Aplica MESMOS filtros laterais que a Inclusao + busca livre + funil por coluna
+  let users = DB.users.filter(u => u.divs.some(divPassa));
+  // Funil por coluna (Cargo, Departamento, CC, Sistemas, Pendências, Última div, Status)
+  const cf = Object.entries(_csFilt);
+  if (cf.length) users = users.filter(u =>
+    cf.every(([c, set]) => set.has(_csDisp(+c, u))));
+  // Busca livre: nome, matricula, usuario (login), CPF, email
+  const q = _csNorm(_csBusca);
+  if (q.length >= 2) {
+    users = users.filter(u =>
+      _csNorm(u.n).includes(q) ||
+      _csNorm(u.m).includes(q) ||
+      _csNorm(u.u).includes(q) ||
+      _csNorm(u.cpf || '').includes(q) ||
+      _csNorm(u.email || '').includes(q));
+  }
+  return users;
+}
+
+function renderConsulta(){
+  const body = document.getElementById('cs-body');
+  const totEl = document.getElementById('cs-total');
+  const clearBtn = document.getElementById('cs-busca-clear');
+  if (!body) return;
+  // Sincroniza o "X" de limpar busca
+  if (clearBtn) clearBtn.classList.toggle('show', !!_csBusca);
+
+  const users = _csFiltrarUsers();
+  totEl.textContent = users.length === 1
+    ? '1 funcionário' : `${users.length.toLocaleString('pt-BR')} funcionários`;
+
+  if (!users.length) {
+    body.innerHTML = '<tr><td colspan="13"><div class="cs-vazio">'
+      + (_csBusca
+          ? `Nenhum resultado para <b>${esc(_csBusca)}</b>. Tente outro termo.`
+          : 'Nenhum funcionário com os filtros atuais. Limpe os filtros ou ajuste.')
+      + '</div></td></tr>';
+    return;
+  }
+
+  // Paginação simples: limita a 500 (pra não travar). Se >500, avisa.
+  const MAX = 500;
+  const lim = users.slice(0, MAX);
+  body.innerHTML = lim.map(u => {
+    // Calcula resumo: sistemas distintos + qtd divergencias + ultima data
+    const sistemas = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
+    const pendentes = u.divs.filter(d => d.s === 'Pendente').length;
+    const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
+    const ultDt = datas.length ? datas[datas.length-1] : '';
+    const cls = pendentes > 0 ? 'pend' : 'ok';
+    const lbl = pendentes > 0 ? `${pendentes} pendente${pendentes>1?'s':''}` : 'OK';
+    const uidEsc = esc(u.u);
+    const matEsc = esc(u.m||'');
+    const nomeEsc = esc(u.n||u.u||'');
+    // Botão H só funciona se existir matrícula (chave do Histórico)
+    const hDisabled = !u.m ? 'disabled title="Sem matrícula — funcionário sem vínculo RH"' :
+      `title="Ir para Histórico filtrando por ${nomeEsc}"`;
+    return `<tr data-uid="${uidEsc}">
+      <td class="cs-expand-btn" onclick="toggleCsExpand('${uidEsc}')" title="Expandir/recolher detalhes">+</td>
+      <td style="text-align:center;"><span class="cs-aba-btns">`
+       + `<span class="cs-aba-btn p" onclick="csIrParaPend('${uidEsc}','${nomeEsc}')" `
+       +   `title="Ir para Pendências filtrando por ${nomeEsc}">P</span>`
+       + `<span class="cs-aba-btn h" ${hDisabled} `
+       +   `onclick="csIrParaHist('${matEsc}','${nomeEsc}')">H</span>`
+       + `</span></td>
+      <td><strong style="color:var(--navy)">${esc(u.m)||'—'}</strong></td>
+      <td><span class="cs-nome-link" onclick="csAbrirDrawer('${uidEsc}')" title="Abrir detalhes laterais">${esc(u.n)}</span></td>
+      <td>${esc(u.u)||'—'}</td>
+      <td>${esc(u.cpf)||'—'}</td>
+      <td>${esc(u.c)||'—'}</td>
+      <td>${esc(u.d)||'—'}</td>
+      <td>${esc(u.cc)||'—'}</td>
+      <td style="text-align:center;font-weight:700;color:var(--navy)">${sistemas}</td>
+      <td style="text-align:center;font-weight:700;color:${pendentes?'#B33A3A':'#1E7B43'}">${u.divs.length}</td>
+      <td style="text-align:center;color:#3A3F4C;font-size:11px;">${ultDt ? fmtDH(ultDt) : '—'}</td>
+      <td style="text-align:center;"><span class="cs-pill ${cls}">${lbl}</span></td>
+    </tr>`;
+  }).join('');
+  if (users.length > MAX) {
+    body.innerHTML += `<tr><td colspan="13" style="text-align:center;`
+      + `padding:14px;color:#7B8294;font-style:italic;font-size:11.5px;">`
+      + `Mostrando ${MAX} de ${users.length}. Refine a busca para reduzir.`
+      + `</td></tr>`;
+  }
+  equiparCs();
+}
+
+/* ── Funil por coluna na grid Consulta ───────────────────────────────── */
+function _csDisp(c, u){
+  if (c === 6) return u.c || '—';
+  if (c === 7) return u.d || '—';
+  if (c === 8) return u.cc || '—';
+  if (c === 9) {
+    const n = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
+    return String(n);
+  }
+  if (c === 10) {
+    return String(u.divs.filter(d => d.s === 'Pendente').length);
+  }
+  if (c === 11) {
+    const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
+    if (!datas.length) return '—';
+    return fmtDate(datas[datas.length-1]) || '—';   // só data (dia)
+  }
+  if (c === 12) {
+    return u.divs.some(d => d.s === 'Pendente') ? 'Pendente' : 'OK';
+  }
+  return '—';
+}
+
+function _csMenu(c, th){
+  _gxFechar();
+  // Universo: usuarios que passam pelos filtros laterais (mesmo base do _csFiltrarUsers)
+  const base = DB.users.filter(u => u.divs.some(divPassa));
+  const sv = new Set(); base.forEach(u => sv.add(_csDisp(c, u)));
+  const lista = [...sv].sort(_gxCmp), sel = _csFilt[c];
+  const m = document.createElement('div');
+  m.className = 'gx-menu'; m.id = 'gx-menu';
+  m.innerHTML =
+    '<input class="gx-busca" placeholder="buscar valor...">'
+    + '<label class="gx-v gx-todos"><input type="checkbox" checked> (Todos)</label>'
+    + '<div class="gx-vals">' + lista.map((v, i) =>
+        '<label class="gx-v"><input type="checkbox" value="' + i + '" '
+        + ((!sel || sel.has(v)) ? 'checked' : '') + '> '
+        + (esc(v) || '(vazio)') + '</label>').join('')
+    + '</div><div class="gx-acoes">'
+    + '<button class="gx-ok">Aplicar</button>'
+    + '<button class="gx-limpar">Limpar</button></div>';
+  document.body.appendChild(m);
+  const r = th.getBoundingClientRect();
+  m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - m.offsetWidth - 6)) + 'px';
+  m.style.top  = Math.min(r.bottom + 2, window.innerHeight - m.offsetHeight - 6) + 'px';
+  const bu = m.querySelector('.gx-busca');
+  bu.oninput = () => {
+    const q = bu.value.toLowerCase();
+    m.querySelectorAll('.gx-vals .gx-v').forEach(l => {
+      const hit = l.textContent.toLowerCase().includes(q);
+      l.style.display = hit ? '' : 'none';
+      l.querySelector('input').checked = hit;
+    });
+    const all = [...m.querySelectorAll('.gx-vals input')];
+    m.querySelector('.gx-todos input').checked = all.every(i => i.checked);
+  };
+  const tdc = m.querySelector('.gx-todos input');
+  tdc.onchange = () => m.querySelectorAll('.gx-vals .gx-v').forEach(l => {
+    if (l.style.display !== 'none') l.querySelector('input').checked = tdc.checked;
+  });
+  const aplica = () => {
+    if (_tabAtual === 'consulta') {
+      renderAtalhosOpcaoC('consulta');
+      _persistirFiltroAplicado('consulta');
+    }
+  };
+  m.querySelector('.gx-ok').onclick = () => {
+    const marc = [...m.querySelectorAll('.gx-vals input:checked')].map(i => lista[+i.value]);
+    if (marc.length >= lista.length) delete _csFilt[c];
+    else _csFilt[c] = new Set(marc);
+    _gxFechar(); renderConsulta(); aplica();
+  };
+  m.querySelector('.gx-limpar').onclick = () => {
+    delete _csFilt[c];
+    _gxFechar(); renderConsulta(); aplica();
+  };
+  setTimeout(() => document.addEventListener('mousedown', _gxFora), 0);
+}
+
+function equiparCs(){
+  document.querySelectorAll('#cs-tbl thead th').forEach((th, c) => {
+    // Só colunas com filtro (definidas em _CS_COL_NOME) ganham funil
+    if (!_CS_COL_NOME[c]) return;
+    th.classList.add('th-x');
+    // (ordenação clicando no header — opcional; deixa só o funil por enquanto)
+    let mk = th.querySelector('.th-mk');
+    if (!mk) {
+      mk = document.createElement('span');
+      mk.className = 'th-mk';
+      mk.innerHTML = _SVG_FUNIL;
+      mk.onclick = ev => { ev.stopPropagation(); _csMenu(c, th); };
+      th.appendChild(mk);
+    }
+    mk.classList.toggle('mk-filtrado', !!_csFilt[c]);
+  });
+}
+
+/* ── (+) Expansão inline na grid de Consulta ─────────────────────────── */
+const _csExpand = new Set();   // uids atualmente expandidos
+function toggleCsExpand(uid){
+  const tbody = document.getElementById('cs-body');
+  if (!tbody) return;
+  const tr = tbody.querySelector(`tr[data-uid="${CSS.escape(uid)}"]`);
+  if (!tr) return;
+  const btn = tr.querySelector('.cs-expand-btn');
+  // Já está aberto? Remove a linha-filha e recolhe.
+  const proxima = tr.nextElementSibling;
+  if (proxima && proxima.classList.contains('cs-sub') && proxima.dataset.uid === uid) {
+    proxima.remove();
+    _csExpand.delete(uid);
+    if (btn) { btn.classList.remove('aberto'); btn.textContent = '+'; }
+    return;
+  }
+  // Senão, monta a sub-linha
+  const u = DB.users.find(x => x.u === uid);
+  if (!u) return;
+  const conteudo = _csMontarSub(u);
+  const sub = document.createElement('tr');
+  sub.className = 'cs-sub';
+  sub.dataset.uid = uid;
+  sub.innerHTML = `<td colspan="13"><div class="cs-sub-wrap">${conteudo}</div></td>`;
+  tr.insertAdjacentElement('afterend', sub);
+  _csExpand.add(uid);
+  if (btn) { btn.classList.add('aberto'); btn.textContent = '+'; }
+}
+
+function _csMontarSub(u){
+  if (!u.divs || !u.divs.length) {
+    return '<div class="cs-sub-titulo">Acessos</div>'
+      + '<div style="color:#7B8294;font-style:italic;">Sem registros de acesso.</div>';
+  }
+  const porSis = {};
+  u.divs.forEach(d => {
+    const sis = d.sis || '—';
+    (porSis[sis] = porSis[sis] || []).push(d);
+  });
+  let h = '<div class="cs-sub-titulo">Acessos / divergências</div>';
+  Object.entries(porSis).forEach(([sis, lista]) => {
+    h += `<div class="cs-sub-acc">`
+      + `<div class="cs-sub-acc-h"><span>${esc(sis)}</span>`
+      + `<span class="cs-sub-sis">${lista.length} ${lista.length>1?'itens':'item'}</span></div>`;
+    lista.forEach(d => {
+      const stColor = d.s === 'Pendente' ? '#B33A3A' : '#1E7B43';
+      const perfil = d.pe || d.pp || '—';
+      const data = d.dt ? ` · ${fmtDH(d.dt)}` : '';
+      h += `<div class="cs-sub-acc-p">`
+        + `<span>${esc(d.tl || d.t)} · ${esc(perfil)}${data}</span>`
+        + `<span class="cs-sub-st" style="color:${stColor}">${esc(d.s)}</span>`
+        + `</div>`;
+    });
+    h += `</div>`;
+  });
+  return h;
+}
+
+function csLimparBusca(){
+  _csBusca = '';
+  document.getElementById('cs-busca').value = '';
+  renderConsulta();
+}
+
+/* ── Navegação Consulta → Pendências/Histórico ───────────────────────── */
+/* Setado quando o usuário clica em P ou H na grid da Consulta.
+   Persiste o filtro aplicado e mostra um badge verde na aba destino. */
+let _filtroVindoConsulta = null;  // {tab:'incl'|'hist', uid|matricula, nome}
+
+function csIrParaPend(uid, nome){
+  // Limpa filtros existentes da grid de Pendências e o filtro especial de Data
+  if (typeof _filtPend === 'object' && _filtPend) {
+    Object.keys(_filtPend).forEach(k => delete _filtPend[k]);
+  }
+  _filtData = {tipo:'', de:'', ate:''};
+  if (typeof _atalhoAplicadoId === 'object' && _atalhoAplicadoId) {
+    _atalhoAplicadoId.incl = null;
+  }
+  // Aplica filtro pelo Usuário (col 7 na nova ordem)
+  _filtPend[7] = new Set([uid]);
+  _filtroVindoConsulta = {tab:'incl', uid, nome};
+  paginaAtual = 1;
+  showPage('incl');
+}
+
+function csIrParaHist(matricula, nome){
+  if (!matricula) return;
+  if (typeof _histFilt === 'object' && _histFilt) {
+    Object.keys(_histFilt).forEach(k => delete _histFilt[k]);
+  }
+  _histFilt[1] = new Set([matricula]);   // col 1 = Matrícula
+  _filtroVindoConsulta = {tab:'hist', uid:matricula, nome};
+  _histPag = 1;
+  showPage('hist');
+}
+
+function _renderBadgeVindoConsulta(){
+  const inclHost = document.getElementById('cs-vinculo-incl');
+  const histHost = document.getElementById('cs-vinculo-hist');
+  if (inclHost) inclHost.innerHTML = '';
+  if (histHost) histHost.innerHTML = '';
+  if (!_filtroVindoConsulta) return;
+  const host = _filtroVindoConsulta.tab === 'incl' ? inclHost : histHost;
+  if (!host) return;
+  const detalhe = _filtroVindoConsulta.tab === 'incl'
+    ? `Login: ${_filtroVindoConsulta.uid}`
+    : `Matrícula: ${_filtroVindoConsulta.uid}`;
+  host.innerHTML =
+      `<span class="atl-aplicado" title="Filtro aplicado a partir da aba Consulta">`
+    + `✓ Filtrado da Consulta: <b>${esc(_filtroVindoConsulta.nome)}</b>`
+    + `<span class="atl-aplicado-i" title="${esc(detalhe)}">i</span>`
+    + `<span class="atl-aplicado-x" onclick="limparFiltroVindoConsulta()" `
+    +   `title="Limpar este filtro">×</span>`
+    + `</span>`;
+}
+
+function limparFiltroVindoConsulta(){
+  const tab = _filtroVindoConsulta && _filtroVindoConsulta.tab;
+  _filtroVindoConsulta = null;
+  if (tab === 'incl') {
+    if (typeof _filtPend === 'object' && _filtPend)
+      Object.keys(_filtPend).forEach(k => delete _filtPend[k]);
+    _filtData = {tipo:'', de:'', ate:''};
+    paginaAtual = 1;
+    comHandling(renderMatrix);
+  } else if (tab === 'hist') {
+    if (typeof _histFilt === 'object' && _histFilt)
+      Object.keys(_histFilt).forEach(k => delete _histFilt[k]);
+    _histPag = 1;
+    comHandling(pintarHistorico);
+  }
+  _renderBadgeVindoConsulta();
+}
+
+function csAbrirDrawer(uid){
+  const u = DB.users.find(x => x.u === uid);
+  if (!u) return;
+  _csUserAtivo = u;
+  _csTab = 'ident';
+  document.getElementById('cs-drawer-nome').textContent = u.n || u.u;
+  document.getElementById('cs-drawer-meta').textContent =
+    `${u.m ? 'matr ' + u.m : 'sem matrícula'} · ${u.c || '—'} · ${u.cc || '—'}`;
+  // Sincroniza tabs visuais
+  document.querySelectorAll('.cs-drawer-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.cstab === 'ident'));
+  csRenderDrawerBody();
+  document.getElementById('cs-drawer').classList.add('show');
+  // Destaca a linha ativa na grid (visual cue de quem está no popup)
+  document.querySelectorAll('#cs-body tr.cs-row-ativa').forEach(r =>
+    r.classList.remove('cs-row-ativa'));
+  const ativa = document.querySelector(`#cs-body tr[data-uid="${CSS.escape(uid)}"]`);
+  if (ativa) ativa.classList.add('cs-row-ativa');
+}
+
+function csFecharDrawer(){
+  document.getElementById('cs-drawer').classList.remove('show');
+  _csUserAtivo = null;
+  document.querySelectorAll('#cs-body tr.cs-row-ativa').forEach(r =>
+    r.classList.remove('cs-row-ativa'));
+}
+
+function csDrawerTab(tab){
+  _csTab = tab;
+  document.querySelectorAll('.cs-drawer-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.cstab === tab));
+  csRenderDrawerBody();
+}
+
+function csRenderDrawerBody(){
+  const u = _csUserAtivo;
+  const body = document.getElementById('cs-drawer-body');
+  if (!u) { body.innerHTML = ''; return; }
+  if (_csTab === 'ident') {
+    body.innerHTML = ''
+      + '<div class="cs-sec">Identidade</div>'
+      + _csLinha('Matrícula',       u.m || '—')
+      + _csLinha('Usuário (login)', u.u || '—')
+      + _csLinha('Nome',            u.n || '—')
+      + '<div class="cs-sec">Organização</div>'
+      + _csLinha('Cargo',           u.c || '—')
+      + _csLinha('Departamento',    u.d || '—')
+      + _csLinha('Centro de Custo', u.cc || '—');
+  }
+  else if (_csTab === 'acessos') {
+    if (!u.divs.length) {
+      body.innerHTML = '<div class="cs-empty">Sem registros de acesso.</div>';
+      return;
+    }
+    // Agrupa por sistema
+    const porSis = {};
+    u.divs.forEach(d => {
+      const sis = d.sis || '—';
+      (porSis[sis] = porSis[sis] || []).push(d);
+    });
+    let h = '<div class="cs-sec">Acessos por sistema</div>';
+    Object.entries(porSis).forEach(([sis, lista]) => {
+      h += `<div class="cs-acc">`
+        + `<div class="cs-acc-h"><span>${esc(sis)}</span>`
+        + `<span class="cs-acc-sis">${lista.length} ${lista.length>1?'itens':'item'}</span></div>`;
+      lista.forEach(d => {
+        const stColor = d.s === 'Pendente' ? '#B33A3A' : '#1E7B43';
+        const perfil = d.pe || d.pp || '—';
+        h += `<div class="cs-acc-p">`
+          + `<span>${esc(d.tl || d.t)} · ${esc(perfil)}</span>`
+          + `<span class="cs-acc-st" style="color:${stColor}">${esc(d.s)}</span>`
+          + `</div>`;
+      });
+      h += `</div>`;
+    });
+    body.innerHTML = h;
+  }
+  else if (_csTab === 'hist') {
+    body.innerHTML = '<div class="cs-empty">📜 Histórico de movimentações '
+      + 'do funcionário aparece aqui quando houver CDC do RH '
+      + '(admissão, alteração de cargo, etc.).</div>';
+  }
+  else if (_csTab === 'quar') {
+    body.innerHTML = '<div class="cs-empty">⏱️ Histórico de quarentena '
+      + 'e resoluções aparece aqui.</div>';
+  }
+}
+
+function _csLinha(k, v){
+  return `<div class="cs-row"><span class="cs-k">${esc(k)}</span>`
+       + `<span class="cs-v">${esc(v)}</span></div>`;
+}
+
+function csExportar(){
+  const users = _csFiltrarUsers();
+  const cols = ['Matrícula','Nome','Login','CPF','Cargo','Departamento',
+                'Centro de Custo','Sistemas','Pendências','Última divergência','Status'];
+  const rows = users.map(u => {
+    const sis = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
+    const pend = u.divs.filter(d => d.s === 'Pendente').length;
+    const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
+    const ultDt = datas.length ? fmtDH(datas[datas.length-1]) : '';
+    return [u.m||'', u.n, u.u||'', u.cpf||'', u.c||'', u.d||'', u.cc||'',
+            sis, u.divs.length, ultDt,
+            pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'OK'];
+  });
+  fetch('/api/exportar', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({arquivo:'consulta', colunas:cols, linhas:rows})
+  }).then(r => r.blob()).then(b => {
+    const url = URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'consulta.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+  }).catch(() => alert('Falha ao exportar.'));
 }
 
 function exportarInclusao(){
@@ -1960,11 +3781,10 @@ document.addEventListener('DOMContentLoaded', () => {
     montarFiltros();
     renderMatrix();
     aplicarKPIs();
+    // botoes de filtros salvos da aba Inclusao + re-aplica ultimo se persistido
+    carregarAtalhos('incl', /*reaplicarUltimo=*/true);
 
-    const s = distOrdenada(DB.sis_dist);
-    mkChart('ch-sis-vg', s.labels, s.data);
-    const a = distOrdenada(DB.acao_dist);
-    mkChart('ch-acao-vg', a.labels, a.data, 0.22);
+    renderVisaoGeral();
 
     // Tooltip automático estilo Power BI: Usuário, Nome e a coluna sob o mouse
     const tip = document.createElement('div');
