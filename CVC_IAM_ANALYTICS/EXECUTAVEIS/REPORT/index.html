@@ -923,13 +923,13 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
           <table class="vg-tbl">
             <thead><tr>
               <th>Nome</th><th>Desligamento</th><th>Cargo</th>
-              <th style="text-align:center">Sis.</th><th style="text-align:center">Perfis</th><th></th>
+              <th style="text-align:center">Sis.</th><th style="text-align:center">Perfis</th>
             </tr></thead>
             <tbody id="vg-top-body"></tbody>
           </table>
         </div>
         <div class="vg-ver-todos">
-          <a href="#" onclick="showPage('incl');return false;">Ver todos os acessos de desligado na Inclusão / Alteração →</a>
+          <span class="vg-soft">⚠ Indicador de risco — o tratamento dos acessos de desligado entra na Fase 2 (Desligados).</span>
         </div>
       </div>
     </div>
@@ -1884,7 +1884,7 @@ function _vgRiscoClasse(p){
   return 'vg-risco-baixo';
 }
 function _vgTopUrgentes(host, lista){
-  if (!lista || !lista.length) { host.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#7B8294;padding:20px">Sem desligados com acesso ativo</td></tr>'; return; }
+  if (!lista || !lista.length) { host.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#7B8294;padding:20px">Sem desligados com acesso ativo</td></tr>'; return; }
   host.innerHTML = lista.map(t => {
     const diasStr = t.dias != null ? `${t.dias}d atrás` : '—';
     return `<tr>`
@@ -1893,7 +1893,6 @@ function _vgTopUrgentes(host, lista){
       + `<td>${esc(t.cargo)}</td>`
       + `<td style="text-align:center">${t.sistemas}</td>`
       + `<td style="text-align:center"><span class="vg-badge ${_vgRiscoClasse(t.perfis)}">${t.perfis}</span></td>`
-      + `<td><button class="vg-btn-acao" onclick="showPage('incl')">Ver</button></td>`
       + `</tr>`;
   }).join('');
 }
