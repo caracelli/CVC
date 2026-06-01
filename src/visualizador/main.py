@@ -968,9 +968,14 @@ def _calcular_visao_geral(c, sistema=""):
         f"SELECT tipo, COUNT(*) FROM divergencias "
         + (" WHERE sistema = ?" if sistema else "") + " GROUP BY tipo",
         argS)}
-    # Concentração por sistema (mantem todos os sistemas — visão de proporção)
+    # Concentração por sistema. RESPEITA o escopo configurado (visualizador/sistema):
+    # com escopo SYSTUR mostra SO SYSTUR (requisito da 1a entrega = nada alem de
+    # SYSTUR); com escopo vazio (multi-sistema futuro) mostra TODOS. O painel
+    # continua multi-sistema-ready — quem manda e' o escopo, nao um filtro fixo.
     out["div_sistemas"] = {r[0]: r[1] for r in c.execute(
-        "SELECT sistema, COUNT(*) FROM divergencias GROUP BY sistema ORDER BY 2 DESC")}
+        "SELECT sistema, COUNT(*) FROM divergencias "
+        + ("WHERE sistema = ? " if sistema else "")
+        + "GROUP BY sistema ORDER BY 2 DESC", argS)}
 
     # Top 10 desligados recentes ainda com acesso ativo NO SISTEMA do escopo
     hoje = datetime.date.today()
