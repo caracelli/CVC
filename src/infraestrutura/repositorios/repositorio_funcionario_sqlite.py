@@ -18,6 +18,11 @@ class RepositorioFuncionarioSqlite(IRepositorioFuncionario):
 
     def salvar_ativos(self, ativos: List[FuncionarioAtivo], arquivo_origem: str = ""):
         with self._conexao.sessao() as sessao:
+            # RH ativos chega de forma INCREMENTAL: cada arquivo traz apenas
+            # admissoes/alteracoes do ciclo, nao a base inteira. Por isso usa
+            # merge (upsert) — quem nao vem no lote permanece intacto. NAO
+            # trocar por delete+insert: apagaria todos os ativos ausentes do
+            # incremento (perda de dados).
             for f in ativos:
                 sessao.merge(RhAtivo(
                     matricula=f.matricula,

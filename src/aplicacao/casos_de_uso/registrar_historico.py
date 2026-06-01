@@ -13,7 +13,7 @@ gera trilha (so estabelece baseline).
 """
 import json
 from datetime import date
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict
 
 from loguru import logger
 
@@ -48,6 +48,10 @@ class RegistrarHistorico:
     # ---- API publica para RH (compativel com chamadas legadas) -------------
 
     def registrar_ativos(self, ativos: list) -> dict:
+        # RH ativos chega INCREMENTAL: cada lote traz so admissoes/alteracoes do
+        # ciclo, nao a base inteira. Por isso detectar_remocao=False — ausencia
+        # do lote NAO e' remocao (senao todo ativo fora do incremento viraria
+        # falso REMOVIDO). Saidas chegam pelo arquivo de desligados.
         return self._registrar(
             entidade=ENTIDADE_RH_ATIVO,
             tipo_compat="ATIVO",
@@ -56,6 +60,7 @@ class RegistrarHistorico:
             recebidos=ativos,
             chave_orm=lambda r: self._pad.normalizar_matricula(r.matricula),
             chave_entidade=lambda f: self._pad.normalizar_matricula(f.matricula),
+            detectar_remocao=False,
         )
 
     def registrar_desligados(self, desligados: list) -> dict:
@@ -73,7 +78,8 @@ class RegistrarHistorico:
 
     def _registrar(self, *, entidade: str, tipo_compat: str, modelo_orm,
                    campos: list, recebidos: list,
-                   chave_orm: Callable, chave_entidade: Callable) -> dict:
+                   chave_orm: Callable, chave_entidade: Callable,
+                   detectar_remocao: bool = True) -> dict:
         hoje = date.today()
 
         with self._conexao.sessao() as sessao:
@@ -123,14 +129,19 @@ class RegistrarHistorico:
                         ))
                         alterados += 1
 
-            for chave, dados_ant in anterior.items():
-                if chave not in novo:
-                    sessao.add(self._registro_historico(
-                        hoje, entidade, tipo_compat, chave,
-                        tipo_mudanca="REMOVIDO", campos_alterados=None,
-                        dados_ant=dados_ant, dados_novo=None,
-                    ))
-                    removidos += 1
+            # REMOVIDO por ausencia so faz sentido em entidade SNAPSHOT (a base
+            # inteira vem a cada ciclo). Em entidade INCREMENTAL (RH ativos),
+            # ausencia do lote NAO e' remocao — desativado para nao gerar
+            # enxurrada de falsos REMOVIDO. Saidas vem pelo arquivo de desligados.
+            if detectar_remocao:
+                for chave, dados_ant in anterior.items():
+                    if chave not in novo:
+                        sessao.add(self._registro_historico(
+                            hoje, entidade, tipo_compat, chave,
+                            tipo_mudanca="REMOVIDO", campos_alterados=None,
+                            dados_ant=dados_ant, dados_novo=None,
+                        ))
+                        removidos += 1
 
             sessao.add(SnapshotRh(
                 data_snapshot=hoje, tipo=tipo_compat, total_registros=len(novo),

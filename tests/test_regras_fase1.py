@@ -215,11 +215,15 @@ class TestCDCHistoricoRh(unittest.TestCase):
         self.assertEqual(r["alterados"], 1)
         self.assertEqual((r["novos"], r["removidos"]), (0, 0))
 
-    def test_removido_quando_matricula_some_do_arquivo(self):
+    def test_ausente_do_incremento_nao_vira_removido(self):
+        # RH ativos e' INCREMENTAL: a ausencia de uma matricula no lote NAO
+        # significa remocao (senao todo ativo fora do incremento viraria falso
+        # REMOVIDO). Saidas chegam pelo arquivo de desligados, nao por ausencia.
         self.repo.salvar_ativos([_ativo("100", "11111111111"), _ativo("200", "22222222222")])
         r = self.hist.registrar_ativos([_ativo("100", "11111111111")])
-        self.assertEqual(r["removidos"], 1)
-        self.assertEqual(r["total"], 1)
+        self.assertEqual(r["removidos"], 0, "ausencia no incremento nao e' remocao")
+        # MAT200, ausente do lote, continua ativo na base
+        self.assertIsNotNone(self.repo.buscar_por_matricula("200"))
 
 
 # ───────── Histórico — dobra das resoluções de pendência (aba Histórico) ─────────
