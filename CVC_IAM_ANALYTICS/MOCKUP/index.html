@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>CVC IAM Analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#111;overflow:hidden;width:100vw;height:100vh;}
+
+#scaler{
+  position:fixed;top:0;left:0;
+  width:1440px;height:895px;
+  transform-origin:top left;
+  background:#F2F4F7;
+  overflow:hidden;
+}
+.abs{position:absolute;}
+.page{position:absolute;top:0;left:0;width:1440px;height:895px;display:none;}
+.page.active{display:block;}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+.hdr-bg    {left:0;top:0;width:1440px;height:70px;background:#1F2D5C;}
+.hdr-accent{left:0;top:0;width:12px;height:110px;background:#F5B800;z-index:20;}
+.hdr-sep   {left:0;top:69px;width:1440px;height:1px;background:#F5B800;z-index:19;}
+.nav-bg    {left:0;top:70px;width:1440px;height:40px;background:#1F2D5C;z-index:10;}
+.hdr-title {left:30px;top:10px;font:700 24px/1 'Segoe UI',sans-serif;color:#fff;}
+.hdr-sub   {left:30px;top:46px;font:400 13px 'Segoe UI',sans-serif;color:#fff;}
+.hdr-ref   {left:1090px;top:10px;width:330px;font:700 16px 'Segoe UI',sans-serif;color:#F5B800;text-align:right;}
+.hdr-upd   {left:1090px;top:36px;width:330px;font:400 12px 'Segoe UI',sans-serif;color:#B0BEC5;text-align:right;}
+
+/* ── Nav tabs ────────────────────────────────────────────────────────── */
+.tab{
+  position:absolute;top:74px;height:32px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:6px 6px 0 0;cursor:pointer;
+  font:400 13px 'Segoe UI',sans-serif;
+  background:#fff;color:#555;
+  box-shadow:2px 0 6px rgba(31,45,92,.3);
+  transition:background .15s;z-index:15;user-select:none;
+}
+.tab.active{background:#F5B800;color:#1F2D5C;font-weight:700;}
+
+/* ── KPI card (fiel ao cardVisual do Power BI) ───────────────────────── */
+.kpi{
+  position:absolute;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:8px;
+  box-shadow:8px 8px 12px rgba(31,45,92,.25);
+}
+.kpi-val{font:700 22px/1 'Segoe UI',sans-serif;text-align:center;margin-bottom:5px;}
+.kpi-lbl{font:700 10px/1.2 'Segoe UI',sans-serif;text-align:center;}
+
+/* ── Sidebar panels ──────────────────────────────────────────────────── */
+.panel{
+  position:absolute;background:#fff;
+  border:1px solid #E0E0E0;border-radius:10px;
+  box-shadow:8px 8px 12px rgba(31,45,92,.25);
+  overflow:hidden;
+}
+.panel-lbl{position:absolute;font:700 10.5px/1 'Segoe UI',sans-serif;color:#1F2D5C;}
+
+/* ── Slicer pills ────────────────────────────────────────────────────── */
+.slicer-wrap{position:absolute;display:flex;flex-direction:column;gap:5px;padding:6px 8px;left:0;right:0;}
+.pill{
+  width:100%;padding:7px 8px;border-radius:20px;border:none;cursor:pointer;
+  font:700 11px 'Segoe UI',sans-serif;text-align:center;transition:all .12s;
+}
+.pill.yellow{background:#F5B800;color:#1F2D5C;}
+.pill.gray  {background:#E5E4E1;color:#252423;}
+.pill.navy  {background:#1F2D5C;color:#fff;}
+
+/* ── Chart panels ────────────────────────────────────────────────────── */
+.chart-panel{
+  position:absolute;background:#fff;border-radius:6px;
+  box-shadow:8px 8px 12px rgba(31,45,92,.25);overflow:hidden;
+}
+.chart-title{font:700 13px 'Segoe UI',sans-serif;color:#1F2D5C;text-align:center;padding:10px 8px 6px;}
+.chart-title.orange{color:#E67E22;}
+.chart-canvas-wrap{position:absolute;left:0;right:0;bottom:0;}
+
+/* ── Main panel + table ──────────────────────────────────────────────── */
+.content-panel{
+  position:absolute;background:#fff;border-radius:10px;
+  border:1px solid #E0E0E0;
+  box-shadow:8px 8px 12px rgba(31,45,92,.25);overflow:hidden;
+}
+.tbl-wrap{position:absolute;top:0;left:0;right:0;bottom:0;overflow:auto;}
+table{border-collapse:collapse;font:400 11px 'Segoe UI',sans-serif;table-layout:fixed;}
+thead th{
+  position:sticky;top:0;z-index:2;
+  background:#1F2D5C;color:#fff;
+  padding:7px 6px;text-align:left;font-weight:600;white-space:nowrap;font-size:11px;
+  border-right:1px solid rgba(255,255,255,.15);
+}
+thead th:last-child{border-right:none;}
+tbody tr:nth-child(even){background:#F8F9FB;}
+tbody tr:hover{background:#EDF0F7;}
+tbody td{
+  padding:5px 6px;color:#252423;
+  border-bottom:1px solid #E8EDF2;border-right:1px solid #F0F0F0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+tbody td:last-child{border-right:none;}
+tr.sub-row td{background:#FAFBFC;color:#555;}
+
+/* ── Expand button ───────────────────────────────────────────────────── */
+.expand-btn{
+  background:none;border:1px solid #1F2D5C;border-radius:3px;cursor:pointer;
+  color:#1F2D5C;font-size:9px;padding:1px 4px;font-weight:700;
+  line-height:1;display:inline-flex;align-items:center;justify-content:center;
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────── */
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-weight:600;font-size:10.5px;white-space:nowrap;}
+.b-sem-acesso  {background:#DEECF9;color:#004578;}
+.b-sem-vinculo {background:#F0E6F6;color:#5C2D91;}
+.b-divergente  {background:#FEF3E2;color:#833C00;}
+.b-em-analise  {background:#FFF3CD;color:#856404;}
+.b-pendente    {background:#FDE7E9;color:#A4262C;}
+.b-resolvida   {background:#DFF6DD;color:#107C10;}
+
+/* ── Placeholder ─────────────────────────────────────────────────────── */
+.ph{
+  position:absolute;left:0;top:110px;right:0;bottom:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;color:#605E5C;
+}
+.ph h2{font:700 22px 'Segoe UI',sans-serif;color:#1F2D5C;}
+.ph p {font:400 14px 'Segoe UI',sans-serif;max-width:420px;text-align:center;line-height:1.7;}
+</style>
+</head>
+<body>
+<div id="scaler">
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     VISÃO GERAL
+══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="pg-vg">
+  <div class="abs hdr-bg"></div>
+  <div class="abs nav-bg"></div>
+  <div class="abs hdr-accent"></div>
+  <div class="abs hdr-sep"></div>
+  <div class="abs hdr-title">IAM Analitics</div>
+  <div class="abs hdr-sub">Governança de Acessos - CVC Corp</div>
+  <div class="abs hdr-ref">Referência: Maio / 2026</div>
+  <div class="abs hdr-upd">Última atualização: 14/05/2026 09:42</div>
+  <div class="tab active" style="left:16px;width:183px;" data-tab="vg">Visão Geral</div>
+  <div class="tab"        style="left:203px;width:183px;" data-tab="incl">Inclusão / Alteração</div>
+  <div class="tab"        style="left:390px;width:183px;" data-tab="perf">Perfis Inválidos</div>
+  <div class="tab"        style="left:577px;width:183px;" data-tab="sv">Sem Vínculo RH</div>
+
+  <!-- KPI cards VG: y=115 h=80 w=336 -->
+  <!-- Incluir Acesso -->
+  <div class="kpi" style="left:15px;top:115px;width:336px;height:80px;background:#EBF5FB;border:1px solid #D5E8F5;">
+    <div class="kpi-val" style="color:#2980B9;">562</div>
+    <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso</div>
+  </div>
+  <!-- Alterar Perfil -->
+  <div class="kpi" style="left:373px;top:115px;width:336px;height:80px;background:#EBF5FB;border:1px solid #D5E8F5;">
+    <div class="kpi-val" style="color:#2471A3;">41</div>
+    <div class="kpi-lbl" style="color:#2471A3;">Alterar Perfil</div>
+  </div>
+  <!-- Em Análise -->
+  <div class="kpi" style="left:731px;top:115px;width:336px;height:80px;background:#FEF3E2;border:1px solid #F9D5A7;">
+    <div class="kpi-val" style="color:#E67E22;">798</div>
+    <div class="kpi-lbl" style="color:#E67E22;">Em Análise</div>
+  </div>
+  <!-- Total Não Mapeados -->
+  <div class="kpi" style="left:1089px;top:115px;width:336px;height:80px;background:#F5EEF8;border:1px solid #D7BDE2;">
+    <div class="kpi-val" style="color:#7D3C98;">4.957</div>
+    <div class="kpi-lbl" style="color:#7D3C98;">Total Não Mapeados</div>
+  </div>
+
+  <!-- Gráfico 1: Ações por Sistema -->
+  <div class="chart-panel" style="left:15px;top:208px;width:697px;height:360px;">
+    <div class="chart-title">Ações Pendentes por Sistema</div>
+    <div class="chart-canvas-wrap" style="top:38px;height:322px;">
+      <canvas id="ch-sis-vg" style="width:697px;height:322px;"></canvas>
+    </div>
+  </div>
+
+  <!-- Gráfico 2: Distribuição por Tipo -->
+  <div class="chart-panel" style="left:729px;top:208px;width:696px;height:360px;">
+    <div class="chart-title orange">Distribuição por Tipo de Ação</div>
+    <div class="chart-canvas-wrap" style="top:38px;height:322px;">
+      <canvas id="ch-acao-vg" style="width:696px;height:322px;"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     INCLUSÃO / ALTERAÇÃO
+══════════════════════════════════════════════════════════════════════ -->
+<div class="page active" id="pg-incl">
+  <div class="abs hdr-bg"></div>
+  <div class="abs nav-bg"></div>
+  <div class="abs hdr-accent"></div>
+  <div class="abs hdr-sep"></div>
+  <div class="abs hdr-title">IAM Analitics</div>
+  <div class="abs hdr-sub">Governança de Acessos - CVC Corp</div>
+  <div class="abs hdr-ref">Referência: Maio / 2026</div>
+  <div class="abs hdr-upd">Última atualização: 14/05/2026 09:42</div>
+  <div class="tab"        style="left:16px;width:183px;" data-tab="vg">Visão Geral</div>
+  <div class="tab active" style="left:203px;width:183px;" data-tab="incl">Inclusão / Alteração</div>
+  <div class="tab"        style="left:390px;width:183px;" data-tab="perf">Perfis Inválidos</div>
+  <div class="tab"        style="left:577px;width:183px;" data-tab="sv">Sem Vínculo RH</div>
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
+
+  <!-- Painel Ação/Status: x=3 y=112 w=204 h=220 -->
+  <div class="panel" style="left:3px;top:112px;width:204px;height:220px;">
+    <div class="panel-lbl" style="left:10px;top:9px;">Status:</div>
+    <div class="slicer-wrap" style="top:28px;" id="slicer-acao">
+      <button class="pill yellow" data-acao="all"           onclick="slicerAcao(this)">Selecionar Todos</button>
+      <button class="pill gray"   data-acao="Alterar Perfil" onclick="slicerAcao(this)">Alterar Perfil</button>
+      <button class="pill gray"   data-acao="Incluir Acesso" onclick="slicerAcao(this)">Incluir Acesso</button>
+      <button class="pill gray"   data-acao="Em Análise"     onclick="slicerAcao(this)">Em Análise</button>
+      <button class="pill gray"   data-acao="Não Mapeado"    onclick="slicerAcao(this)">Não Mapeado</button>
+    </div>
+  </div>
+
+  <!-- Painel Sistema: x=3 y=338 w=204 h=100 -->
+  <div class="panel" style="left:3px;top:338px;width:204px;height:100px;">
+    <div class="panel-lbl" style="left:10px;top:9px;">Filtrar Por Sistema:</div>
+    <div class="slicer-wrap" style="top:28px;" id="slicer-sis">
+      <button class="pill gray"   data-sis="all"    onclick="slicerSis(this)">Selecionar Todos</button>
+      <button class="pill yellow" data-sis="SYSTUR"  onclick="slicerSis(this)">SYSTUR</button>
+    </div>
+  </div>
+
+  <!-- Painel gráfico sidebar -->
+  <div class="panel" style="left:6px;top:448px;width:198px;height:442px;display:flex;flex-direction:column;align-items:center;">
+    <div style="font:700 11px 'Segoe UI',sans-serif;color:#1F2D5C;text-align:center;padding-top:10px;">Por Sistema</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;">
+      <canvas id="ch-sis-sidebar" style="width:198px;height:84px;display:block;"></canvas>
+    </div>
+  </div>
+
+  <!-- ── KPI cards: y=118 h=72 w=238 ─────────────────────────────────── -->
+  <!-- Incluir Acesso -->
+  <div class="kpi" style="left:216px;top:118px;width:238px;height:72px;background:#EBF5FB;border:1px solid #D5E8F5;">
+    <div class="kpi-val" style="color:#2980B9;">562</div>
+    <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso</div>
+  </div>
+  <!-- Alterar Perfil -->
+  <div class="kpi" style="left:460px;top:118px;width:238px;height:72px;background:#EBF5FB;border:1px solid #D5E8F5;">
+    <div class="kpi-val" style="color:#2471A3;">41</div>
+    <div class="kpi-lbl" style="color:#2471A3;">Alterar Perfil</div>
+  </div>
+  <!-- Em Análise -->
+  <div class="kpi" style="left:704px;top:118px;width:238px;height:72px;background:#FEF3E2;border:1px solid #F9D5A7;">
+    <div class="kpi-val" style="color:#E67E22;">798</div>
+    <div class="kpi-lbl" style="color:#E67E22;">Em Análise</div>
+  </div>
+  <!-- Total Não Mapeados -->
+  <div class="kpi" style="left:949px;top:118px;width:238px;height:72px;background:#F5EEF8;border:1px solid #D7BDE2;">
+    <div class="kpi-val" style="color:#7D3C98;">4.957</div>
+    <div class="kpi-lbl" style="color:#7D3C98;">Total Não Mapeados</div>
+  </div>
+  <!-- Total c/ Ação -->
+  <div class="kpi" style="left:1193px;top:118px;width:238px;height:72px;background:#EAFAF1;border:1px solid #A9DFBF;">
+    <div class="kpi-val" style="color:#1E8449;">6.358</div>
+    <div class="kpi-lbl" style="color:#1E8449;">Total c/ Ação</div>
+  </div>
+
+  <!-- ── Painel principal: x=216 y=203 w=1218 h=692 ──────────────────── -->
+  <div class="content-panel" style="left:216px;top:203px;width:1218px;height:692px;">
+    <div class="tbl-wrap">
+      <table id="matrix-tbl">
+        <colgroup>
+          <col style="width:28px">   <!-- expand -->
+          <col style="width:88px">   <!-- Usuário -->
+          <col style="width:50px">   <!-- Qtd -->
+          <col style="width:280px">  <!-- Nome -->
+          <col style="width:72px">   <!-- Matrícula -->
+          <col style="width:190px">  <!-- Departamento -->
+          <col style="width:190px">  <!-- Cargo -->
+          <col style="width:130px">  <!-- Tipo -->
+          <col style="width:155px">  <!-- Perfil Encontrado -->
+          <col style="width:155px">  <!-- Perfil Esperado -->
+          <col style="width:80px">   <!-- Data -->
+          <col style="width:78px">   <!-- Status -->
+        </colgroup>
+        <thead>
+          <tr>
+            <th style="width:28px;text-align:center;"></th>
+            <th>Usuário/Acesso</th>
+            <th style="text-align:center;">Qtd</th>
+            <th>Nome</th>
+            <th>Matrícula</th>
+            <th>Departamento</th>
+            <th>Cargo</th>
+            <th>Tipo</th>
+            <th>Perfil Encontrado</th>
+            <th>Perfil Esperado</th>
+            <th>Data</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="matrix-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PERFIS INVÁLIDOS
+══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="pg-perf">
+  <div class="abs hdr-bg"></div><div class="abs nav-bg"></div>
+  <div class="abs hdr-accent"></div><div class="abs hdr-sep"></div>
+  <div class="abs hdr-title">IAM Analitics</div>
+  <div class="abs hdr-sub">Governança de Acessos - CVC Corp</div>
+  <div class="abs hdr-ref">Referência: Maio / 2026</div>
+  <div class="abs hdr-upd">Última atualização: 14/05/2026 09:42</div>
+  <div class="tab"        style="left:16px;width:183px;" data-tab="vg">Visão Geral</div>
+  <div class="tab"        style="left:203px;width:183px;" data-tab="incl">Inclusão / Alteração</div>
+  <div class="tab active" style="left:390px;width:183px;" data-tab="perf">Perfis Inválidos</div>
+  <div class="tab"        style="left:577px;width:183px;" data-tab="sv">Sem Vínculo RH</div>
+  <div class="ph">
+    <h2>Perfis Inválidos</h2>
+    <p>Esta página apresentará os perfis de acesso que não constam na matriz organizacional vigente. Disponível na Fase 2 do projeto.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SEM VÍNCULO RH
+══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="pg-sv">
+  <div class="abs hdr-bg"></div><div class="abs nav-bg"></div>
+  <div class="abs hdr-accent"></div><div class="abs hdr-sep"></div>
+  <div class="abs hdr-title">IAM Analitics</div>
+  <div class="abs hdr-sub">Governança de Acessos - CVC Corp</div>
+  <div class="abs hdr-ref">Referência: Maio / 2026</div>
+  <div class="abs hdr-upd">Última atualização: 14/05/2026 09:42</div>
+  <div class="tab"        style="left:16px;width:183px;" data-tab="vg">Visão Geral</div>
+  <div class="tab"        style="left:203px;width:183px;" data-tab="incl">Inclusão / Alteração</div>
+  <div class="tab"        style="left:390px;width:183px;" data-tab="perf">Perfis Inválidos</div>
+  <div class="tab active" style="left:577px;width:183px;" data-tab="sv">Sem Vínculo RH</div>
+
+  <!-- KPI cards SV -->
+  <div class="kpi" style="left:15px;top:115px;width:336px;height:80px;background:#F5EEF8;border:1px solid #D7BDE2;">
+    <div class="kpi-val" style="color:#7D3C98;">4.957</div>
+    <div class="kpi-lbl" style="color:#7D3C98;">Sem Vínculo RH</div>
+  </div>
+  <div class="kpi" style="left:373px;top:115px;width:336px;height:80px;background:#FDE7E9;border:1px solid #F1AEBA;">
+    <div class="kpi-val" style="color:#A4262C;">4.957</div>
+    <div class="kpi-lbl" style="color:#A4262C;">Pendentes</div>
+  </div>
+  <div class="kpi" style="left:731px;top:115px;width:336px;height:80px;background:#DFF6DD;border:1px solid #9FD89A;">
+    <div class="kpi-val" style="color:#107C10;">0</div>
+    <div class="kpi-lbl" style="color:#107C10;">Resolvidos</div>
+  </div>
+  <div class="kpi" style="left:1089px;top:115px;width:336px;height:80px;background:#EBF5FB;border:1px solid #D5E8F5;">
+    <div class="kpi-val" style="color:#2980B9;">1</div>
+    <div class="kpi-lbl" style="color:#2980B9;">Sistemas</div>
+  </div>
+
+  <div class="content-panel" style="left:15px;top:210px;width:1410px;height:665px;">
+    <div class="tbl-wrap">
+      <table style="width:100%;">
+        <thead><tr>
+          <th style="width:140px;">Usuário</th>
+          <th style="width:280px;">Nome</th>
+          <th style="width:80px;">Sistema</th>
+          <th style="width:180px;">Perfil no Sistema</th>
+          <th style="width:240px;">Situação RH</th>
+          <th style="width:90px;">Detecção</th>
+          <th style="width:80px;">Status</th>
+        </tr></thead>
+        <tbody id="sv-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /scaler -->
+
+<script>
+/* ── Escala ────────────────────────────────────────────────────────────── */
+const CANVAS_W = 1440, CANVAS_H = 895;
+const sc = document.getElementById('scaler');
+function scale(){
+  const s = Math.min(window.innerWidth/CANVAS_W, window.innerHeight/CANVAS_H);
+  sc.style.transform = `scale(${s})`;
+  sc.style.marginLeft = ((window.innerWidth - CANVAS_W*s)/2)+'px';
+  sc.style.marginTop  = ((window.innerHeight - CANVAS_H*s)/2)+'px';
+}
+window.addEventListener('resize', scale); scale();
+
+/* ── Navegação (somente aba Inclusão/Alteração é funcional) ────────────── */
+document.querySelectorAll('.tab').forEach(t => {
+  if(t.dataset.tab !== 'incl'){
+    t.style.opacity = '0.55';
+    t.style.cursor  = 'default';
+  }
+});
+
+/* ── Slicers ───────────────────────────────────────────────────────────── */
+let activeAcao = null;
+
+function slicerAcao(pill) {
+  const acao = pill.dataset.acao;
+  const pills = document.querySelectorAll('#slicer-acao .pill');
+  if (acao === 'all') {
+    // Selecionar Todos: todos ficam amarelos, sem filtro
+    pills.forEach(p => { p.classList.remove('gray','navy'); p.classList.add('yellow'); });
+    activeAcao = null;
+  } else {
+    // Opção específica: só ela amarela, Todos e demais ficam cinza
+    pills.forEach(p => { p.classList.remove('yellow','navy'); p.classList.add('gray'); });
+    pill.classList.remove('gray'); pill.classList.add('yellow');
+    activeAcao = acao;
+  }
+  renderMatrix();
+}
+
+function slicerSis(pill) {
+  const sis = pill.dataset.sis;
+  const pills = document.querySelectorAll('#slicer-sis .pill');
+  if (sis === 'all') {
+    pills.forEach(p => { p.classList.remove('gray','navy'); p.classList.add('yellow'); });
+  } else {
+    pills.forEach(p => { p.classList.remove('yellow','navy'); p.classList.add('gray'); });
+    pill.classList.remove('gray'); pill.classList.add('yellow');
+  }
+}
+
+/* ── Dados reais SYSTUR ────────────────────────────────────────────────── */
+const DB = {"kpis":{"sem_acesso":562,"divergente":41,"em_analise":798,"nao_mapeado":4957,"total":6358},"acao_dist":{"Não Mapeado":4957,"Em Análise":798,"Incluir Acesso":562,"Alterar Perfil":41},"sis_dist":{"SICA_ESFERA":3,"SICA_RA":52,"SIGOT":549,"SYSTUR":6358},"users":[{"u":"10049","n":"AGATHA DIAS","m":"10049","c":"COORDENADOR SERVICE DESK","d":"TI","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"UX_E_UI","pp":"TI_SISTEMAS_SUPERVISOR","dt":"2026-05-14","s":"Pendente"}]},{"u":"1051","n":"GISELE MARILETE CANAL","m":"1051","c":"ANALISTA FISCAL PL","d":"Fiscal","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"TRIBUTARIO","pp":"TRIBUTARIO_NOTA_FISCAL_MANUAL","dt":"2026-05-14","s":"Pendente"}]},{"u":"1152","n":"ADMILSON COELHO MARTINS","m":"1152","c":"GERENTE VENDAS","d":"Comercial","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"READ_GERENTE","dt":"2026-05-14","s":"Pendente"}]},{"u":"1249","n":"ANDREIA TONELLO DA MAIA","m":"1249","c":"ANALISTA CONTABIL PL","d":"Contabilidade","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"CONTABILIDADE","dt":"2026-05-14","s":"Pendente"}]},{"u":"1303","n":"MARCELO DE CASTRO DIAS","m":"1303","c":"EXECUTIVO VENDAS","d":"Comercial","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"ATEND_AGENCIA_LJP_PROMOTORES_VC","dt":"2026-05-14","s":"Pendente"}]},{"u":"14494","n":"LARISSA POSCLAN GODOY","m":"14494","c":"LIDER OPERACOES","d":"CCO","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"CCO_CRC_E_SO_LIDER","pp":"LIDER_OPERACOES","dt":"2026-05-14","s":"Pendente"}]},{"u":"14513","n":"EMERSON SILVA DE SOUZA","m":"14513","c":"COORDENADOR COMPRAS","d":"Suprimentos","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"COMPRAS","pp":"COMPRAS_LIDER","dt":"2026-05-14","s":"Pendente"}]},{"u":"1462","n":"MARIA JOSE PEIXOTO","m":"1462","c":"GERENTE VENDAS","d":"Comercial","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"READ_GERENTE","dt":"2026-05-14","s":"Pendente"}]},{"u":"14742","n":"JANAINA VIEIRA DE SOUZA PINTO","m":"14742","c":"SUPERVISOR ATENDIMENTO","d":"CCO","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"VISUAL_OPERACAO_SAC_E_REEMBOLSO","pp":"B2B_AEREO_REXTUR","dt":"2026-05-14","s":"Pendente"}]},{"u":"1555","n":"REBECCA BELEM DE LIMA LACH","m":"1555","c":"ANALISTA PLANEJAMENTO PL","d":"Planejamento","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"B2B_CONTROLE_E_QUALIDADE","dt":"2026-05-14","s":"Pendente"}]},{"u":"1629","n":"DANIEL SANTELLO","m":"1629","c":"ESPECIALISTA DESENVOLVIMENTO","d":"TI","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"TI_ESPECIALISTA_DE_SISTEMAS","pp":"TI_ESPECIALISTA_DE_SISTEMAS","dt":"2026-05-14","s":"Pendente"}]},{"u":"1748","n":"PAULO OLIVEIRA SILVA","m":"1748","c":"GERENTE EXECUTIVO VENDAS","d":"Comercial","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"GERENTE_REGIONAL","pp":"GERENTE_REGIONAL_ATEND_AGENCIA","dt":"2026-05-14","s":"Pendente"}]},{"u":"1808","n":"VANESSA GONCALVES DA SILVA","m":"1808","c":"COORDENADOR PRODUTO","d":"Novos Negócios","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"NOVOS_NEGOCIOS_SVAS","dt":"2026-05-14","s":"Pendente"}]},{"u":"22291","n":"CRISTIANE ALEIXO","m":"22291","c":"GERENTE PRODUTO","d":"Intercâmbio","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"INTERCAMBIO_LIDER","pp":"INTERCAMBIO_PRODUTOS","dt":"2026-05-14","s":"Pendente"}]},{"u":"22324","n":"RITA DE CASSIA ALEXANDRE DOS SANTOS","m":"22324","c":"LIDER OPERACOES","d":"Intercâmbio","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"INTERCAMBIO_LIDER","pp":"INTERCAMBIO_FINANCEIRO","dt":"2026-05-14","s":"Pendente"}]},{"u":"23000","n":"NATALIA GASPARDI","m":"23000","c":"CONSULTOR ATENDIMENTO I","d":"Comercial","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"ATEND_PUBLIC_LJT_VENDEDOR_VC","pp":"B2B_AEREO_REXTUR","dt":"2026-05-14","s":"Pendente"}]},{"u":"23374","n":"EVERTON BENTO GONCALVES","m":"23374","c":"ANALISTA INFRAESTRUTURA SR","d":"TI","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"TI_GESTAO_DE_RISCO","pp":"TI_GESTAO_DE_RISCO","dt":"2026-05-14","s":"Pendente"}]},{"u":"23415","n":"VLADEMIR DE LIMA INOCENCIO","m":"23415","c":"ANALISTA INFRAESTRUTURA JR","d":"TI","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"TI_GESTAO_DE_RISCO","pp":"TI_GESTAO_DE_RISCO","dt":"2026-05-14","s":"Pendente"}]},{"u":"23420","n":"RAFAEL DINIZ MARTINS","m":"23420","c":"ANALISTA INFRAESTRUTURA JR","d":"TI","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"TI_GESTAO_DE_RISCO","pp":"TI_GESTAO_DE_RISCO","dt":"2026-05-14","s":"Pendente"}]},{"u":"2725","n":"CIRLEY APARECIDA FREITAS JEREMIAS","m":"2725","c":"ASSISTENTE SUPORTE VENDAS","d":"Comercial","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"LJP_ATENDIMENTO_AGENCIAS_GRUPOS_MULTIMARCAS","pp":"LJP_ATENDIMENTO_AGENCIAS_GRUPOS_MULTIMARCAS","dt":"2026-05-14","s":"Pendente"}]},{"u":"30729","n":"MICHEL GOMES DA CRUZ","m":"30729","c":"ANALISTA PLANEJAMENTO FINANCEIRO SR","d":"Financeiro","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"B2B_PLANEJAMENTO_FINANCEIRO","pp":"B2B_PLANEJAMENTO_FINANCEIRO","dt":"2026-05-14","s":"Pendente"}]},{"u":"3146","n":"FABIO RICO CHEIDA JABBUR","m":"3146","c":"GERENTE SISTEMAS","d":"TI","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"TI_ONGOING","pp":"TI_SISTEMAS_GERENTE","dt":"2026-05-14","s":"Pendente"}]},{"u":"4752","n":"RENATA BARBOSA GIANNOTTI UCHIDA","m":"4752","c":"DIRETOR GENTE GESTAO","d":"RH","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"RH_BUSINESS_PARTNER","pp":"RH_GENTE_E_GESTAO_DIRETOR","dt":"2026-05-14","s":"Pendente"}]},{"u":"5713","n":"KAMILA FERNANDA GONDRAN FARHAT","m":"5713","c":"COORDENADOR CUSTOS","d":"Financeiro","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"CUSTOS_E_COMISSAO_LIDER","pp":"CUSTOS_E_COMISSAO_LIDER","dt":"2026-05-14","s":"Pendente"}]},{"u":"6671","n":"ELAINE CASACA","m":"6671","c":"ANALISTA NEGOCIACAO PRODUTO PL","d":"Aéreo","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"GATEWAY_AEREO","pp":"AEREO_CORPORATIVO","dt":"2026-05-14","s":"Pendente"}]},{"u":"714","n":"ROGERIO ALEXANDRE DE MELO","m":"714","c":"GERENTE REGIONAL VENDAS","d":"Comercial","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"GERENTE_REGIONAL","dt":"2026-05-14","s":"Pendente"}]},{"u":"718","n":"ELITON MATEUS FONTOURA","m":"718","c":"CONSULTOR ATENDIMENTO I","d":"B2B","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"B2B_AEREO_REXTUR","dt":"2026-05-14","s":"Pendente"}]},{"u":"7550","n":"SILVIA CAROLINA FREIRE FERNANDES","m":"7550","c":"SUPERVISOR SECRETARIA EXECUTIVA","d":"Administrativo","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"SECRETARIA_ADMINISTRATIVO","dt":"2026-05-14","s":"Pendente"}]},{"u":"7715","n":"LARA CASULA","m":"7715","c":"ANALISTA WEB SR","d":"Digital","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"PRODUTO_NACIONAL_OPERADOR","pp":"COMERCIAL_ONLINE","dt":"2026-05-14","s":"Pendente"}]},{"u":"785","n":"DANIELLE FERREIRA DE SIQUEIRA TESSER","m":"785","c":"EXECUTIVO VENDAS","d":"Comercial","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"ATEND_AGENCIA_LJP_PROMOTORES_VC","dt":"2026-05-14","s":"Pendente"}]},{"u":"7936","n":"SAMANTA EMIDIO REIS","m":"7936","c":"LIDER SUPORTE VENDAS","d":"Comercial","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"GRP_ATUALIZAR_FINAN","pp":"SUPORTE_A_VENDAS_E_CONCORRENCIA_LIDER","dt":"2026-05-14","s":"Pendente"}]},{"u":"799","n":"PATRICIA MARAGNA FAGUNDES HAKOMARU","m":"799","c":"GERENTE ATENDIMENTO","d":"CCO","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"READ_GERENTE","dt":"2026-05-14","s":"Pendente"}]},{"u":"8036","n":"JHONNY DE OLIVEIRA IZIDRE","m":"8036","c":"ASSISTENTE SUPORTE VENDAS","d":"Comercial","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"SUPORTE_A_VENDAS_ANALISTA","dt":"2026-05-14","s":"Pendente"}]},{"u":"8243","n":"VANDO ALCANTARA ANICETO","m":"8243","c":"GERENTE DESENVOLVIMENTO","d":"TI","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"TI_SISTEMAS_GERENTE","pp":"TI_SISTEMAS_GERENTE","dt":"2026-05-14","s":"Pendente"}]},{"u":"8454","n":"THIAGO NOGUEIRA ROCHA","m":"8454","c":"ANALISTA TREINAMENTO SR","d":"RH","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"RH_TREINAMENTO_E_DESENVOLVIMENTO","dt":"2026-05-14","s":"Pendente"}]},{"u":"8455","n":"DANIELA ARAUJO SANTOS FRANZIN","m":"8455","c":"LIDER SUPORTE VENDAS","d":"Comercial","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"GRP_ATUALIZAR_FINAN","pp":"SUPORTE_A_VENDAS_E_CONCORRENCIA_LIDER","dt":"2026-05-14","s":"Pendente"}]},{"u":"8583","n":"JOYCE OLIVEIRA DA COSTA","m":"8583","c":"CONSULTOR ATENDIMENTO I","d":"B2B","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"B2B_AEREO_REXTUR","dt":"2026-05-14","s":"Pendente"}]},{"u":"8756","n":"FELIPE DA SILVA POLETTI","m":"8756","c":"DESIGNER PL","d":"Marketing","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"VITRINES_E_PDVs","dt":"2026-05-14","s":"Pendente"}]},{"u":"9021","n":"MAYARA RIBEIRO USSUNA LEAL","m":"9021","c":"ANALISTA SUPORTE VENDAS JR","d":"Comercial","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"GRP_ATUALIZAR_FINAN","pp":"SUPORTE_A_VENDAS_E_CONCORRENCIA","dt":"2026-05-14","s":"Pendente"}]},{"u":"9147","n":"ERIKA BUENO MAYER","m":"9147","c":"SUPERVISOR ATENDIMENTO","d":"CCO","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"ATEND_AGENCIA_LJP_SUP_VENDAS_VC","pp":"PORTAL_DO_AGENTE_LIDER","dt":"2026-05-14","s":"Pendente"}]},{"u":"ARIG4484","n":"SERGIO RICARDO DE OLIVEIRA","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"BGEG4525","n":"ELIANE PIERRO TAVOLARO DE AGU","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"CGRG2611","n":"RODRIGO SANDRE CRISTIANINI","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"CPMG2113","n":"MARCOS ROBERTO MULLER","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"DPSG4334","n":"ADRIANA P DEZANETTI PIMENTA","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"GYNG8906","n":"RODOLFO A FERREIRA","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"GYNV8910","n":"HERICA RIBEIRO PINTO","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"ITAG8041","n":"FERNANDO FAVERO","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"JANG1060","n":"GISELDA RAMOS LAGES","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"LDBG2103","n":"JOSE CARLOS QUILICI","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"MLBG2607","n":"FERNANDO AUGUSTO CARRETONI PAZIN","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"MOGS4645","n":"CHRISTINNE ZABEU PAS","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"NATG2408","n":"JULIANA N T REGO","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"PCAG4640","n":"ROBSON V JESUS","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"PERG8012","n":"PAULA CRISTINA DE OL","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"RJCG6639","n":"LUCIA SILVA","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"SBHS4555","n":"GERALDO ROGERIO LANZA","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"SHGG4631","n":"IVANA ERNST BARBOSA","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"SRCG4527","n":"JAIR G DOS SANTOS","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]},{"u":"TPSG8806","n":"CORINA RUIZ","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","s":"Pendente"}]}]};
+
+/* ── Adicionar múltiplas divergências a alguns usuários ────────────────── */
+// Agatha: 3 divergências (DIVERGENTE + EM_ANALISE + SEM_ACESSO)
+const u_agatha = DB.users.find(u => u.u==='10049');
+u_agatha.divs.push(
+  {t:'EM_ANALISE',tl:'Em Análise',a:'Em Análise',pe:'TI_SISTEMAS_SUPERVISOR',pp:'TI_SISTEMAS_SUPERVISOR',dt:'2026-05-14',s:'Pendente'},
+  {t:'SEM_ACESSO',tl:'Sem Acesso',a:'Incluir Acesso',pe:'',pp:'READ_OPERADOR',dt:'2026-05-14',s:'Pendente'}
+);
+// Paulo Oliveira: 2 divergências
+const u_paulo = DB.users.find(u => u.u==='1748');
+u_paulo.divs.push(
+  {t:'EM_ANALISE',tl:'Em Análise',a:'Em Análise',pe:'GERENTE_REGIONAL_ATEND_AGENCIA',pp:'GERENTE_REGIONAL_ATEND_AGENCIA',dt:'2026-05-14',s:'Pendente'}
+);
+// Cristiane Aleixo: 2 divergências
+const u_cristiane = DB.users.find(u => u.u==='22291');
+u_cristiane.divs.push(
+  {t:'SEM_ACESSO',tl:'Sem Acesso',a:'Incluir Acesso',pe:'',pp:'INTERCAMBIO_OPERADOR',dt:'2026-05-14',s:'Pendente'}
+);
+// Samanta Reis: 2 divergências
+const u_samanta = DB.users.find(u => u.u==='7936');
+u_samanta.divs.push(
+  {t:'SEM_ACESSO',tl:'Sem Acesso',a:'Incluir Acesso',pe:'',pp:'SUPORTE_A_VENDAS_ANALISTA',dt:'2026-05-14',s:'Pendente'}
+);
+// Vando Alcantara: 2 divergências
+const u_vando = DB.users.find(u => u.u==='8243');
+u_vando.divs.push(
+  {t:'DIVERGENTE',tl:'Divergente',a:'Alterar Perfil',pe:'TI_SISTEMAS_SUPERVISOR',pp:'TI_SISTEMAS_GERENTE',dt:'2026-05-14',s:'Pendente'}
+);
+// Fabio Jabbur: 2 divergências
+const u_fabio = DB.users.find(u => u.u==='3146');
+u_fabio.divs.push(
+  {t:'SEM_ACESSO',tl:'Sem Acesso',a:'Incluir Acesso',pe:'',pp:'TI_SISTEMAS_GERENTE',dt:'2026-05-14',s:'Pendente'}
+);
+
+/* ── Helpers ───────────────────────────────────────────────────────────── */
+const TIPO_CSS = {
+  'SEM_ACESSO':           'b-sem-acesso',
+  'ACESSO_SEM_VINCULO_RH':'b-sem-vinculo',
+  'DIVERGENTE':           'b-divergente',
+  'EM_ANALISE':           'b-em-analise'
+};
+function tipoBadge(t, tl){ return `<span class="badge ${TIPO_CSS[t]||''}">${tl||t}</span>`; }
+function stBadge(s)       { return `<span class="badge ${s==='Pendente'?'b-pendente':'b-resolvida'}">${s}</span>`; }
+function fmtDate(iso)     { if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function esc(v)           { return (v||'—').replace(/</g,'&lt;'); }
+
+/* ── Render Matrix ─────────────────────────────────────────────────────── */
+function renderMatrix(){
+  // Filtrar por ação selecionada
+  let users = activeAcao
+    ? DB.users.filter(u => u.divs.some(d => d.a === activeAcao))
+    : DB.users;
+
+  // Ordenar: mais divergências primeiro (igual ao BI: sort por Qtd desc)
+  users = [...users].sort((a,b) => b.divs.length - a.divs.length);
+
+  let h = '';
+  users.forEach((u, rowIdx) => {
+    const hasMore = u.divs.length > 1;
+    const d0 = u.divs[0];
+    // linha principal
+    h += `<tr>
+      <td style="text-align:center;width:28px;">
+        ${hasMore ? `<button class="expand-btn" data-row="${rowIdx}" onclick="toggleSubs(this)">+</button>` : ''}
+      </td>
+      <td><strong style="color:#1F2D5C;">${esc(u.u)}</strong></td>
+      <td style="text-align:center;font-weight:700;color:#1F2D5C;">${u.divs.length}</td>
+      <td>${esc(u.n)}</td>
+      <td>${esc(u.m)||'—'}</td>
+      <td>${esc(u.d)||'—'}</td>
+      <td>${esc(u.c)||'—'}</td>
+      <td>${tipoBadge(d0.t,d0.tl)}</td>
+      <td>${esc(d0.pe)||'—'}</td>
+      <td>${esc(d0.pp)||'—'}</td>
+      <td>${fmtDate(d0.dt)}</td>
+      <td>${stBadge(d0.s)}</td>
+    </tr>`;
+    // sub-linhas (colapsadas)
+    u.divs.slice(1).forEach(d => {
+      h += `<tr class="sub-row" data-sub="${rowIdx}" style="display:none;">
+        <td></td>
+        <td style="padding-left:18px;color:#7B8085;font-size:10.5px;">↳ ${esc(d.pp||'—')}</td>
+        <td style="text-align:center;">1</td>
+        <td>—</td><td>—</td><td>—</td><td>—</td>
+        <td>${tipoBadge(d.t,d.tl)}</td>
+        <td>${esc(d.pe)||'—'}</td>
+        <td>${esc(d.pp)||'—'}</td>
+        <td>${fmtDate(d.dt)}</td>
+        <td>${stBadge(d.s)}</td>
+      </tr>`;
+    });
+  });
+  document.getElementById('matrix-body').innerHTML = h;
+}
+
+function toggleSubs(btn){
+  const row = btn.dataset.row;
+  const isOpen = btn.textContent === '-';
+  document.querySelectorAll(`[data-sub="${row}"]`).forEach(r =>
+    r.style.display = isOpen ? 'none' : 'table-row'
+  );
+  btn.textContent = isOpen ? '+' : '-';
+}
+
+/* ── Render Sem Vínculo RH ──────────────────────────────────────────────── */
+function renderSV(){
+  const svUsers = DB.users.filter(u => u.divs[0].t === 'ACESSO_SEM_VINCULO_RH');
+  let h = '';
+  svUsers.forEach(u => {
+    h += `<tr>
+      <td>${esc(u.u)}</td>
+      <td>${esc(u.n)}</td>
+      <td>SYSTUR</td>
+      <td>—</td>
+      <td>Não localizado na base RH ativa</td>
+      <td>${fmtDate(u.divs[0].dt)}</td>
+      <td>${stBadge(u.divs[0].s)}</td>
+    </tr>`;
+  });
+  document.getElementById('sv-body').innerHTML = h;
+}
+
+/* ── Gráficos ───────────────────────────────────────────────────────────── */
+const YELLOW='#F5B800', NAVY='#1F2D5C', GRID='#E8EDF2', AXIS='#605E5C';
+
+const BASE_OPT = {
+  indexAxis:'y', responsive:false,
+  plugins:{legend:{display:false},tooltip:{backgroundColor:NAVY,titleColor:'#fff',bodyColor:'#fff',cornerRadius:4}},
+  scales:{
+    x:{grid:{color:GRID,drawBorder:false},ticks:{color:AXIS,font:{size:11}},title:{display:false}},
+    y:{grid:{display:false},ticks:{color:AXIS,font:{size:11}},title:{display:false}}
+  }
+};
+
+function mkChart(id, labels, data, w, h, alpha){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.width=w; el.height=h;
+  const fill = alpha
+    ? YELLOW + Math.round((1-alpha)*255).toString(16).padStart(2,'0')
+    : YELLOW;
+  new Chart(el,{
+    type:'bar',
+    data:{labels, datasets:[{data, backgroundColor:fill, borderRadius:3, borderSkipped:false}]},
+    options:{...BASE_OPT, animation:{duration:0}}
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderMatrix();
+  renderSV();
+
+  mkChart('ch-sis-vg',
+    ['SICA_ESFERA','SICA_RA','SIGOT','SYSTUR'],
+    [3,52,549,6358],
+    697,322);
+
+  mkChart('ch-acao-vg',
+    ['Alterar Perfil','Incluir Acesso','Em Análise','Não Mapeado'],
+    [41,562,798,4957],
+    696,322,0.22);
+
+  mkChart('ch-sis-sidebar',
+    ['SYSTUR'],
+    [6358],
+    198,84);
+});
+</script>
+</body>
+</html>

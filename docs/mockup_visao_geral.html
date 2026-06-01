@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8">
+<title>CVC IAM Analytics — Visão Geral (mockup)</title>
+<style>
+:root {
+  --azul: #1F2D5C;
+  --azul-claro: #3B5189;
+  --bg: #F5F6FA;
+  --card: #FFFFFF;
+  --texto: #1A1F36;
+  --texto-soft: #6E7686;
+  --verde: #2B7A2B;
+  --amarelo: #E08A1F;
+  --vermelho: #D14343;
+  --linha: #E7EBF2;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--texto);
+  padding: 20px 32px 40px;
+  min-height: 100vh;
+}
+.header {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding-bottom: 16px; border-bottom: 1px solid var(--linha); margin-bottom: 20px;
+}
+.brand-block { display: flex; flex-direction: column; gap: 4px; }
+.brand { color: var(--azul); font-size: 11.5px; font-weight: 700; letter-spacing: .12em; }
+h1 { color: var(--azul); font-size: 24px; font-weight: 700; }
+.tabs { display: flex; gap: 4px; }
+.tab {
+  padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--texto-soft);
+  background: transparent; border: none; cursor: pointer; border-bottom: 3px solid transparent;
+}
+.tab.active { color: var(--azul); border-bottom-color: var(--azul); }
+.banner {
+  background: var(--card); padding: 10px 16px; border-radius: 8px;
+  margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;
+  font-size: 12.5px; color: var(--texto-soft); border-left: 3px solid var(--azul);
+}
+.banner b { color: var(--azul); }
+
+/* Grid */
+.row { display: grid; gap: 16px; margin-bottom: 18px; }
+.row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.row.cols-2 { grid-template-columns: 1fr 1fr; }
+.row.cols-3-2 { grid-template-columns: 3fr 2fr; }
+.row.cols-2-3 { grid-template-columns: 2fr 3fr; }
+
+.card {
+  background: var(--card); border-radius: 10px; padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(31,45,92,.06);
+}
+.card h3 {
+  color: var(--texto-soft); font-size: 11.5px; text-transform: uppercase;
+  letter-spacing: .08em; margin-bottom: 10px; font-weight: 600;
+}
+.card h2 { color: var(--azul); font-size: 14.5px; margin-bottom: 14px; font-weight: 700; }
+
+/* KPI cards */
+.kpi { display: flex; flex-direction: column; gap: 6px; }
+.kpi-valor {
+  font-size: 30px; font-weight: 700; color: var(--azul); line-height: 1.1;
+}
+.kpi-sub {
+  font-size: 11.5px; color: var(--texto-soft); display: flex; gap: 6px; align-items: center;
+}
+.delta { font-weight: 600; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+.delta-bom { color: var(--verde); background: #E5F3E5; }
+.delta-ruim { color: var(--vermelho); background: #FBE5E5; }
+.kpi.alerta .kpi-valor { color: var(--vermelho); }
+.kpi.atencao .kpi-valor { color: var(--amarelo); }
+.kpi.ok .kpi-valor { color: var(--verde); }
+
+/* Chamados / movimentacao */
+.chamado-row {
+  display: grid; grid-template-columns: 140px 1fr 60px; gap: 10px;
+  align-items: center; padding: 8px 0;
+}
+.chamado-label { font-size: 12.5px; color: var(--texto-soft); font-weight: 500; }
+.chamado-track { background: var(--bg); height: 22px; border-radius: 4px; overflow: hidden; }
+.chamado-fill { height: 100%; border-radius: 4px; display: flex; align-items: center;
+  padding-left: 8px; color: white; font-size: 11.5px; font-weight: 600; }
+.chamado-val { font-weight: 700; color: var(--azul); font-size: 13.5px; text-align: right; }
+.saldo {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--linha);
+  display: flex; justify-content: space-between; font-size: 12.5px;
+}
+.saldo-pos { color: var(--vermelho); font-weight: 700; }
+.saldo-neg { color: var(--verde); font-weight: 700; }
+.saldo-info { color: var(--texto-soft); font-size: 11.5px; }
+
+/* Donut */
+.donut-wrap { display: flex; gap: 20px; align-items: center; }
+.legenda { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.leg-item {
+  display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center;
+  font-size: 12.5px; padding: 4px 0;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.leg-label { color: var(--texto); }
+.leg-val { font-weight: 700; color: var(--azul); }
+.leg-val small { color: var(--texto-soft); font-weight: 500; }
+
+/* Bars */
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar-row {
+  display: grid; grid-template-columns: 90px 1fr 80px; gap: 10px; align-items: center;
+  font-size: 12.5px;
+}
+.bar-label { color: var(--texto-soft); font-weight: 500; }
+.bar-track { background: var(--bg); height: 22px; border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+.bar-val { text-align: right; font-weight: 700; color: var(--azul); font-size: 13px; }
+
+/* Tabela top */
+table.top-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.top-tab th, table.top-tab td {
+  padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--linha);
+}
+table.top-tab th {
+  color: var(--texto-soft); text-transform: uppercase; font-size: 10.5px;
+  letter-spacing: .06em; background: var(--bg);
+}
+table.top-tab td:first-child { font-weight: 600; color: var(--azul); }
+.dias { color: var(--texto-soft); font-size: 11.5px; }
+.badge {
+  display: inline-block; min-width: 28px; padding: 2px 8px; border-radius: 4px;
+  font-weight: 700; text-align: center; font-size: 11.5px;
+}
+.risco-alto { background: #FBE5E5; color: var(--vermelho); }
+.risco-medio { background: #FBF1E5; color: var(--amarelo); }
+.risco-baixo { background: #E5F3E5; color: var(--verde); }
+.btn-acao {
+  background: var(--azul); color: white; border: none; padding: 5px 12px;
+  border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+}
+.btn-acao:hover { background: var(--azul-claro); }
+.ver-todos {
+  text-align: right; padding-top: 10px; margin-top: 8px;
+  border-top: 1px solid var(--linha);
+}
+.ver-todos a { color: var(--azul); text-decoration: none; font-size: 12.5px; font-weight: 600; }
+
+/* Movimentacao RH bar empilhada */
+.mov-bar { display: flex; height: 28px; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+.mov-seg { display: flex; align-items: center; justify-content: center; color: white;
+  font-size: 12px; font-weight: 700; }
+.mov-leg { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; }
+.mov-leg span { display: flex; align-items: center; gap: 6px; color: var(--texto-soft); }
+.mov-leg .dot { width: 10px; height: 10px; border-radius: 2px; }
+
+/* Sugestoes */
+.sug-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; }
+.sug {
+  background: var(--bg); padding: 10px 12px; border-radius: 6px; font-size: 12px;
+  cursor: pointer; border-left: 3px solid var(--azul);
+}
+.sug:hover { background: #E7EBF2; }
+.sug b { color: var(--azul); }
+
+/* Footer */
+.foot {
+  margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--linha);
+  text-align: center; color: var(--texto-soft); font-size: 11px;
+}
+</style></head><body>
+
+<div class="header">
+  <div class="brand-block">
+    <div class="brand">CVC · IAM ANALYTICS</div>
+    <h1>Visão Geral</h1>
+  </div>
+  <div class="tabs">
+    <button class="tab active">Visão Geral</button>
+    <button class="tab">Consulta</button>
+    <button class="tab">Quarentena</button>
+    <button class="tab">Histórico</button>
+  </div>
+</div>
+
+<div class="banner">
+  <div>🕒 <b>Última atualização:</b> 29/05/2026 16:43 · banco gerado pelo Processador ·
+    2.207 ativos · 10.752 desligados · 40.434 acessos</div>
+  <div><button class="btn-acao">Atualizar</button></div>
+</div>
+
+<!-- LINHA 1 — 4 KPIs -->
+<div class="row cols-4">
+  <div class="card kpi alerta">
+    <h3>🔴 Pendências Abertas</h3>
+    <div class="kpi-valor">1.540</div>
+    <div class="kpi-sub">
+      Itens com situação <b style="color:var(--vermelho)">PENDENTE</b>
+      <span class="delta delta-bom">▼ 12%</span>
+    </div>
+  </div>
+  <div class="card kpi alerta">
+    <h3>⚠️ Acessos de Desligado</h3>
+    <div class="kpi-valor">18.704</div>
+    <div class="kpi-sub">
+      Acessos ativos de pessoas já desligadas
+      <span class="delta delta-ruim">▲ 5%</span>
+    </div>
+  </div>
+  <div class="card kpi ok">
+    <h3>📊 Cobertura RH</h3>
+    <div class="kpi-valor">77.9%</div>
+    <div class="kpi-sub">
+      31.507 de 40.434 acessos vinculados
+      <span class="delta delta-bom">▲ 2.3pp</span>
+    </div>
+  </div>
+  <div class="card kpi">
+    <h3>⏱️ Em Quarentena</h3>
+    <div class="kpi-valor">0</div>
+    <div class="kpi-sub">
+      Usuários aguardando resolução
+    </div>
+  </div>
+</div>
+
+<!-- LINHA 2 — Chamados & Movimentacao RH -->
+<div class="row cols-2">
+  <div class="card">
+    <h2>📨 Chamados do Mês</h2>
+    <div class="chamado-row">
+      <span class="chamado-label">Identificados</span>
+      <div class="chamado-track">
+        <div class="chamado-fill" style="width:100.0%;background:var(--azul-claro)">
+          1.540
+        </div>
+      </div>
+      <span class="chamado-val">1.540</span>
+    </div>
+    <div class="chamado-row">
+      <span class="chamado-label">Resolvidos</span>
+      <div class="chamado-track">
+        <div class="chamado-fill" style="width:0.0%;background:var(--verde)">
+          0
+        </div>
+      </div>
+      <span class="chamado-val">0</span>
+    </div>
+    <div class="saldo">
+      <span>Saldo aberto: <span class="saldo-pos">+1.540</span></span>
+      <span class="saldo-info">Tempo médio de resolução: <b>8 dias</b></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>👥 Movimentação RH (últimos 30 dias)</h2>
+    <div class="mov-bar">
+      <div class="mov-seg" style="width:29.4%;background:var(--verde)" title="Admissões">42</div>
+      <div class="mov-seg" style="width:54.5%;background:var(--azul-claro)" title="Alterações">78</div>
+      <div class="mov-seg" style="width:16.1%;background:var(--vermelho)" title="Desligamentos">23</div>
+    </div>
+    <div class="mov-leg">
+      <span><div class="dot" style="background:var(--verde)"></div> Admissões: <b>42</b></span>
+      <span><div class="dot" style="background:var(--azul-claro)"></div> Alterações cargo/CC: <b>78</b></span>
+      <span><div class="dot" style="background:var(--vermelho)"></div> Desligamentos: <b>23</b></span>
+    </div>
+    <p style="margin-top:14px;font-size:11.5px;color:var(--texto-soft)">
+      → Essa movimentação gerou aproximadamente <b>92</b>
+      itens de ação esta semana.
+    </p>
+  </div>
+</div>
+
+<!-- LINHA 3 — Divergencias por tipo (donut) + Concentracao por sistema (barras) -->
+<div class="row cols-2-3">
+  <div class="card">
+    <h2>🥧 Divergências por Tipo</h2>
+    <div class="donut-wrap">
+      <svg viewBox="0 0 160 160" width="160" height="160"><circle cx="80" cy="80" r="60" fill="none" stroke="#EEF1F6" stroke-width="22" /><circle cx="80" cy="80" r="60" fill="none" stroke="#D14343" stroke-width="22" stroke-dasharray="255.0 122.0" stroke-dashoffset="94.2" transform="rotate(-90 80 80)" /><circle cx="80" cy="80" r="60" fill="none" stroke="#E08A1F" stroke-width="22" stroke-dasharray="121.3 255.7" stroke-dashoffset="-160.7" transform="rotate(-90 80 80)" /><circle cx="80" cy="80" r="60" fill="none" stroke="#7B68EE" stroke-width="22" stroke-dasharray="0.7 376.3" stroke-dashoffset="-282.0" transform="rotate(-90 80 80)" /><text x="80" y="76" text-anchor="middle" font-size="22" font-weight="700" fill="#1F2D5C">27.658</text><text x="80" y="94" text-anchor="middle" font-size="9" fill="#7A8294">divergências</text></svg><div class="legenda"><div class="leg-item"><span class="dot" style="background:#D14343"></span><span class="leg-label">Acesso de Desligado</span><span class="leg-val">18.704 <small>(67.6%)</small></span></div><div class="leg-item"><span class="dot" style="background:#E08A1F"></span><span class="leg-label">Sem Vínculo RH</span><span class="leg-val">8.900 <small>(32.2%)</small></span></div><div class="leg-item"><span class="dot" style="background:#7B68EE"></span><span class="leg-label">Perfil Inválido</span><span class="leg-val">54 <small>(0.2%)</small></span></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>📊 Concentração por Sistema</h2>
+    <div class="bars"><div class="bar-row"><span class="bar-label">SIG</span><div class="bar-track"><div class="bar-fill" style="width:100.0%;background:#1F2D5C"></div></div><span class="bar-val">21.542</span></div><div class="bar-row"><span class="bar-label">SYSTUR</span><div class="bar-track"><div class="bar-fill" style="width:28.4%;background:#1F2D5C"></div></div><span class="bar-val">6.116</span></div></div>
+    <p style="margin-top:12px;font-size:11.5px;color:var(--texto-soft)">
+      → Clique num sistema para abrir a aba Consulta filtrada.
+    </p>
+  </div>
+</div>
+
+<!-- LINHA 4 — Aging + Acoes imediatas -->
+<div class="row cols-2-3">
+  <div class="card">
+    <h2>⏳ Aging das Pendências</h2>
+    <div class="bar-row"><span class="bar-label">0-7 dias</span><div class="bar-track"><div class="bar-fill" style="width:100.0%;background:#7B68EE"></div></div><span class="bar-val">1.540</span></div><div class="bar-row"><span class="bar-label">8-30 dias</span><div class="bar-track"><div class="bar-fill" style="width:0.0%;background:#3B8FF5"></div></div><span class="bar-val">0</span></div><div class="bar-row"><span class="bar-label">31-90 dias</span><div class="bar-track"><div class="bar-fill" style="width:0.0%;background:#E08A1F"></div></div><span class="bar-val">0</span></div><div class="bar-row"><span class="bar-label">90+ dias</span><div class="bar-track"><div class="bar-fill" style="width:0.0%;background:#D14343"></div></div><span class="bar-val">0</span></div>
+    <p style="margin-top:12px;font-size:11px;color:var(--texto-soft)">
+      A faixa <b style="color:var(--vermelho)">90+ dias</b> é o alarme silencioso —
+      precisam ser resolvidas ou justificadas formalmente.
+    </p>
+  </div>
+  <div class="card">
+    <h2>🚨 Ação Imediata — Recém-desligados ainda com Acesso (Top 10)</h2>
+    <table class="top-tab">
+      <thead><tr>
+        <th>Nome</th><th>Desligamento</th><th>Cargo</th>
+        <th>Sistemas</th><th>Perfis</th><th></th>
+      </tr></thead>
+      <tbody><tr><td>ANA PAULA BRENTAN SOARES</td><td><span class="dias">58d atrás</span></td><td>CONSULTOR VENDAS I</td><td>1</td><td><span class="badge risco-baixo">1</span></td><td><button class="btn-acao">Resolver</button></td></tr><tr><td>STEFANIA GARCIA DOS SANTOS</td><td><span class="dias">116d atrás</span></td><td>CONSULTOR VENDAS MM</td><td>1</td><td><span class="badge risco-baixo">1</span></td><td><button class="btn-acao">Resolver</button></td></tr><tr><td>CAROLINE CARVALHO DE CASTRO</td><td><span class="dias">172d atrás</span></td><td>EXECUTIVO VENDAS</td><td>1</td><td><span class="badge risco-baixo">1</span></td><td><button class="btn-acao">Resolver</button></td></tr><tr><td>HELIO ISIDORO GERALDO FILHO</td><td><span class="dias">206d atrás</span></td><td>EXECUTIVO VENDAS</td><td>1</td><td><span class="badge risco-baixo">1</span></td><td><button class="btn-acao">Resolver</button></td></tr><tr><td>THAIS SERRANO</td><td><span class="dias">207d atrás</span></td><td>ANALISTA MARKETING SR</td><td>1</td><td><span class="badge risco-baixo">1</span></td><td><button class="btn-acao">Resolver</button></td></tr><tr><td>SUELEN DOS SANTOS SILVA</td><td><span class="dias">207d atrás</span></td><td>GERENTE REGIONAL VENDAS</td><td>1</td><td><span class="badge risco-baixo">1</span></td><td><button class="btn-acao">Resolver</button></td></tr><tr><td>NATHAN PATRICIO SILVA</td><td><span class="dias">226d atrás</span></td><td>ANALISTA INFRAESTRUTURA JR</td><td>1</td><td><span class="badge risco-alto">127</span></td><td><button class="btn-acao">Resolver</button></td></tr><tr><td>GUILHERME MARTINS INACIO DE BARROS</td><td><span class="dias">240d atrás</span></td><td>ANALISTA SUPORTE JR</td><td>1</td><td><span class="badge risco-alto">127</span></td><td><button class="btn-acao">Resolver</button></td></tr><tr><td>MARCIA LEONI DE SOUZA MOREIRA</td><td><span class="dias">241d atrás</span></td><td>ANALISTA WEB JR</td><td>1</td><td><span class="badge risco-baixo">1</span></td><td><button class="btn-acao">Resolver</button></td></tr><tr><td>JESSICA DE PAULA CORREA</td><td><span class="dias">241d atrás</span></td><td>ASSISTENTE SUPORTE VENDAS</td><td>1</td><td><span class="badge risco-baixo">1</span></td><td><button class="btn-acao">Resolver</button></td></tr></tbody>
+    </table>
+    <div class="ver-todos">
+      <a href="#">Ver todos os 18.704 acessos de desligado →</a>
+    </div>
+  </div>
+</div>
+
+<!-- LINHA 5 — Sugestoes de exploracao -->
+<div class="row">
+  <div class="card">
+    <h2>💡 Atalhos de Exploração</h2>
+    <p style="font-size:12.5px;color:var(--texto-soft)">
+      Cliques que respondem perguntas comuns sem precisar montar filtros.
+    </p>
+    <div class="sug-grid">
+      <div class="sug">📈 <b>Funcionários com mais de 100 perfis</b> · explorar concentração de acesso</div>
+      <div class="sug">⏰ <b>Acessos de desligados há mais de 90 dias</b> · risco regulatório</div>
+      <div class="sug">🤝 <b>Cargos sem matriz de perfil definida</b> · auditoria da matriz</div>
+      <div class="sug">🔎 <b>Vinculações por FUZZY ou NOME</b> · revisar manualmente (baixa confiança)</div>
+      <div class="sug">🏨 <b>Família ACESSO_HOTEL_* (SIG)</b> · módulo hotelaria</div>
+      <div class="sug">🚗 <b>Família ACESSO_CARRO_* (SIG)</b> · módulo locação</div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  Mockup gerado a partir do banco real em 29/05/2026 16:43 ·
+  CVC IAM Analytics — Fase 1 (SYSTUR + SIG) ·
+  Dados fictícios apenas para visualização do layout
+</div>
+
+</body></html>
