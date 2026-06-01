@@ -43,8 +43,9 @@ h1{color:#1F2D5C;margin:0 0 6px;font:700 22px Arial}
 <p class="sub">Versao <span class="ver">__V_LOCAL__</span> -> <span class="ver">__V_REDE__</span></p>
 <div class="spinner"></div>
 <p id="status">Baixando da rede</p>
-<p class="small">O painel sera aberto automaticamente.<br>
-Se nao abrir em 30s, <a href="http://127.0.0.1:8800/" style="color:#1F2D5C;font-weight:600;text-decoration:underline">clique aqui</a>.</p>
+<p class="small">O painel abre automaticamente quando o processamento terminar
+(no 1&ordm; uso pode levar alguns minutos).<br>
+Se demorar muito, <a href="http://127.0.0.1:8800/" style="color:#1F2D5C;font-weight:600;text-decoration:underline">clique aqui</a>.</p>
 </div>
 <script>
 const st=document.getElementById('status');
@@ -55,15 +56,18 @@ setInterval(()=>{dn=(dn%6)+1;st.textContent=baseSt+'.'.repeat(dn);},350);
 // Estrategia 1: polla via <script src=...> — onload em alguns browsers
 // nao dispara para cross-origin file:// -> http://localhost. Por isso o
 // fallback abaixo.
+// Polla o painel (8800) PACIENTEMENTE e so redireciona quando ele responde
+// de fato (onload). No PRIMEIRO uso o visualizador roda o Processador antes
+// de servir, o que pode levar alguns MINUTOS — por isso nada de fallback
+// curto que jogue pra 8800 antes do painel existir (era a causa do
+// "pagina nao encontrada").
 let tentativas=0;
-const MAX_TENT=20;  // ~14s a 700ms
+const MAX_TENT=1200;  // ~14 min a 700ms — paciencia pro 1o processamento
 function tentar(){
-  if(baseSt.indexOf('Aguardando')<0) baseSt='Aguardando o painel ficar pronto';
+  if(baseSt.indexOf('Aguardando')<0) baseSt='Aguardando o painel (1o uso pode levar minutos)';
   tentativas++;
   if(tentativas>MAX_TENT){
-    // Fallback: forca redirect. Se 8800 estiver no ar, abre o painel.
-    // Se nao, o browser mostra erro de conexao, ai o usuario sabe.
-    window.location.replace('http://127.0.0.1:8800/');
+    window.location.replace('http://127.0.0.1:8800/');  // ultima tentativa
     return;
   }
   const s=document.createElement('script');
@@ -73,10 +77,6 @@ function tentar(){
   document.head.appendChild(s);
 }
 setTimeout(tentar,4000);
-
-// Estrategia 2: fallback ABSOLUTO de 30s — se nada funcionou, redireciona
-// mesmo assim. Cobre o caso de browser bloquear todos os scripts cross-origin.
-setTimeout(()=>{window.location.replace('http://127.0.0.1:8800/');},30000);
 </script></body></html>"""
 
 

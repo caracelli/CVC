@@ -921,20 +921,28 @@ def _calcular_visao_geral(c, sistema=""):
         f"SELECT COUNT(*) FROM acessos_sistemas a "
         f"JOIN rh_desligados d ON a.matricula_vinculada = d.matricula {wsis}",
         argS).fetchone()[0]
-    # Cobertura RH: também só do sistema do escopo
-    wsis_simples = "WHERE sistema = ?" if sistema else ""
-    total = c.execute(
-        f"SELECT COUNT(*) FROM acessos_sistemas {wsis_simples}",
-        argS).fetchone()[0]
-    vinc = c.execute(
-        f"SELECT COUNT(*) FROM acessos_sistemas "
-        f"WHERE matricula_vinculada IS NOT NULL "
-        f"AND metodo_vinculacao NOT IN ('NAO_VINCULADO','FUZZY','')"
-        + (" AND sistema = ?" if sistema else ""),
-        argS).fetchone()[0]
-    out["cobertura_pct"] = round(100 * vinc / total, 1) if total else 0
-    out["acessos_vinc"] = vinc
-    out["total_acessos"] = total
+    # Cobertura RH: também só do sistema do escopo. Defensivo: um banco de
+    # schema antigo (pre-freeze, sem metodo_vinculacao) NAO pode zerar a Visao
+    # Geral inteira — degrada so este bloco e loga (visivel no visualizador.log).
+    try:
+        wsis_simples = "WHERE sistema = ?" if sistema else ""
+        total = c.execute(
+            f"SELECT COUNT(*) FROM acessos_sistemas {wsis_simples}",
+            argS).fetchone()[0]
+        vinc = c.execute(
+            f"SELECT COUNT(*) FROM acessos_sistemas "
+            f"WHERE matricula_vinculada IS NOT NULL "
+            f"AND metodo_vinculacao NOT IN ('NAO_VINCULADO','FUZZY','')"
+            + (" AND sistema = ?" if sistema else ""),
+            argS).fetchone()[0]
+        out["cobertura_pct"] = round(100 * vinc / total, 1) if total else 0
+        out["acessos_vinc"] = vinc
+        out["total_acessos"] = total
+    except Exception as e:
+        print(f"  [vg] cobertura indisponivel ({e!r}) — banco de schema antigo?")
+        out["cobertura_pct"] = 0
+        out["acessos_vinc"] = 0
+        out["total_acessos"] = 0
     # quarentena_ativa: preenchido no construir_db (depende do set em_quar)
 
     # Universo RH (banner) — RH é global (sem filtro de sistema)
@@ -1588,16 +1596,31 @@ def banner():
     print("=" * 64)
 
 
-def _rodar_processador_se_necessario():
-    """Se o banco nao existe, roda o launcher_processador.exe (motor) e
-    bloqueia ate terminar.
+def _rede_db_path():
+    """Caminho do banco NA REDE (modo rede) ou local (modo local)."""
+    raiz = REDE_RAIZ if REDE_RAIZ else RAIZ_APP
+    p = BANCO_SUB if os.path.isabs(BANCO_SUB) else os.path.join(raiz, BANCO_SUB)
+    return os.path.abspath(p)
 
-    Chamamos o motor DIRETO (nao o principal Processador.exe), porque queremos
-    bloquear esperando processamento concluir — o principal e' fire-and-forget
-    (spawn DETACHED). Auto-update do motor nao e' necessario aqui: se o
-    visualizador esta rodando, sua versao casa com a do motor irmao."""
+
+def _rodar_processador_se_necessario():
+    """Se o banco DA REDE nao existe, roda o launcher_processador.exe (motor)
+    e bloqueia ate terminar.
+
+    IMPORTANTE: a decisao olha o banco DA REDE, nao o cache local. O auto-update
+    preserva DADOS/*.db, entao um cache local ANTIGO (ex.: pre-schema-freeze, sem
+    metodo_vinculacao) pode sobreviver a atualizacao e mascarar uma rede em
+    branco — fazendo o painel servir dados velhos e a Visao Geral estourar.
+    Gateando pelo banco da rede, o primeiro processamento sempre roda quando
+    deve, e o cache e' re-sincronizado depois.
+
+    Chamamos o motor DIRETO (nao o principal Processador.exe) porque queremos
+    bloquear ate o processamento concluir. Roda HEADLESS (sem aba do Processador,
+    sem clique manual): processa, encerra sozinho, e o visualizador sobe o painel
+    quando o banco existir."""
     global DB_PATH
-    if os.path.exists(DB_PATH):
+    rede_db = _rede_db_path()
+    if os.path.exists(rede_db):
         return True
     candidatos = []
     if REDE_RAIZ:
@@ -1608,21 +1631,15 @@ def _rodar_processador_se_necessario():
     if not proc_exe:
         print(f"  [primeiro-uso] launcher_processador.exe nao encontrado em {candidatos}")
         return False
-    print(f"  [primeiro-uso] banco ausente — rodando {proc_exe}")
+    print(f"  [primeiro-uso] banco da rede ausente ({rede_db}) — rodando {proc_exe}")
     try:
         env = os.environ.copy()
-        # Sinaliza pro Processador que foi chamado pelo Visualizador. A pagina
-        # HTML mostra "Clique em Fechar para abrir o painel" e o botao Fechar
-        # redireciona pra URL do painel apos sinalizar /encerrar.
-        env["PROCESSADOR_CHAMADO_POR"] = "visualizador"
-        env["PROCESSADOR_URL_PAINEL"] = f"http://{HOST}:{PORT}/"
+        # Headless: sem janela/aba do Processador e sem exigir clique do usuario.
+        # Com NOBROWSER=1, o Processador processa e encerra sozinho (timeout
+        # curto), o subprocess.run retorna, e o visualizador sobe o painel.
+        env["PROCESSADOR_NOBROWSER"] = "1"
         cp = subprocess.run([proc_exe], cwd=os.path.dirname(proc_exe), env=env)
         print(f"  [primeiro-uso] Processador retornou {cp.returncode}")
-        # NAO setamos VISUALIZADOR_NOBROWSER: queremos que o main() abra o
-        # navegador normalmente quando subir o servidor 8800 — assim o usuario
-        # tem GARANTIA de ver o painel, mesmo se a aba do Processador foi
-        # fechada/perdida. A aba do Processador, se ainda aberta, redireciona
-        # pra mesma URL ao clicar Fechar (sem duplicar — replace na URL atual).
     except Exception as e:
         print(f"  [primeiro-uso] erro ao rodar Processador: {e!r}")
         return False
