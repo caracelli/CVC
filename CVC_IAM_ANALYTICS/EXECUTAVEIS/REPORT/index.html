@@ -1827,10 +1827,12 @@ function _vgKpi(id, val){
   if (el) el.textContent = _vgFmt(val);
 }
 function _vgDonut(div_tipos){
+  /* Paleta semântica + colorblind-safe (vermelho=risco, âmbar=atenção,
+     azul=neutro — evita vermelho/verde; sempre pareada com rótulo na legenda) */
   const cores = {
-    'ACESSO_DESLIGADO':       '#B33A3A',
-    'ACESSO_SEM_VINCULO_RH':  '#F5B800',
-    'PERFIL_INVALIDO':        '#5B47A8',
+    'ACESSO_DESLIGADO':       '#C0392B',  /* risco */
+    'ACESSO_SEM_VINCULO_RH':  '#E08A1E',  /* atenção */
+    'PERFIL_INVALIDO':        '#2C7BB6',  /* neutro */
   };
   const rotulos = {
     'ACESSO_DESLIGADO':       'Acesso de Desligado',
@@ -2505,7 +2507,7 @@ function renderVisaoGeral(){
   _vgKpi('vg-k-pend', vg.pendentes);
   _vgKpi('vg-k-desl', vg.acessos_deslig);
   const k = document.getElementById('vg-k-cob');
-  if (k) k.textContent = (vg.cobertura_pct != null) ? vg.cobertura_pct.toFixed(1) + '%' : '—';
+  if (k) k.textContent = (vg.cobertura_pct != null) ? Math.round(vg.cobertura_pct) + '%' : '—';
   _vgKpi('vg-k-quar', vg.quarentena_ativa);
   // Chamados
   _vgChamados(vg);
@@ -2519,7 +2521,8 @@ function renderVisaoGeral(){
   // Concentração por sistema
   _vgBarras(document.getElementById('vg-sistemas'), vg.div_sistemas, {});
   // Aging
-  const corAging = {'0-7':'#5B47A8','8-30':'#2C3D72','31-90':'#F5B800','90+':'#B33A3A'};
+  /* Rampa de severidade (calmo→alarme): recente=verde, vai a vermelho em 90+ */
+  const corAging = {'0-7':'#5AA469','8-30':'#2C7BB6','31-90':'#E08A1E','90+':'#C0392B'};
   _vgBarras(document.getElementById('vg-aging'), vg.aging, corAging);
   // Top urgentes
   _vgTopUrgentes(document.getElementById('vg-top-body'), vg.top_urgentes);
