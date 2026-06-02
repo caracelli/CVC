@@ -87,7 +87,12 @@ class LeitorMatrizPerfis(LeitorArquivoBase):
     ):
         super().__init__(pasta_processados, pasta_erros)
 
-    def ler(self, pasta: str) -> Tuple[List[PerfilEsperado], List[str]]:
+    def ler(self, pasta: str, sistemas_em_escopo: Optional[set] = None
+            ) -> Tuple[List[PerfilEsperado], List[str]]:
+        """sistemas_em_escopo: se informado, so processa matrizes desses
+        sistemas. Os demais sao ignorados em silencio (sem mover, sem log
+        visivel) — assim sistemas ainda nao implementados nao geram falsa
+        sensacao de processamento. None = processa todos (compat)."""
         perfis: List[PerfilEsperado] = []
         processados: List[str] = []
 
@@ -95,6 +100,16 @@ class LeitorMatrizPerfis(LeitorArquivoBase):
             sistema = _extrair_sistema(arquivo.name)
             if not sistema:
                 logger.warning(f"Matriz Perfis: sistema não identificado no nome '{arquivo.name}' — ignorado.")
+                continue
+
+            if sistemas_em_escopo is not None and sistema not in sistemas_em_escopo:
+                # Sistema fora do escopo desta fase: nao loga (debug fica abaixo
+                # do nivel INFO da UI) e nao move o arquivo — fica pronto pra
+                # quando o sistema entrar em escopo.
+                logger.debug(
+                    f"Matriz Perfis [{sistema.value}]: fora de escopo nesta fase "
+                    f"— ignorada ('{arquivo.name}')."
+                )
                 continue
 
             try:

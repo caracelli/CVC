@@ -167,6 +167,21 @@ def _verificar_e_criar_lock(banco_path):
         return True, None
 
 
+def _sistemas_em_escopo(cfg) -> set:
+    """Conjunto de Sistema com ativo=true no config — os implementados nesta
+    fase. Usado para filtrar matrizes (e, futuramente, importacoes) de
+    sistemas ainda fora de escopo, evitando falsa sensacao de processamento."""
+    escopo = set()
+    for sc in cfg.sistemas.values():
+        if not sc.ativo:
+            continue
+        try:
+            escopo.add(Sistema(sc.nome))
+        except ValueError:
+            pass
+    return escopo
+
+
 def _executar(caminho_config: Path) -> int:
     """Logica original do Processador. Devolve 0 se OK, 1 se erro."""
     if not caminho_config.exists():
@@ -229,18 +244,22 @@ def _executar(caminho_config: Path) -> int:
         # Card 4 — Padronização (snapshot/histórico já gravado no Card 3, antes do merge)
         PadronizarRh(conexao).executar()
 
-        # Card 5 — Matrizes (perfis esperados e estrutura organizacional)
+        # Card 5 — Matrizes (perfis esperados e estrutura organizacional).
+        # Filtra matrizes pelos sistemas em escopo (ativo=true no config) —
+        # sistemas ainda nao implementados nao geram falsa sensacao de
+        # processamento no log.
         ImportarMatrizes(
             conexao=conexao,
             pasta_perfis=str(app_raiz / cfg.matrizes_perfis_caminho),
             pasta_org=str(app_raiz / cfg.matrizes_org_caminho),
             pasta_processados=pasta_proc,
             pasta_erros=pasta_err,
+            sistemas_em_escopo=_sistemas_em_escopo(cfg),
         ).executar()
 
         # Card 6 — SYSTUR
         sis_cfg = cfg.sistemas.get("SYSTUR")
-        if sis_cfg:
+        if sis_cfg and sis_cfg.ativo:
             ImportarSistema(
                 conexao=conexao,
                 sistema=Sistema.SYSTUR,

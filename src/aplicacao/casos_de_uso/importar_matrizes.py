@@ -16,17 +16,23 @@ class ImportarMatrizes:
         pasta_org: str,
         pasta_processados: Optional[str] = None,
         pasta_erros: Optional[str] = None,
+        sistemas_em_escopo: Optional[set] = None,
     ):
         self._leitor_perfis = LeitorMatrizPerfis(pasta_processados, pasta_erros)
         self._leitor_org = LeitorMatrizOrganizacional(pasta_processados, pasta_erros)
         self._repositorio = RepositorioMatrizSqlite(conexao)
         self._pasta_perfis = pasta_perfis
         self._pasta_org = pasta_org
+        # Sistemas implementados/em escopo nesta fase. Matrizes de sistemas
+        # fora desse conjunto sao ignoradas (sem log/processamento). None =
+        # todos (compat com chamadas antigas/testes).
+        self._sistemas_em_escopo = sistemas_em_escopo
 
     def executar(self):
         logger.info("=== Importação Matrizes iniciada ===")
 
-        perfis, arq_perfis = self._leitor_perfis.ler(self._pasta_perfis)
+        perfis, arq_perfis = self._leitor_perfis.ler(
+            self._pasta_perfis, self._sistemas_em_escopo)
         if perfis:
             self._repositorio.salvar_perfis_esperados(perfis, ", ".join(arq_perfis))
 

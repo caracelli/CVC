@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <configuracao>
-    <versao>2.2.5</versao>
+    <versao>2.3.0</versao>
     <cliente>CVC</cliente>
     <projeto>IAM Analytics</projeto>
 
@@ -54,6 +54,8 @@
             <descricao>Sistema de Gestão de Operações e Turismo</descricao>
             <caminho_entrada>ENTRADA/SISTEMAS/SIGOT</caminho_entrada>
             <caminho_parquet>DADOS/PARQUET/ACESSOS/SIGOT</caminho_parquet>
+            <!-- Fase 1: fora de escopo (so SYSTUR). ativo=true quando implementado. -->
+            <ativo>false</ativo>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -69,6 +71,8 @@
             <descricao>Sistema de Controle de Acesso - Rede Agência</descricao>
             <caminho_entrada>ENTRADA/SISTEMAS/SICA_RA</caminho_entrada>
             <caminho_parquet>DADOS/PARQUET/ACESSOS/SICA_RA</caminho_parquet>
+            <!-- Fase 1: fora de escopo (so SYSTUR). ativo=true quando implementado. -->
+            <ativo>false</ativo>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -84,6 +88,8 @@
             <descricao>Sistema de Controle de Acesso - Esfera</descricao>
             <caminho_entrada>ENTRADA/SISTEMAS/SICA_ESFERA</caminho_entrada>
             <caminho_parquet>DADOS/PARQUET/ACESSOS/SICA_ESFERA</caminho_parquet>
+            <!-- Fase 1: fora de escopo (so SYSTUR). ativo=true quando implementado. -->
+            <ativo>false</ativo>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -99,6 +105,8 @@
             <descricao>Sistema de Turismo</descricao>
             <caminho_entrada>ENTRADA/SISTEMAS/SYSTUR</caminho_entrada>
             <caminho_parquet>DADOS/PARQUET/ACESSOS/SYSTUR</caminho_parquet>
+            <!-- Fase 1: UNICO sistema em escopo. -->
+            <ativo>true</ativo>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -114,6 +122,8 @@
             <descricao>Integrador Contábil</descricao>
             <caminho_entrada>ENTRADA/SISTEMAS/IC</caminho_entrada>
             <caminho_parquet>DADOS/PARQUET/ACESSOS/IC</caminho_parquet>
+            <!-- Fase 1: fora de escopo (so SYSTUR). ativo=true quando implementado. -->
+            <ativo>false</ativo>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -134,6 +144,8 @@
             <caminho_entrada>ENTRADA/SISTEMAS/SIG</caminho_entrada>
             <caminho_de_para>ENTRADA/MATRIZES/PERFIS_SISTEMAS/SIG/DE_PARA</caminho_de_para>
             <caminho_parquet>DADOS/PARQUET/ACESSOS/SIG</caminho_parquet>
+            <!-- Fase 1: fora de escopo (so SYSTUR). ativo=true quando entrar em escopo. -->
+            <ativo>false</ativo>
             <colunas>
                 <usuario>LOGIN</usuario>
                 <nome>NM_USER</nome>
