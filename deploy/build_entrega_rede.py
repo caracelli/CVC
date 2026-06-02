@@ -369,17 +369,20 @@ def zipar(base: Path, alvo_zip: Path):
 
 
 def main():
-    """Gera UM zip unico (ENTREGA_REDE.zip) com tudo — possivel agora porque os
-    zips sao versionados via Git LFS (aguenta arquivos grandes). Antes era
-    dividido em 3 so pra caber no limite de 100 MB do GitHub sem LFS.
+    """Gera UM zip unico (ENTREGA_REDE.zip) contendo a pasta CVC_IAM_ANALYTICS
+    COMPLETA — sem subpastas REDE/CLIENTE. E' so extrair e copiar a pasta
+    CVC_IAM_ANALYTICS para Z:\\CVC\\. Versionado via Git LFS (aguenta o tamanho).
 
-    Estrutura do zip:
-      ENTREGA_REDE/
+    Conteudo do zip:
+      CVC_IAM_ANALYTICS/
+        EXECUTAVEIS/  (Processador.exe, visualizador.exe, launcher/ COM motor,
+                       CONFIG/config.xml [raiz=Z:], REPORT/)
+        ENTRADA/      (arquivos prontos para o 1o processamento)
+        DADOS/        (vazio — o Processador gera o banco)
+        INTERACOES/   (vazia)
         LEIA-ME.txt
-        REDE/CVC_IAM_ANALYTICS/...    -> copiar para Z:\\CVC\\CVC_IAM_ANALYTICS (servidor, COM motor)
-        CLIENTE/CVC_VISUALIZADOR/...  -> copiar para cada maquina-usuario
     """
-    print("=== Build ENTREGA_REDE (zip unico) ===")
+    print("=== Build ENTREGA (zip unico: CVC_IAM_ANALYTICS completo) ===")
     checar_prerequisitos()
 
     if STAGING.exists():
@@ -389,19 +392,29 @@ def main():
 
     inicio = datetime.now()
 
-    base = STAGING / "ENTREGA_REDE"
-    base.mkdir()
-    (base / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
+    # Monta CVC_IAM_ANALYTICS completo: exes (sem motor) + ENTRADA + DADOS + INTERACOES...
+    montar_rede(STAGING)
+    # ...e adiciona o motor (launcher_processador.exe) no mesmo EXECUTAVEIS/launcher/
+    _montar_motor_separado(STAGING)
 
-    print("\n[1/2] Montando REDE (servidor COM motor)")
-    montar_rede(base / "REDE")               # exes (sem motor) + ENTRADA + DADOS vazio
-    _montar_motor_separado(base / "REDE")    # adiciona o launcher_processador.exe na REDE
-
-    print("[2/2] Montando CLIENTE (visualizador)")
-    montar_cliente(base / "CLIENTE")
+    leia = (
+        "ENTREGA - CVC IAM Analytics\n"
+        "============================\n\n"
+        "Este zip contem a pasta CVC_IAM_ANALYTICS completa (exes, CONFIG,\n"
+        "REPORT, ENTRADA com os arquivos prontos, DADOS vazio).\n\n"
+        "1. Extraia o zip.\n"
+        "2. Copie a pasta CVC_IAM_ANALYTICS para Z:\\CVC\\\n"
+        "   (fica Z:\\CVC\\CVC_IAM_ANALYTICS\\). O config.xml ja vem com\n"
+        "   <raiz>Z:\\CVC\\CVC_IAM_ANALYTICS</raiz>.\n"
+        "3. Rode UMA vez Z:\\CVC\\CVC_IAM_ANALYTICS\\EXECUTAVEIS\\Processador.exe\n"
+        "   -> gera o banco em DADOS\\BANCO\\iam_analytics.db.\n"
+        "4. Em cada maquina-usuario (com Z: mapeado), abra o visualizador.exe\n"
+        "   -> mostra o painel; auto-atualiza da rede.\n"
+    )
+    (STAGING / "CVC_IAM_ANALYTICS" / "LEIA-ME.txt").write_text(leia, encoding="utf-8")
 
     alvo = ENTREGA / "ENTREGA_REDE.zip"
-    zipar(base, alvo)
+    zipar(STAGING / "CVC_IAM_ANALYTICS", alvo)
     print(f"\n  OK -> {alvo}  ({alvo.stat().st_size/1024/1024:.1f} MB)")
 
     shutil.rmtree(STAGING, ignore_errors=True)
