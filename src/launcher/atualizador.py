@@ -6,6 +6,9 @@ Chamado pelo principal (visualizador.exe / Processador.exe) somente quando
 
 UX (substitui o antigo splash file:// que pollava o 8800 e as vezes "nao dava
 em nada"):
+  - FECHA (taskkill) os exes do app abertos ANTES de copiar, pra liberar os
+    arquivos — era o que travava a copia quando a atualizacao partia do
+    proprio Processador.exe (ele segurava o proprio .exe).
   - SERVE a propria pagina (HTTP local, porta ~8802) e mostra a LISTA de
     arquivos sendo copiados, marcando cada um quando termina, com barra de
     progresso.
@@ -311,6 +314,35 @@ def _flags_detached() -> int:
     return DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
 
 
+def _matar_apps() -> None:
+    """taskkill nos exes do app ANTES de copiar, pra garantir que ninguem
+    esteja segurando os arquivos (foi o que travava a copia do Processador.exe
+    quando a atualizacao era iniciada por ele mesmo).
+
+    Mata os principais (Processador.exe / visualizador.exe) e os cores
+    (launcher_processador.exe / launcher_visualizador.exe). NUNCA o
+    launcher_atualizador.exe — somos nos.
+
+    SEM /T de proposito: /T mataria os processos-filho, e o atualizador e'
+    filho do principal que nos chamou; com /T cometeriamos suicidio. Matar
+    so por nome de imagem nao afeta o atualizador (nome diferente).
+
+    Em dev (.py) nao ha exes com esses nomes — e' no-op inofensivo.
+    """
+    if sys.platform != "win32":
+        return
+    nomes = ["Processador.exe", "visualizador.exe",
+             "launcher_processador.exe", "launcher_visualizador.exe"]
+    CREATE_NO_WINDOW = 0x08000000
+    for nome in nomes:
+        try:
+            subprocess.run(["taskkill", "/F", "/IM", nome],
+                           capture_output=True, creationflags=CREATE_NO_WINDOW)
+        except Exception:
+            pass
+    time.sleep(0.7)  # da tempo dos handles de arquivo liberarem
+
+
 def _spawn_core(base: Path, alvo: str, nobrowser: bool) -> bool:
     core = base / "launcher" / f"launcher_{alvo}.exe"
     if not core.exists():
@@ -359,6 +391,8 @@ def _rodar_copia(base: Path, rede_exec: Path, alvo: str) -> None:
     """Thread de copia: copia arquivo a arquivo reportando progresso e, ao
     final, sobe o core do visualizador (pra 8800 estar pronto no Fechar)."""
     try:
+        _ESTADO.status("Fechando aplicativos abertos")
+        _matar_apps()
         _ESTADO.status("Calculando arquivos")
         itens = _coletar(rede_exec)
         _ESTADO.definir_total(len(itens))
