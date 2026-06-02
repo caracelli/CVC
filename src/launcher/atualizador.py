@@ -111,10 +111,13 @@ def _retry_io(fn, tentativas: int = 5, delay: float = 0.4) -> bool:
     return False
 
 
-def _aplicar(base_local: Path, rede_exec: Path) -> bool:
+def _aplicar(base_local: Path, rede_exec: Path, alvo: str = "") -> bool:
     """Copia da rede para o local, exceto:
       - launcher_atualizador.exe — estamos rodando agora, o principal e' quem
         atualiza isso na proxima rodada (pre-update).
+      - launcher_processador.exe — quando alvo='visualizador': o motor (~81 MB)
+        NAO roda na maquina-usuario (ela so le da rede). Copiar isso arrastava
+        ~81 MB por SMB a cada update, deixando a atualizacao lenta (minutos).
       - DADOS\\ — dados locais nunca vem da rede.
       - *.db, *.db-shm, *.db-wal — cache local independente.
       - *.old, *.log, __pycache__ — residuais."""
@@ -132,6 +135,8 @@ def _aplicar(base_local: Path, rede_exec: Path) -> bool:
             elif base_n.endswith(".db") or base_n.endswith(".db-shm") or base_n.endswith(".db-wal"):
                 proibidos.add(n)
             elif n == "launcher_atualizador.exe":
+                proibidos.add(n)
+            elif n == "launcher_processador.exe" and alvo == "visualizador":
                 proibidos.add(n)
         return proibidos
 
@@ -177,7 +182,7 @@ def main() -> int:
     _abrir_splash(v_local, v_rede)
     time.sleep(0.8)  # da tempo do browser pintar o splash
 
-    if _aplicar(base, rede_exec):
+    if _aplicar(base, rede_exec, args.alvo):
         print(f"[atualizador] concluido: {v_local} -> {v_rede}")
         return 0
     print("[atualizador] falha na copia - abortado")

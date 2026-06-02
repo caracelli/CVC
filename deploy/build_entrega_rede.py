@@ -67,8 +67,8 @@ ENTRADA_ARQUIVOS = [
 ]
 
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
-VERSAO_INICIAL = "2.1.7"     # 2=sistema (arquitetura launcher) . 1=Processador . 7=Visualizador
-VERSAO_NOVA = "2.1.8"        # bump apenas para demo do auto-update
+VERSAO_INICIAL = "2.1.8"     # 2=sistema (arquitetura launcher) . 1=Processador . 8=Visualizador
+VERSAO_NOVA = "2.1.9"        # bump apenas para demo do auto-update
 
 ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",
