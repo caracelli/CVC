@@ -35,6 +35,8 @@ class RepositorioFuncionarioSqlite(IRepositorioFuncionario):
                     data_admissao=f.data_admissao,
                     email=f.email,
                     situacao=f.situacao,
+                    tipo_vinculo=getattr(f, "tipo_vinculo", "FUNCIONARIO"),
+                    empresa=getattr(f, "empresa", None),
                     arquivo_origem=arquivo_origem,
                     dt_importacao=datetime.now(),
                 ))
@@ -93,6 +95,8 @@ class RepositorioFuncionarioSqlite(IRepositorioFuncionario):
             email=r.email,
             data_admissao=r.data_admissao,
             situacao=r.situacao or "ATIVO",
+            tipo_vinculo=getattr(r, "tipo_vinculo", None) or "FUNCIONARIO",
+            empresa=r.empresa,
         )
 
     def _para_desligado(self, r: RhDesligado) -> FuncionarioDesligado:

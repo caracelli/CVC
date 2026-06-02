@@ -50,6 +50,9 @@ ARQUIVOS_ORIGEM = RAIZ / "Arquivos_origem"
 # (origem em Arquivos_origem) -> (subpasta dentro de CVC_IAM_ANALYTICS/ENTRADA)
 ENTRADA_ARQUIVOS = [
     ("PROJETOIAM (8).CSV",                                       "RH/ATIVOS"),
+    # Terceiros (layout QuickReport) — vai pra mesma pasta RH/ATIVOS; o
+    # LeitorRh roteia por cabecalho (EMPRESA FORNECEDORA -> tipo_vinculo=TERCEIRO).
+    ("RH/ATIVOS/QuickReport_1780421571311.xlsx",                 "RH/ATIVOS"),
     ("PROJETOIAMDESLIGADOS (2).CSV",                             "RH/DESLIGADOS"),
     ("Mapeamento CCO_CSC (1).xlsx",                              "MATRIZES/ORGANIZACIONAL"),
     ("MATRIZ DE PERFIL DE ACESSO - SIGOT.xlsx",                  "MATRIZES/PERFIS_SISTEMAS"),
@@ -67,8 +70,8 @@ ENTRADA_ARQUIVOS = [
 ]
 
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
-VERSAO_INICIAL = "2.3.0"     # 2=sistema (arquitetura launcher) . 3=Processador . 0=Visualizador
-VERSAO_NOVA = "2.3.1"        # bump apenas para demo do auto-update
+VERSAO_INICIAL = "2.4.1"     # 2=sistema . 4=Processador (terceiros) . 1=Visualizador (vinculo)
+VERSAO_NOVA = "2.4.2"        # bump apenas para demo do auto-update
 
 ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",
@@ -158,7 +161,9 @@ def montar_rede(base: Path):
         (raiz / "ENTRADA" / sub).mkdir(parents=True, exist_ok=True)
     for nome_origem, sub_destino in ENTRADA_ARQUIVOS:
         origem = ARQUIVOS_ORIGEM / nome_origem
-        destino = raiz / "ENTRADA" / sub_destino / nome_origem
+        # nome_origem pode vir com subpasta (ex.: RH/ATIVOS/arquivo.xlsx);
+        # no destino usamos so o nome do arquivo.
+        destino = raiz / "ENTRADA" / sub_destino / Path(nome_origem).name
         shutil.copy2(origem, destino)
     # DADOS esqueleto, SEM banco (cliente roda o Processador para gera-lo)
     for sub in DADOS_SUBDIRS:

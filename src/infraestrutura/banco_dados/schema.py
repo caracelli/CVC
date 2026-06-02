@@ -21,6 +21,8 @@ class RhAtivo(Base):
     data_admissao = Column(Date)
     email = Column(String)
     situacao = Column(String)
+    # FUNCIONARIO (CLT proprio) | TERCEIRO (prestador de fornecedor)
+    tipo_vinculo = Column(String, default="FUNCIONARIO")
     empresa = Column(String)
     local_trabalho = Column(String)
     arquivo_origem = Column(String)

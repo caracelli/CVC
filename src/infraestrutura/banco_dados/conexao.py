@@ -33,6 +33,7 @@ class ConexaoBancoDados:
             self._migrar_log_importacoes_hash(conn)
             self._migrar_historico_unificado(conn)
             self._migrar_acessos_sistemas_pk_e_matching(conn)
+            self._migrar_rh_ativos_tipo_vinculo(conn)
 
     def _cols(self, conn, tabela: str) -> set:
         return {row[1] for row in conn.execute(text(f"PRAGMA table_info({tabela})"))}
@@ -82,6 +83,15 @@ class ConexaoBancoDados:
                 "ALTER TABLE validacao_acessos ADD COLUMN situacao_acao TEXT DEFAULT 'PENDENTE'"))
             conn.commit()
             logger.info("Migration: validacao_acessos.situacao_acao adicionada.")
+
+    def _migrar_rh_ativos_tipo_vinculo(self, conn):
+        if "rh_ativos" not in self._tabelas(conn):
+            return
+        if "tipo_vinculo" not in self._cols(conn, "rh_ativos"):
+            conn.execute(text(
+                "ALTER TABLE rh_ativos ADD COLUMN tipo_vinculo TEXT DEFAULT 'FUNCIONARIO'"))
+            conn.commit()
+            logger.info("Migration: rh_ativos.tipo_vinculo adicionada.")
 
     def _migrar_matriz_cco(self, conn):
         # matriz_organizacional foi substituida por matriz_cco

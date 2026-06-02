@@ -8,3 +8,7 @@ from .funcionario import Funcionario
 class FuncionarioAtivo(Funcionario):
     data_admissao: Optional[date] = None
     situacao: str = "ATIVO"
+    # FUNCIONARIO (CLT proprio) | TERCEIRO (prestador de fornecedor)
+    tipo_vinculo: str = "FUNCIONARIO"
+    # Empresa fornecedora (preenchido para terceiros)
+    empresa: Optional[str] = None

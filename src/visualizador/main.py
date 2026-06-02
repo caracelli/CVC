@@ -544,6 +544,14 @@ def garantir_estrutura(force=False):
                       "ON rh_ativos(matricula)")
         except Exception:
             pass
+        # Defensivo: DB gerado por Processador antigo pode nao ter tipo_vinculo.
+        # Sem isso, o LEFT JOIN rh_ativos com COALESCE(r.tipo_vinculo) quebraria.
+        try:
+            _rh_cols = [r[1] for r in c.execute("PRAGMA table_info(rh_ativos)")]
+            if _rh_cols and "tipo_vinculo" not in _rh_cols:
+                c.execute("ALTER TABLE rh_ativos ADD COLUMN tipo_vinculo TEXT DEFAULT 'FUNCIONARIO'")
+        except Exception:
+            pass
         c.executescript(_SQL_QUAR)
         c.executescript(_SQL_HIST)
         for _tab in ("quarentena", "quarentena_historico"):
@@ -883,7 +891,8 @@ def _montar_base():
                        COALESCE(r.centro_custo_codigo,'') cc_cod,
                        COALESCE(r.centro_custo_nome,'')   cc_nome,
                        COALESCE(r.cpf,'')   cpf,
-                       COALESCE(r.email,'') email
+                       COALESCE(r.email,'') email,
+                       COALESCE(r.tipo_vinculo,'FUNCIONARIO') tipo_vinc
                 FROM bi_divergencias b
                 LEFT JOIN rh_ativos r ON r.matricula = b.matricula
                 {wsql}
@@ -906,9 +915,9 @@ def _montar_base():
                 "pe": r["perfil_encontrado"], "pp": r["perfil_esperado"],
                 "dt": r["data_identificacao"] or "",
                 "s": "Resolvido" if r["resolvida"] else "Pendente",
-                # vinculo: hoje so ha funcionarios; "Terceiro" entra quando o
-                # arquivo de terceiros for integrado a importacao de RH.
-                "vinc": "Funcionário",
+                # vinculo lido do rh_ativos (tipo_vinculo): Funcionário (CLT)
+                # ou Terceiro (prestador de fornecedor).
+                "vinc": "Terceiro" if r["tipo_vinc"] == "TERCEIRO" else "Funcionário",
                 "o": ("Matriz " + (r["sistema"] or "")) if r["origem"] == "MATRIZ"
                      else ("Matriz CCO" if r["origem"] == "CCO" else "—"),
             })
