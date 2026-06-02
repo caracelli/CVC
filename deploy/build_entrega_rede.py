@@ -184,12 +184,10 @@ LEIA_ME = """\
 ENTREGA_REDE — Teste end-to-end com pasta de rede
 ===================================================
 
-Dois zips compoem o teste (cada um e' autoexplicativo, este LEIA-ME
-esta nos dois):
+Um zip unico (ENTREGA_REDE.zip) com duas pastas:
 
-  ENTREGA_REDE_servidor.zip   REDE\\  (vai para Z:\\CVC\\)
-                              ATUALIZACAO\\  (demo do auto-update)
-  ENTREGA_REDE_cliente.zip    CLIENTE\\  (vai para cada maquina-usuario)
+  REDE\\      -> copiar para Z:\\CVC\\CVC_IAM_ANALYTICS\\  (servidor, COM o motor)
+  CLIENTE\\   -> copiar para cada maquina-usuario
 
 Este pacote valida a arquitetura multiusuario: base na rede,
 varios visualizadores escrevendo .jsonl por usuario em INTERACOES/,
@@ -371,55 +369,43 @@ def zipar(base: Path, alvo_zip: Path):
 
 
 def main():
-    """Divide em TRES zips para caber no limite de 100MB do GitHub:
-      - ENTREGA_REDE_servidor.zip  (REDE sem motor + ATUALIZACAO + LEIA-ME)
-      - ENTREGA_REDE_motor.zip     (so o launcher_processador.exe, ~80 MB)
-      - ENTREGA_REDE_cliente.zip   (CLIENTE + LEIA-ME)
-    Servidor.zip + motor.zip extraidos em sequencia compoem a rede completa.
-    O LEIA-ME vai em todos para cada zip ser autoexplicativo."""
-    print("=== Build ENTREGA_REDE (tres zips) ===")
+    """Gera UM zip unico (ENTREGA_REDE.zip) com tudo — possivel agora porque os
+    zips sao versionados via Git LFS (aguenta arquivos grandes). Antes era
+    dividido em 3 so pra caber no limite de 100 MB do GitHub sem LFS.
+
+    Estrutura do zip:
+      ENTREGA_REDE/
+        LEIA-ME.txt
+        REDE/CVC_IAM_ANALYTICS/...    -> copiar para Z:\\CVC\\CVC_IAM_ANALYTICS (servidor, COM motor)
+        CLIENTE/CVC_VISUALIZADOR/...  -> copiar para cada maquina-usuario
+    """
+    print("=== Build ENTREGA_REDE (zip unico) ===")
     checar_prerequisitos()
 
     if STAGING.exists():
-        shutil.rmtree(STAGING)
+        shutil.rmtree(STAGING, ignore_errors=True)
     STAGING.mkdir(parents=True, exist_ok=True)
     ENTREGA.mkdir(parents=True, exist_ok=True)
 
     inicio = datetime.now()
 
-    # --- ZIP 1: SERVIDOR (sem motor) ---
-    print("\n[1/3] Montando ENTREGA_REDE_servidor (REDE sem motor + ATUALIZACAO)")
-    serv = STAGING / "ENTREGA_REDE_servidor"
-    serv.mkdir()
-    (serv / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
-    montar_rede(serv / "REDE")
-    montar_atualizacao(serv / "ATUALIZACAO")
-    alvo_serv = ENTREGA / "ENTREGA_REDE_servidor.zip"
-    zipar(serv, alvo_serv)
-    print(f"  OK -> {alvo_serv}  ({alvo_serv.stat().st_size/1024/1024:.1f} MB)")
+    base = STAGING / "ENTREGA_REDE"
+    base.mkdir()
+    (base / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
 
-    # --- ZIP 2: MOTOR (so o launcher_processador) ---
-    print("\n[2/3] Montando ENTREGA_REDE_motor (launcher_processador.exe)")
-    motor = STAGING / "ENTREGA_REDE_motor"
-    motor.mkdir()
-    (motor / "LEIA-ME.txt").write_text(LEIA_ME_MOTOR, encoding="utf-8")
-    _montar_motor_separado(motor / "REDE")
-    alvo_motor = ENTREGA / "ENTREGA_REDE_motor.zip"
-    zipar(motor, alvo_motor)
-    print(f"  OK -> {alvo_motor}  ({alvo_motor.stat().st_size/1024/1024:.1f} MB)")
+    print("\n[1/2] Montando REDE (servidor COM motor)")
+    montar_rede(base / "REDE")               # exes (sem motor) + ENTRADA + DADOS vazio
+    _montar_motor_separado(base / "REDE")    # adiciona o launcher_processador.exe na REDE
 
-    # --- ZIP 3: CLIENTE ---
-    print("\n[3/3] Montando ENTREGA_REDE_cliente (CLIENTE)")
-    cli = STAGING / "ENTREGA_REDE_cliente"
-    cli.mkdir()
-    (cli / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
-    montar_cliente(cli / "CLIENTE")
-    alvo_cli = ENTREGA / "ENTREGA_REDE_cliente.zip"
-    zipar(cli, alvo_cli)
-    print(f"  OK -> {alvo_cli}  ({alvo_cli.stat().st_size/1024/1024:.1f} MB)")
+    print("[2/2] Montando CLIENTE (visualizador)")
+    montar_cliente(base / "CLIENTE")
 
-    shutil.rmtree(STAGING)
-    print(f"\nConcluido em {(datetime.now()-inicio).total_seconds():.1f}s.")
+    alvo = ENTREGA / "ENTREGA_REDE.zip"
+    zipar(base, alvo)
+    print(f"\n  OK -> {alvo}  ({alvo.stat().st_size/1024/1024:.1f} MB)")
+
+    shutil.rmtree(STAGING, ignore_errors=True)
+    print(f"Concluido em {(datetime.now()-inicio).total_seconds():.1f}s.")
 
 
 LEIA_ME_MOTOR = """\
