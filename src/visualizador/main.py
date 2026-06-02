@@ -112,6 +112,33 @@ _enc_em = None  # timestamp de um encerramento agendado (None = nenhum pendente)
 _GRACE = 5      # carencia: F5/Ctrl+F5 recarrega e re-arma a aba dentro desse prazo
 _sessao = None  # id da aba ativa; um beacon de encerrar so vale vindo dela
 _BASE = None   # cache da parte cara do DB (bi_divergencias + JOIN); 1x por execução
+_SEM_BANCO = False   # True quando o banco da rede ainda nao existe (mostra aviso)
+
+# Pagina mostrada quando o banco ainda nao foi gerado (em vez de travar
+# "importando"). O visualizador NAO roda o Processador — quem roda e' o
+# responsavel, manualmente. O ping mantem o watchdog coerente (cai ao fechar).
+_PAGINA_SEM_BANCO = """<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>CVC IAM — Banco nao gerado</title><style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;margin:0;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#f5f6fa,#e7ebf2)}
+.card{background:#fff;border-radius:14px;padding:40px 48px;max-width:520px;text-align:center;
+  box-shadow:0 8px 28px rgba(31,45,92,.12)}
+.brand{color:#1F2D5C;font:700 11.5px Arial;letter-spacing:.1em;margin-bottom:8px}
+h1{color:#1F2D5C;margin:0 0 12px;font:700 21px Arial}
+p{color:#3A3F4C;font:400 14px/1.6 Arial;margin:6px 0}
+.b{color:#1F2D5C;font-weight:700}
+</style></head><body>
+<div class="card">
+  <div class="brand">CVC IAM ANALYTICS</div>
+  <h1>Banco ainda nao gerado</h1>
+  <p>Ainda nao ha dados processados na rede.</p>
+  <p><span class="b">Pe&ccedil;a para o respons&aacute;vel rodar o Processador</span> &mdash;
+     ele gera o banco. Depois, feche e abra este painel novamente.</p>
+</div>
+<script>setInterval(()=>{fetch('/api/ping?s=semb').catch(()=>{})},4000);</script>
+</body></html>"""
 
 
 def _enc(motivo):
@@ -1298,7 +1325,10 @@ class H(BaseHTTPRequestHandler):
         global _last_seen, _armed, _enc_em, _sessao
         try:
             if self.path in ("/", "/index.html"):
-                self._send(200, html_injetado(), "text/html; charset=utf-8")
+                if _SEM_BANCO:
+                    self._send(200, _PAGINA_SEM_BANCO, "text/html; charset=utf-8")
+                else:
+                    self._send(200, html_injetado(), "text/html; charset=utf-8")
             elif self.path == "/api/dados":
                 self._send(200, json.dumps(construir_db(), ensure_ascii=False),
                            "application/json; charset=utf-8")
@@ -1623,76 +1653,45 @@ def _rede_db_path():
     return os.path.abspath(p)
 
 
-def _rodar_processador_se_necessario():
-    """Se o banco DA REDE nao existe, roda o launcher_processador.exe (motor)
-    e bloqueia ate terminar.
+def _banco_disponivel():
+    """True se o banco DA REDE ja existe.
 
-    IMPORTANTE: a decisao olha o banco DA REDE, nao o cache local. O auto-update
-    preserva DADOS/*.db, entao um cache local ANTIGO (ex.: pre-schema-freeze, sem
-    metodo_vinculacao) pode sobreviver a atualizacao e mascarar uma rede em
-    branco — fazendo o painel servir dados velhos e a Visao Geral estourar.
-    Gateando pelo banco da rede, o primeiro processamento sempre roda quando
-    deve, e o cache e' re-sincronizado depois.
-
-    Chamamos o motor DIRETO (nao o principal Processador.exe) porque queremos
-    bloquear ate o processamento concluir. Roda HEADLESS (sem aba do Processador,
-    sem clique manual): processa, encerra sozinho, e o visualizador sobe o painel
-    quando o banco existir."""
-    global DB_PATH
-    rede_db = _rede_db_path()
-    if os.path.exists(rede_db):
-        return True
-    candidatos = []
-    if REDE_RAIZ:
-        candidatos.append(os.path.join(REDE_RAIZ, "EXECUTAVEIS", "launcher",
-                                       "launcher_processador.exe"))
-    candidatos.append(os.path.join(BASE_EXE, "launcher_processador.exe"))
-    proc_exe = next((p for p in candidatos if os.path.exists(p)), None)
-    if not proc_exe:
-        print(f"  [primeiro-uso] launcher_processador.exe nao encontrado em {candidatos}")
-        return False
-    print(f"  [primeiro-uso] banco da rede ausente ({rede_db}) — rodando {proc_exe}")
-    try:
-        env = os.environ.copy()
-        # Headless: sem janela/aba do Processador e sem exigir clique do usuario.
-        # Com NOBROWSER=1, o Processador processa e encerra sozinho (timeout
-        # curto), o subprocess.run retorna, e o visualizador sobe o painel.
-        env["PROCESSADOR_NOBROWSER"] = "1"
-        cp = subprocess.run([proc_exe], cwd=os.path.dirname(proc_exe), env=env)
-        print(f"  [primeiro-uso] Processador retornou {cp.returncode}")
-    except Exception as e:
-        print(f"  [primeiro-uso] erro ao rodar Processador: {e!r}")
-        return False
-    DB_PATH = sincronizar_banco()
-    return os.path.exists(DB_PATH)
+    O visualizador NAO dispara mais o Processador — quem roda e' o responsavel,
+    manualmente (na maquina que tem o motor). Se faltar banco, main() sobe a
+    pagina _PAGINA_SEM_BANCO em vez de travar 'importando'. O auto-update (copiar
+    a versao da rede pro local) e' independente disto e segue funcionando."""
+    return os.path.exists(_rede_db_path())
 
 
 def main():
-    global SRV
+    global SRV, _SEM_BANCO
     # Auto-update agora e' responsabilidade do principal (visualizador.exe no
     # top level) e do launcher_atualizador.exe. Este core so SERVE o painel.
     banner()
-    if not _rodar_processador_se_necessario():
-        print(f"  [FALHA] banco nao encontrado: {DB_PATH}")
-        time.sleep(8)
-        return 1
-    try:
-        garantir_estrutura(force=("refresh" in [a.lower() for a in sys.argv[1:]]))
-    except Exception as e:
-        print(f"  [FALHA] estrutura: {e!r}")
-        time.sleep(8)
-        return 1
-
-    if len(sys.argv) > 1 and sys.argv[1].lower() == "selftest":
-        db = construir_db()
-        print("  KPIs :", db["kpis"])
-        print("  Acao :", db["acao_dist"])
-        print("  Sist :", db["sis_dist"])
-        print("  Users:", len(db["users"]))
-        return 0
-    if not os.path.exists(INDEX_PATH):
-        print(f"  [FALHA] index.html nao encontrado: {INDEX_PATH}")
-        return 1
+    # Se o banco da rede ainda nao existe, NAO disparamos o Processador (o
+    # responsavel roda ele manualmente). Subimos o servidor mostrando uma
+    # pagina clara — assim a aba do auto-update cai nela, sem girar "importando".
+    _SEM_BANCO = not _banco_disponivel()
+    if _SEM_BANCO:
+        print(f"  [sem-banco] {_rede_db_path()} ausente — servindo aviso "
+              f"'rode o Processador' (visualizador nao dispara o Processador).")
+    else:
+        try:
+            garantir_estrutura(force=("refresh" in [a.lower() for a in sys.argv[1:]]))
+        except Exception as e:
+            print(f"  [FALHA] estrutura: {e!r}")
+            time.sleep(8)
+            return 1
+        if len(sys.argv) > 1 and sys.argv[1].lower() == "selftest":
+            db = construir_db()
+            print("  KPIs :", db["kpis"])
+            print("  Acao :", db["acao_dist"])
+            print("  Sist :", db["sis_dist"])
+            print("  Users:", len(db["users"]))
+            return 0
+        if not os.path.exists(INDEX_PATH):
+            print(f"  [FALHA] index.html nao encontrado: {INDEX_PATH}")
+            return 1
     try:
         srv = ThreadingHTTPServer((HOST, PORT), H)
     except OSError as e:
