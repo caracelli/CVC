@@ -1,0 +1,13 @@
+atualizador: trata exe em uso via rename .old (corrige erro ao atualizar pelo Processador)
+
+Ao iniciar a atualizacao pelo Processador.exe, o proprio Processador.exe (o
+principal) esta em execucao e segura o arquivo — copiar o novo por cima dava
+erro de arquivo em uso. Agora, quando o destino esta travado, o atualizador
+renomeia o antigo para .exe.old e copia o novo no lugar (rename de exe em
+execucao e' permitido no Windows). O processo atual segue rodando do .old e
+o novo vale no proximo start; no Fechar o atualizador sobe o core novo. Sem
+precisar matar o processo. Vale para Processador.exe e visualizador.exe.
+
+Versao 2.2.4; launcher_atualizador.exe recompilado; zip regenerado. 89/89 testes.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>

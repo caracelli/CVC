@@ -370,7 +370,26 @@ def _rodar_copia(base: Path, rede_exec: Path, alvo: str) -> None:
 
             def _copiar(_src=src, _dst=dst):
                 _dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(_src, _dst)
+                try:
+                    shutil.copy2(_src, _dst)
+                except (PermissionError, OSError):
+                    # _dst em uso — tipicamente o proprio Processador.exe /
+                    # visualizador.exe (o principal) que disparou ESTA
+                    # atualizacao e segue rodando enquanto copiamos. No Windows
+                    # da pra RENOMEAR um exe em execucao: movemos o antigo pra
+                    # .old e copiamos o novo no lugar. O processo atual continua
+                    # do .old; o novo vale no proximo start. (Sem precisar matar
+                    # o processo.)
+                    if not _dst.exists():
+                        raise
+                    antigo = _dst.with_suffix(_dst.suffix + ".old")
+                    try:
+                        if antigo.exists():
+                            antigo.unlink()
+                    except OSError:
+                        pass
+                    os.replace(_dst, antigo)
+                    shutil.copy2(_src, _dst)
 
             ok = _retry_io(_copiar)
             _ESTADO.terminar_arquivo(ok)
