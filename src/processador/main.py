@@ -118,6 +118,55 @@ def main():
             ui.aguardar_e_encerrar(timeout_segundos=2)
 
 
+def _verificar_e_criar_lock(banco_path):
+    """Lock de processamento na pasta do banco (rede). Impede duas execucoes
+    simultaneas do Processador (escrita concorrente corromperia o banco).
+
+    Devolve (prosseguir, lock_path):
+      - (False, None) -> ja ha processamento em andamento (lock recente): abortar.
+      - (True, Path)  -> lock adquirido (remover no fim).
+      - (True, None)  -> nao deu pra criar o lock; segue SEM trava (nao bloqueia
+                          o processamento legitimo por causa de uma rede so-leitura).
+    Um lock antigo (provavel execucao interrompida) e' assumido apos STALE_MIN
+    minutos, para nao travar todos para sempre se o Processador cair no meio.
+    STALE_MIN deve ser MAIOR que o maior tempo de processamento real (o log
+    "Processamento finalizado em Xs" da a perspectiva pra calibrar).
+    """
+    import getpass
+    from datetime import datetime
+    STALE_MIN = 20   # run real ~1min local (medido); ~3-8min na rede (SMB). 20min
+                     # da margem confortavel sem travar horas. O log "finalizado
+                     # em Xs" mostra o tempo real pra recalibrar se preciso.
+    lock = banco_path.parent / "_processando.lock"
+    agora = datetime.now()
+    if lock.exists():
+        try:
+            info = lock.read_text(encoding="utf-8").strip()
+            ts = datetime.fromisoformat(info.splitlines()[0][:19])
+            idade_min = (agora - ts).total_seconds() / 60
+        except Exception:
+            info, idade_min = "(ilegivel)", 99999
+        if idade_min < STALE_MIN:
+            logger.error(
+                f"Processamento JA EM ANDAMENTO na rede (iniciado em {info}). "
+                f"Abortando para nao conflitar o banco. Se tiver CERTEZA de que "
+                f"ninguem esta rodando, apague '{lock.name}' em {lock.parent} e "
+                f"rode novamente.")
+            return False, None
+        logger.warning(
+            f"Lock de processamento antigo ({info}, ~{idade_min:.0f} min) — provavel "
+            f"execucao interrompida. Assumindo e prosseguindo.")
+    try:
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        lock.write_text(
+            f"{agora.isoformat(timespec='seconds')}\n"
+            f"usuario={getpass.getuser()}\n", encoding="utf-8")
+        return True, lock
+    except Exception as e:
+        logger.warning(f"Nao foi possivel criar o lock ({e!r}) — seguindo sem trava.")
+        return True, None
+
+
 def _executar(caminho_config: Path) -> int:
     """Logica original do Processador. Devolve 0 se OK, 1 se erro."""
     if not caminho_config.exists():
@@ -152,76 +201,92 @@ def _executar(caminho_config: Path) -> int:
     conexao = ConexaoBancoDados(str(app_raiz / cfg.banco_dados))
     conexao.inicializar()
 
-    # Dobra das interacoes (.jsonl) nas tabelas de quarentena. Em modo rede a
-    # pasta esta na raiz compartilhada; em modo local, dentro do app_raiz.
-    DobrarInteracoes(
-        caminho_banco=str(app_raiz / cfg.banco_dados),
-        pasta_interacoes=str(app_raiz / cfg.rede_interacoes),
-        quarentena_dias=cfg.visualizador_quarentena_dias,
-    ).executar()
+    from datetime import datetime as _dt
+    _inicio = _dt.now()
+    # Lock de processamento na rede: impede duas execucoes simultaneas do
+    # Processador (escrita concorrente corromperia o banco). Liberado no finally.
+    prosseguir, lock = _verificar_e_criar_lock(app_raiz / cfg.banco_dados)
+    if not prosseguir:
+        return 1
+    try:
+        # Dobra das interacoes (.jsonl) nas tabelas de quarentena. Em modo rede a
+        # pasta esta na raiz compartilhada; em modo local, dentro do app_raiz.
+        DobrarInteracoes(
+            caminho_banco=str(app_raiz / cfg.banco_dados),
+            pasta_interacoes=str(app_raiz / cfg.rede_interacoes),
+            quarentena_dias=cfg.visualizador_quarentena_dias,
+        ).executar()
 
-    # Card 3 — Importação RH
-    ImportarRh(
-        conexao=conexao,
-        pasta_ativos=str(app_raiz / cfg.rh_ativos_caminho),
-        pasta_desligados=str(app_raiz / cfg.rh_desligados_caminho),
-        pasta_processados=pasta_proc,
-        pasta_erros=pasta_err,
-    ).executar()
-
-    # Card 4 — Padronização (snapshot/histórico já gravado no Card 3, antes do merge)
-    PadronizarRh(conexao).executar()
-
-    # Card 5 — Matrizes (perfis esperados e estrutura organizacional)
-    ImportarMatrizes(
-        conexao=conexao,
-        pasta_perfis=str(app_raiz / cfg.matrizes_perfis_caminho),
-        pasta_org=str(app_raiz / cfg.matrizes_org_caminho),
-        pasta_processados=pasta_proc,
-        pasta_erros=pasta_err,
-    ).executar()
-
-    # Card 6 — SYSTUR
-    sis_cfg = cfg.sistemas.get("SYSTUR")
-    if sis_cfg:
-        ImportarSistema(
+        # Card 3 — Importação RH
+        ImportarRh(
             conexao=conexao,
-            sistema=Sistema.SYSTUR,
-            pasta_entrada=str(app_raiz / sis_cfg.caminho_entrada),
+            pasta_ativos=str(app_raiz / cfg.rh_ativos_caminho),
+            pasta_desligados=str(app_raiz / cfg.rh_desligados_caminho),
             pasta_processados=pasta_proc,
             pasta_erros=pasta_err,
         ).executar()
 
-    # Card 12 — SIG (matricial + de-para). Condicional: roda so se houver
-    # pasta de entrada configurada E ativo. Nao bloqueia o pipeline se faltar
-    # arquivo (ImportarSig loga "nao em uso" e segue).
-    sig_cfg = cfg.sistemas.get("SIG")
-    if sig_cfg and sig_cfg.ativo and sig_cfg.caminho_entrada:
-        ImportarSig(
+        # Card 4 — Padronização (snapshot/histórico já gravado no Card 3, antes do merge)
+        PadronizarRh(conexao).executar()
+
+        # Card 5 — Matrizes (perfis esperados e estrutura organizacional)
+        ImportarMatrizes(
             conexao=conexao,
-            pasta_extratos=str(app_raiz / sig_cfg.caminho_entrada),
-            pasta_de_para=str(app_raiz / sig_cfg.caminho_de_para) if sig_cfg.caminho_de_para else "",
+            pasta_perfis=str(app_raiz / cfg.matrizes_perfis_caminho),
+            pasta_org=str(app_raiz / cfg.matrizes_org_caminho),
             pasta_processados=pasta_proc,
             pasta_erros=pasta_err,
         ).executar()
 
-    # Card 7 — Vincular acessos ao RH por CPF
-    VincularAcessosRh(conexao=conexao).executar()
+        # Card 6 — SYSTUR
+        sis_cfg = cfg.sistemas.get("SYSTUR")
+        if sis_cfg:
+            ImportarSistema(
+                conexao=conexao,
+                sistema=Sistema.SYSTUR,
+                pasta_entrada=str(app_raiz / sis_cfg.caminho_entrada),
+                pasta_processados=pasta_proc,
+                pasta_erros=pasta_err,
+            ).executar()
 
-    # Card 8 — Analisar divergencias
-    AnalisarDivergencias(conexao=conexao).executar()
+        # Card 12 — SIG (matricial + de-para). Condicional: roda so se houver
+        # pasta de entrada configurada E ativo. Nao bloqueia o pipeline se faltar
+        # arquivo (ImportarSig loga "nao em uso" e segue).
+        sig_cfg = cfg.sistemas.get("SIG")
+        if sig_cfg and sig_cfg.ativo and sig_cfg.caminho_entrada:
+            ImportarSig(
+                conexao=conexao,
+                pasta_extratos=str(app_raiz / sig_cfg.caminho_entrada),
+                pasta_de_para=str(app_raiz / sig_cfg.caminho_de_para) if sig_cfg.caminho_de_para else "",
+                pasta_processados=pasta_proc,
+                pasta_erros=pasta_err,
+            ).executar()
 
-    # Validação de acessos (inclusão/alteração) — grava na tabela validacao_acessos
-    ValidarAcessosSistema(conexao=conexao).executar()
+        # Card 7 — Vincular acessos ao RH por CPF
+        VincularAcessosRh(conexao=conexao).executar()
 
-    # Card 9 — Gerar saidas (Excel) — usa validações acima para a coluna acao
-    GerarSaidas(
-        conexao=conexao,
-        pasta_saidas=str(app_raiz / cfg.saida_divergencias),
-    ).executar()
+        # Card 8 — Analisar divergencias
+        AnalisarDivergencias(conexao=conexao).executar()
 
-    logger.success("Processamento finalizado.")
-    return 0
+        # Validação de acessos (inclusão/alteração) — grava na tabela validacao_acessos
+        ValidarAcessosSistema(conexao=conexao).executar()
+
+        # Card 9 — Gerar saidas (Excel) — usa validações acima para a coluna acao
+        GerarSaidas(
+            conexao=conexao,
+            pasta_saidas=str(app_raiz / cfg.saida_divergencias),
+        ).executar()
+
+        _dur = (_dt.now() - _inicio).total_seconds()
+        logger.success(
+            f"Processamento finalizado em {_dur:.0f}s ({_dur/60:.1f} min).")
+        return 0
+    finally:
+        if lock:
+            try:
+                lock.unlink()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
