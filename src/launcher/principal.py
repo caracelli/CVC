@@ -15,7 +15,6 @@ Fluxo:
 Nenhuma lógica de servidor HTTP, nenhum self-update, nenhum import pesado.
 Mantem o principal pequeno e estavel — raramente precisa mudar.
 """
-import os
 import shutil
 import subprocess
 import sys
@@ -105,21 +104,21 @@ def main() -> int:
                     print(f"[principal] launcher_atualizador.exe ausente em "
                           f"{atualizador_local}")
 
-    # Spawn o core (visualizador ou processador), DETACHED
+    # Quando houve update, o ATUALIZADOR ja cuidou de subir o core:
+    #   - visualizador: subiu logo apos copiar (NOBROWSER); o botao Fechar do
+    #     atualizador navega a propria aba para o painel (8800).
+    #   - processador: sobe no clique do Fechar (abre a propria janela de log).
+    # Entao aqui NAO spawnamos nada — evita 2a aba / processo duplicado.
+    if houve_update:
+        return 0
+
+    # Abertura normal (sem update): spawn do core, DETACHED, como sempre.
     if not core_local.exists():
         print(f"[principal] core ausente: {core_local}")
         return 1
-    # Apos atualizacao, o splash do atualizador ja redireciona a PROPRIA aba
-    # para o painel (8800). Entao o visualizador NAO deve abrir uma 2a aba —
-    # senao o usuario fica com o painel DUPLICADO. Em abertura normal (sem
-    # update), o core abre o navegador como sempre.
-    env = os.environ.copy()
-    if houve_update and alvo == "visualizador":
-        env["VISUALIZADOR_NOBROWSER"] = "1"
     try:
         subprocess.Popen([str(core_local)], cwd=str(launcher_dir),
-                         creationflags=_flags_detached(), close_fds=True,
-                         env=env)
+                         creationflags=_flags_detached(), close_fds=True)
     except Exception as e:
         print(f"[principal] falha ao spawnar core: {e!r}")
         return 1
