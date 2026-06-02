@@ -1,0 +1,93 @@
+
+Transcrição. Use as teclas de direção para navegar entre entradas de transcrição. Selecione uma entrada para navegar pela mídia até a hora da entrada.
+
+
+Pesquisar
+
+O conteúdo gerado por IA pode estar incorreto
+
+Bruna Soler dos Santos Fernandes começou a transcrição
+
+Bruna Soler dos Santos Fernandes
+0 minutos 4 segundos0:04
+Bruna Soler dos Santos Fernandes 0 minutos 4 segundos
+Por exemplo, assistir voltar, não é?
+Bruna Soler dos Santos Fernandes 0 minutos 7 segundos
+Aí ela quer acesso no Systur, por exemplo. Então a gente vai abrir a a bateria do Systur, vai pegar aqui pelo centro de custo dela e depois vai filtrar o cargo dela. Então nesse caso aqui.
+ND
+
+NELSON CARACELLI DINIZ
+0 minutos 20 segundos0:20
+NELSON CARACELLI DINIZ 0 minutos 20 segundos
+And.
+
+Bruna Soler dos Santos Fernandes
+0 minutos 22 segundos0:22
+Bruna Soler dos Santos Fernandes 0 minutos 22 segundos
+Ela pode ter acesso a esses três perfis. Quando tem mais de um perfil, normalmente, o que a gente pede para eles? Para eles informarem o login espelho do mesmo centro de custo ou do mesmo centro de custo gestora e aí a gente libera quando tem mais de um perfil.
+Bruna Soler dos Santos Fernandes 0 minutos 40 segundos
+Está quando tem, quando tem um só, a gente libera o perfil que tem, mas quando tem mais de um, a gente precisa que o usuário indique ali qual que é o perfil que ele vai precisar. Está nesse caso, aqui é um mau exemplo, porque tem mais de um perfil, está não.
+ND
+
+NELSON CARACELLI DINIZ
+0 minutos 53 segundos0:53
+NELSON CARACELLI DINIZ 0 minutos 53 segundos
+Tá, vamos lá, onde é, onde é que ele indica isso?
+
+Bruna Soler dos Santos Fernandes
+0 minutos 57 segundos0:57
+Bruna Soler dos Santos Fernandes 0 minutos 57 segundos
+Aqui, ó, nesse perfil de Acessos.
+ND
+
+NELSON CARACELLI DINIZ
+0 minutos 58 segundos0:58
+NELSON CARACELLI DINIZ 0 minutos 58 segundos
+No.
+NELSON CARACELLI DINIZ 1 minuto
+Não, OK, aí você filtrou, ele tem 3 perfis. Onde é que o usuário indica qual perfil? É na hora que abre o chamado.
+
+Bruna Soler dos Santos Fernandes
+1 minuto 4 segundos1:04
+Bruna Soler dos Santos Fernandes 1 minuto 4 segundos
+He is so ele.
+Bruna Soler dos Santos Fernandes 1 minuto 6 segundos
+Ele vai, ele.
+Bruna Soler dos Santos Fernandes 1 minuto 9 segundos
+Então, ele pode indicar na hora que ele abre o chamado ou a gente conversar ali com ele dentro do próprio chamado. A gente pode voltar o chamado para o usuário pedindo para que ele indique esse chamado, esse perfil.
+ND
+
+NELSON CARACELLI DINIZ
+1 minuto 20 segundos1:20
+NELSON CARACELLI DINIZ 1 minuto 20 segundos
+Yes.
+NELSON CARACELLI DINIZ 1 minuto 24 segundos
+Tá, eu estou pensando aqui só na questão da lógica do sistema, tá? Então eu acharia que 3 na lógica do sistema. Eu abro um chamado com os 3 informando para ele informar qual que é o correto.
+
+Bruna Soler dos Santos Fernandes
+1 minuto 29 segundos1:29
+Bruna Soler dos Santos Fernandes 1 minuto 29 segundos
+Santos.
+Bruna Soler dos Santos Fernandes 1 minuto 38 segundos
+Isso.
+Bruna Soler dos Santos Fernandes 1 minuto 40 segundos
+Yes.
+ND
+
+NELSON CARACELLI DINIZ
+1 minuto 41 segundos1:41
+NELSON CARACELLI DINIZ 1 minuto 41 segundos
+Contri Michele.
+
+Bruna Soler dos Santos Fernandes
+1 minuto 43 segundos1:43
+Bruna Soler dos Santos Fernandes 1 minuto 43 segundos
+A gente só vai precisar ver que, por exemplo, assim, não os casos que eles fazem hoje lá, quando o usuário tem mais de um perfil, eles não fazem nenhum tipo de atribuição, né? Isso vai ser uma regra que a gente vai precisar definir com eles, tá? Se.
+Bruna Soler dos Santos Fernandes 1 minuto 59 segundos
+A gente vai abrir chamado mesmo quando ele estiver mais de um perfil ou não, tá? Isso eu acho que dá para colocar como premissa aí para a gente detalhar isso na regra.
+ND
+
+NELSON CARACELLI DINIZ
+2 minutos 10 segundos2:10
+NELSON CARACELLI DINIZ 2 minutos 10 segundos
+Okay.
