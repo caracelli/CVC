@@ -71,8 +71,8 @@ ENTRADA_ARQUIVOS = [
 ]
 
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
-VERSAO_INICIAL = "2.4.1"     # 2=sistema . 4=Processador (terceiros) . 1=Visualizador (vinculo)
-VERSAO_NOVA = "2.4.2"        # bump apenas para demo do auto-update
+VERSAO_INICIAL = "2.5.2"     # 2=sistema . 5=Processador (checkpoint WAL) . 2=Visualizador (cache WAL-aware)
+VERSAO_NOVA = "2.5.3"        # bump apenas para demo do auto-update
 
 ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",

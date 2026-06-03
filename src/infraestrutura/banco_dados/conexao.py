@@ -9,6 +9,7 @@ class ConexaoBancoDados:
 
     def __init__(self, caminho_db: str):
         Path(caminho_db).parent.mkdir(parents=True, exist_ok=True)
+        self._caminho = caminho_db
         self._engine = create_engine(f"sqlite:///{caminho_db}", echo=False)
         self._SessionFactory = sessionmaker(bind=self._engine)
 
@@ -16,6 +17,26 @@ class ConexaoBancoDados:
         Base.metadata.create_all(self._engine)
         self._migrar()
         logger.info("Banco de dados inicializado.")
+
+    def checkpoint(self):
+        """Consolida o WAL no .db (TRUNCATE). O banco fica em journal_mode=WAL
+        (setado por dobrar_interacoes); sem checkpoint, escritas ficam no
+        .db-wal e o .db nao muda de tamanho/mtime — entao o Visualizador, que
+        decide recopiar o cache por tamanho/mtime do .db, nao detecta a
+        atualizacao e mostra dado velho. Chamado ao fim do processamento.
+
+        Dispose primeiro pra liberar conexoes do pool (TRUNCATE exige que
+        ninguem segure o WAL)."""
+        import sqlite3
+        try:
+            self._engine.dispose()
+            con = sqlite3.connect(self._caminho, timeout=15)
+            try:
+                con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            finally:
+                con.close()
+        except Exception as e:
+            logger.warning(f"checkpoint WAL falhou (segue): {e!r}")
 
     # ------------------------------------------------------------------
     # Migrations incrementais

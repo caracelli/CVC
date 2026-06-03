@@ -217,7 +217,17 @@ def _precisa_sincronizar(rede_db: str, local_db: str) -> bool:
     try:
         if os.path.getsize(rede_db) != os.path.getsize(local_db):
             return True
-        return os.path.getmtime(rede_db) > os.path.getmtime(local_db)
+        # Em WAL, escritas recentes do Processador podem estar no .db-wal e
+        # ainda nao refletidas no .db (mtime/size do .db nao mudam). Por isso
+        # consideramos tambem o mtime do -wal da rede. (O Processador faz
+        # checkpoint ao fim, mas isto cobre a janela ate o checkpoint.)
+        def _mtime_max(p):
+            m = os.path.getmtime(p)
+            w = p + "-wal"
+            if os.path.exists(w):
+                m = max(m, os.path.getmtime(w))
+            return m
+        return _mtime_max(rede_db) > os.path.getmtime(local_db)
     except OSError:
         return True
 

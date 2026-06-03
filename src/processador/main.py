@@ -296,6 +296,10 @@ def _executar(caminho_config: Path) -> int:
             pasta_saidas=str(app_raiz / cfg.saida_divergencias),
         ).executar()
 
+        # Consolida o WAL no .db pra o Visualizador detectar a atualizacao
+        # (ele decide recopiar o cache por tamanho/mtime do .db).
+        conexao.checkpoint()
+
         _dur = (_dt.now() - _inicio).total_seconds()
         logger.success(
             f"Processamento finalizado em {_dur:.0f}s ({_dur/60:.1f} min).")
