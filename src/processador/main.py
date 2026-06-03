@@ -239,6 +239,8 @@ def _executar(caminho_config: Path) -> int:
             pasta_desligados=str(app_raiz / cfg.rh_desligados_caminho),
             pasta_processados=pasta_proc,
             pasta_erros=pasta_err,
+            processar_desligados=cfg.rh_processar_desligados,
+            processar_terceiros=cfg.rh_processar_terceiros,
         ).executar()
 
         # Card 4 — Padronização (snapshot/histórico já gravado no Card 3, antes do merge)

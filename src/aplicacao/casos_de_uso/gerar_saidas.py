@@ -88,8 +88,11 @@ class GerarSaidas:
             logger.warning("Nenhuma divergencia encontrada — saidas nao geradas.")
             return 0
 
-        # Excel (usa entidades Divergencia originais, excluindo ACESSO_DESLIGADO)
-        _TIPOS_EXCLUIDOS = {TipoDivergencia.ACESSO_DESLIGADO}
+        # Excel (usa entidades Divergencia originais). Escopo Fase 1 (SYSTUR
+        # inclusao/alteracao): exclui ACESSO_DESLIGADO (fluxo separado) e
+        # PERFIL_INVALIDO (fora do painel desde 21/05 — "some perfil invalido
+        # por enquanto"), mantendo o Excel alinhado a grid.
+        _TIPOS_EXCLUIDOS = {TipoDivergencia.ACESSO_DESLIGADO, TipoDivergencia.PERFIL_INVALIDO}
         divergencias_excel = [d for d in self._repo_div.obter_todas() if d.tipo not in _TIPOS_EXCLUIDOS]
         if divergencias_excel:
             caminho_excel = self._escritor_excel.salvar_divergencias(divergencias_excel, self._pasta_saidas)

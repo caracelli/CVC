@@ -39,6 +39,10 @@ class Configuracao:
     sistemas: Dict[str, ConfigSistema]
     rh_ativos_caminho: str
     rh_desligados_caminho: str
+    # Escopo da fase: na Fase 1 (SYSTUR inclusao/alteracao) desligados e
+    # terceiros ficam fora. Default True preserva o comportamento legado.
+    rh_processar_desligados: bool
+    rh_processar_terceiros: bool
     processados: str
     erros: str
     matrizes_perfis_caminho: str
@@ -89,6 +93,10 @@ class LeitorConfig:
             node = root.find(xpath)
             return {c.tag: c.text for c in node} if node is not None else {}
 
+        def _bool(xpath: str, padrao: str = "true") -> bool:
+            txt = (root.findtext(xpath, padrao) or padrao).strip().lower()
+            return txt not in ("false", "0", "no", "nao", "n")
+
         return Configuracao(
             versao=root.findtext("versao", "1.0.0"),
             cliente=root.findtext("cliente", ""),
@@ -103,6 +111,8 @@ class LeitorConfig:
             sistemas=sistemas,
             rh_ativos_caminho=root.findtext("rh/ativos/caminho", ""),
             rh_desligados_caminho=root.findtext("rh/desligados/caminho", ""),
+            rh_processar_desligados=_bool("rh/desligados/processar"),
+            rh_processar_terceiros=_bool("rh/ativos/processar_terceiros"),
             processados=root.findtext("rede/processados", "DADOS/PROCESSADOS"),
             erros=root.findtext("rede/erros", "DADOS/ERROS"),
             matrizes_perfis_caminho=root.findtext("matrizes/perfis_sistemas/caminho", ""),

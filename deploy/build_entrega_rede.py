@@ -48,31 +48,37 @@ LEIA_ME_EXECS = EXECS / "LEIA-ME.md"
 ARQUIVOS_ORIGEM = RAIZ / "Arquivos_origem"
 
 # (origem em Arquivos_origem) -> (subpasta dentro de CVC_IAM_ANALYTICS/ENTRADA)
+#
+# ESCOPO FASE 1 = SYSTUR (inclusao/alteracao). A ENTRADA da entrega leva SO os
+# 4 arquivos necessarios para esse fluxo: RH ativos + Mapeamento CCO/CSC +
+# matriz SYSTUR + extrato SYSTUR. Qualquer outro arquivo (desligados, terceiros,
+# outros sistemas) fica FORA do pacote — e o motor tambem os ignora por config
+# (rh/desligados/processar=false, rh/ativos/processar_terceiros=false, e os
+# sistemas fora de escopo com ativo=false). Para reativar numa proxima fase,
+# descomentar a linha correspondente abaixo.
 ENTRADA_ARQUIVOS = [
     ("PROJETOIAM (8).CSV",                                       "RH/ATIVOS"),
-    # Terceiros (layout QuickReport): integracao pronta (LeitorRh roteia por
-    # cabecalho -> tipo_vinculo=TERCEIRO), mas FORA da entrega da Fase 1 — so
-    # entra quando a regra de espelho for definida pela usuaria. Para ativar,
-    # reincluir aqui: ("RH/ATIVOS/QuickReport_1780421571311.xlsx", "RH/ATIVOS").
-    ("PROJETOIAMDESLIGADOS (2).CSV",                             "RH/DESLIGADOS"),
     ("Mapeamento CCO_CSC (1).xlsx",                              "MATRIZES/ORGANIZACIONAL"),
-    ("MATRIZ DE PERFIL DE ACESSO - SIGOT.xlsx",                  "MATRIZES/PERFIS_SISTEMAS"),
-    ("MATRIZ DE PERFIL DE ACESSO SICA ESFERA.xlsx",              "MATRIZES/PERFIS_SISTEMAS"),
-    ("MATRIZ DE PERFIL DE ACESSO SICA RA.xlsx",                  "MATRIZES/PERFIS_SISTEMAS"),
     ("MATRIZ DE PERFIL DE ACESSO SYSTUR.xlsx",                   "MATRIZES/PERFIS_SISTEMAS"),
-    ("Matriz de Perfil de Acessso - IC Integrador Contabil.xlsx", "MATRIZES/PERFIS_SISTEMAS"),
     ("relatorio systur 30.04.xlsx",                              "SISTEMAS/SYSTUR"),
-    # Fase 1 (escopo do teste) e' SYSTUR; os arquivos abaixo ficam no zip
-    # mas o Processador atual so processa SYSTUR. Quando outros sistemas
-    # entrarem em escopo, os arquivos ja estarao no lugar.
-    ("SIGOT_30_04.csv",                                          "SISTEMAS/SIGOT"),
-    ("SICA_RA_30_04.csv",                                        "SISTEMAS/SICA_RA"),
-    ("relatorio IC 30.04.xlsx",                                  "SISTEMAS/IC"),
+    # --- FORA da Fase 1 (descomentar quando a fase respectiva entrar) ---
+    # Terceiros (QuickReport): so quando a regra de espelho for definida.
+    #   ("RH/ATIVOS/QuickReport_1780421571311.xlsx",            "RH/ATIVOS"),
+    # Desligados: fluxo de revogacao, fase separada.
+    #   ("PROJETOIAMDESLIGADOS (2).CSV",                         "RH/DESLIGADOS"),
+    # Outros sistemas (matrizes + extratos): fora de escopo na Fase 1.
+    #   ("MATRIZ DE PERFIL DE ACESSO - SIGOT.xlsx",              "MATRIZES/PERFIS_SISTEMAS"),
+    #   ("MATRIZ DE PERFIL DE ACESSO SICA ESFERA.xlsx",          "MATRIZES/PERFIS_SISTEMAS"),
+    #   ("MATRIZ DE PERFIL DE ACESSO SICA RA.xlsx",              "MATRIZES/PERFIS_SISTEMAS"),
+    #   ("Matriz de Perfil de Acessso - IC Integrador Contabil.xlsx", "MATRIZES/PERFIS_SISTEMAS"),
+    #   ("SIGOT_30_04.csv",                                      "SISTEMAS/SIGOT"),
+    #   ("SICA_RA_30_04.csv",                                    "SISTEMAS/SICA_RA"),
+    #   ("relatorio IC 30.04.xlsx",                              "SISTEMAS/IC"),
 ]
 
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
-VERSAO_INICIAL = "2.5.2"     # 2=sistema . 5=Processador (checkpoint WAL) . 2=Visualizador (cache WAL-aware)
-VERSAO_NOVA = "2.5.3"        # bump apenas para demo do auto-update
+VERSAO_INICIAL = "2.6.2"     # 2=sistema . 6=Processador (escopo Fase 1: ignora desligados/terceiros) . 2=Visualizador
+VERSAO_NOVA = "2.6.3"        # bump apenas para demo do auto-update
 
 ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",

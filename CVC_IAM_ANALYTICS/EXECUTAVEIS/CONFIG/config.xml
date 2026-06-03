@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <configuracao>
-    <versao>2.5.2</versao>
+    <versao>2.6.2</versao>
     <cliente>CVC</cliente>
     <projeto>IAM Analytics</projeto>
 
@@ -23,6 +23,11 @@
     <rh>
         <ativos>
             <caminho>ENTRADA/RH/ATIVOS</caminho>
+            <!-- Escopo Fase 1 (SYSTUR inclusao/alteracao): terceiros (layout
+                 QuickReport) ficam FORA. Se um arquivo de terceiros cair nesta
+                 pasta, o LeitorRh o IGNORA (nao importa). Trocar para true
+                 quando a regra de espelho de terceiros for definida. -->
+            <processar_terceiros>false</processar_terceiros>
             <colunas>
                 <matricula>MATRICULA</matricula>
                 <nome>NOME</nome>
@@ -37,6 +42,11 @@
             </colunas>
         </ativos>
         <desligados>
+            <!-- Escopo Fase 1 (SYSTUR inclusao/alteracao): desligados ficam
+                 FORA (revogacao de acesso de desligado e' fluxo separado). Com
+                 processar=false o Processador NAO le esta pasta, mesmo que haja
+                 arquivo. Trocar para true quando o fluxo de desligados entrar. -->
+            <processar>false</processar>
             <caminho>ENTRADA/RH/DESLIGADOS</caminho>
             <colunas>
                 <matricula>MATRICULA</matricula>

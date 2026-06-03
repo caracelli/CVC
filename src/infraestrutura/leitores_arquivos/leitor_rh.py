@@ -135,9 +135,11 @@ def _norm_nome(s: str) -> str:
 
 class LeitorRh(LeitorArquivoBase):
 
-    def __init__(self, separador: str = ";", pasta_processados: str = None, pasta_erros: str = None):
+    def __init__(self, separador: str = ";", pasta_processados: str = None,
+                 pasta_erros: str = None, processar_terceiros: bool = True):
         super().__init__(pasta_processados, pasta_erros)
         self._separador = separador
+        self._processar_terceiros = processar_terceiros
 
     def ler_ativos(self, pasta: str) -> Tuple[List[FuncionarioAtivo], List[str]]:
         """Le os arquivos da pasta de ATIVOS. Roteia por layout: arquivo de
@@ -150,6 +152,12 @@ class LeitorRh(LeitorArquivoBase):
             try:
                 enc = self.detectar_encoding(arquivo) if arquivo.suffix.lower() == ".csv" else "utf-8"
                 df, tipo = self._carregar_df_rh(arquivo, enc)
+                if tipo == "TERCEIRO" and not self._processar_terceiros:
+                    # Escopo da fase: terceiros ficam fora (regra de espelho
+                    # ainda nao definida). Nao importa nem move o arquivo.
+                    logger.info(
+                        f"Terceiro fora de escopo nesta fase — ignorado ('{arquivo.name}').")
+                    continue
                 novos = (self._parse_terceiros(df) if tipo == "TERCEIRO"
                          else self._parse_clt(df))
                 ativos.extend(novos)

@@ -15,12 +15,19 @@ class ImportarRh:
         pasta_desligados: str,
         pasta_processados: str = None,
         pasta_erros: str = None,
+        processar_desligados: bool = True,
+        processar_terceiros: bool = True,
     ):
-        self._leitor = LeitorRh(pasta_processados=pasta_processados, pasta_erros=pasta_erros)
+        self._leitor = LeitorRh(
+            pasta_processados=pasta_processados,
+            pasta_erros=pasta_erros,
+            processar_terceiros=processar_terceiros,
+        )
         self._repositorio = RepositorioFuncionarioSqlite(conexao)
         self._historico = RegistrarHistorico(conexao)
         self._pasta_ativos = pasta_ativos
         self._pasta_desligados = pasta_desligados
+        self._processar_desligados = processar_desligados
 
     def executar(self):
         logger.info("=== Importação RH iniciada ===")
@@ -31,11 +38,18 @@ class ImportarRh:
             self._historico.registrar_ativos(ativos)
             self._repositorio.salvar_ativos(ativos, ", ".join(arq_ativos))
 
-        desligados, arq_desligados = self._leitor.ler_desligados(self._pasta_desligados)
-        if desligados:
-            # Desligados fora do escopo da trilha de ouvidoria (Fase 1):
-            # atualiza só a base, sem registrar histórico de movimentação.
-            self._repositorio.salvar_desligados(desligados, ", ".join(arq_desligados))
+        desligados = []
+        if self._processar_desligados:
+            desligados, arq_desligados = self._leitor.ler_desligados(self._pasta_desligados)
+            if desligados:
+                # Desligados fora do escopo da trilha de ouvidoria (Fase 1):
+                # atualiza só a base, sem registrar histórico de movimentação.
+                self._repositorio.salvar_desligados(desligados, ", ".join(arq_desligados))
+        else:
+            # Escopo da fase: SYSTUR inclusão/alteração não trata desligados.
+            # A pasta não é lida, mesmo que haja arquivo (revogação é fluxo
+            # separado). Ver config rh/desligados/processar.
+            logger.info("Desligados fora de escopo nesta fase — ignorado.")
 
         logger.info(f"=== Importação RH concluída: {len(ativos)} ativos, {len(desligados)} desligados ===")
         return len(ativos), len(desligados)
