@@ -50,9 +50,10 @@ ARQUIVOS_ORIGEM = RAIZ / "Arquivos_origem"
 # (origem em Arquivos_origem) -> (subpasta dentro de CVC_IAM_ANALYTICS/ENTRADA)
 ENTRADA_ARQUIVOS = [
     ("PROJETOIAM (8).CSV",                                       "RH/ATIVOS"),
-    # Terceiros (layout QuickReport) — vai pra mesma pasta RH/ATIVOS; o
-    # LeitorRh roteia por cabecalho (EMPRESA FORNECEDORA -> tipo_vinculo=TERCEIRO).
-    ("RH/ATIVOS/QuickReport_1780421571311.xlsx",                 "RH/ATIVOS"),
+    # Terceiros (layout QuickReport): integracao pronta (LeitorRh roteia por
+    # cabecalho -> tipo_vinculo=TERCEIRO), mas FORA da entrega da Fase 1 — so
+    # entra quando a regra de espelho for definida pela usuaria. Para ativar,
+    # reincluir aqui: ("RH/ATIVOS/QuickReport_1780421571311.xlsx", "RH/ATIVOS").
     ("PROJETOIAMDESLIGADOS (2).CSV",                             "RH/DESLIGADOS"),
     ("Mapeamento CCO_CSC (1).xlsx",                              "MATRIZES/ORGANIZACIONAL"),
     ("MATRIZ DE PERFIL DE ACESSO - SIGOT.xlsx",                  "MATRIZES/PERFIS_SISTEMAS"),
