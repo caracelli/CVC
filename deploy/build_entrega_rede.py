@@ -13,7 +13,7 @@ Conteudo:
       CVC_VISUALIZADOR/
         visualizador.exe + visualizador.py + CONFIG/ + REPORT/ + LEIA-ME.md
     ATUALIZACAO/                       -> para demonstrar o auto-update
-      CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml   (versao 1.0.5)
+      CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml   (versao 1.0.1)
 
 Pre-requisito: rodar build_processador.py e build_visualizador.py antes.
 
@@ -77,8 +77,8 @@ ENTRADA_ARQUIVOS = [
 ]
 
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
-VERSAO_INICIAL = "2.6.2"     # 2=sistema . 6=Processador (escopo Fase 1: ignora desligados/terceiros) . 2=Visualizador
-VERSAO_NOVA = "2.6.3"        # bump apenas para demo do auto-update
+VERSAO_INICIAL = "1.0.0"     # MAJOR.PROCESSADOR.VISUALIZADOR (release inicial Fase 1 SYSTUR)
+VERSAO_NOVA = "1.0.0"        # primeira entrega: tudo 1.0.0 (demo de auto-update nao usado no build atual)
 
 ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",
@@ -328,14 +328,14 @@ SIMULACAO LOCAL (uma maquina, dois usuarios sequenciais):
 ------------------------------------------------------------
 
 A pasta ATUALIZACAO\\ deste zip traz o mesmo config.xml com
-<versao>1.0.5</versao> (a versao da rede vai estar a frente da
+<versao>1.0.1</versao> (a versao da rede vai estar a frente da
 versao local de cada cliente).
 
     1. Copie ATUALIZACAO\\CVC_IAM_ANALYTICS\\EXECUTAVEIS\\CONFIG\\config.xml
        por cima de Z:\\CVC\\CVC_IAM_ANALYTICS\\EXECUTAVEIS\\CONFIG\\config.xml.
     2. Em uma maquina-usuario, abra C:\\CVC\\VISUALIZADOR\\visualizador.exe.
     3. No log (visualizador_log.txt, ao lado do exe):
-         [auto-update] atualizando 1.0.4 -> 1.0.5
+         [auto-update] atualizando 1.0.0 -> 1.0.1
          [auto-update] concluido - reiniciando
     4. O visualizador.exe local foi renomeado para .exe.old, o novo
        foi copiado da rede, e o processo reiniciou sozinho.
