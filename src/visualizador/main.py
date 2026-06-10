@@ -1414,6 +1414,35 @@ def listar_historico_rh():
                 }))
         finally:
             cr.close()
+
+    # Aderentes "conforme direto" projetados na trilha pelo Processador
+    # (entidade ACESSO_SISTEMA / ADERENTE). O Processador ja gravou apenas
+    # quem nao tem resolucao previa, entao nao ha sobreposicao com as linhas
+    # acima. Tabela `historico` pode nem existir em banco antigo -> blindado.
+    ch = conn_ro()
+    try:
+        for row in ch.execute(
+            "SELECT matricula, data_snapshot, dados_novo FROM historico "
+            "WHERE entidade='ACESSO_SISTEMA' AND tipo_mudanca='ADERENTE'"
+        ):
+            try:
+                d = json.loads(row[2] or "{}")
+            except Exception:
+                d = {}
+            ds = str(row[1] or "")
+            out.append({
+                "tipo": "ADERENTE", "data": ds, "_ord": ds,
+                "matricula": row[0], "nome": d.get("nome") or row[0],
+                "movimentacao": "Aderente", "campos": "",
+                "sistema": d.get("sistema") or "", "perfil": d.get("perfil") or "",
+                "cargo": d.get("cargo") or "", "ticket": "", "ticket_url": "",
+                "descricao": "", "por": "", "em": "", "pendencias": [],
+            })
+    except Exception:
+        pass  # tabela historico pode nao existir em banco antigo
+    finally:
+        ch.close()
+
     out.sort(key=lambda x: x.get("_ord") or "", reverse=True)
     return out
 

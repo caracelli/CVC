@@ -15,8 +15,16 @@ class RepositorioMatrizSqlite:
         self._conexao = conexao
 
     def salvar_perfis_esperados(self, perfis: List[PerfilEsperado], arquivo_origem: str = ""):
+        if not perfis:
+            return
+        # Substituicao POR SISTEMA: apaga so os perfis dos sistemas presentes
+        # neste lote. Importar a matriz de um sistema NAO toca nos outros
+        # (isolamento — antes era DELETE global e zerava todas as matrizes).
+        sistemas = {p.sistema.value for p in perfis}
         with self._conexao.sessao() as sessao:
-            sessao.query(PerfilEsperadoModel).delete()
+            sessao.query(PerfilEsperadoModel).filter(
+                PerfilEsperadoModel.sistema.in_(sistemas)
+            ).delete(synchronize_session=False)
             for p in perfis:
                 sessao.add(PerfilEsperadoModel(
                     cargo_codigo=p.cargo_codigo,
@@ -28,7 +36,9 @@ class RepositorioMatrizSqlite:
                     dt_importacao=datetime.now(),
                 ))
             sessao.commit()
-        logger.info(f"{len(perfis)} perfis esperados gravados no banco.")
+        logger.info(
+            f"{len(perfis)} perfis esperados gravados ({', '.join(sorted(sistemas))})."
+        )
 
     def obter_perfis_esperados(self) -> List[PerfilEsperado]:
         with self._conexao.sessao() as sessao:
@@ -45,8 +55,15 @@ class RepositorioMatrizSqlite:
             ]
 
     def salvar_cco(self, registros: List[Dict], arquivo_origem: str = ""):
+        if not registros:
+            return
+        # Substituicao POR SISTEMA tambem na CCO: apaga so os mapeamentos dos
+        # sistemas presentes neste arquivo, preservando os demais.
+        sistemas = {r["sistema"] for r in registros}
         with self._conexao.sessao() as sessao:
-            sessao.query(MatrizCcoModel).delete()
+            sessao.query(MatrizCcoModel).filter(
+                MatrizCcoModel.sistema.in_(sistemas)
+            ).delete(synchronize_session=False)
             for r in registros:
                 sessao.add(MatrizCcoModel(
                     cc=r["cc"],

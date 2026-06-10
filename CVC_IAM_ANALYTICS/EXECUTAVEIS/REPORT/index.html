@@ -230,6 +230,7 @@ body{
 .h-alt{background:#FFF3D6;color:#8A6314;}
 .h-pen{background:#FDE7E9;color:#A4262C;}
 .h-res{background:#E7EEFB;color:#27468C;}
+.h-ader{background:#E3F5E9;color:#1E7F4E;}
 .filtro-dica{font:600 9px Arial;color:#8A9099;padding:1px 2px 7px;line-height:1.45;}
 .filtro-dica b{color:#3A3F4C;font-weight:800;}
 .hist-tk{color:#2D6CDF;cursor:pointer;font-weight:700;
@@ -3475,7 +3476,8 @@ function _histDisp(c,r){
   return (v==null||v==='')?'—':String(v);
 }
 const _HMOV_CSS={'Admitido':'h-adm','Alterado':'h-alt',
-  'Pendência identificada':'h-pen','Pendência resolvida':'h-res'};
+  'Pendência identificada':'h-pen','Pendência resolvida':'h-res',
+  'Aderente':'h-ader'};
 function histMov(r){
   return `<span class="h-mov ${_HMOV_CSS[r.movimentacao]||''}">`
     + `${esc(r.movimentacao)||'—'}</span>`;
