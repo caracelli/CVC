@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from loguru import logger
 
 from dominio.objetos_valor.sistema import Sistema
@@ -38,9 +36,6 @@ class ImportarSistema:
             logger.warning(f"{self._sistema.value}: nenhum arquivo encontrado.")
             return 0
 
-        # PROCESSADOS na raiz da pasta do sistema (ex.: .../SYSTUR/PROCESSADOS)
-        destino_proc = Path(self._pasta_entrada) / "PROCESSADOS"
-
         for arquivo in arquivos:
             # Hash antes da leitura — assim, mesmo se a leitura falhar, logamos
             # tentativa de processar o arquivo com seu fingerprint.
@@ -68,7 +63,7 @@ class ImportarSistema:
                 hash_arquivo=hash_arq, total_registros=len(perfis),
                 status="SUCESSO",
             )
-            self._leitor.mover_para_processados(arquivo, destino=destino_proc)
+            self._leitor.mover_para_processados(arquivo)
             logger.success(
                 f"{self._sistema.value}: '{arquivo.name}' processado "
                 f"({len(perfis)} linhas) e movido para PROCESSADOS."

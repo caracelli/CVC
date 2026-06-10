@@ -55,6 +55,8 @@ class ConexaoBancoDados:
             self._migrar_historico_unificado(conn)
             self._migrar_acessos_sistemas_pk_e_matching(conn)
             self._migrar_rh_ativos_tipo_vinculo(conn)
+            self._migrar_gestor(conn)
+            self._migrar_ciclo_vida(conn)
 
     def _cols(self, conn, tabela: str) -> set:
         return {row[1] for row in conn.execute(text(f"PRAGMA table_info({tabela})"))}
@@ -113,6 +115,45 @@ class ConexaoBancoDados:
                 "ALTER TABLE rh_ativos ADD COLUMN tipo_vinculo TEXT DEFAULT 'FUNCIONARIO'"))
             conn.commit()
             logger.info("Migration: rh_ativos.tipo_vinculo adicionada.")
+
+    def _migrar_gestor(self, conn):
+        """Coluna 'gestor' (aditiva) em rh_ativos e matriz_cco — chave do
+        casamento da CCO por (centro de custo + gestor)."""
+        tabelas = self._tabelas(conn)
+        if "rh_ativos" in tabelas and "gestor" not in self._cols(conn, "rh_ativos"):
+            conn.execute(text("ALTER TABLE rh_ativos ADD COLUMN gestor TEXT"))
+            conn.commit()
+            logger.info("Migration: rh_ativos.gestor adicionada.")
+        if "matriz_cco" in tabelas and "gestor" not in self._cols(conn, "matriz_cco"):
+            conn.execute(text("ALTER TABLE matriz_cco ADD COLUMN gestor TEXT"))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_matriz_cco_gestor ON matriz_cco (gestor)"))
+            conn.commit()
+            logger.info("Migration: matriz_cco.gestor adicionada.")
+
+    def _migrar_ciclo_vida(self, conn):
+        """Tabela ciclo_vida_acesso (aditiva). CREATE IF NOT EXISTS — nao toca
+        em nenhuma tabela existente. Guarda o ciclo Pendencia->Resolvido->Aderente
+        com timestamps (first-wins) para medir tempo de tratamento."""
+        if "ciclo_vida_acesso" in self._tabelas(conn):
+            return
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS ciclo_vida_acesso (
+                matricula      TEXT NOT NULL,
+                sistema        TEXT NOT NULL,
+                perfil         TEXT,
+                nome           TEXT,
+                login          TEXT,
+                cargo          TEXT,
+                dt_pendencia   TEXT,
+                dt_resolvido   TEXT,
+                ticket         TEXT,
+                dt_aderente    TEXT,
+                dt_atualizacao TEXT,
+                PRIMARY KEY (matricula, sistema)
+            )"""))
+        conn.commit()
+        logger.info("Migration: tabela ciclo_vida_acesso criada.")
 
     def _migrar_matriz_cco(self, conn):
         # matriz_organizacional foi substituida por matriz_cco

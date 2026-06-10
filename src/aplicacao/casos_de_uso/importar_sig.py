@@ -76,7 +76,6 @@ class ImportarSig:
             logger.warning(f"SIG: nenhum arquivo de extrato em {self._pasta_extratos}")
             return 0
 
-        destino_proc = Path(self._pasta_extratos) / "PROCESSADOS"
         total_perfis = 0
         for arquivo in arquivos:
             try:
@@ -102,7 +101,7 @@ class ImportarSig:
                 hash_arquivo=hash_arq, total_registros=len(perfis),
                 status="SUCESSO",
             )
-            self._extrato_leitor.mover_para_processados(arquivo, destino=destino_proc)
+            self._extrato_leitor.mover_para_processados(arquivo)
             total_perfis += len(perfis)
             logger.success(
                 f"SIG: '{arquivo.name}' processado — {len(perfis)} linhas "

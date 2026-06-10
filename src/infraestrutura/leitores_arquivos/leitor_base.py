@@ -40,17 +40,16 @@ class LeitorArquivoBase:
         logger.info(f"{len(arquivos)} arquivo(s) encontrado(s) em {p.name} (recursivo)")
         return sorted(arquivos)
 
-    def mover_para_processados(self, arquivo: Path, destino: Optional[Path] = None):
-        destino = (
-            Path(destino) if destino
-            else self._pasta_processados if self._pasta_processados
-            else arquivo.parent / "PROCESSADOS"
-        )
+    def mover_para_processados(self, arquivo: Path):
+        # SEMPRE move para uma subpasta PROCESSADOS dentro da pasta do proprio
+        # arquivo de origem (controle por pasta). A varredura recursiva ignora
+        # "processados"/"erros" (_SUBPASTAS_IGNORADAS), entao nao reprocessa.
+        destino = arquivo.parent / "PROCESSADOS"
         destino.mkdir(parents=True, exist_ok=True)
         sufixo = datetime.now().strftime("%Y%m%d_%H%M%S")
         novo_nome = f"{arquivo.stem}_{sufixo}{arquivo.suffix}"
         shutil.move(str(arquivo), str(destino / novo_nome))
-        logger.info(f"Movido para processados: {arquivo.name}")
+        logger.info(f"Movido para processados: {destino}")
 
     def mover_para_erros(self, arquivo: Path, erro: str):
         destino = self._pasta_erros if self._pasta_erros else arquivo.parent / "ERROS"

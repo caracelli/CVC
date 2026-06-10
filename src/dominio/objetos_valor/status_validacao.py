@@ -8,3 +8,6 @@ class StatusValidacao(str, Enum):
     NAO_MAPEADO = "NAO_MAPEADO"
     SEM_ACESSO = "SEM_ACESSO"
     SEM_DADOS = "SEM_DADOS"
+    # Conforme: tem pelo menos um perfil aderente ao esperado (por sistema).
+    # Aparece na grid como OK, mas NAO conta como pendencia.
+    OK = "OK"

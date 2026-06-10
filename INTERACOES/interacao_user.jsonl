@@ -11,3 +11,5 @@
 {"schema_version": 1, "tipo_interacao": "ATALHO", "registro_id": "atl_1780087550833", "acao": "EXCLUIR", "usuario": "user", "data_acao": "2026-05-29T17:54:41", "extras": {}}
 {"schema_version": 1, "tipo_interacao": "ATALHO", "registro_id": "atl_1780088523696", "acao": "CRIAR", "usuario": "user", "data_acao": "2026-05-29T18:02:03", "extras": {"nome": "454", "origem": "incl", "filtros": [["grid:Nome", "718"]]}}
 {"schema_version": 1, "tipo_interacao": "ATALHO", "registro_id": "atl_1780089636335", "acao": "CRIAR", "usuario": "user", "data_acao": "2026-05-29T18:20:36", "extras": {"nome": "11", "origem": "incl", "filtros": [["acao", "Alterar Perfil"], ["grid:Nome", "718"]]}}
+{"schema_version": 1, "tipo_interacao": "ATALHO", "registro_id": "atl_1780088523696", "acao": "EXCLUIR", "usuario": "user", "data_acao": "2026-06-08T19:46:37", "extras": {}}
+{"schema_version": 1, "tipo_interacao": "ATALHO", "registro_id": "atl_1780089636335", "acao": "EXCLUIR", "usuario": "user", "data_acao": "2026-06-08T19:46:41", "extras": {}}

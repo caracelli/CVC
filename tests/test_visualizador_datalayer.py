@@ -1,0 +1,135 @@
+# -*- coding: utf-8 -*-
+"""Data-layer do Visualizador (client-facing): garantir_estrutura monta
+bi_divergencias a partir de validacao_acessos + divergencias; _montar_base
+calcula KPIs/sis_dist/acao_dist/users com o filtro de sistema do config.
+
+Sem servidor: importa o modulo e faz monkeypatch dos globais (DB_PATH/SISTEMA),
+como scripts/rodar_visualizador_selftest.py.
+"""
+import os
+import sqlite3
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from infraestrutura.banco_dados.conexao import ConexaoBancoDados
+import visualizador.main as vm
+
+IC = "IC_INTEGRADOR_CONTABIL"
+SYSTUR = "SYSTUR"
+
+
+def _seed(db):
+    c = sqlite3.connect(db)
+    c.executescript("""
+        INSERT INTO rh_ativos (matricula,nome,cpf,cargo_descricao,
+            centro_custo_codigo,centro_custo_nome,departamento,situacao,tipo_vinculo)
+        VALUES ('M1','NOME M1','111','ANALISTA','100','FIN','D','ATIVO','FUNCIONARIO'),
+               ('M2','NOME M2','222','GERENTE','200','COM','D','ATIVO','TERCEIRO');
+
+        INSERT INTO validacao_acessos (matricula,nome,sistema,perfil_esperado,
+            perfil_atual,status,situacao_acao,origem_matriz,dt_processamento)
+        VALUES ('M1','NOME M1','IC_INTEGRADOR_CONTABIL','IC CONSULTA','','SEM_ACESSO',
+                'PENDENTE','MATRIZ','2026-05-01 10:00:00'),
+               ('M2','NOME M2','IC_INTEGRADOR_CONTABIL','IC CONSULTA','IC_APROVADOR',
+                'DIVERGENTE','PENDENTE','CCO','2026-05-02 09:00:00'),
+               ('M1','NOME M1','SYSTUR','S1','','EM_ANALISE','PENDENTE','MATRIZ',
+                '2026-05-03 08:00:00');
+
+        INSERT INTO divergencias (id,tipo,sistema,usuario,nome_usuario,matricula,
+            perfil_encontrado,descricao,resolvida)
+        VALUES ('d1','ACESSO_SEM_VINCULO_RH','IC_INTEGRADOR_CONTABIL','tercX',
+                'TERCEIRO X','','PX','sem vinculo',0);
+    """)
+    c.commit()
+    c.close()
+
+
+class TestVisualizadorDataLayer(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.mkdtemp(prefix="cvc_vis_")
+        cls.db = os.path.join(cls._tmp, "iam.db")
+        ConexaoBancoDados(cls.db).inicializar()
+        _seed(cls.db)
+        # monkeypatch dos globais do modulo
+        cls._orig = (vm.DB_PATH, vm.SISTEMA, vm._BASE)
+        vm.DB_PATH = cls.db
+        vm.SISTEMA = ""
+        vm._BASE = None
+        vm.garantir_estrutura(force=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        vm.DB_PATH, vm.SISTEMA, vm._BASE = cls._orig
+
+    def _base(self, sistema):
+        vm.SISTEMA = sistema
+        vm._BASE = None
+        return vm._montar_base()
+
+    # ---- bi_divergencias ----
+    def test_bi_divergencias_une_validacao_e_sem_vinculo(self):
+        c = sqlite3.connect(self.db)
+        try:
+            n = c.execute("SELECT COUNT(*) FROM bi_divergencias").fetchone()[0]
+        finally:
+            c.close()
+        self.assertEqual(n, 4)   # 3 validacao + 1 ACESSO_SEM_VINCULO_RH
+
+    # ---- KPIs (todos os sistemas) ----
+    def test_kpis_todos_os_sistemas(self):
+        b = self._base("")
+        self.assertEqual(b["kpis"], {
+            "sem_acesso": 1, "divergente": 1, "em_analise": 1,
+            "nao_mapeado": 1, "ok": 0, "total": 4})
+
+    def test_sis_dist(self):
+        b = self._base("")
+        self.assertEqual(b["sis_dist"], {IC: 3, SYSTUR: 1})
+
+    def test_acao_dist_rotulos(self):
+        b = self._base("")
+        self.assertEqual(b["acao_dist"], {
+            "Incluir Acesso": 1, "Alterar Perfil": 1,
+            "Em Análise": 1, "Não Mapeado": 1})
+
+    # ---- users / JOIN rh_ativos ----
+    def test_users_estrutura_e_vinculo(self):
+        b = self._base("")
+        users = {u["u"]: u for u in b["users"]}
+        self.assertEqual(set(users), {"M1", "M2", "tercX"})
+        # M1 tem 2 divergencias (IC SEM_ACESSO + SYSTUR EM_ANALISE)
+        self.assertEqual(len(users["M1"]["divs"]), 2)
+        # M2 e' TERCEIRO no rh_ativos -> vinculo "Terceiro"
+        self.assertEqual(users["M2"]["divs"][0]["vinc"], "Terceiro")
+        # tercX nao esta no rh_ativos -> default "Funcionário"
+        self.assertEqual(users["tercX"]["divs"][0]["vinc"], "Funcionário")
+
+    def test_origem_label_por_div(self):
+        b = self._base("")
+        m1 = next(u for u in b["users"] if u["u"] == "M1")
+        origens = {d["o"] for d in m1["divs"]}
+        self.assertIn("Matriz IC_INTEGRADOR_CONTABIL", origens)  # origem MATRIZ
+        m2 = next(u for u in b["users"] if u["u"] == "M2")
+        self.assertEqual(m2["divs"][0]["o"], "Matriz CCO")        # origem CCO
+        terc = next(u for u in b["users"] if u["u"] == "tercX")
+        self.assertEqual(terc["divs"][0]["o"], "—")               # sem origem
+
+    # ---- filtro por sistema ----
+    def test_filtro_sistema_ic(self):
+        b = self._base(IC)
+        # EM_ANALISE era do SYSTUR -> some; restam SEM_ACESSO/DIVERGENTE/nao_mapeado do IC
+        self.assertEqual(b["kpis"], {
+            "sem_acesso": 1, "divergente": 1, "em_analise": 0,
+            "nao_mapeado": 1, "ok": 0, "total": 3})
+        # sis_dist NAO e' filtrado (sempre mostra a distribuicao completa)
+        self.assertEqual(b["sis_dist"], {IC: 3, SYSTUR: 1})
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

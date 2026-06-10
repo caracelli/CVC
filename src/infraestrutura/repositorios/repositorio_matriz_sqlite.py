@@ -51,6 +51,7 @@ class RepositorioMatrizSqlite:
                 sessao.add(MatrizCcoModel(
                     cc=r["cc"],
                     cc_nome=r.get("cc_nome", ""),
+                    gestor=r.get("gestor", ""),
                     funcao=r.get("funcao", ""),
                     sistema=r["sistema"],
                     perfil=r["perfil"],
@@ -64,7 +65,8 @@ class RepositorioMatrizSqlite:
         with self._conexao.sessao() as sessao:
             rows = sessao.query(MatrizCcoModel).all()
             return [
-                {"cc": r.cc, "cc_nome": r.cc_nome or "", "funcao": r.funcao or "",
+                {"cc": r.cc, "cc_nome": r.cc_nome or "",
+                 "gestor": getattr(r, "gestor", None) or "", "funcao": r.funcao or "",
                  "sistema": r.sistema, "perfil": r.perfil}
                 for r in rows
             ]

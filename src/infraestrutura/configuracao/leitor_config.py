@@ -73,7 +73,7 @@ class LeitorConfig:
         for sis in root.findall("sistemas/sistema"):
             sid = sis.get("id")
             colunas_node = sis.find("colunas")
-            colunas = {c.tag: c.text for c in colunas_node} if colunas_node else {}
+            colunas = {c.tag: c.text for c in colunas_node} if colunas_node is not None else {}
             ativo_txt = (sis.findtext("ativo", "true") or "true").strip().lower()
             sistemas[sid] = ConfigSistema(
                 id=sid,
@@ -105,9 +105,9 @@ class LeitorConfig:
             rede_executaveis=root.findtext("rede/executaveis", "EXECUTAVEIS"),
             rede_interacoes=root.findtext("rede/interacoes", "INTERACOES"),
             banco_dados=root.findtext("rede/banco_dados", ""),
-            encoding_padrao=proc.findtext("encoding_padrao", "utf-8") if proc else "utf-8",
-            separador_csv=proc.findtext("separador_csv", ";") if proc else ";",
-            formato_data=proc.findtext("formato_data", "%d/%m/%Y") if proc else "%d/%m/%Y",
+            encoding_padrao=proc.findtext("encoding_padrao", "utf-8") if proc is not None else "utf-8",
+            separador_csv=proc.findtext("separador_csv", ";") if proc is not None else ";",
+            formato_data=proc.findtext("formato_data", "%d/%m/%Y") if proc is not None else "%d/%m/%Y",
             sistemas=sistemas,
             rh_ativos_caminho=root.findtext("rh/ativos/caminho", ""),
             rh_desligados_caminho=root.findtext("rh/desligados/caminho", ""),

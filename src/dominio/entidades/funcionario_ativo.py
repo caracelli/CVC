@@ -12,3 +12,5 @@ class FuncionarioAtivo(Funcionario):
     tipo_vinculo: str = "FUNCIONARIO"
     # Empresa fornecedora (preenchido para terceiros)
     empresa: Optional[str] = None
+    # "Nome Gestor" do RH — chave do casamento com a CCO (cc + gestor)
+    gestor: Optional[str] = None

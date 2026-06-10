@@ -21,6 +21,7 @@ class RhAtivo(Base):
     data_admissao = Column(Date)
     email = Column(String)
     situacao = Column(String)
+    gestor = Column(String)   # "Nome Gestor" do RH — chave do casamento CCO
     # FUNCIONARIO (CLT proprio) | TERCEIRO (prestador de fornecedor)
     tipo_vinculo = Column(String, default="FUNCIONARIO")
     empresa = Column(String)
@@ -170,6 +171,7 @@ class MatrizCcoModel(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     cc = Column(String, nullable=False, index=True)
     cc_nome = Column(String)
+    gestor = Column(String, index=True)   # "Nome Gestor" da CCO — chave do casamento
     funcao = Column(String, index=True)
     sistema = Column(String, nullable=False)
     perfil = Column(String, nullable=False)
@@ -197,6 +199,29 @@ class ValidacaoAcessoModel(Base):
     situacao_acao = Column(String, default="PENDENTE", index=True)  # PENDENTE / RESOLVIDO
     origem_matriz = Column(String)
     dt_processamento = Column(DateTime, default=datetime.now)
+
+
+class CicloVidaAcessoModel(Base):
+    """Ciclo de vida de uma pendencia de acesso: Pendencia -> Resolvido (ticket)
+    -> Aderente (acesso OK). Append/upsert IDEMPOTENTE (first-wins): cada data so
+    e' gravada na PRIMEIRA vez; processamentos seguintes nao sobrescrevem. Serve
+    de base p/ o tempo de tratamento (Historico) e tempo medio (Visao Geral)."""
+    __tablename__ = "ciclo_vida_acesso"
+
+    # Chave (matricula, sistema): "a pessoa esta resolvida nesse sistema".
+    # Por perfil deixaria opcoes de Em Analise penduradas quando a pessoa
+    # escolhe uma das N e as outras somem.
+    matricula = Column(String, primary_key=True)
+    sistema = Column(String, primary_key=True)
+    perfil = Column(String)   # perfil representativo (esperado/atual) p/ exibicao
+    nome = Column(String)
+    login = Column(String)
+    cargo = Column(String)
+    dt_pendencia = Column(String)   # ISO datetime — 1a vez vista como pendencia
+    dt_resolvido = Column(String)   # ISO datetime — quando resolvida (ticket Jira)
+    ticket = Column(String)         # numero do chamado Jira
+    dt_aderente = Column(String)    # ISO datetime — 1a vez conforme (acesso OK)
+    dt_atualizacao = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
 class DivergenciaModel(Base):

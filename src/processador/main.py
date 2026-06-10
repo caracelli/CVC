@@ -15,11 +15,13 @@ from aplicacao.casos_de_uso.importar_rh import ImportarRh
 from aplicacao.casos_de_uso.padronizar_rh import PadronizarRh
 from aplicacao.casos_de_uso.importar_sistema import ImportarSistema
 from aplicacao.casos_de_uso.importar_sig import ImportarSig
+from infraestrutura.leitores_arquivos.configs_sistemas import CONFIGS_SISTEMAS
 from aplicacao.casos_de_uso.importar_matrizes import ImportarMatrizes
 from aplicacao.casos_de_uso.vincular_acessos_rh import VincularAcessosRh
 from aplicacao.casos_de_uso.analisar_divergencias import AnalisarDivergencias
 from aplicacao.casos_de_uso.gerar_saidas import GerarSaidas
 from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
+from aplicacao.casos_de_uso.registrar_ciclo_vida import RegistrarCicloVida
 from aplicacao.casos_de_uso.dobrar_interacoes import DobrarInteracoes
 from dominio.objetos_valor.sistema import Sistema
 
@@ -259,13 +261,23 @@ def _executar(caminho_config: Path) -> int:
             sistemas_em_escopo=_sistemas_em_escopo(cfg),
         ).executar()
 
-        # Card 6 — SYSTUR
-        sis_cfg = cfg.sistemas.get("SYSTUR")
-        if sis_cfg and sis_cfg.ativo:
+        # Card 6+ — Importacao dos extratos dos sistemas em escopo (ativo=true)
+        # que tem leitor padrao em CONFIGS_SISTEMAS (SYSTUR, IC, SIGOT, SICA_*).
+        # O SIG (matricial) tem fluxo proprio logo abaixo; sistemas sem leitor
+        # padrao (scaffold, ex.: ORACLE_EBS) sao ignorados em silencio.
+        for _sc in cfg.sistemas.values():
+            if not _sc.ativo:
+                continue
+            try:
+                _sis = Sistema(_sc.nome)
+            except ValueError:
+                continue
+            if _sis is Sistema.SIG or _sis not in CONFIGS_SISTEMAS:
+                continue
             ImportarSistema(
                 conexao=conexao,
-                sistema=Sistema.SYSTUR,
-                pasta_entrada=str(app_raiz / sis_cfg.caminho_entrada),
+                sistema=_sis,
+                pasta_entrada=str(app_raiz / _sc.caminho_entrada),
                 pasta_processados=pasta_proc,
                 pasta_erros=pasta_err,
             ).executar()
@@ -291,6 +303,10 @@ def _executar(caminho_config: Path) -> int:
 
         # Validação de acessos (inclusão/alteração) — grava na tabela validacao_acessos
         ValidarAcessosSistema(conexao=conexao).executar()
+
+        # Ciclo de vida (Pendencia -> Resolvido -> Aderente) — idempotente/blindado.
+        # Depois da validacao (validacao_acessos) e da dobra (resolucoes, acima).
+        RegistrarCicloVida(conexao=conexao).executar()
 
         # Card 9 — Gerar saidas (Excel) — usa validações acima para a coluna acao
         GerarSaidas(

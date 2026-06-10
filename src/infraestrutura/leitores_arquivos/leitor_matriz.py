@@ -161,6 +161,7 @@ class LeitorMatrizOrganizacional(LeitorArquivoBase):
 
     _CAND_CC_COD  = ["CÓDIGO DO CENTRO DE CUSTO", "CODIGO DO CENTRO DE CUSTO", "CCUSTO", "CENTRO DE CUSTO"]
     _CAND_CC_NOME = ["NOME DO CENTRO DE CUSTO", "NOME CENTRO DE CUSTO"]
+    _CAND_GESTOR  = ["NOME GESTOR", "NOME DO GESTOR", "GESTOR"]
     _CAND_FUNCAO  = ["FUNÇÃO", "FUNCAO"]
     _CAND_SISTEMA = ["SISTEMAS", "SISTEMA"]
     _CAND_PERFIL  = ["PERFIS", "PERFIL ACESSO", "PERFIL"]
@@ -190,6 +191,7 @@ class LeitorMatrizOrganizacional(LeitorArquivoBase):
                 cols = list(df.columns)
                 col_cc      = self._resolver(cols, self._CAND_CC_COD)
                 col_nome    = self._resolver(cols, self._CAND_CC_NOME)
+                col_gestor  = self._resolver(cols, self._CAND_GESTOR)
                 col_funcao  = self._resolver(cols, self._CAND_FUNCAO)
                 col_sistema = self._resolver(cols, self._CAND_SISTEMA)
                 col_perfil  = self._resolver(cols, self._CAND_PERFIL)
@@ -214,6 +216,7 @@ class LeitorMatrizOrganizacional(LeitorArquivoBase):
                     registros.append({
                         "cc":      cc,
                         "cc_nome": str(row.get(col_nome, "")).strip() if col_nome else "",
+                        "gestor":  str(row.get(col_gestor, "")).strip() if col_gestor else "",
                         "funcao":  str(row.get(col_funcao, "")).strip() if col_funcao else "",
                         "sistema": sistema_raw,
                         "perfil":  perfil_raw,
@@ -226,11 +229,11 @@ class LeitorMatrizOrganizacional(LeitorArquivoBase):
             except Exception as e:
                 self.mover_para_erros(arquivo, str(e))
 
-        # Deduplica por (cc, funcao, sistema, perfil) — arquivos com conteúdo idêntico mas nomes diferentes
+        # Deduplica por (cc, gestor, funcao, sistema, perfil) — arquivos idênticos com nomes diferentes
         seen: set = set()
         registros_unicos: List[dict] = []
         for r in registros:
-            key = (r["cc"], r["funcao"], r["sistema"], r["perfil"])
+            key = (r["cc"], r.get("gestor", ""), r["funcao"], r["sistema"], r["perfil"])
             if key not in seen:
                 seen.add(key)
                 registros_unicos.append(r)

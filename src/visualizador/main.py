@@ -98,6 +98,7 @@ TIPO_LABEL = {
     "SEM_ACESSO": "Sem Acesso", "DIVERGENTE": "Divergente",
     "EM_ANALISE": "Em Análise", "ACESSO_SEM_VINCULO_RH": "Sem Vínculo RH",
     "ACESSO_DESLIGADO": "Acesso Desligado", "PERFIL_INVALIDO": "Perfil Inválido",
+    "OK": "Aderente",
 }
 
 # origem_matriz -> rótulo da coluna "Origem"
@@ -185,9 +186,11 @@ def carregar_config():
             v = (root.findtext("rede/banco_dados") or "").strip()
             if v:
                 banco_sub = v
-            s = (root.findtext("visualizador/sistema") or "").strip()
-            if s:
-                sistema = s
+            # <sistema> presente mas VAZIO = todos os sistemas ativos (filtro
+            # desligado). Elemento AUSENTE mantem o default legado "SYSTUR".
+            node_s = root.find("visualizador/sistema")
+            if node_s is not None:
+                sistema = (node_s.text or "").strip()
             q = (root.findtext("visualizador/quarentena_dias") or "").strip()
             if q:
                 duracao = int(q)
@@ -467,8 +470,14 @@ SELECT
   0                              AS resolvida,
   CASE v.status WHEN 'SEM_ACESSO' THEN 'Incluir Acesso'
                 WHEN 'DIVERGENTE' THEN 'Alterar Perfil'
-                WHEN 'EM_ANALISE' THEN 'Em Análise' ELSE '' END AS acao,
-  COALESCE(v.origem_matriz,'') AS origem
+                WHEN 'EM_ANALISE' THEN 'Em Análise'
+                WHEN 'OK' THEN 'Aderente' ELSE '' END AS acao,
+  COALESCE(v.origem_matriz,'') AS origem,
+  -- login REAL do sistema (CD_LOGIN), trazido do acesso por (matricula, sistema).
+  -- Vazio em SEM_ACESSO (a pessoa ainda nao tem login — a acao e' criar).
+  COALESCE((SELECT a.usuario FROM acessos_sistemas a
+            WHERE a.matricula_vinculada = v.matricula AND a.sistema = v.sistema
+            LIMIT 1), '') AS login
 FROM validacao_acessos v
 UNION ALL
 SELECT
@@ -479,7 +488,8 @@ SELECT
   COALESCE(d.perfil_esperado,'')  AS perfil_esperado,
   COALESCE(d.descricao,'')        AS descricao,
   COALESCE(d.data_identificacao,'') AS data_identificacao,
-  d.resolvida, 'Não Mapeado' AS acao, '' AS origem
+  d.resolvida, 'Não Mapeado' AS acao, '' AS origem,
+  d.usuario AS login
 FROM divergencias d
 WHERE d.tipo = 'ACESSO_SEM_VINCULO_RH'
 """
@@ -541,8 +551,8 @@ def garantir_estrutura(force=False):
         ).fetchone()
         if existe and not force:
             cols = [r[1] for r in c.execute("PRAGMA table_info(bi_divergencias)")]
-            if "origem" not in cols:
-                force = True  # migração de schema: coluna 'origem' nova
+            if "origem" not in cols or "login" not in cols:
+                force = True  # migração de schema: coluna 'origem'/'login' nova
         if force or not existe:
             c.execute("DROP TABLE IF EXISTS bi_divergencias")
             c.executescript(_SQL_BI)
@@ -836,7 +846,11 @@ def construir_db():
             uc = dict(u)
             uc["resolvido"] = True
             uc["resolucao"] = r
-            uc["divs"] = [dict(d, s="Resolvido") for d in u["divs"]]
+            # Transicao do ciclo: linha JA Aderente (acesso OK) vence o overlay
+            # de resolucao -> some das pendencias como Aderente; o resto vira
+            # Resolvido. O Historico/lupa mantem a trilha do ticket.
+            uc["divs"] = [dict(d, s=("Aderente" if d.get("t") == "OK" else "Resolvido"))
+                          for d in u["divs"]]
             users.append(uc)
         else:
             users.append(u)
@@ -855,7 +869,7 @@ def construir_db():
     vg["chamados"] = ch
     return {"kpis": _BASE["kpis"], "acao_dist": _BASE["acao_dist"],
             "sis_dist": _BASE["sis_dist"], "meta": _BASE["meta"],
-            "users": users, "vg": vg}
+            "users": users, "vg": vg, "aderentes": _BASE.get("aderentes", [])}
 
 
 def _montar_base():
@@ -878,8 +892,10 @@ def _montar_base():
             "divergente": cont("DIVERGENTE"),
             "em_analise": cont("EM_ANALISE"),
             "nao_mapeado": cont("ACESSO_SEM_VINCULO_RH"),
-            "total": c.execute(
-                f"SELECT COUNT(*) FROM bi_divergencias {whereS}", argS).fetchone()[0],
+            "ok": cont("OK"),                       # conforme — nao e' pendencia
+            "total": c.execute(                     # total de PENDENCIAS (exclui OK)
+                f"SELECT COUNT(*) FROM bi_divergencias {whereS} "
+                f"{'AND' if whereS else 'WHERE'} tipo <> 'OK'", argS).fetchone()[0],
         }
         acao_dist = {r["acao"]: r["n"] for r in c.execute(
             f"SELECT acao, COUNT(*) n FROM bi_divergencias {whereS} "
@@ -895,7 +911,7 @@ def _montar_base():
         rows = c.execute(
             f"""SELECT b.usuario, b.nome_usuario, b.matricula, b.tipo, b.acao,
                        b.perfil_encontrado, b.perfil_esperado, b.data_identificacao,
-                       b.resolvida, b.origem, b.sistema,
+                       b.resolvida, b.origem, b.sistema, b.login,
                        COALESCE(r.cargo_descricao,'') cargo,
                        COALESCE(r.departamento,'')   depto,
                        COALESCE(r.centro_custo_codigo,'') cc_cod,
@@ -922,15 +938,22 @@ def _montar_base():
             u["divs"].append({
                 "t": tp, "tl": TIPO_LABEL.get(tp, tp), "a": r["acao"],
                 "sis": r["sistema"] or "",
+                "login": r["login"] or "",   # login do sistema (CD_LOGIN) desta linha
                 "pe": r["perfil_encontrado"], "pp": r["perfil_esperado"],
                 "dt": r["data_identificacao"] or "",
-                "s": "Resolvido" if r["resolvida"] else "Pendente",
+                "s": ("Aderente" if tp == "OK"
+                      else "Resolvido" if r["resolvida"] else "Pendente"),
                 # vinculo lido do rh_ativos (tipo_vinculo): Funcionário (CLT)
                 # ou Terceiro (prestador de fornecedor).
                 "vinc": "Terceiro" if r["tipo_vinc"] == "TERCEIRO" else "Funcionário",
                 "o": ("Matriz " + (r["sistema"] or "")) if r["origem"] == "MATRIZ"
                      else ("Matriz CCO" if r["origem"] == "CCO" else "—"),
             })
+        # Login do usuario = logins distintos dos seus acessos (96% tem 1).
+        # Vazio quando so ha SEM_ACESSO (ainda nao tem login no sistema).
+        for _u in users.values():
+            _logins = sorted({d["login"] for d in _u["divs"] if d.get("login")})
+            _u["login"] = ", ".join(_logins)
         maxdt = c.execute(
             "SELECT MAX(data_identificacao) FROM bi_divergencias "
             "WHERE data_identificacao <> ''").fetchone()[0] or ""
@@ -945,10 +968,51 @@ def _montar_base():
         except Exception as e:
             print(f"  [vg] falha ao calcular Visão Geral: {e!r} — vg vazio")
             vg = {}
+
+        # ── Conformidade (aba Aderentes): quem está conforme + a trilha/datas ─
+        aderentes = []
+        try:
+            cond_a, par_a = "WHERE dt_aderente IS NOT NULL", []
+            if SISTEMA:
+                cond_a += " AND sistema = ?"
+                par_a.append(SISTEMA)
+            for r in c.execute(
+                "SELECT matricula,nome,login,cargo,sistema,perfil,dt_aderente,"
+                "       dt_pendencia,dt_resolvido,ticket "
+                "FROM ciclo_vida_acesso " + cond_a + " ORDER BY dt_aderente DESC", par_a):
+                aderentes.append({
+                    "m": r["matricula"], "n": r["nome"] or "", "login": r["login"] or "",
+                    "cargo": r["cargo"] or "", "sis": r["sistema"] or "",
+                    "perfil": r["perfil"] or "", "dt": r["dt_aderente"] or "",
+                    "dt_pend": r["dt_pendencia"] or "", "dt_resol": r["dt_resolvido"] or "",
+                    "ticket": r["ticket"] or "",
+                })
+        except Exception as e:
+            print(f"  [conf] falha ao montar aderentes: {e!r}")
+
         return {"kpis": kpis, "acao_dist": acao_dist, "sis_dist": sis_dist,
-                "users": list(users.values()), "meta": meta, "vg": vg}
+                "users": list(users.values()), "meta": meta, "vg": vg,
+                "aderentes": aderentes}
     finally:
         c.close()
+
+
+def _fmt_duracao(seg):
+    """Segundos -> 'Xd Yh Zmin' (dias/horas/minutos). None/negativo -> '—'."""
+    if seg is None or seg < 0:
+        return "—"
+    seg = int(seg)
+    d, h, m = seg // 86400, (seg % 86400) // 3600, (seg % 3600) // 60
+    partes = []
+    if d:
+        partes.append(f"{d}d")
+    if h:
+        partes.append(f"{h}h")
+    if m:
+        partes.append(f"{m}min")
+    if not partes:
+        partes.append("0min")   # menos de 1 minuto
+    return " ".join(partes)
 
 
 def _calcular_visao_geral(c, sistema=""):
@@ -969,7 +1033,10 @@ def _calcular_visao_geral(c, sistema=""):
     # Fonte: bi_divergencias (validacao_acessos com ação + ACESSO_SEM_VINCULO_RH).
     try:
         out["pendentes"] = c.execute(
-            f"SELECT COUNT(*) FROM bi_divergencias WHERE resolvida=0{whereS}",
+            f"SELECT COUNT(*) FROM bi_divergencias WHERE resolvida=0 AND tipo<>'OK'{whereS}",
+            argS).fetchone()[0]
+        out["ok"] = c.execute(
+            f"SELECT COUNT(*) FROM bi_divergencias WHERE tipo='OK'{whereS}",
             argS).fetchone()[0]
     except Exception:
         out["pendentes"] = c.execute(
@@ -1091,7 +1158,7 @@ def _calcular_visao_geral(c, sistema=""):
     try:
         chamados["identificados"] = c.execute(
             "SELECT COUNT(*) FROM validacao_acessos "
-            "WHERE date(dt_processamento) >= ?", (corte,)
+            "WHERE situacao_acao='PENDENTE' AND date(dt_processamento) >= ?", (corte,)
         ).fetchone()[0]
     except Exception:
         pass
@@ -1103,6 +1170,35 @@ def _calcular_visao_geral(c, sistema=""):
     except Exception:
         pass  # tabela resolucoes ainda nao existe em banco virgem
     out["chamados"] = chamados
+
+    # Tempo de tratamento (ciclo de vida): medias sobre os ciclos COMPLETOS
+    # (as 3 datas presentes), p/ a barra segmentada — os 2 segmentos somam o
+    # total exato. seg_* em segundos (p/ a proporcao da barra no front).
+    filtro_sis = " AND sistema = ?" if sistema else ""
+    par_sis = (sistema,) if sistema else ()
+    tempos = {"total": "—", "pend_resolv": "—", "resolv_ader": "—",
+              "seg_pr": 0, "seg_ra": 0, "n": 0}
+    try:
+        r = c.execute(
+            "SELECT AVG((julianday(dt_resolvido)-julianday(dt_pendencia))*86400.0), "
+            "       AVG((julianday(dt_aderente )-julianday(dt_resolvido))*86400.0), "
+            "       COUNT(*) "
+            "FROM ciclo_vida_acesso "
+            "WHERE dt_pendencia IS NOT NULL AND dt_resolvido IS NOT NULL "
+            "  AND dt_aderente IS NOT NULL "
+            "  AND dt_resolvido >= dt_pendencia AND dt_aderente >= dt_resolvido"
+            + filtro_sis, par_sis).fetchone()
+        seg_pr, seg_ra, n = (r[0] or 0), (r[1] or 0), (r[2] or 0)
+        if n:
+            tempos.update({
+                "seg_pr": seg_pr, "seg_ra": seg_ra, "n": n,
+                "pend_resolv": _fmt_duracao(seg_pr),
+                "resolv_ader": _fmt_duracao(seg_ra),
+                "total": _fmt_duracao(seg_pr + seg_ra),
+            })
+    except Exception:
+        pass
+    out["tempos"] = tempos
 
     return out
 
@@ -1283,6 +1379,13 @@ def listar_historico_rh():
                     "SELECT MIN(data_identificacao) FROM bi_divergencias "
                     "WHERE usuario=? AND data_identificacao<>''", [rid]).fetchone()
                 dt_pend = (str(row[0]) if row and row[0] else "")
+                # A "identificada" nunca pode ser DEPOIS da "resolvida". Se a
+                # pessoa ja virou Aderente/OK, o bi so guarda a linha OK com a
+                # data do reprocesso (data_identificacao > em) -> limita pela
+                # propria data de resolucao para nao inverter a cronologia.
+                _em = str(rdat.get("em") or "")
+                if _em and (not dt_pend or dt_pend > _em):
+                    dt_pend = _em
                 # dados do encerramento, comuns às 2 linhas (p/ o modal de detalhe)
                 tk = {
                     "ticket": rdat.get("ticket") or "",
@@ -1591,8 +1694,8 @@ def criar_atalho(usuario, nome, origem, filtros):
     origem = (origem or "").strip()
     if not nome:
         return False, "nome obrigatório", None
-    if origem not in ("incl", "hist", "consulta"):
-        return False, "origem inválida (use 'incl', 'hist' ou 'consulta')", None
+    if origem not in ("incl", "hist", "consulta", "conf"):
+        return False, "origem inválida (use 'incl', 'hist', 'consulta' ou 'conf')", None
     if not isinstance(filtros, list):
         return False, "filtros precisa ser lista", None
     atuais = listar_atalhos(usuario, origem)

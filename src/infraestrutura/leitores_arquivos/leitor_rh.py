@@ -21,6 +21,7 @@ _COLUNAS = {
     "centro_custo_codigo": ["Código do Centro de Custo", "Codigo do Centro de Custo", "CENTRO_CUSTO"],
     "centro_custo_nome":   ["Nome do Centro de Custo", "NOME_CENTRO_CUSTO", "CentroCusto"],
     "departamento":        ["Diretoria Executiva", "DEPARTAMENTO", "Departamento"],
+    "gestor":              ["Nome Gestor", "NOME_GESTOR", "Nome do Gestor", "Gestor"],
     "data_admissao":       ["Data de Admissão", "Data de Admissao", "DATA_ADMISSAO", "DtAdmissao"],
     "email":               ["Email", "EMAIL", "E-mail"],
     "situacao":            ["Status do Funcionário", "Status do Funcionario", "SITUACAO", "Status"],
@@ -210,6 +211,7 @@ class LeitorRh(LeitorArquivoBase):
                 data_admissao=_parse_data(_valor(row, col["data_admissao"])),
                 situacao=_valor(row, col["situacao"]) or "ATIVO",
                 tipo_vinculo="FUNCIONARIO",
+                gestor=_valor(row, col["gestor"]) or None,
             ))
         return out
 

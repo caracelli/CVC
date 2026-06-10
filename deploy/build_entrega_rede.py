@@ -61,24 +61,26 @@ ENTRADA_ARQUIVOS = [
     ("Mapeamento CCO_CSC (1).xlsx",                              "MATRIZES/ORGANIZACIONAL"),
     ("MATRIZ DE PERFIL DE ACESSO SYSTUR.xlsx",                   "MATRIZES/PERFIS_SISTEMAS"),
     ("relatorio systur 30.04.xlsx",                              "SISTEMAS/SYSTUR"),
-    # --- FORA da Fase 1 (descomentar quando a fase respectiva entrar) ---
+    # IC (Integrador Contabil) — em escopo: matriz + extrato. O perfil casa por
+    # aproximacao (extrato usa '_', matriz usa espaco). Sistema ativo=true no config.
+    ("Matriz de Perfil de Acessso - IC Integrador Contabil.xlsx", "MATRIZES/PERFIS_SISTEMAS"),
+    ("relatorio IC 30.04.xlsx",                                  "SISTEMAS/IC"),
+    # --- FORA de escopo (descomentar quando a fase respectiva entrar) ---
     # Terceiros (QuickReport): so quando a regra de espelho for definida.
     #   ("RH/ATIVOS/QuickReport_1780421571311.xlsx",            "RH/ATIVOS"),
     # Desligados: fluxo de revogacao, fase separada.
     #   ("PROJETOIAMDESLIGADOS (2).CSV",                         "RH/DESLIGADOS"),
-    # Outros sistemas (matrizes + extratos): fora de escopo na Fase 1.
+    # Outros sistemas (matrizes + extratos): fora de escopo.
     #   ("MATRIZ DE PERFIL DE ACESSO - SIGOT.xlsx",              "MATRIZES/PERFIS_SISTEMAS"),
     #   ("MATRIZ DE PERFIL DE ACESSO SICA ESFERA.xlsx",          "MATRIZES/PERFIS_SISTEMAS"),
     #   ("MATRIZ DE PERFIL DE ACESSO SICA RA.xlsx",              "MATRIZES/PERFIS_SISTEMAS"),
-    #   ("Matriz de Perfil de Acessso - IC Integrador Contabil.xlsx", "MATRIZES/PERFIS_SISTEMAS"),
     #   ("SIGOT_30_04.csv",                                      "SISTEMAS/SIGOT"),
     #   ("SICA_RA_30_04.csv",                                    "SISTEMAS/SICA_RA"),
-    #   ("relatorio IC 30.04.xlsx",                              "SISTEMAS/IC"),
 ]
 
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
-VERSAO_INICIAL = "1.0.0"     # MAJOR.PROCESSADOR.VISUALIZADOR (release inicial Fase 1 SYSTUR)
-VERSAO_NOVA = "1.0.0"        # primeira entrega: tudo 1.0.0 (demo de auto-update nao usado no build atual)
+VERSAO_INICIAL = "1.1.1"     # MAJOR.PROCESSADOR.VISUALIZADOR (ciclo de vida + casamento por gestor + processados por pasta)
+VERSAO_NOVA = "1.1.1"        # entrega: Processador (migracoes/ciclo/gestor) + Visualizador (painel)
 
 ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",

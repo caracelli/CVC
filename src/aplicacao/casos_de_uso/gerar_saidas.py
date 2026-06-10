@@ -13,6 +13,7 @@ _STATUS_LABEL = {
     "DIVERGENTE":  "Alterar Perfil",
     "EM_ANALISE":  "Em Análise",
     "NAO_MAPEADO": "Não Mapeado",
+    "OK":          "Aderente",
 }
 
 

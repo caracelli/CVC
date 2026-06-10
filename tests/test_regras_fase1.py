@@ -150,8 +150,9 @@ class TestValidacaoStatus(unittest.TestCase):
 
     def _gerar(self, perfis, acessos_atuais, sistemas_com_dados=("SYSTUR",)):
         acessos = {"500": [("SYSTUR", p) for p in acessos_atuais]}
+        perfis3 = [(p, m, "MATRIZ") for p, m in perfis]   # origem por perfil
         return self.uc._gerar_registros_sistema(
-            self._func(), "SYSTUR", perfis, acessos, set(sistemas_com_dados), "MATRIZ",
+            self._func(), "SYSTUR", perfis3, acessos, set(sistemas_com_dados),
         )
 
     def test_um_perfil_sem_acesso(self):
@@ -161,7 +162,7 @@ class TestValidacaoStatus(unittest.TestCase):
 
     def test_um_perfil_aderente(self):
         regs = self._gerar([("P1", False)], acessos_atuais=["P1"])
-        self.assertEqual(regs[0]["status"], "ADERENTE")
+        self.assertEqual(regs[0]["status"], "OK")
 
     def test_um_perfil_divergente(self):
         regs = self._gerar([("P1", False)], acessos_atuais=["P2"])
@@ -311,6 +312,55 @@ class TestDobraResolucaoHistorico(unittest.TestCase):
         rs = self._resolucoes()
         self.assertEqual(len(rs), 1)
         self.assertEqual(rs[0]["ticket"], "IAM-9")
+
+
+# ──────────── IC — casamento de perfil por APROXIMACAO ('_' x espaco) ────────────
+class TestValidacaoAproximacaoIC(unittest.TestCase):
+    """O IC casa perfil por APROXIMACAO: o extrato traz NM_GRUPO com '_'
+    ('IC_CONSULTA') e a matriz traz com espaco ('IC CONSULTA'). O SYSTUR
+    permanece com casamento EXATO (a aproximacao e' escopada so ao IC)."""
+
+    IC = Sistema.IC_INTEGRADOR_CONTABIL.value
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.mkdtemp(prefix="cvc_test_ic_")
+        conexao = ConexaoBancoDados(os.path.join(cls._tmp, "ic.db"))
+        conexao.inicializar()
+        cls.uc = ValidarAcessosSistema(conexao)
+
+    def _func(self):
+        return SimpleNamespace(
+            matricula="500", cpf="12345678900", nome="FULANO", email="",
+            centro_custo_codigo="100", centro_custo_nome="TI",
+            cargo_codigo="CG1", cargo_descricao="ANALISTA",
+        )
+
+    def _gerar(self, sistema_valor, perfis, acessos_atuais):
+        acessos = {"500": [(sistema_valor, p) for p in acessos_atuais]}
+        perfis3 = [(p, m, "MATRIZ") for p, m in perfis]   # origem por perfil
+        return self.uc._gerar_registros_sistema(
+            self._func(), sistema_valor, perfis3, acessos, {sistema_valor},
+        )
+
+    def test_ic_underscore_vs_espaco_adere(self):
+        regs = self._gerar(self.IC, [("IC CONSULTA", False)], ["IC_CONSULTA"])
+        self.assertEqual(regs[0]["status"], "OK")
+
+    def test_ic_inconsistencia_interna_da_matriz_adere(self):
+        # matriz tem 'IC_CADASTRO' e 'IC CADASTRO' misturados; a normalizacao
+        # casa ambos com o extrato 'IC_CADASTRO'
+        regs = self._gerar(self.IC, [("IC_CADASTRO", False)], ["IC_CADASTRO"])
+        self.assertEqual(regs[0]["status"], "OK")
+
+    def test_ic_perfil_realmente_diferente_diverge(self):
+        regs = self._gerar(self.IC, [("IC CONSULTA", False)], ["IC_APROVADOR"])
+        self.assertEqual(regs[0]["status"], "DIVERGENTE")
+
+    def test_systur_nao_usa_aproximacao(self):
+        # a aproximacao NAO vale para o SYSTUR: '_' x espaco continua divergindo
+        regs = self._gerar("SYSTUR", [("P 1", False)], ["P_1"])
+        self.assertEqual(regs[0]["status"], "DIVERGENTE")
 
 
 if __name__ == "__main__":

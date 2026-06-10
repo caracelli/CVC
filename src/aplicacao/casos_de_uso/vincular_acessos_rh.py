@@ -29,11 +29,15 @@ class VincularAcessosRh:
     def executar(self) -> dict:
         logger.info("=== Vinculacao Acessos x RH iniciada (cascata multi-chave) ===")
 
-        # Universo de matching: desligados primeiro (ativos sobrescrevem em colisoes).
-        # Mesma logica de antes — ativo prevalece quando ha o mesmo CPF/email.
+        # Universo de matching: ATIVOS primeiro. A cascata indexa numa lista e,
+        # em colisao (mesmo CPF/email/nome em ativo e desligado), escolhe o
+        # PRIMEIRO da lista (cand[0]) — entao o ativo prevalece, e o desligado
+        # entra so como candidato para revisao. Caso tipico: re-contratacao
+        # (mesma pessoa com matricula nova ativa); o acesso deve ligar ao cargo
+        # ATUAL, nao ao vinculo desligado.
         funcionarios = []
-        funcionarios.extend(self._repo_func.obter_desligados())
         funcionarios.extend(self._repo_func.obter_ativos())
+        funcionarios.extend(self._repo_func.obter_desligados())
         universo = construir_universo(funcionarios)
 
         contagem = self._repo_acesso.vincular_multi_chave(universo)

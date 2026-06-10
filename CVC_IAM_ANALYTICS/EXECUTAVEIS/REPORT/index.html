@@ -92,6 +92,8 @@ body{
   box-shadow:inset 6px 0 0 0 var(--kpi-bar,var(--gold)),var(--sh-1);
   transition:transform .18s cubic-bezier(.22,.68,.24,1),box-shadow .18s;
 }
+.kpi-link{cursor:pointer;}
+.kpi-link:hover{transform:translateY(-2px);box-shadow:inset 6px 0 0 0 var(--kpi-bar,var(--gold)),0 6px 16px rgba(22,160,133,.25);}
 .kpi::before{               /* brilho superior (recua 6px p/ não cobrir a faixa) */
   content:"";position:absolute;left:6px;right:0;top:0;height:56%;
   background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0));
@@ -288,10 +290,10 @@ body{
 
 /* ── Tabela ─────────────────────────────────────────────────────────── */
 table{border-collapse:collapse;width:100%;font-size:11px;}
-#matrix-tbl{table-layout:fixed;min-width:1240px;}
-#sv-tbl{table-layout:fixed;min-width:1040px;}
-#quar-tbl{table-layout:fixed;min-width:1040px;}
-#cs-tbl{table-layout:fixed;min-width:1504px;}
+#matrix-tbl{table-layout:auto;min-width:1240px;}
+#sv-tbl{table-layout:auto;min-width:1040px;}
+#quar-tbl{table-layout:auto;min-width:1040px;}
+#cs-tbl{table-layout:auto;min-width:1504px;}
 thead th{
   position:sticky;top:0;z-index:2;
   background:linear-gradient(180deg,#2C3D72,#1F2D5C);color:#fff;
@@ -306,6 +308,8 @@ tbody td{
   border-bottom:1px solid #EAEEF3;border-right:1px solid #F2F3F6;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
+/* Perfil encontrado com vários acessos: uma linha por perfil */
+td.perfil-cel{white-space:normal;line-height:1.45;overflow:visible;text-overflow:clip;}
 tbody td:last-child{border-right:none;}
 tbody tr{transition:background .12s;}
 tbody tr:nth-child(even){background:#F7F9FC;}
@@ -338,6 +342,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .b-em-analise  {background:#FFF3CD;color:#856404;}
 .b-pendente    {background:#FDE7E9;color:#A4262C;}
 .b-resolvida   {background:#DFF6DD;color:#107C10;}
+.b-ok          {background:#D5F5E3;color:#0E6B47;}
 
 /* ── Gráficos ───────────────────────────────────────────────────────── */
 .chart-row{flex:1;min-height:0;display:flex;gap:13px;}
@@ -364,6 +369,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 #pg-vg::-webkit-scrollbar-thumb:hover{background:rgba(31,45,92,.45);}
 .vg-row{display:flex;gap:13px;flex:none;}
 .vg-2col>.panel,.vg-2col-bg>.panel{flex:1;min-width:0;}
+.vg-3col>.panel{flex:1;min-width:0;}
 .vg-2col-bg>.panel:nth-child(1){flex:0 0 40%;}
 .vg-panel{padding:14px 16px;display:flex;flex-direction:column;min-height:0;}
 .vg-title{font-size:13px;font-weight:700;color:var(--navy);
@@ -384,6 +390,33 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   display:flex;justify-content:space-between;font-size:11.5px;color:#5A6377;}
 .vg-saldo-pos{color:#B33A3A;font-weight:700;}
 .vg-saldo-neg{color:#1E8449;font-weight:700;}
+
+/* Tempo de tratamento (ciclo de vida) — barra segmentada (composição) */
+.vg-tempos{margin-top:2px;display:flex;flex-direction:column;}
+.vg-tempo-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.vg-tempo-total-val{font-size:24px;font-weight:800;color:#16A085;letter-spacing:-.5px;}
+.vg-tempo-total-lbl{font-size:11.5px;color:#5A6377;font-weight:600;}
+.vg-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none;}
+.vg-seg-bar{display:flex;height:30px;border-radius:7px;overflow:hidden;background:rgba(31,45,92,.06);
+  box-shadow:inset 0 1px 2px rgba(20,28,55,.10);}
+.vg-seg{transition:width .6s cubic-bezier(.22,.68,.24,1);}
+.vg-seg-pr{background:#B33A3A;}
+.vg-seg-ra{background:#F5B800;}
+.vg-seg-rows{margin-top:11px;display:flex;flex-direction:column;gap:8px;}
+.vg-seg-row{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#5A6377;font-weight:600;}
+.vg-seg-k{flex:1;min-width:0;}
+.vg-seg-row b{color:#1F2D5C;font-weight:800;white-space:nowrap;}
+.vg-seg-empty-msg{font-size:11px;color:#9AA3B5;font-style:italic;margin-top:8px;}
+
+/* ── Aba Aderentes (usa o padrão de grid navy do projeto) ───────────── */
+.conf-topo{display:flex;align-items:center;gap:14px;flex:none;}
+.conf-kpi{font-size:13px;color:#5A6377;font-weight:600;white-space:nowrap;}
+.conf-kpi span{font-size:24px;font-weight:800;color:#0E6B47;margin-right:4px;letter-spacing:-.4px;}
+.conf-busca{flex:0 1 380px;padding:8px 12px;border:1px solid #D5DCEA;border-radius:7px;
+  font-size:13px;outline:none;}
+.conf-busca:focus{border-color:#16A085;box-shadow:0 0 0 3px rgba(22,160,133,.12);}
+.conf-note{font-size:11.5px;color:#5A6377;}
+#conf-tbl{min-width:1180px;}
 
 /* Movimentação RH (barra empilhada) */
 .vg-mov-bar{display:flex;height:30px;border-radius:6px;overflow:hidden;margin-bottom:10px;
@@ -665,6 +698,10 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   color:#15428B;border-color:#A8C0E8;}
 .cs-aba-btn.h:hover{filter:brightness(1.04);
   box-shadow:0 2px 6px rgba(21,66,139,.25);}
+.cs-aba-btn.a{background:linear-gradient(180deg,#D5F5E3,#A9DFBF);
+  color:#0E6B47;border-color:#9FD6B8;}
+.cs-aba-btn.a:hover{filter:brightness(1.04);
+  box-shadow:0 2px 6px rgba(14,107,71,.25);}
 .cs-aba-btn:active{transform:translateY(1px);}
 .cs-aba-btn[disabled]{opacity:.42;cursor:not-allowed;pointer-events:none;}
 .cs-vazio{text-align:center;padding:38px 18px;color:#7B8294;
@@ -838,6 +875,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   <div class="tab active" data-tab="vg">Visão Geral</div>
   <div class="tab"        data-tab="consulta">Consulta</div>
   <div class="tab"        data-tab="incl">Pendências</div>
+  <div class="tab"        data-tab="conf">Aderentes</div>
   <div class="tab"        data-tab="hist">Histórico</div>
   <div class="tab"        data-tab="quar">Quarentena</div>
 </nav>
@@ -866,8 +904,8 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
       </div>
     </div>
 
-    <!-- Linha 2 — Chamados (últimos 30 dias) + Movimentação RH -->
-    <div class="vg-row vg-2col">
+    <!-- Linha 2 — Chamados | Tempo de Tratamento | Movimentação RH -->
+    <div class="vg-row vg-3col">
       <div class="panel vg-panel">
         <div class="vg-title">📨 Chamados <span class="vg-soft">(últimos 30 dias)</span></div>
         <div class="vg-chamado-row">
@@ -882,7 +920,30 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
         </div>
         <div class="vg-saldo">
           <span>Saldo aberto: <span id="vg-saldo">—</span></span>
-          <span class="vg-soft">Tempo médio resolução: <b id="vg-tmr">—</b></span>
+        </div>
+      </div>
+
+      <!-- Tempo de tratamento (ciclo Pendência → Resolvido → Aderente) -->
+      <div class="panel vg-panel">
+        <div class="vg-title">⏱️ Tempo de Tratamento <span class="vg-soft">(ciclo)</span></div>
+        <div class="vg-tempos">
+          <div class="vg-tempo-head">
+            <span class="vg-tempo-total-val" id="vg-t-tot">—</span>
+            <span class="vg-tempo-total-lbl">médio total <span class="vg-soft" id="vg-t-tot-n"></span></span>
+          </div>
+          <div class="vg-seg-bar" id="vg-seg-bar">
+            <div class="vg-seg vg-seg-pr" id="vg-seg-pr"></div>
+            <div class="vg-seg vg-seg-ra" id="vg-seg-ra"></div>
+          </div>
+          <div class="vg-seg-rows">
+            <div class="vg-seg-row"><i class="vg-dot" style="background:#B33A3A"></i>
+              <span class="vg-seg-k">Pendência → Resolvido</span><b id="vg-seg-pr-v">—</b></div>
+            <div class="vg-seg-row"><i class="vg-dot" style="background:#F5B800"></i>
+              <span class="vg-seg-k">Resolvido → Aderente</span><b id="vg-seg-ra-v">—</b></div>
+          </div>
+          <div class="vg-seg-empty-msg" id="vg-seg-empty-msg" style="display:none;">
+            Sem ciclos completos ainda.
+          </div>
         </div>
       </div>
 
@@ -951,6 +1012,11 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
         <div class="kpi-val" style="color:#E67E22;">798</div>
         <div class="kpi-lbl" style="color:#E67E22;">Em Análise</div>
       </div>
+      <div class="kpi kpi-link" style="background:#E8F8F5;border:1px solid #A3E4D7;--kpi-bar:#16A085;"
+           onclick="showPage('conf')" title="Ver a aba Aderentes (conformes)">
+        <div class="kpi-val" style="color:#16A085;" id="kpi-aderente">0</div>
+        <div class="kpi-lbl" style="color:#16A085;">Aderente ↗</div>
+      </div>
       <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;--kpi-bar:#7D3C98;">
         <div class="kpi-val" style="color:#7D3C98;">4.957</div>
         <div class="kpi-lbl" style="color:#7D3C98;">Total Não Mapeados</div>
@@ -965,7 +1031,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
         <div id="filtros"></div>
       </div>
       <div class="incl-main">
-        <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="por-pagina" onchange="mudarPorPagina(this.value)"><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="pager"></span><span class="lista-total" id="incl-total"></span><span class="cs-vinculo-host" id="cs-vinculo-incl"></span><div class="atl-actions" id="atl-actions-incl"></div><button class="btn-exp" onclick="exportarInclusao()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+        <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="por-pagina" onchange="mudarPorPagina(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="pager"></span><span class="lista-total" id="incl-total"></span><span class="cs-vinculo-host" id="cs-vinculo-incl"></span><div class="atl-actions" id="atl-actions-incl"></div><button class="btn-exp" onclick="exportarInclusao()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
       <div class="content-panel">
         <div class="tbl-wrap">
           <table id="matrix-tbl">
@@ -1022,6 +1088,8 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
         <input id="cs-busca" type="text" placeholder="Buscar por nome, matrícula, CPF, login ou e-mail..." />
         <button id="cs-busca-clear" onclick="csLimparBusca()" title="Limpar">×</button>
       </div>
+      <span class="pp-wrap">Itens por página:<select id="cs-pp" onchange="csPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span>
+      <span class="pager" id="cs-pager"></span>
       <span class="lista-total" id="cs-total"></span>
       <div class="atl-actions" id="atl-actions-consulta"></div>
       <button class="btn-exp" onclick="csExportar()">
@@ -1089,9 +1157,33 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
     </div>
   </div>
 
+  <!-- ═══ ADERENTES (CONFORMIDADE) ═══ -->
+  <div class="page" id="pg-conf">
+    <div class="conf-topo">
+      <div class="conf-kpi"><span id="conf-total">0</span> <small>acessos aderentes (conformes)</small></div>
+      <input id="conf-busca" class="conf-busca" placeholder="Buscar matrícula, nome, login, perfil, ticket…"
+             oninput="confBuscar()">
+      <span class="conf-note">Ciclo: 🔴 Pendência → 🟡 Resolvido (ticket) → 🟢 Aderente · <b>tempo total</b> (d/h/min)</span>
+    </div>
+    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="conf-pp" onchange="confPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="conf-pager"></span><span class="lista-total"></span><span class="cs-vinculo-host" id="cs-vinculo-conf"></span><div class="atl-actions" id="atl-actions-conf"></div><button class="btn-exp" onclick="exportarAderentes()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+    <div class="content-panel">
+      <div class="tbl-wrap">
+        <table id="conf-tbl">
+          <thead><tr>
+            <th>Matrícula</th><th>Nome</th><th>Login</th>
+            <th>Sistema</th><th>Perfil aderente</th>
+            <th>🔴 Pendência</th><th>🟡 Resolvido</th><th>🟢 Aderente</th>
+            <th>Ticket</th><th>⏱️ Tempo total</th>
+          </tr></thead>
+          <tbody id="conf-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ HISTÓRICO ═══ -->
   <div class="page" id="pg-hist">
-    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="hist-pp" onchange="histPP(this.value)"><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="hist-pager"></span><span class="lista-total" id="hist-count"></span><span class="cs-vinculo-host" id="cs-vinculo-hist"></span><div class="atl-actions" id="atl-actions-hist"></div><button class="btn-exp" onclick="exportarHistorico()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="hist-pp" onchange="histPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="hist-pager"></span><span class="lista-total" id="hist-count"></span><span class="cs-vinculo-host" id="cs-vinculo-hist"></span><div class="atl-actions" id="atl-actions-hist"></div><button class="btn-exp" onclick="exportarHistorico()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
     <div class="content-panel">
       <div class="tbl-wrap">
         <table id="hist-tbl">
@@ -1172,15 +1264,296 @@ function showPage(tab){
     if (tab === 'quar') await renderQuarentena();
     else if (tab === 'hist') { await renderHistorico(); carregarAtalhos('hist', true); }
     else if (tab === 'vg')   { renderVisaoGeral(); }
+    else if (tab === 'conf') { renderConformidade(); carregarAtalhos('conf', true); }
     else if (tab === 'incl') { renderMatrix(); aplicarKPIs(); carregarAtalhos('incl', true); }
-    else if (tab === 'consulta') { renderConsulta(); carregarAtalhos('consulta', true); }
-    if (tab === 'incl' || tab === 'hist') _renderBadgeVindoConsulta();
+    else if (tab === 'consulta') { await _carregarHistMats(); renderConsulta(); carregarAtalhos('consulta', true); }
+    if (tab === 'incl' || tab === 'hist' || tab === 'conf') _renderBadgeVindoConsulta();
     await proc(false);
   }));
 }
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => showPage(t.dataset.tab));
 });
+
+/* ── Conformidade (Aderentes) ─────────────────────────────────────────── */
+// Duração entre duas datas ISO ("YYYY-MM-DD HH:MM:SS") -> "Xd Yh Zmin".
+function _durStr(ini, fim){
+  if(!ini || !fim) return '—';
+  const a = new Date(String(ini).replace(' ','T')), b = new Date(String(fim).replace(' ','T'));
+  let s = Math.round((b - a)/1000);
+  if(isNaN(s) || s < 0) return '—';
+  const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60);
+  const p = [];
+  if(d) p.push(d+'d'); if(h) p.push(h+'h'); if(m) p.push(m+'min');
+  // < 1 min = mesmo processamento (sem tempo real decorrido) -> não contabiliza
+  return p.length ? p.join(' ') : '—';
+}
+let _confPag = 1, _confPP = 50;
+function confPP(v){ _confPP = parseInt(v, 10) || 100; _confPag = 1; renderConformidade(); }
+function confIr(p){ _confPag = p; renderConformidade(); }
+function confBuscar(){ _confPag = 1; renderConformidade(); }
+function renderConformidade(){
+  const rows = _confRowsFiltradas();
+  const tot = document.getElementById('conf-total');
+  if (tot) tot.textContent = rows.length.toLocaleString('pt-BR');
+  const totPag = Math.max(1, Math.ceil(rows.length / _confPP));
+  if (_confPag > totPag) _confPag = totPag;
+  if (_confPag < 1) _confPag = 1;
+  const ini = (_confPag - 1) * _confPP;
+  const pag = rows.slice(ini, ini + _confPP);
+  const tb = document.getElementById('conf-tbody');
+  if (!tb) return;
+  tb.innerHTML = pag.map(a => {
+    const total = _durStr(a.dt_pend, a.dt);
+    return `<tr><td><strong>${esc(a.m)}</strong></td><td>${esc(a.n)}</td>`
+    + `<td><strong style="color:#1F2D5C;">${esc(a.login)}</strong></td>`
+    + `<td>${esc(a.sis)}</td><td>${esc(a.perfil)}</td>`
+    + `<td>${a.dt_pend ? fmtDH(a.dt_pend) : '—'}</td>`
+    + `<td>${a.dt_resol ? fmtDH(a.dt_resol) : '—'}</td>`
+    + `<td><span class="badge b-ok">${fmtDH(a.dt)}</span></td>`
+    + `<td>${a.ticket ? esc(a.ticket) : '—'}</td>`
+    + `<td><b style="color:#16A085;white-space:nowrap;">${total}</b></td></tr>`;
+  }).join('')
+    || '<tr><td colspan="10" style="text-align:center;color:#9AA3B5;padding:22px;">'
+       + 'Nenhum acesso aderente ainda.</td></tr>';
+  const pg = document.getElementById('conf-pager');
+  if (pg) pg.innerHTML = rows.length === 0 ? '' :
+      `<button class="pg-btn" ${_confPag<=1?'disabled':''} onclick="confIr(1)">«</button>`
+    + `<button class="pg-btn" ${_confPag<=1?'disabled':''} onclick="confIr(${_confPag-1})">‹</button>`
+    + `<span class="pg-atual">${_confPag} / ${totPag}</span>`
+    + `<button class="pg-btn" ${_confPag>=totPag?'disabled':''} onclick="confIr(${_confPag+1})">›</button>`
+    + `<button class="pg-btn" ${_confPag>=totPag?'disabled':''} onclick="confIr(${totPag})">»</button>`;
+  equiparConf();
+}
+
+/* Aderentes — funil por coluna (categóricas) + filtro de DATA (col 5/6/7) ── */
+const _confFilt = {};              // col idx -> Set de valores permitidos
+let _confData = {};                // col idx -> {tipo, de, ate}
+let _confDataCol = null;           // coluna do popover de data aberto
+const _CONF_DATECOL  = {5:'dt_pend', 6:'dt_resol', 7:'dt'};
+const _CONF_FUNILCOL = {3:'Sistema', 4:'Perfil aderente', 8:'Ticket'};
+const _CONF_NOME_COL = {'Sistema':3, 'Perfil aderente':4, 'Ticket':8};
+const _CONF_DATENOME = {5:'Pendência', 6:'Resolvido', 7:'Aderente'};
+const _CONF_DATENOME_COL = {'Pendência':5, 'Resolvido':6, 'Aderente':7};
+
+function _confDisp(c, a){
+  if (c === 3) return a.sis || '—';
+  if (c === 4) return a.perfil || '—';
+  if (c === 8) return a.ticket || '(sem ticket)';
+  return '—';
+}
+function _confResolveData(fd){
+  if (!fd || !fd.tipo) return null;
+  const hoje = new Date(), z = n => String(n).padStart(2,'0');
+  const ymd = d => d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
+  switch (fd.tipo){
+    case 'hoje': return {de: ymd(hoje), ate: ymd(hoje)};
+    case '7d':   { const d=new Date(hoje); d.setDate(d.getDate()-6); return {de: ymd(d), ate: ymd(hoje)}; }
+    case 'mes':  return {de: ymd(new Date(hoje.getFullYear(), hoje.getMonth(), 1)), ate: ymd(hoje)};
+    case 'ano':  return {de: ymd(new Date(hoje.getFullYear(), 0, 1)), ate: ymd(hoje)};
+    case 'range': return (fd.de || fd.ate) ? {de: fd.de||'', ate: fd.ate||''} : null;
+  }
+  return null;
+}
+function _confPassaData(a){
+  return Object.entries(_confData).every(([c, fd]) => {
+    const r = _confResolveData(fd);
+    if (!r) return true;
+    const v = String(a[_CONF_DATECOL[+c]] || '').slice(0,10);
+    if (!v) return false;
+    if (r.de && v < r.de) return false;
+    if (r.ate && v > r.ate) return false;
+    return true;
+  });
+}
+// Linhas que passam em busca + funil + filtro de data (mesma base da grid e do export)
+function _confRowsFiltradas(){
+  const arr = DB.aderentes || [];
+  const q = _csNorm((document.getElementById('conf-busca') || {}).value || '');
+  let rows = q
+    ? arr.filter(a => _csNorm(`${a.m} ${a.n} ${a.login} ${a.perfil} ${a.sis} ${a.cargo} ${a.ticket}`).includes(q))
+    : arr.slice();
+  const cf = Object.entries(_confFilt);
+  if (cf.length) rows = rows.filter(a => cf.every(([c, set]) => set.has(_confDisp(+c, a))));
+  return rows.filter(_confPassaData);
+}
+function exportarAderentes(){
+  const rows = _confRowsFiltradas();
+  const cols = ['Matrícula','Nome','Login','Cargo','Sistema','Perfil aderente',
+                'Pendência','Resolvido','Aderente','Ticket','Tempo total'];
+  const linhas = rows.map(a => [a.m, a.n, a.login, a.cargo, a.sis, a.perfil,
+                a.dt_pend || '', a.dt_resol || '', a.dt || '', a.ticket || '',
+                _durStr(a.dt_pend, a.dt)]);
+  baixarExcel('Aderentes', cols, linhas, linhas.map(() => 0));
+}
+function _confMenu(c, th){
+  _gxFechar();
+  const base = DB.aderentes || [];
+  const sv = new Set(); base.forEach(a => sv.add(_confDisp(c, a)));
+  const lista = [...sv].sort(_gxCmp), sel = _confFilt[c];
+  const m = document.createElement('div');
+  m.className = 'gx-menu'; m.id = 'gx-menu';
+  m.innerHTML =
+      '<input class="gx-busca" placeholder="buscar valor...">'
+    + '<label class="gx-v gx-todos"><input type="checkbox" checked> (Todos)</label>'
+    + '<div class="gx-vals">' + lista.map((v, i) =>
+        '<label class="gx-v"><input type="checkbox" value="' + i + '" '
+        + ((!sel || sel.has(v)) ? 'checked' : '') + '> ' + (esc(v) || '(vazio)') + '</label>').join('')
+    + '</div><div class="gx-acoes"><button class="gx-ok">Aplicar</button>'
+    + '<button class="gx-limpar">Limpar</button></div>';
+  document.body.appendChild(m);
+  const r = th.getBoundingClientRect();
+  m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - m.offsetWidth - 6)) + 'px';
+  m.style.top  = Math.min(r.bottom + 2, window.innerHeight - m.offsetHeight - 6) + 'px';
+  const bu = m.querySelector('.gx-busca');
+  bu.oninput = () => {
+    const qq = bu.value.toLowerCase();
+    m.querySelectorAll('.gx-vals .gx-v').forEach(l => {
+      const hit = l.textContent.toLowerCase().includes(qq);
+      l.style.display = hit ? '' : 'none';
+      l.querySelector('input').checked = hit;
+    });
+    m.querySelector('.gx-todos input').checked =
+      [...m.querySelectorAll('.gx-vals input')].every(i => i.checked);
+  };
+  const tdc = m.querySelector('.gx-todos input');
+  tdc.onchange = () => m.querySelectorAll('.gx-vals .gx-v').forEach(l => {
+    if (l.style.display !== 'none') l.querySelector('input').checked = tdc.checked;
+  });
+  m.querySelector('.gx-ok').onclick = () => {
+    const marc = [...m.querySelectorAll('.gx-vals input:checked')].map(i => lista[+i.value]);
+    if (marc.length >= lista.length) delete _confFilt[c]; else _confFilt[c] = new Set(marc);
+    _gxFechar(); confBuscar(); _confAtalhoSync();
+  };
+  m.querySelector('.gx-limpar').onclick = () => { delete _confFilt[c]; _gxFechar(); confBuscar(); _confAtalhoSync(); };
+  setTimeout(() => document.addEventListener('mousedown', _gxFora), 0);
+}
+function _confAtalhoSync(){
+  if (_tabAtual === 'conf') { renderAtalhosOpcaoC('conf'); _persistirFiltroAplicado('conf'); }
+}
+
+/* ── Componente de FILTRO DE DATA genérico (preset/range) — padrão de todas
+   as grids com coluna de data. fd = {tipo, de, ate}. ─────────────────────── */
+function _dtRange(fd){
+  if (!fd || !fd.tipo) return null;
+  const hoje = new Date(), z = n => String(n).padStart(2,'0');
+  const ymd = d => d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
+  switch (fd.tipo){
+    case 'hoje': return {de: ymd(hoje), ate: ymd(hoje)};
+    case '7d':   { const d=new Date(hoje); d.setDate(d.getDate()-6); return {de: ymd(d), ate: ymd(hoje)}; }
+    case 'mes':  return {de: ymd(new Date(hoje.getFullYear(), hoje.getMonth(), 1)), ate: ymd(hoje)};
+    case 'ano':  return {de: ymd(new Date(hoje.getFullYear(), 0, 1)), ate: ymd(hoje)};
+    case 'range': return (fd.de || fd.ate) ? {de: fd.de||'', ate: fd.ate||''} : null;
+  }
+  return null;
+}
+function _dtPass(val, fd){
+  const r = _dtRange(fd);
+  if (!r) return true;
+  const v = String(val || '').slice(0,10);
+  if (!v) return false;
+  if (r.de && v < r.de) return false;
+  if (r.ate && v > r.ate) return false;
+  return true;
+}
+// Serializa fd p/ atalho ('hoje'/'7d'/'mes'/'ano' ou 'range|de|ate'); e o reverso.
+function _dtSer(fd){ return fd.tipo === 'range' ? `range|${fd.de||''}|${fd.ate||''}` : fd.tipo; }
+function _dtDes(v){ const s=String(v); if(s.startsWith('range|')){const p=s.split('|');return {tipo:'range',de:p[1]||'',ate:p[2]||''};} return {tipo:s,de:'',ate:''}; }
+// Popover de data; chama onApply(fd|null) ao Aplicar/Limpar.
+function _dtMenu(th, fd0, onApply){
+  _gxFechar();
+  const fd = fd0 || {tipo:'', de:'', ate:''};
+  const m = document.createElement('div');
+  m.className = 'gx-menu dm-menu'; m.id = 'gx-menu';
+  const rad = (v, lab) => `<label class="dm-r"><input type="radio" name="dm-tipo" value="${v}" `
+    + (fd.tipo === v ? 'checked' : '') + `> ${lab}</label>`;
+  m.innerHTML =
+      '<div class="dm-h">Períodos rápidos</div>'
+    + rad('', 'Tudo (sem filtro)') + rad('hoje', 'Hoje') + rad('7d', 'Últimos 7 dias')
+    + rad('mes', 'Este mês') + rad('ano', 'Este ano')
+    + '<div class="dm-sep"></div><div class="dm-h">Personalizado</div>'
+    + rad('range', 'Entre datas:')
+    + '<div class="dm-range"><label>De  <input type="date" id="dm-de" value="' + (fd.de || '') + '"></label>'
+    + '<label>Até <input type="date" id="dm-ate" value="' + (fd.ate || '') + '"></label></div>'
+    + '<div class="dm-ft"><button class="gx-ok" id="dm-ok">Aplicar</button>'
+    + '<button class="gx-limpar" id="dm-limpar">Limpar</button></div>';
+  document.body.appendChild(m);
+  const r = th.getBoundingClientRect();
+  m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 290)) + 'px';
+  m.style.top  = Math.min(r.bottom + 2, window.innerHeight - m.offsetHeight - 6) + 'px';
+  ['dm-de','dm-ate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => m.querySelector('input[value="range"]').checked = true);
+  });
+  m.querySelector('#dm-ok').onclick = () => {
+    const sel = document.querySelector('input[name="dm-tipo"]:checked');
+    const tipo = sel ? sel.value : '';
+    _gxFechar();
+    if (!tipo) onApply(null);
+    else onApply({tipo,
+      de:  tipo === 'range' ? ((document.getElementById('dm-de')  || {}).value || '') : '',
+      ate: tipo === 'range' ? ((document.getElementById('dm-ate') || {}).value || '') : ''});
+  };
+  m.querySelector('#dm-limpar').onclick = () => { _gxFechar(); onApply(null); };
+  setTimeout(() => document.addEventListener('mousedown', _gxFora), 0);
+}
+function _confMenuData(c, th){
+  _gxFechar();
+  _confDataCol = c;
+  const fd = _confData[c] || {tipo:'', de:'', ate:''};
+  const m = document.createElement('div');
+  m.className = 'gx-menu dm-menu'; m.id = 'gx-menu';
+  const rad = (v, lab) =>
+    `<label class="dm-r"><input type="radio" name="dm-tipo" value="${v}" `
+    + (fd.tipo === v ? 'checked' : '') + `> ${lab}</label>`;
+  m.innerHTML =
+      '<div class="dm-h">Períodos rápidos</div>'
+    + rad('', 'Tudo (sem filtro)') + rad('hoje', 'Hoje') + rad('7d', 'Últimos 7 dias')
+    + rad('mes', 'Este mês') + rad('ano', 'Este ano')
+    + '<div class="dm-sep"></div><div class="dm-h">Personalizado</div>'
+    + rad('range', 'Entre datas:')
+    + '<div class="dm-range"><label>De  <input type="date" id="dm-de" value="' + (fd.de || '') + '"></label>'
+    + '<label>Até <input type="date" id="dm-ate" value="' + (fd.ate || '') + '"></label></div>'
+    + '<div class="dm-ft"><button class="gx-ok dm-aplicar" onclick="_confAplicarData()">Aplicar</button>'
+    + '<button class="gx-limpar dm-limpar" onclick="_confLimparData()">Limpar</button></div>';
+  document.body.appendChild(m);
+  const r = th.getBoundingClientRect();
+  m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 290)) + 'px';
+  m.style.top  = Math.min(r.bottom + 2, window.innerHeight - m.offsetHeight - 6) + 'px';
+  ['dm-de','dm-ate'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change',
+      () => m.querySelector('input[value="range"]').checked = true);
+  });
+  setTimeout(() => document.addEventListener('mousedown', _gxFora), 0);
+}
+function _confAplicarData(){
+  const sel = document.querySelector('input[name="dm-tipo"]:checked');
+  const tipo = sel ? sel.value : '';
+  const c = _confDataCol;
+  if (!tipo) { delete _confData[c]; }
+  else {
+    _confData[c] = {tipo,
+      de:  tipo === 'range' ? ((document.getElementById('dm-de')  || {}).value || '') : '',
+      ate: tipo === 'range' ? ((document.getElementById('dm-ate') || {}).value || '') : ''};
+  }
+  _gxFechar(); confBuscar(); _confAtalhoSync();
+}
+function _confLimparData(){ delete _confData[_confDataCol]; _gxFechar(); confBuscar(); _confAtalhoSync(); }
+function equiparConf(){
+  document.querySelectorAll('#conf-tbl thead th').forEach((th, c) => {
+    const isData = _CONF_DATECOL[c], isFunil = _CONF_FUNILCOL[c];
+    if (!isData && !isFunil) return;
+    th.classList.add('th-x');
+    let mk = th.querySelector('.th-mk');
+    if (!mk) {
+      mk = document.createElement('span'); mk.className = 'th-mk'; mk.innerHTML = _SVG_FUNIL;
+      mk.onclick = ev => { ev.stopPropagation(); isData ? _confMenuData(c, th) : _confMenu(c, th); };
+      th.appendChild(mk);
+    }
+    mk.classList.toggle('mk-filtrado', isData ? !!_confData[c] : !!_confFilt[c]);
+  });
+}
 
 /* ── Filtros laterais (gerados da base, multi-seleção) ────────────────── */
 const FILTROS = [
@@ -1198,6 +1571,7 @@ const DESC_FILTRO = {
   'Incluir Acesso': 'Funcionário sem o acesso que a matriz do cargo exige — precisa incluir o perfil.',
   'Alterar Perfil': 'Funcionário com perfil diferente do permitido para o cargo — precisa alterar.',
   'Em Análise':     'O cargo tem mais de um perfil possível na matriz — requer análise manual.',
+  'Aderente':       'Funcionário com pelo menos um perfil aderente ao esperado do cargo — conforme (não é pendência).',
   'Não Mapeado':    'Acesso no sistema sem funcionário correspondente na base de RH ativa.',
   // Tipo (mesma classificação, rótulo usado na grid)
   'Sem Acesso':     'Funcionário sem o acesso que a matriz do cargo exige — precisa incluir o perfil.',
@@ -1219,10 +1593,12 @@ function montarFiltros(){
   const dica = '<div class="filtro-dica">Clique <b>isola</b> o valor · '
     + 'Ctrl+clique para <b>combinar</b></div>';
   host.innerHTML = dica + FILTROS.map(f => {
-    // Status é um conjunto fechado: fixa Pendente/Resolvido para que uma
-    // pendência resolvida ao vivo continue visível (o valor já existe no card).
-    const vals = f.id === 'status'
-      ? ['Pendente', 'Resolvido'] : valoresFiltro(f.campo);
+    // Status é um conjunto fechado: Pendente/Resolvido. "Aderente" vive só na
+    // dimensão Ação (não aparece em Status nem em Tipo).
+    let vals;
+    if (f.id === 'status') vals = ['Pendente', 'Resolvido'];
+    else { vals = valoresFiltro(f.campo);
+           if (f.id === 'tipo' || f.id === 'acao') vals = vals.filter(v => v !== 'Aderente'); }
     filtroSel[f.id] = new Set(vals);
     const comInfo = (f.id === 'acao' || f.id === 'status' || f.id === 'tipo');
     const todos = `<button class="pill yellow" data-all="1" onclick="filtroTodos('${f.id}',this)">Desmarcar Todos</button>`;
@@ -1278,10 +1654,13 @@ function filtroTodos(fid, btn){
 }
 
 function divPassa(d){
+  // Aderente não é filtrável por Ação/Status/Tipo (não aparece em Pendências;
+  // na Consulta deve sempre passar). Filtra só por Vínculo e Sistema.
+  const ad = d.a === 'Aderente';
   return (!filtroSel.vinculo || filtroSel.vinculo.has(d.vinc)) &&
-         (!filtroSel.acao    || filtroSel.acao.has(d.a))    &&
-         (!filtroSel.status  || filtroSel.status.has(d.s))  &&
-         (!filtroSel.tipo    || filtroSel.tipo.has(d.tl))   &&
+         (ad || !filtroSel.acao    || filtroSel.acao.has(d.a))    &&
+         (ad || !filtroSel.status  || filtroSel.status.has(d.s))  &&
+         (ad || !filtroSel.tipo    || filtroSel.tipo.has(d.tl))   &&
          (!filtroSel.sistema || filtroSel.sistema.has(d.sis));
 }
 
@@ -1289,6 +1668,7 @@ async function aplicarFiltro(){
   paginaAtual = 1;
   await refreshDB();   // releitura por evento: traz interacoes novas da rede
   comHandling(renderMatrix);
+  aplicarKPIs();       // cards do topo seguem os filtros laterais
   // Atualiza o badge "Aplicado: <nome>" da aba ativa —
   // o estado dos filtros mudou, pode ter virado/saido de um filtro salvo
   if (_tabAtual === 'incl' || _tabAtual === 'consulta' || _tabAtual === 'hist') {
@@ -1337,7 +1717,7 @@ const TIPO_CSS = {
   'EM_ANALISE':            'b-em-analise'
 };
 function tipoBadge(t, tl){ return `<span class="badge ${TIPO_CSS[t]||''}">${tl||t}</span>`; }
-function stBadge(s)      { return `<span class="badge ${s==='Pendente'?'b-pendente':'b-resolvida'}">${s}</span>`; }
+function stBadge(s)      { const cls = s==='Pendente'?'b-pendente':(s==='Aderente'?'b-ok':'b-resolvida'); return `<span class="badge ${cls}">${s}</span>`; }
 /* Padrão único de data: dd/mm/aaaa hh:mm:ss (data sem hora recebe 00:00:00). */
 function fmtDH(iso){
   if(!iso) return '';
@@ -1364,10 +1744,16 @@ function fmtDataCurta(iso){
 }
 function fmtDT(iso){ return fmtDH(iso); }
 function esc(v)          { return (v||'—').replace(/</g,'&lt;'); }
+// Perfis separados por ", " (vários acessos) -> uma linha por perfil
+function _perfilBr(v){
+  if(!v) return '—';
+  const parts = String(v).split(',').map(s=>s.trim()).filter(Boolean);
+  return parts.length ? parts.map(p=>p.replace(/</g,'&lt;')).join('<br>') : '—';
+}
 
 /* ── Render Matrix ────────────────────────────────────────────────────── */
 /* ── Grade: filtro + paginação ────────────────────────────────────────── */
-let porPagina = 100, paginaAtual = 1, _usersFiltrados = [];
+let porPagina = 50, paginaAtual = 1, _usersFiltrados = [];
 
 /* ── Classificar + filtrar nas grids (menu estilo Excel) ─────────────── */
 function _gxNum(s){ if(!/\d/.test(String(s))) return null;
@@ -1488,7 +1874,7 @@ const _PEND_KEY={
   0:u=>u.divs[0].dt,
   2:u=>u.divs[0].vinc,
   4:u=>u.divs[0].s,
-  5:u=>u.n, 6:u=>u.m, 7:u=>u.u, 8:u=>u.divs.length,
+  5:u=>u.n, 6:u=>u.m, 7:u=>u.login, 8:u=>u.divs.length,
   9:u=>u.d, 10:u=>u.c,
   11:u=>u.divs[0].tl, 12:u=>u.divs[0].pe, 13:u=>u.divs[0].pp,
   14:u=>u.divs[0].o};
@@ -1678,7 +2064,11 @@ function equiparPend(){
 }
 
 function renderMatrix(){
-  _usersFiltrados = DB.users.filter(u => u.divs.some(divPassa));
+  // Pendências = só pendências. Aderente (conforme) NÃO entra aqui — tem a aba
+  // própria (Aderentes). Remove as linhas Aderente e quem só tem Aderente.
+  _usersFiltrados = DB.users
+    .map(u => ({...u, divs: u.divs.filter(d => d.a !== 'Aderente')}))
+    .filter(u => u.divs.length > 0 && u.divs.some(divPassa));
   const fp = Object.entries(_filtPend);
   if(fp.length) _usersFiltrados = _usersFiltrados.filter(u =>
     fp.every(([c,set]) => set.has(_pendDisp(+c,u))));
@@ -1695,6 +2085,9 @@ function renderMatrix(){
   equiparPend();
 }
 
+// A separação 1-item-por-linha é feita no PROCESSAMENTO (validar_acessos_sistema):
+// cada par esperado×encontrado vira uma linha. Aqui é só passthrough.
+function _divsDisplayA(divs){ return divs; }
 function pintarPagina(){
   const users = _usersFiltrados, total = users.length;
   const totPag = Math.max(1, Math.ceil(total / porPagina));
@@ -1702,40 +2095,41 @@ function pintarPagina(){
   const pag = users.slice(ini, ini + porPagina);
   let h = '';
   pag.forEach((u, rowIdx) => {
-    const hasMore = u.divs.length > 1;
-    const d0 = u.divs[0];
+    const ddivs = _divsDisplayA(u.divs);   // Opção A: 1 linha por perfil ENCONTRADO
+    const hasMore = ddivs.length > 1;
+    const d0 = ddivs[0];
     h += `<tr data-u="${esc(u.u)}" data-n="${esc(u.n)}">
       <td>${fmtDH(d0.dt)}</td>
       <td style="text-align:center;"><button class="qbtn" title="Enviar para quarentena" aria-label="Enviar para quarentena" onclick="quarentenar('${u.u}')"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V7"/><path d="M6 13l6-6 6 6"/><path d="M5 21h14"/></svg></button></td>
       <td>${esc(d0.vinc)||'—'}</td>
-      <td style="text-align:center;">${hasMore ? `<button class="expand-btn" data-row="${rowIdx}" onclick="toggleSubs(this)">+</button>` : ''}</td>
+      <td style="text-align:center;">${hasMore ? `<button class="expand-btn" data-row="${rowIdx}" data-u="${esc(u.u)}" onclick="toggleSubs(this)">${_inclExpand.has(u.u)?'-':'+'}</button>` : ''}</td>
       <td>${stBadge(d0.s)}${btnRes(u)}</td>
       <td>${esc(u.n)}</td>
       <td>${esc(u.m)||'—'}</td>
-      <td><strong style="color:#1F2D5C;">${esc(u.u)}</strong></td>
-      <td style="text-align:center;font-weight:700;color:#1F2D5C;">${u.divs.length}</td>
+      <td><strong style="color:#1F2D5C;">${esc(u.login)||'—'}</strong></td>
+      <td style="text-align:center;font-weight:700;color:#1F2D5C;">${ddivs.length}</td>
       <td>${esc(u.d)||'—'}</td>
       <td>${esc(u.c)||'—'}</td>
       <td>${tipoBadge(d0.t,d0.tl)}</td>
-      <td>${esc(d0.pe)||'—'}</td>
-      <td>${esc(d0.pp)||'—'}</td>
+      <td class="perfil-cel">${_perfilBr(d0.pe)}</td>
+      <td class="perfil-cel">${_perfilBr(d0.pp)}</td>
       <td style="text-align:center;">${esc(d0.o)||'—'}</td>
     </tr>`;
-    u.divs.slice(1).forEach(d => {
-      h += `<tr class="sub-row" data-u="${esc(u.u)}" data-n="${esc(u.n)}" data-sub="${rowIdx}" style="display:none;">
+    ddivs.slice(1).forEach(d => {
+      h += `<tr class="sub-row" data-u="${esc(u.u)}" data-n="${esc(u.n)}" data-sub="${rowIdx}" style="display:${_inclExpand.has(u.u)?'table-row':'none'};">
         <td>${fmtDH(d.dt)}</td>
         <td></td>
         <td></td>
         <td></td>
         <td>${stBadge(d.s)}</td>
-        <td style="padding-left:14px;color:#7B8085;font-size:10.5px;">↳ ${esc(d.pp||'—')}</td>
+        <td style="padding-left:14px;color:#7B8085;font-size:10.5px;">↳ ${esc(d.pe||d.pp||'—')}</td>
         <td>—</td>
         <td>—</td>
         <td style="text-align:center;">1</td>
         <td>—</td><td>—</td>
         <td>${tipoBadge(d.t,d.tl)}</td>
-        <td>${esc(d.pe)||'—'}</td>
-        <td>${esc(d.pp)||'—'}</td>
+        <td class="perfil-cel">${_perfilBr(d.pe)}</td>
+        <td class="perfil-cel">${_perfilBr(d.pp)}</td>
         <td style="text-align:center;">${esc(d.o)||'—'}</td>
       </tr>`;
     });
@@ -1774,13 +2168,16 @@ function mudarPorPagina(v){
   comHandling(pintarPagina);
 }
 
+const _inclExpand = new Set();   // matrículas expandidas (persiste no auto-refresh)
 function toggleSubs(btn){
   const row = btn.dataset.row;
+  const uid = btn.dataset.u;
   const isOpen = btn.textContent === '-';
   document.querySelectorAll(`#matrix-body [data-sub="${row}"]`).forEach(r =>
     r.style.display = isOpen ? 'none' : 'table-row'
   );
   btn.textContent = isOpen ? '+' : '-';
+  if (uid) { if (isOpen) _inclExpand.delete(uid); else _inclExpand.add(uid); }
 }
 
 /* ── Auto-refresh por ociosidade (10s sem interacao) ──────────────────── */
@@ -1934,10 +2331,26 @@ function _vgChamados(vg){
   const sinal = saldo > 0 ? '+' : '';
   const cls = saldo > 0 ? 'vg-saldo-pos' : (saldo < 0 ? 'vg-saldo-neg' : '');
   document.getElementById('vg-saldo').innerHTML = `<span class="${cls}">${sinal}${_vgFmt(saldo)}</span>`;
-  document.getElementById('vg-tmr').textContent = ch.tempo_medio_dias ? `${ch.tempo_medio_dias} dias` : '—';
+}
+function _vgTempos(vg){
+  const t = vg.tempos || {};
+  const pr = +t.seg_pr || 0, ra = +t.seg_ra || 0, sum = pr + ra;
+  const tot = document.getElementById('vg-t-tot');
+  if(tot) tot.textContent = sum ? (t.total || '—') : '—';
+  const tn = document.getElementById('vg-t-tot-n');
+  if(tn) tn.textContent = t.n ? `· ${t.n} ciclo${t.n>1?'s':''}` : '';
+  const pPr = sum ? Math.round(100*pr/sum) : 0, pRa = sum ? 100 - pPr : 0;
+  const segPr = document.getElementById('vg-seg-pr'), segRa = document.getElementById('vg-seg-ra');
+  if(segPr) segPr.style.width = pPr + '%';
+  if(segRa) segRa.style.width = pRa + '%';
+  const prV = document.getElementById('vg-seg-pr-v'), raV = document.getElementById('vg-seg-ra-v');
+  if(prV) prV.textContent = sum ? `${t.pend_resolv} · ${pPr}%` : '—';
+  if(raV) raV.textContent = sum ? `${t.resolv_ader} · ${pRa}%` : '—';
+  const msg = document.getElementById('vg-seg-empty-msg');
+  if(msg) msg.style.display = sum ? 'none' : 'block';
 }
 /* ── Atalhos personalizados (gravados via /api, padrão JSONL) ──────── */
-const ATL = { incl: [], consulta: [], hist: [], limite: 9, usuario: '' };
+const ATL = { incl: [], consulta: [], hist: [], conf: [], limite: 9, usuario: '' };
 
 async function carregarAtalhos(origem, reaplicarUltimo=false){
   try {
@@ -1960,7 +2373,7 @@ async function carregarAtalhos(origem, reaplicarUltimo=false){
    - Persistido em localStorage por origem ('incl' ou 'consulta')
    Diferente de "filtros atuais batem por coincidencia" — o badge so aparece
    se o usuario *deliberadamente* clicou no filtro salvo. */
-const _atalhoAplicadoId = {incl: null, hist: null};
+const _atalhoAplicadoId = {incl: null, hist: null, consulta: null, conf: null};
 
 /* Devolve o filtro salvo APLICADO EXPLICITAMENTE pelo usuario.
    Se os filtros atuais nao batem mais com ele (user modificou algum filtro
@@ -2075,6 +2488,13 @@ function _filtrosIguais(a, b){
 /* Descreve os critérios de um filtro salvo em texto legivel para o tooltip (i).
    Agrupa por chave e enumera valores. Ex.:
    "Sistema: SYSTUR | Cargo: ANALISTA, COORDENADOR | Status: Pendente" */
+/* Valor de filtro de data (preset/range) -> texto legível. */
+function _descDataVal(v){
+  const m = {hoje:'Hoje', '7d':'Últimos 7 dias', mes:'Este mês', ano:'Este ano'};
+  if (m[v]) return m[v];
+  if (String(v).startsWith('range|')) { const p = String(v).split('|'); return `${p[1]||'…'} → ${p[2]||'…'}`; }
+  return v;
+}
 function _descreverCriterios(filtros){
   if (!Array.isArray(filtros) || !filtros.length) return 'Sem critérios';
   const rotulos = {
@@ -2083,12 +2503,19 @@ function _descreverCriterios(filtros){
   const grupos = {};
   filtros.forEach(([fid, v]) => {
     if (!fid) return;
-    let label;
-    if (fid.startsWith('grid:'))      label = fid.slice(5);
-    else if (fid.startsWith('hist:')) label = fid.slice(5);
-    else if (fid.startsWith('cs:'))   label = fid.slice(3);
+    let label, val = String(v), ehData = false;
+    if (fid.startsWith('confdata:'))    { label = fid.slice(9); ehData = true; }
+    else if (fid === 'csdata')          { label = 'Última div'; ehData = true; }
+    else if (fid === 'histdata')        { label = 'Data'; ehData = true; }
+    else if (fid === 'quardata')        { label = 'Data'; ehData = true; }
+    else if (fid === 'data')            { label = 'Data'; ehData = true; }
+    else if (fid.startsWith('grid:'))   label = fid.slice(5);
+    else if (fid.startsWith('hist:'))   label = fid.slice(5);
+    else if (fid.startsWith('conf:'))   label = fid.slice(5);
+    else if (fid.startsWith('cs:'))     label = fid.slice(3);
     else label = rotulos[fid] || fid;
-    (grupos[label] = grupos[label] || []).push(String(v));
+    if (ehData) val = _descDataVal(val);
+    (grupos[label] = grupos[label] || []).push(val);
   });
   return Object.entries(grupos)
     .map(([k, vs]) => `${k}: ${vs.join(', ')}`)
@@ -2099,6 +2526,7 @@ function _descreverCriterios(filtros){
 function _origemAtual(){
   if (_tabAtual === 'hist') return 'hist';
   if (_tabAtual === 'consulta') return 'consulta';
+  if (_tabAtual === 'conf') return 'conf';
   return 'incl';
 }
 
@@ -2117,6 +2545,7 @@ function _resetTodosFiltros(){
   if (_tabAtual === 'hist') {
     if (typeof _histFilt === 'object' && _histFilt)
       Object.keys(_histFilt).forEach(k => delete _histFilt[k]);
+    _histData = null;
     _histPag = 1;
     comHandling(pintarHistorico);
     return;
@@ -2124,7 +2553,16 @@ function _resetTodosFiltros(){
   if (_tabAtual === 'consulta') {
     if (typeof _csFilt === 'object' && _csFilt)
       Object.keys(_csFilt).forEach(k => delete _csFilt[k]);
+    _csData = null;
+    _csAbasFilt = null;
     if (typeof renderConsulta === 'function') renderConsulta();
+    return;
+  }
+  if (_tabAtual === 'conf') {
+    if (typeof _confFilt === 'object' && _confFilt)
+      Object.keys(_confFilt).forEach(k => delete _confFilt[k]);
+    _confData = {};
+    if (typeof renderConformidade === 'function') renderConformidade();
     return;
   }
   document.querySelectorAll('.slicer[data-filtro]').forEach(grupo => {
@@ -2226,19 +2664,42 @@ function _filtrosAtivosAtuais(){
   if (t === 'hist') {
     if (typeof _histFilt === 'object' && _histFilt) {
       Object.entries(_histFilt).forEach(([col, sel]) => {
+        if (+col === 4) return;            // Data -> filtro de data (abaixo)
         const nome = _HIST_COL_NOME[+col];
         if (!nome || !sel) return;
         for (const v of sel) out.push(['hist:' + nome, v]);
       });
     }
+    if (_histData && _histData.tipo) out.push(['histdata', _dtSer(_histData)]);
     return out;
   }
   if (t === 'consulta') {
     if (typeof _csFilt === 'object' && _csFilt) {
       Object.entries(_csFilt).forEach(([col, sel]) => {
+        if (+col === 11) return;            // Última div -> filtro de data
         const nome = _CS_COL_NOME[+col];
         if (!nome || !sel) return;
         for (const v of sel) out.push(['cs:' + nome, v]);
+      });
+    }
+    if (_csData && _csData.tipo) out.push(['csdata', _dtSer(_csData)]);
+    return out;
+  }
+  if (t === 'conf') {
+    if (typeof _confFilt === 'object' && _confFilt) {
+      Object.entries(_confFilt).forEach(([col, sel]) => {
+        const nome = _CONF_FUNILCOL[+col];
+        if (!nome || !sel) return;
+        for (const v of sel) out.push(['conf:' + nome, v]);
+      });
+    }
+    // filtro de data: presets (relativos) + range (datas fixas)
+    if (typeof _confData === 'object' && _confData) {
+      Object.entries(_confData).forEach(([col, fd]) => {
+        const nome = _CONF_DATENOME[+col];
+        if (!nome || !fd || !fd.tipo) return;
+        const val = fd.tipo === 'range' ? `range|${fd.de||''}|${fd.ate||''}` : fd.tipo;
+        out.push(['confdata:' + nome, val]);
       });
     }
     return out;
@@ -2249,7 +2710,8 @@ function _filtrosAtivosAtuais(){
     if (!sel || sel.size === 0) return;
     const todos = f.id === 'status'
       ? ['Pendente', 'Resolvido']
-      : valoresFiltro(f.campo);
+      : (f.id === 'tipo' ? valoresFiltro(f.campo).filter(v => v !== 'Aderente')
+                         : valoresFiltro(f.campo));
     if (sel.size === todos.length) return;  // sem filtro restritivo
     for (const v of sel) out.push([f.id, v]);
   });
@@ -2259,6 +2721,12 @@ function _filtrosAtivosAtuais(){
       if (!nome || !sel) return;
       for (const v of sel) out.push(['grid:' + nome, v]);
     });
+  }
+  // filtro de data (col Data) — presets relativos + range fixo
+  if (typeof _filtData === 'object' && _filtData && _filtData.tipo) {
+    const val = _filtData.tipo === 'range'
+      ? `range|${_filtData.de||''}|${_filtData.ate||''}` : _filtData.tipo;
+    out.push(['data', val]);
   }
   return out;
 }
@@ -2402,18 +2870,44 @@ function aplicarFiltrosAtalho(filtros, idAtalho){
   }
 
   // Detecta a aba ALVO pelo prefixo dos filtros (hist:/cs:) ou cai em incl
-  const temHist = filtros.some(([fid]) => typeof fid === 'string' && fid.startsWith('hist:'));
-  const temCs   = filtros.some(([fid]) => typeof fid === 'string' && fid.startsWith('cs:'));
+  const temHist = filtros.some(([fid]) => typeof fid === 'string' && (fid.startsWith('hist:') || fid === 'histdata'));
+  const temCs   = filtros.some(([fid]) => typeof fid === 'string' && (fid.startsWith('cs:') || fid === 'csdata'));
+  const temConf = filtros.some(([fid]) => typeof fid === 'string' && /^conf(data)?:/.test(fid));
 
-  if (temHist) {
-    // Aplica em _histFilt
-    if (typeof _histFilt === 'object' && _histFilt)
-      Object.keys(_histFilt).forEach(k => delete _histFilt[k]);
+  if (temConf) {
+    if (typeof _confFilt === 'object' && _confFilt)
+      Object.keys(_confFilt).forEach(k => delete _confFilt[k]);
+    _confData = {};
     const porCol = {};
     filtros.forEach(([fid, v]) => {
+      if (typeof fid !== 'string') return;
+      if (fid.startsWith('conf:')) {
+        const col = _CONF_NOME_COL[fid.slice(5)];
+        if (col != null) (porCol[col] = porCol[col] || new Set()).add(String(v));
+      } else if (fid.startsWith('confdata:')) {
+        const col = _CONF_DATENOME_COL[fid.slice(9)];
+        if (col == null) return;
+        const sv = String(v), p = sv.split('|');
+        _confData[col] = sv.startsWith('range|')
+          ? {tipo:'range', de:p[1]||'', ate:p[2]||''} : {tipo:sv, de:'', ate:''};
+      }
+    });
+    Object.entries(porCol).forEach(([col, set]) => { _confFilt[+col] = set; });
+    _confPag = 1;
+    if (typeof renderConformidade === 'function') renderConformidade();
+    return;
+  }
+
+  if (temHist) {
+    // Aplica em _histFilt + filtro de data (_histData)
+    if (typeof _histFilt === 'object' && _histFilt)
+      Object.keys(_histFilt).forEach(k => delete _histFilt[k]);
+    _histData = null;
+    const porCol = {};
+    filtros.forEach(([fid, v]) => {
+      if (fid === 'histdata') { _histData = _dtDes(v); return; }
       if (!fid || !fid.startsWith('hist:')) return;
-      const nome = fid.slice(5);
-      const col = _HIST_NOME_COL[nome];
+      const col = _HIST_NOME_COL[fid.slice(5)];
       if (col == null) return;
       (porCol[col] = porCol[col] || new Set()).add(String(v));
     });
@@ -2426,11 +2920,12 @@ function aplicarFiltrosAtalho(filtros, idAtalho){
   if (temCs) {
     if (typeof _csFilt === 'object' && _csFilt)
       Object.keys(_csFilt).forEach(k => delete _csFilt[k]);
+    _csData = null;
     const porCol = {};
     filtros.forEach(([fid, v]) => {
+      if (fid === 'csdata') { _csData = _dtDes(v); return; }
       if (!fid || !fid.startsWith('cs:')) return;
-      const nome = fid.slice(3);
-      const col = _CS_NOME_COL[nome];
+      const col = _CS_NOME_COL[fid.slice(3)];
       if (col == null) return;
       (porCol[col] = porCol[col] || new Set()).add(String(v));
     });
@@ -2456,12 +2951,21 @@ function aplicarFiltrosAtalho(filtros, idAtalho){
   if (typeof _filtPend === 'object' && _filtPend) {
     Object.keys(_filtPend).forEach(k => delete _filtPend[k]);
   }
+  // 1c. Reset + aplica o filtro de DATA (col Data): preset ou range
+  _filtData = {tipo:'', de:'', ate:''};
+  const _fdAtl = (filtros.find(([fid]) => fid === 'data') || [])[1];
+  if (_fdAtl != null) {
+    const sv = String(_fdAtl), p = sv.split('|');
+    _filtData = sv.startsWith('range|')
+      ? {tipo:'range', de:p[1]||'', ate:p[2]||''} : {tipo:sv, de:'', ate:''};
+  }
 
   // 2. Agrupa filtros do atalho por id (lateral) ou nome de coluna (grid)
   const porGrupo = {};
   const porGrid = {};
   filtros.forEach(([fid, v]) => {
     if (!fid || v == null) return;
+    if (fid === 'data') return;       // data já tratada acima (1c)
     if (fid.startsWith('grid:')) {
       const nome = fid.slice(5);
       (porGrid[nome] = porGrid[nome] || []).push(String(v));
@@ -2510,6 +3014,8 @@ function renderVisaoGeral(){
   _vgKpi('vg-k-quar', vg.quarentena_ativa);
   // Chamados
   _vgChamados(vg);
+  // Tempo de tratamento (ciclo de vida)
+  _vgTempos(vg);
   // Movimentação RH
   _vgMovimentacao(vg);
   // Donut tipos
@@ -2589,6 +3095,8 @@ function btnRes(u){
       + 'stroke="#1F2D5C" stroke-width="2.4" stroke-linecap="round">'
       + '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>';
   }
+  // Sem pendência (todas as linhas Aderente) -> nada a resolver
+  if(!u.divs.some(d => d.a !== 'Aderente')) return '';
   return '<button class="btn-res ico-res" title="Resolver pendência(s)" '
     + 'onclick="abrirResolver(\'' + esc(u.u) + '\')">'
     + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" '
@@ -2773,6 +3281,7 @@ document.addEventListener('keydown', e => {
       clearTimeout(t);
       t = setTimeout(() => {
         _csBusca = inp.value || '';
+        _csPag = 1;
         renderConsulta();
       }, 200);
     });
@@ -2796,7 +3305,35 @@ function quarView(btn){
   btn.classList.add('active');
   quarVista = btn.dataset.view;
   delete _gridSt['quar-tbl'];
+  _quarDataFilt = {};   // colunas de data mudam entre Ativas/Histórico
   pintarQuarentena();
+}
+
+// Filtro de data da Quarentena (mesmo componente _dtMenu das demais grids).
+let _quarDataFilt = {};   // { campo: fd }  campo = data_inicio|data_fim|data_saida
+function _quarFiltrar(rows){
+  const fs = Object.entries(_quarDataFilt);
+  if (!fs.length) return rows;
+  return rows.filter(q => fs.every(([campo, fd]) => _dtPass(q[campo], fd)));
+}
+function _quarEquiparData(){
+  // Liga o popover de data nas colunas de data (variam por vista)
+  const cols = quarVista === 'ativas'
+    ? {3:'data_inicio', 4:'data_fim'}
+    : {4:'data_inicio', 5:'data_saida'};
+  document.querySelectorAll('#quar-tbl thead th').forEach((th, c) => {
+    const campo = cols[c];
+    if (!campo) return;
+    const mk = th.querySelector('.th-mk');
+    if (!mk) return;
+    mk.onclick = ev => { ev.stopPropagation();
+      _dtMenu(th, _quarDataFilt[campo], fd => {
+        if (fd) _quarDataFilt[campo] = fd; else delete _quarDataFilt[campo];
+        pintarQuarentena();
+      });
+    };
+    mk.classList.toggle('mk-filtrado', !!_quarDataFilt[campo]);
+  });
 }
 
 function pintarQuarentena(){
@@ -2806,7 +3343,7 @@ function pintarQuarentena(){
   const body = document.getElementById('quar-body');
   const cnt  = document.getElementById('quar-count');
   if(quarVista === 'ativas'){
-    const rows = quarData.ativas || [];
+    const rows = _quarFiltrar(quarData.ativas || []);
     cols.innerHTML = `<col style="width:104px"><col style="width:220px">`
       + `<col style="width:92px"><col style="width:132px">`
       + `<col style="width:132px"><col style="width:96px"><col style="width:112px">`;
@@ -2827,7 +3364,7 @@ function pintarQuarentena(){
       : `<tr><td colspan="7" style="text-align:center;padding:26px;color:#8A9099;">Ninguém em quarentena no momento.</td></tr>`;
     cnt.textContent = rows.length + ' em quarentena';
   } else {
-    const recs = quarData.historico || [];
+    const recs = _quarFiltrar(quarData.historico || []);
     const grupos = {}, ordem = [];
     recs.forEach(r => {
       if(!grupos[r.usuario]){ grupos[r.usuario] = []; ordem.push(r.usuario); }
@@ -2872,6 +3409,7 @@ function pintarQuarentena(){
       (ordem.length === 1 ? ' usuário no histórico' : ' usuários no histórico');
   }
   gridExcel('quar-tbl');
+  _quarEquiparData();
 }
 
 function toggleHist(btn){
@@ -2927,7 +3465,8 @@ function renderSV(){
 }
 
 
-let _histRecs=[], _histOrd=null, _histPag=1, _histPP=100;
+let _histRecs=[], _histOrd=null, _histPag=1, _histPP=50;
+let _histData=null;   // filtro de data (col 4) — {tipo,de,ate}
 const _histFilt={};
 /* colunas: 0=expand 1=Matrícula 2=Nome 3=Movimentação 4=Data 5=Detalhe */
 function _histDisp(c,r){
@@ -2969,8 +3508,9 @@ async function renderHistorico(){
 }
 function _histGrupos(){
   let rs=_histRecs.slice();
-  const ff=Object.entries(_histFilt);
+  const ff=Object.entries(_histFilt).filter(([c])=>+c!==4);  // col 4 = Data tem filtro próprio
   if(ff.length) rs=rs.filter(r=>ff.every(([c,set])=>set.has(_histDisp(+c,r))));
+  if(_histData) rs=rs.filter(r=>_dtPass(r.data, _histData));
   const mapa={}, ordem=[];
   rs.forEach(r=>{
     const k=(r.matricula||'')+''+(r.nome||'');
@@ -3113,9 +3653,13 @@ function equiparHist(){
     let mk=th.querySelector('.th-mk');
     if(!mk){ mk=document.createElement('span'); mk.className='th-mk';
       mk.innerHTML=_SVG_FUNIL;
-      mk.onclick=ev=>{ ev.stopPropagation(); _histMenu(c,th); };
+      mk.onclick=ev=>{ ev.stopPropagation();
+        if(c===4){ _dtMenu(th, _histData, fd=>{ _histData=fd; _histPag=1;
+          comHandling(pintarHistorico);
+          if(_tabAtual==='hist'){ renderAtalhosOpcaoC('hist'); _persistirFiltroAplicado('hist'); } }); }
+        else _histMenu(c,th); };
       th.appendChild(mk); }
-    mk.classList.toggle('mk-filtrado', !!_histFilt[c]);
+    mk.classList.toggle('mk-filtrado', c===4 ? !!_histData : !!_histFilt[c]);
   });
 }
 
@@ -3143,6 +3687,17 @@ async function baixarExcel(arquivo, colunas, linhas, niveis, formatos){
 let _csBusca = '';
 let _csUserAtivo = null;   // user object aberto no drawer
 let _csTab = 'ident';
+let _csData = null;        // filtro de data (col 11 = Última div) — {tipo,de,ate}
+let _csPP = 50, _csPag = 1;   // paginação
+let _histMats = new Set();    // matrículas que têm histórico (p/ botão H condicional)
+let _csAbasFilt = null;       // funil da coluna Abas: Set de {Pendência,Aderente,Histórico}
+async function _carregarHistMats(){
+  try {
+    const r = await fetch('/api/historico');
+    const recs = await r.json();
+    _histMats = new Set((recs || []).map(x => x.matricula).filter(Boolean));
+  } catch(e) { /* mantém o cache atual */ }
+}
 
 function _csNorm(s){
   // Remove acentos + lower + colapsa espacos
@@ -3154,17 +3709,24 @@ function _csNorm(s){
 function _csFiltrarUsers(){
   // Aplica MESMOS filtros laterais que a Inclusao + busca livre + funil por coluna
   let users = DB.users.filter(u => u.divs.some(divPassa));
-  // Funil por coluna (Cargo, Departamento, CC, Sistemas, Pendências, Última div, Status)
-  const cf = Object.entries(_csFilt);
+  // Funil por coluna (Cargo, Departamento, CC, Sistemas, Pendências, Status) — col 11 (Última div) tem filtro de data
+  const cf = Object.entries(_csFilt).filter(([c]) => +c !== 11);
   if (cf.length) users = users.filter(u =>
     cf.every(([c, set]) => set.has(_csDisp(+c, u))));
+  if (_csData) users = users.filter(u => {
+    const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
+    return _dtPass(datas.length ? datas[datas.length-1] : '', _csData);
+  });
+  // Funil da coluna Abas (Pendência/Aderente/Histórico): passa quem tem ao menos um selecionado
+  if (_csAbasFilt && _csAbasFilt.size)
+    users = users.filter(u => _csAbasOf(u).some(x => _csAbasFilt.has(x)));
   // Busca livre: nome, matricula, usuario (login), CPF, email
   const q = _csNorm(_csBusca);
   if (q.length >= 2) {
     users = users.filter(u =>
       _csNorm(u.n).includes(q) ||
       _csNorm(u.m).includes(q) ||
-      _csNorm(u.u).includes(q) ||
+      _csNorm(u.login || '').includes(q) ||
       _csNorm(u.cpf || '').includes(q) ||
       _csNorm(u.email || '').includes(q));
   }
@@ -3189,12 +3751,16 @@ function renderConsulta(){
           ? `Nenhum resultado para <b>${esc(_csBusca)}</b>. Tente outro termo.`
           : 'Nenhum funcionário com os filtros atuais. Limpe os filtros ou ajuste.')
       + '</div></td></tr>';
+    _csPager(1);
     return;
   }
 
-  // Paginação simples: limita a 500 (pra não travar). Se >500, avisa.
-  const MAX = 500;
-  const lim = users.slice(0, MAX);
+  // Paginação
+  const totPag = Math.max(1, Math.ceil(users.length / _csPP));
+  if (_csPag > totPag) _csPag = totPag;
+  if (_csPag < 1) _csPag = 1;
+  const ini = (_csPag - 1) * _csPP;
+  const lim = users.slice(ini, ini + _csPP);
   body.innerHTML = lim.map(u => {
     // Calcula resumo: sistemas distintos + qtd divergencias + ultima data
     const sistemas = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
@@ -3202,42 +3768,49 @@ function renderConsulta(){
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     const ultDt = datas.length ? datas[datas.length-1] : '';
     const cls = pendentes > 0 ? 'pend' : 'ok';
-    const lbl = pendentes > 0 ? `${pendentes} pendente${pendentes>1?'s':''}` : 'OK';
+    const lbl = pendentes > 0 ? `${pendentes} pendente${pendentes>1?'s':''}` : 'Aderente';
     const uidEsc = esc(u.u);
     const matEsc = esc(u.m||'');
     const nomeEsc = esc(u.n||u.u||'');
     // Botão H só funciona se existir matrícula (chave do Histórico)
-    const hDisabled = !u.m ? 'disabled title="Sem matrícula — funcionário sem vínculo RH"' :
-      `title="Ir para Histórico filtrando por ${nomeEsc}"`;
+    // Botões A/P/H só aparecem se houver dado correspondente
+    const temPend = u.divs.some(d => d.a !== 'Aderente');
+    const temAder = !!u.m && u.divs.some(d => d.a === 'Aderente');
+    const temHist = !!u.m && _histMats.has(u.m);
+    const btnP = temPend ? `<span class="cs-aba-btn p" onclick="csIrParaPend('${matEsc}','${uidEsc}','${nomeEsc}')" title="Ir para Pendências filtrando por ${nomeEsc}">P</span>` : '';
+    const btnH = temHist ? `<span class="cs-aba-btn h" onclick="csIrParaHist('${matEsc}','${nomeEsc}')" title="Ir para Histórico filtrando por ${nomeEsc}">H</span>` : '';
+    const btnA = temAder ? `<span class="cs-aba-btn a" onclick="csIrParaAderente('${matEsc}','${nomeEsc}')" title="Ir para Aderentes filtrando por ${nomeEsc}">A</span>` : '';
     return `<tr data-uid="${uidEsc}">
       <td class="cs-expand-btn" onclick="toggleCsExpand('${uidEsc}')" title="Expandir/recolher detalhes">+</td>
-      <td style="text-align:center;"><span class="cs-aba-btns">`
-       + `<span class="cs-aba-btn p" onclick="csIrParaPend('${uidEsc}','${nomeEsc}')" `
-       +   `title="Ir para Pendências filtrando por ${nomeEsc}">P</span>`
-       + `<span class="cs-aba-btn h" ${hDisabled} `
-       +   `onclick="csIrParaHist('${matEsc}','${nomeEsc}')">H</span>`
-       + `</span></td>
+      <td style="text-align:center;"><span class="cs-aba-btns">${btnP}${btnH}${btnA}</span></td>
       <td><strong style="color:var(--navy)">${esc(u.m)||'—'}</strong></td>
       <td><span class="cs-nome-link" onclick="csAbrirDrawer('${uidEsc}')" title="Abrir detalhes laterais">${esc(u.n)}</span></td>
-      <td>${esc(u.u)||'—'}</td>
+      <td>${esc(u.login)||'—'}</td>
       <td>${esc(u.cpf)||'—'}</td>
       <td>${esc(u.c)||'—'}</td>
       <td>${esc(u.d)||'—'}</td>
       <td>${esc(u.cc)||'—'}</td>
       <td style="text-align:center;font-weight:700;color:var(--navy)">${sistemas}</td>
-      <td style="text-align:center;font-weight:700;color:${pendentes?'#B33A3A':'#1E7B43'}">${u.divs.length}</td>
+      <td style="text-align:center;font-weight:700;color:${pendentes?'#B33A3A':'#1E7B43'}">${u.divs.filter(d => d.a !== 'Aderente').length}</td>
       <td style="text-align:center;color:#3A3F4C;font-size:11px;">${ultDt ? fmtDH(ultDt) : '—'}</td>
       <td style="text-align:center;"><span class="cs-pill ${cls}">${lbl}</span></td>
     </tr>`;
   }).join('');
-  if (users.length > MAX) {
-    body.innerHTML += `<tr><td colspan="13" style="text-align:center;`
-      + `padding:14px;color:#7B8294;font-style:italic;font-size:11.5px;">`
-      + `Mostrando ${MAX} de ${users.length}. Refine a busca para reduzir.`
-      + `</td></tr>`;
-  }
   equiparCs();
+  _csPager(totPag);
 }
+function _csPager(totPag){
+  const pg = document.getElementById('cs-pager');
+  if (!pg) return;
+  pg.innerHTML = totPag <= 1 ? '' :
+      `<button class="pg-btn" ${_csPag<=1?'disabled':''} onclick="csIr(1)">«</button>`
+    + `<button class="pg-btn" ${_csPag<=1?'disabled':''} onclick="csIr(${_csPag-1})">‹</button>`
+    + `<span class="pg-atual">${_csPag} / ${totPag}</span>`
+    + `<button class="pg-btn" ${_csPag>=totPag?'disabled':''} onclick="csIr(${_csPag+1})">›</button>`
+    + `<button class="pg-btn" ${_csPag>=totPag?'disabled':''} onclick="csIr(${totPag})">»</button>`;
+}
+function csPP(v){ _csPP = parseInt(v,10) || 100; _csPag = 1; renderConsulta(); }
+function csIr(p){ _csPag = p; renderConsulta(); }
 
 /* ── Funil por coluna na grid Consulta ───────────────────────────────── */
 function _csDisp(c, u){
@@ -3257,7 +3830,7 @@ function _csDisp(c, u){
     return fmtDate(datas[datas.length-1]) || '—';   // só data (dia)
   }
   if (c === 12) {
-    return u.divs.some(d => d.s === 'Pendente') ? 'Pendente' : 'OK';
+    return u.divs.some(d => d.s === 'Pendente') ? 'Pendente' : 'Aderente';
   }
   return '—';
 }
@@ -3320,20 +3893,58 @@ function _csMenu(c, th){
 
 function equiparCs(){
   document.querySelectorAll('#cs-tbl thead th').forEach((th, c) => {
-    // Só colunas com filtro (definidas em _CS_COL_NOME) ganham funil
-    if (!_CS_COL_NOME[c]) return;
+    const ehAbas = (c === 1);   // coluna Abas: funil custom (Pendência/Aderente/Histórico)
+    if (!ehAbas && !_CS_COL_NOME[c]) return;
     th.classList.add('th-x');
-    // (ordenação clicando no header — opcional; deixa só o funil por enquanto)
     let mk = th.querySelector('.th-mk');
     if (!mk) {
       mk = document.createElement('span');
       mk.className = 'th-mk';
       mk.innerHTML = _SVG_FUNIL;
-      mk.onclick = ev => { ev.stopPropagation(); _csMenu(c, th); };
+      mk.onclick = ev => { ev.stopPropagation();
+        if (ehAbas) _csAbasMenu(th);
+        else if (c === 11) _dtMenu(th, _csData, fd => { _csData = fd; renderConsulta();
+          if (_tabAtual === 'consulta') { renderAtalhosOpcaoC('consulta'); _persistirFiltroAplicado('consulta'); } });
+        else _csMenu(c, th); };
       th.appendChild(mk);
     }
-    mk.classList.toggle('mk-filtrado', !!_csFilt[c]);
+    mk.classList.toggle('mk-filtrado', ehAbas ? !!_csAbasFilt : (c === 11 ? !!_csData : !!_csFilt[c]));
   });
+}
+// Atributos (botões) que o usuário tem na coluna Abas
+function _csAbasOf(u){
+  const a = [];
+  if (u.divs.some(d => d.a !== 'Aderente')) a.push('Pendência');
+  if (u.m && u.divs.some(d => d.a === 'Aderente')) a.push('Aderente');
+  if (u.m && _histMats.has(u.m)) a.push('Histórico');
+  return a;
+}
+function _csAbasMenu(th){
+  _gxFechar();
+  const opcoes = ['Pendência', 'Aderente', 'Histórico'], sel = _csAbasFilt;
+  const m = document.createElement('div');
+  m.className = 'gx-menu'; m.id = 'gx-menu';
+  m.innerHTML =
+      '<label class="gx-v gx-todos"><input type="checkbox" checked> (Todos)</label>'
+    + '<div class="gx-vals">' + opcoes.map((v, i) =>
+        '<label class="gx-v"><input type="checkbox" value="' + i + '" '
+        + ((!sel || sel.has(v)) ? 'checked' : '') + '> ' + v + '</label>').join('')
+    + '</div><div class="gx-acoes"><button class="gx-ok">Aplicar</button>'
+    + '<button class="gx-limpar">Limpar</button></div>';
+  document.body.appendChild(m);
+  const r = th.getBoundingClientRect();
+  m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - m.offsetWidth - 6)) + 'px';
+  m.style.top  = Math.min(r.bottom + 2, window.innerHeight - m.offsetHeight - 6) + 'px';
+  const tdc = m.querySelector('.gx-todos input');
+  tdc.onchange = () => m.querySelectorAll('.gx-vals input').forEach(i => i.checked = tdc.checked);
+  const aplica = () => { _gxFechar(); _csPag = 1; renderConsulta(); };
+  m.querySelector('.gx-ok').onclick = () => {
+    const marc = [...m.querySelectorAll('.gx-vals input:checked')].map(i => opcoes[+i.value]);
+    _csAbasFilt = (marc.length >= opcoes.length) ? null : new Set(marc);
+    aplica();
+  };
+  m.querySelector('.gx-limpar').onclick = () => { _csAbasFilt = null; aplica(); };
+  setTimeout(() => document.addEventListener('mousedown', _gxFora), 0);
 }
 
 /* ── (+) Expansão inline na grid de Consulta ─────────────────────────── */
@@ -3405,7 +4016,7 @@ function csLimparBusca(){
    Persiste o filtro aplicado e mostra um badge verde na aba destino. */
 let _filtroVindoConsulta = null;  // {tab:'incl'|'hist', uid|matricula, nome}
 
-function csIrParaPend(uid, nome){
+function csIrParaPend(matricula, uid, nome){
   // Limpa filtros existentes da grid de Pendências e o filtro especial de Data
   if (typeof _filtPend === 'object' && _filtPend) {
     Object.keys(_filtPend).forEach(k => delete _filtPend[k]);
@@ -3414,9 +4025,11 @@ function csIrParaPend(uid, nome){
   if (typeof _atalhoAplicadoId === 'object' && _atalhoAplicadoId) {
     _atalhoAplicadoId.incl = null;
   }
-  // Aplica filtro pelo Usuário (col 7 na nova ordem)
-  _filtPend[7] = new Set([uid]);
-  _filtroVindoConsulta = {tab:'incl', uid, nome};
+  // Filtra pela MATRÍCULA (col 6) quando houver; senão pelo Login (col 7) —
+  // p/ quem não tem matrícula (sem vínculo RH). NÃO usar a matrícula no Login.
+  if (matricula) { _filtPend[6] = new Set([matricula]); }
+  else           { _filtPend[7] = new Set([uid]); }
+  _filtroVindoConsulta = {tab:'incl', matricula, uid, nome};
   paginaAtual = 1;
   showPage('incl');
 }
@@ -3432,16 +4045,32 @@ function csIrParaHist(matricula, nome){
   showPage('hist');
 }
 
+function csIrParaAderente(matricula, nome){
+  if (!matricula) return;
+  const inp = document.getElementById('conf-busca');
+  if (inp) inp.value = matricula;        // filtra a grid de Aderentes pela matrícula
+  if (typeof _confFilt === 'object') Object.keys(_confFilt).forEach(k => delete _confFilt[k]);
+  _confData = {};
+  _confPag = 1;
+  _filtroVindoConsulta = {tab:'conf', matricula, uid:matricula, nome};
+  showPage('conf');
+}
+
 function _renderBadgeVindoConsulta(){
   const inclHost = document.getElementById('cs-vinculo-incl');
   const histHost = document.getElementById('cs-vinculo-hist');
+  const confHost = document.getElementById('cs-vinculo-conf');
   if (inclHost) inclHost.innerHTML = '';
   if (histHost) histHost.innerHTML = '';
+  if (confHost) confHost.innerHTML = '';
   if (!_filtroVindoConsulta) return;
-  const host = _filtroVindoConsulta.tab === 'incl' ? inclHost : histHost;
+  const host = _filtroVindoConsulta.tab === 'incl' ? inclHost
+             : _filtroVindoConsulta.tab === 'conf' ? confHost : histHost;
   if (!host) return;
   const detalhe = _filtroVindoConsulta.tab === 'incl'
-    ? `Login: ${_filtroVindoConsulta.uid}`
+    ? (_filtroVindoConsulta.matricula
+        ? `Matrícula: ${_filtroVindoConsulta.matricula}`
+        : `Login: ${_filtroVindoConsulta.uid}`)
     : `Matrícula: ${_filtroVindoConsulta.uid}`;
   host.innerHTML =
       `<span class="atl-aplicado" title="Filtro aplicado a partir da aba Consulta">`
@@ -3464,8 +4093,16 @@ function limparFiltroVindoConsulta(){
   } else if (tab === 'hist') {
     if (typeof _histFilt === 'object' && _histFilt)
       Object.keys(_histFilt).forEach(k => delete _histFilt[k]);
+    _histData = null;
     _histPag = 1;
     comHandling(pintarHistorico);
+  } else if (tab === 'conf') {
+    const inp = document.getElementById('conf-busca');
+    if (inp) inp.value = '';
+    if (typeof _confFilt === 'object') Object.keys(_confFilt).forEach(k => delete _confFilt[k]);
+    _confData = {};
+    _confPag = 1;
+    renderConformidade();
   }
   _renderBadgeVindoConsulta();
 }
@@ -3574,7 +4211,7 @@ function csExportar(){
     const ultDt = datas.length ? fmtDH(datas[datas.length-1]) : '';
     return [u.m||'', u.n, u.u||'', u.cpf||'', u.c||'', u.d||'', u.cc||'',
             sis, u.divs.length, ultDt,
-            pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'OK'];
+            pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'Aderente'];
   });
   fetch('/api/exportar', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -3669,7 +4306,7 @@ function exportarQuarentena(){
   if(!quarData){ alert('Abra a aba Quarentena primeiro.'); return; }
   const st = _gridSt['quar-tbl'];
   const visiveis = (rows, disp) => {
-    let r = rows;
+    let r = _quarFiltrar(rows);   // filtro de data (mesmo da grid)
     if(st){
       const ff = Object.entries(st.filt);
       if(ff.length) r = r.filter(x => ff.every(([c,set]) => set.has(disp(+c,x))));
@@ -3738,17 +4375,40 @@ function mkChart(id, labels, data, alpha){
 const KPI_MAP = {
   'Incluir Acesso':'sem_acesso', 'Alterar Perfil':'divergente',
   'Em Análise':'em_analise', 'Total Não Mapeados':'nao_mapeado',
+  'Aderente':'ok',
   'Total c/ Ação':'total'
 };
+// Mapeia a ACAO da divergencia (campo d.a) para a chave do KPI.
+const ACAO_KPI = {
+  'Incluir Acesso':'sem_acesso', 'Alterar Perfil':'divergente',
+  'Em Análise':'em_analise', 'Não Mapeado':'nao_mapeado', 'Aderente':'ok',
+};
+// Recalcula os KPIs a partir das divergencias que passam nos filtros laterais
+// (mesma fonte da grid, via divPassa). Sem filtro ativo, bate com os totais da
+// base. Assim os cards do topo SEGUEM os filtros. OK e' contado no card OK,
+// mas NAO entra no "Total c/ Ação" (pendencias).
+function kpisDoFiltro(){
+  const c = {sem_acesso:0, divergente:0, em_analise:0, nao_mapeado:0, ok:0, total:0};
+  DB.users.forEach(u => u.divs.forEach(d => {
+    if(!divPassa(d)) return;
+    const k = ACAO_KPI[d.a];
+    if(k){ c[k]++; if(k!=='ok') c.total++; }
+  }));
+  return c;
+}
 function aplicarKPIs(){
+  const c = kpisDoFiltro();
   document.querySelectorAll('.kpi').forEach(card => {
     const lbl = card.querySelector('.kpi-lbl');
     const val = card.querySelector('.kpi-val');
     if(!lbl || !val) return;
     const k = KPI_MAP[lbl.textContent.trim()];
-    if(k && DB.kpis && DB.kpis[k] != null)
-      val.textContent = Number(DB.kpis[k]).toLocaleString('pt-BR');
+    if(k && c[k] != null)
+      val.textContent = Number(c[k]).toLocaleString('pt-BR');
   });
+  // Card Aderente (informativo, link p/ aba): total de conformes
+  const ae = document.getElementById('kpi-aderente');
+  if(ae) ae.textContent = (DB.aderentes || []).length.toLocaleString('pt-BR');
 }
 function distOrdenada(obj){
   const e = Object.entries(obj || {}).sort((a,b) => a[1]-b[1]);
