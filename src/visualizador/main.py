@@ -1415,28 +1415,40 @@ def listar_historico_rh():
         finally:
             cr.close()
 
-    # Aderentes "conforme direto" projetados na trilha pelo Processador
-    # (entidade ACESSO_SISTEMA / ADERENTE). O Processador ja gravou apenas
-    # quem nao tem resolucao previa, entao nao ha sobreposicao com as linhas
-    # acima. Tabela `historico` pode nem existir em banco antigo -> blindado.
+    # Ciclo de vida persistido pelo Processador na tabela `historico`
+    # (entidade ACESSO_SISTEMA): marcos Pendencia -> Resolvido -> Aderente.
+    # Para quem tem resolucao, as linhas ricas (com ticket/pendencias) ja foram
+    # montadas acima em tempo de leitura — entao pulamos as PENDENCIA/RESOLVIDO
+    # persistidas dessas matriculas para nao duplicar; a ADERENTE sempre entra.
+    # Banco antigo sem a tabela `historico` -> bloco blindado, so nao acrescenta.
+    mats_resol = set((resolvidos or {}).keys())
+    _MOVS = {"PENDENCIA": ("PENDENCIA", "Pendência identificada"),
+             "RESOLVIDO": ("RESOLUCAO", "Pendência resolvida"),
+             "ADERENTE":  ("ADERENTE",  "Aderente")}
     ch = conn_ro()
     try:
         for row in ch.execute(
-            "SELECT matricula, data_snapshot, dados_novo FROM historico "
-            "WHERE entidade='ACESSO_SISTEMA' AND tipo_mudanca='ADERENTE'"
+            "SELECT matricula, tipo_mudanca, data_snapshot, dados_novo FROM historico "
+            "WHERE entidade='ACESSO_SISTEMA' AND tipo_mudanca IN "
+            "('PENDENCIA','RESOLVIDO','ADERENTE')"
         ):
+            mat, tm = row[0], row[1]
+            if tm in ("PENDENCIA", "RESOLVIDO") and mat in mats_resol:
+                continue  # ja coberto pelas linhas ricas da resolucao
+            tipo, mov = _MOVS.get(tm, (tm, tm))
             try:
-                d = json.loads(row[2] or "{}")
+                d = json.loads(row[3] or "{}")
             except Exception:
                 d = {}
-            ds = str(row[1] or "")
+            dt = d.get("data") or str(row[2] or "")   # datetime p/ ordem correta
             out.append({
-                "tipo": "ADERENTE", "data": ds, "_ord": ds,
-                "matricula": row[0], "nome": d.get("nome") or row[0],
-                "movimentacao": "Aderente", "campos": "",
+                "tipo": tipo, "data": dt, "_ord": dt,
+                "matricula": mat, "nome": d.get("nome") or mat,
+                "movimentacao": mov, "campos": d.get("ticket") or "",
                 "sistema": d.get("sistema") or "", "perfil": d.get("perfil") or "",
-                "cargo": d.get("cargo") or "", "ticket": "", "ticket_url": "",
-                "descricao": "", "por": "", "em": "", "pendencias": [],
+                "cargo": d.get("cargo") or "", "ticket": d.get("ticket") or "",
+                "ticket_url": "", "descricao": "", "por": "", "em": "",
+                "pendencias": [],
             })
     except Exception:
         pass  # tabela historico pode nao existir em banco antigo

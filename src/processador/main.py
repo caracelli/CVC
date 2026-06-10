@@ -22,7 +22,7 @@ from aplicacao.casos_de_uso.analisar_divergencias import AnalisarDivergencias
 from aplicacao.casos_de_uso.gerar_saidas import GerarSaidas
 from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
 from aplicacao.casos_de_uso.registrar_ciclo_vida import RegistrarCicloVida
-from aplicacao.casos_de_uso.registrar_aderente_historico import RegistrarAderenteHistorico
+from aplicacao.casos_de_uso.registrar_ciclo_historico import RegistrarCicloHistorico
 from aplicacao.casos_de_uso.dobrar_interacoes import DobrarInteracoes
 from dominio.objetos_valor.sistema import Sistema
 
@@ -309,9 +309,10 @@ def _executar(caminho_config: Path) -> int:
         # Depois da validacao (validacao_acessos) e da dobra (resolucoes, acima).
         RegistrarCicloVida(conexao=conexao).executar()
 
-        # Aderentes "conforme direto" projetados na trilha `historico`
-        # (entidade ACESSO_SISTEMA / ADERENTE). Depois do ciclo e da dobra.
-        RegistrarAderenteHistorico(conexao=conexao).executar()
+        # Projeta os marcos do ciclo (Pendencia/Resolvido/Aderente) na trilha
+        # `historico` — uma linha por marco, idempotente, em ordem. Cobre
+        # transicoes manuais (ticket) e do processador.
+        RegistrarCicloHistorico(conexao=conexao).executar()
 
         # Card 9 — Gerar saidas (Excel) — usa validações acima para a coluna acao
         GerarSaidas(
