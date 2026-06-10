@@ -18,7 +18,7 @@ from typing import Dict, List
 import pandas as pd
 from loguru import logger
 
-from .leitor_base import LeitorArquivoBase
+from .leitor_base import LeitorArquivoBase, ler_tabela
 from dominio.entidades.perfil_acesso import PerfilAcesso
 from dominio.objetos_valor.sistema import Sistema
 from dominio.servicos_dominio.servico_padronizacao import ServicoPadronizacao
@@ -32,12 +32,6 @@ _COLS_FIXAS = ("LOGIN", "NM_USER", "STATUS", "CPF", "EMAIL")
 _MAPA_SITUACAO = {"ATIVO": "ATIVO", "INATIVO": "INATIVO"}
 
 
-def _ler_primeira_aba_xlsx(arquivo: Path, dtype=str) -> pd.DataFrame:
-    """Le sempre a PRIMEIRA aba. Nome real ('Select tb_sys_sec_user') pode
-    mudar se o cliente regerar a query."""
-    return pd.read_excel(arquivo, sheet_name=0, dtype=dtype)
-
-
 class LeitorCatalogoSig(LeitorArquivoBase):
     """Le o de-para `ID -> NM_ROLE` do SIG (XLSX `ID_x_Perfis_SIG`).
 
@@ -48,7 +42,7 @@ class LeitorCatalogoSig(LeitorArquivoBase):
     def ler(self, arquivo: Path) -> Dict[str, str]:
         """Devolve {codigo_str: nome_str}. Codigo armazenado como string
         (consistente com a coluna do extrato e com catalogo_perfis)."""
-        df = _ler_primeira_aba_xlsx(arquivo)
+        df = ler_tabela(arquivo)
         if df.empty:
             logger.warning(f"De-para SIG vazio: {arquivo.name}")
             return {}
@@ -100,7 +94,7 @@ class LeitorSig(LeitorArquivoBase):
         return sorted(self.listar_arquivos(pasta), key=lambda f: chave_data_arquivo(f.name))
 
     def ler_um(self, arquivo: Path) -> List[PerfilAcesso]:
-        df = _ler_primeira_aba_xlsx(arquivo).dropna(how="all")
+        df = ler_tabela(arquivo).dropna(how="all")
         if df.empty:
             return []
 

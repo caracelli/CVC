@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 import pandas as pd
 from loguru import logger
 
-from .leitor_base import LeitorArquivoBase
+from .leitor_base import LeitorArquivoBase, ler_tabela
 from dominio.entidades.funcionario_ativo import FuncionarioAtivo
 from dominio.entidades.funcionario_desligado import FuncionarioDesligado
 from dominio.objetos_valor.cargo import Cargo
@@ -59,13 +59,10 @@ def _parse_data(valor: str) -> Optional[date]:
         return None
 
 
-def _ler_df(arquivo: Path, encoding: str, separador: str = ";") -> pd.DataFrame:
-    if arquivo.suffix.lower() in (".xlsx", ".xls"):
-        return pd.read_excel(arquivo, dtype=str)
-    return pd.read_csv(
-        arquivo, sep=separador, dtype=str,
-        encoding=encoding, on_bad_lines="skip",
-    )
+def _ler_df(arquivo: Path, encoding: str, separador: str = None) -> pd.DataFrame:
+    # Aceita XLSX/XLS ou CSV; no CSV detecta separador (',', ';', tab) e encoding.
+    # `separador=None` => auto (mais robusto); um valor explicito tem prioridade.
+    return ler_tabela(arquivo, dtype=str, encoding=encoding, separador=separador)
 
 
 # ---- Terceiros (layout QuickReport: EMPRESA FORNECEDORA / CNPJ / NOME DO
@@ -176,18 +173,18 @@ class LeitorRh(LeitorArquivoBase):
         """Devolve (df, tipo) onde tipo e' 'TERCEIRO' ou 'FUNCIONARIO'.
         O QuickReport de terceiros tem o cabecalho na 2a linha (1a em branco),
         entao se a leitura padrao nao reconhecer nem terceiro nem CLT, tenta
-        reler o xlsx com header=1."""
-        df = _ler_df(arquivo, enc, self._separador)
+        reler com header=1 (vale para XLSX e CSV)."""
+        df = _ler_df(arquivo, enc)
         if _eh_terceiro(df):
             return df, "TERCEIRO"
         if _tem_matricula_clt(df):
             return df, "FUNCIONARIO"
-        if arquivo.suffix.lower() in (".xlsx", ".xls"):
-            df2 = pd.read_excel(arquivo, dtype=str, header=1)
-            if _eh_terceiro(df2):
-                return df2, "TERCEIRO"
-            if _tem_matricula_clt(df2):
-                return df2, "FUNCIONARIO"
+        # fallback: cabecalho na 2a linha (QuickReport) — qualquer formato
+        df2 = ler_tabela(arquivo, dtype=str, encoding=enc, header=1)
+        if _eh_terceiro(df2):
+            return df2, "TERCEIRO"
+        if _tem_matricula_clt(df2):
+            return df2, "FUNCIONARIO"
         return df, "FUNCIONARIO"  # default conservador
 
     def _parse_clt(self, df: pd.DataFrame) -> List[FuncionarioAtivo]:
@@ -258,7 +255,7 @@ class LeitorRh(LeitorArquivoBase):
         for arquivo in self.listar_arquivos(pasta):
             try:
                 enc = self.detectar_encoding(arquivo) if arquivo.suffix.lower() == ".csv" else "utf-8"
-                df = _ler_df(arquivo, enc, self._separador)
+                df = _ler_df(arquivo, enc)
                 col = {k: _resolver_coluna(df, k) for k in _COLUNAS}
 
                 for _, row in df.iterrows():

@@ -4,9 +4,43 @@ from pathlib import Path
 from typing import List, Optional
 
 import chardet
+import pandas as pd
 from loguru import logger
 
 EXTENSOES_SUPORTADAS = {".csv", ".xlsx", ".xls"}
+
+
+def ler_tabela(arquivo, dtype=str, header=0, skiprows=0,
+               encoding: str = None, separador: str = None) -> "pd.DataFrame":
+    """Leitura UNICA para todos os leitores: aceita XLSX/XLS (primeira aba) OU
+    CSV, com as MESMAS colunas/dados. No CSV, detecta encoding e separador
+    (',', ';' ou tab) quando nao informados — assim qualquer arquivo, em
+    qualquer formato/separador, e' importado. `encoding`/`separador` explicitos
+    (ex.: configurados por sistema) tem prioridade sobre a deteccao.
+    """
+    arquivo = Path(arquivo)
+    if arquivo.suffix.lower() in (".xlsx", ".xls"):
+        return pd.read_excel(arquivo, sheet_name=0, dtype=dtype,
+                             header=header, skiprows=skiprows)
+    enc, sep = encoding, separador
+    if enc is None or sep is None:
+        with open(arquivo, "rb") as f:
+            bruto = f.read(65536)
+        if enc is None:
+            enc = (chardet.detect(bruto).get("encoding") if bruto else None) or "utf-8"
+        if sep is None:
+            try:
+                linhas = bruto.decode(enc, errors="replace").splitlines()
+            except LookupError:
+                enc = "utf-8"
+                linhas = bruto.decode(enc, errors="replace").splitlines()
+            # conta delimitadores NA LINHA DO CABECALHO real (skiprows+header)
+            idx = skiprows + header
+            alvo = linhas[idx] if len(linhas) > idx else (linhas[-1] if linhas else "")
+            cont = {",": alvo.count(","), ";": alvo.count(";"), "\t": alvo.count("\t")}
+            sep = max(cont, key=cont.get) if any(cont.values()) else ","
+    return pd.read_csv(arquivo, sep=sep, dtype=dtype, encoding=enc,
+                       header=header, skiprows=skiprows, on_bad_lines="skip")
 
 
 class LeitorArquivoBase:

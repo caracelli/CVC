@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 from loguru import logger
 
-from .leitor_base import LeitorArquivoBase
+from .leitor_base import LeitorArquivoBase, ler_tabela
 from dominio.entidades.perfil_esperado import PerfilEsperado
 from dominio.objetos_valor.sistema import Sistema
 
@@ -63,18 +63,15 @@ def _resolver_col_cargo(colunas: List[str]) -> Optional[str]:
 
 
 def _ler_df_perfis(arquivo: Path) -> pd.DataFrame:
-    if arquivo.suffix.lower() in (".xlsx", ".xls"):
-        return _normalizar_colunas(pd.read_excel(arquivo, dtype=str))
-    return _normalizar_colunas(pd.read_csv(arquivo, sep=";", dtype=str, on_bad_lines="skip"))
+    # XLSX/XLS ou CSV (separador/encoding auto no CSV); cabecalho na 1a linha.
+    return _normalizar_colunas(ler_tabela(arquivo, dtype=str))
 
 
 def _ler_df_org(arquivo: Path) -> pd.DataFrame:
-    if arquivo.suffix.lower() in (".xlsx", ".xls"):
-        # Linha 0 é título fundido; linha 1 contém os cabeçalhos reais
-        df = pd.read_excel(arquivo, dtype=str, header=1)
-    else:
-        df = pd.read_csv(arquivo, sep=";", dtype=str, on_bad_lines="skip")
-    return _normalizar_colunas(df)
+    # No XLSX a linha 0 e' titulo fundido e o cabecalho real esta' na linha 1;
+    # no CSV (export) o cabecalho ja' vem na 1a linha. Mantemos essa distincao.
+    header = 1 if arquivo.suffix.lower() in (".xlsx", ".xls") else 0
+    return _normalizar_colunas(ler_tabela(arquivo, dtype=str, header=header))
 
 
 class LeitorMatrizPerfis(LeitorArquivoBase):

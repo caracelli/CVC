@@ -5,7 +5,7 @@ from typing import List, Optional
 
 import pandas as pd
 
-from .leitor_base import LeitorArquivoBase
+from .leitor_base import LeitorArquivoBase, ler_tabela
 from .configs_sistemas import ConfigLeitorSistema
 from dominio.entidades.perfil_acesso import PerfilAcesso
 from dominio.servicos_dominio.servico_padronizacao import ServicoPadronizacao
@@ -66,20 +66,13 @@ class LeitorSistema(LeitorArquivoBase):
         return sorted(self.listar_arquivos(pasta), key=lambda f: chave_data_arquivo(f.name))
 
     def _ler_df(self, arquivo: Path, encoding: str) -> pd.DataFrame:
-        if arquivo.suffix.lower() in (".xlsx", ".xls"):
-            # PRIMEIRA aba sempre (sheet_name=0). Nao confiar no nome literal:
-            # arquivos vindos de export SQL (ex.: 'Select tb_sys_sec_user' do SIG)
-            # tem nome que muda se o cliente regenerar a query.
-            df = pd.read_excel(arquivo, dtype=str, skiprows=self._cfg.skiprows, sheet_name=0)
-        else:
-            df = pd.read_csv(
-                arquivo,
-                sep=self._cfg.separador,
-                dtype=str,
-                encoding=encoding,
-                skiprows=self._cfg.skiprows,
-                on_bad_lines="skip",
-            )
+        # XLSX (1a aba) ou CSV. O separador do sistema vem do config (explicito,
+        # tem prioridade); o skiprows tambem. Nomes de aba/export podem mudar,
+        # por isso sheet_name=0 dentro do helper.
+        df = ler_tabela(
+            arquivo, dtype=str, skiprows=self._cfg.skiprows,
+            encoding=encoding, separador=self._cfg.separador,
+        )
         # o cabecalho pode vir com BOM e com espacos de preenchimento
         df.columns = [str(c).replace(_BOM, "").strip() for c in df.columns]
         return df
