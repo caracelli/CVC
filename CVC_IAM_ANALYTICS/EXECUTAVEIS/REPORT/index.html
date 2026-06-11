@@ -3383,7 +3383,7 @@ function pintarQuarentena(){
     ordem.forEach((u, idx) => {
       const eps = grupos[u], e0 = eps[0], mais = eps.length > 1;
       h += `<tr>
-        <td style="text-align:center;">${mais ? `<button class="expand-btn" data-row="${idx}" onclick="toggleHist(this)">+</button>` : ''}</td>
+        <td style="text-align:center;">${mais ? `<button class="expand-btn" data-row="${idx}" data-hk="${esc(u)}" onclick="toggleHist(this)">${_quarHistExpand.has(u)?'-':'+'}</button>` : ''}</td>
         <td><strong style="color:#1F2D5C;">${esc(e0.usuario)}</strong>${mais ? ` <span style="color:#9099A6;font-weight:700;">${eps.length}×</span>` : ''}</td>
         <td>${esc(e0.nome_usuario)}</td>
         <td>${esc(e0.sistema)}</td>
@@ -3393,7 +3393,7 @@ function pintarQuarentena(){
         <td>${esc(e0.motivo)}</td>
       </tr>`;
       eps.slice(1).forEach(e => {
-        h += `<tr class="sub-row" data-sub="${idx}" style="display:none;">
+        h += `<tr class="sub-row" data-sub="${idx}" style="display:${_quarHistExpand.has(u)?'table-row':'none'};">
           <td></td>
           <td style="padding-left:16px;color:#7B8085;">↳</td>
           <td>—</td><td>—</td>
@@ -3413,13 +3413,15 @@ function pintarQuarentena(){
   _quarEquiparData();
 }
 
+const _quarHistExpand=new Set();   // grupos da quarentena-histórico expandidos (persiste no auto-refresh)
 function toggleHist(btn){
-  const row = btn.dataset.row;
+  const row = btn.dataset.row, hk = btn.dataset.hk;
   const open = btn.textContent === '-';
   document.querySelectorAll(`#quar-body tr[data-sub="${row}"]`).forEach(r =>
     r.style.display = open ? 'none' : 'table-row'
   );
   btn.textContent = open ? '+' : '-';
+  if(hk){ if(open) _quarHistExpand.delete(hk); else _quarHistExpand.add(hk); }
 }
 
 async function retirarQuarentena(id){
@@ -3469,6 +3471,7 @@ function renderSV(){
 let _histRecs=[], _histOrd=null, _histPag=1, _histPP=50;
 let _histData=null;   // filtro de data (col 4) — {tipo,de,ate}
 const _histFilt={};
+const _histExpand=new Set();   // grupos expandidos (persiste no auto-refresh)
 /* colunas: 0=expand 1=Matrícula 2=Nome 3=Movimentação 4=Data 5=Detalhe */
 function _histDisp(c,r){
   if(c===4) return fmtDate(r.data)||'—';
@@ -3548,7 +3551,7 @@ function pintarHistorico(){
     const hdr=g.recs[0], resto=g.recs.slice(1);
     h+=`<tr>
       <td style="text-align:center;">${resto.length
-        ?`<button class="expand-btn" onclick="histToggle(this,${gi})">+</button>`:''}</td>
+        ?`<button class="expand-btn" data-row="${gi}" data-hk="${esc(g.chave)}" onclick="histToggle(this)">${_histExpand.has(g.chave)?'-':'+'}</button>`:''}</td>
       <td><strong style="color:#1F2D5C;">${esc(g.matricula)||'—'}</strong></td>
       <td>${esc(g.nome)||'—'}</td>
       <td>${histMov(hdr)}</td>
@@ -3556,7 +3559,7 @@ function pintarHistorico(){
       <td>${histDet(hdr)}</td>
     </tr>`;
     resto.forEach(r=>{
-      h+=`<tr class="sub-row" data-hsub="${gi}" style="display:none;">
+      h+=`<tr class="sub-row" data-hsub="${gi}" style="display:${_histExpand.has(g.chave)?'table-row':'none'};">
         <td></td>
         <td style="text-align:center;color:#B4BAC2;">↳</td>
         <td></td>
@@ -3583,11 +3586,13 @@ function pintarHistorico(){
     `<button class="pg-btn" ${_histPag>=totPag?'disabled':''} onclick="histIr(${totPag})">»</button>`;
   equiparHist();
 }
-function histToggle(btn,gi){
+function histToggle(btn){
+  const row=btn.dataset.row, hk=btn.dataset.hk;
   const open=btn.textContent==='-';
-  document.querySelectorAll(`#hist-body [data-hsub="${gi}"]`).forEach(r=>
+  document.querySelectorAll(`#hist-body [data-hsub="${row}"]`).forEach(r=>
     r.style.display=open?'none':'table-row');
   btn.textContent=open?'+':'-';
+  if(hk){ if(open) _histExpand.delete(hk); else _histExpand.add(hk); }
 }
 function histIr(p){ _histPag=p; comHandling(pintarHistorico); }
 function histPP(v){ _histPP=parseInt(v,10)||100; _histPag=1; comHandling(pintarHistorico); }

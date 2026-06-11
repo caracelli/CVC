@@ -186,15 +186,19 @@ class ValidarAcessosSistema:
             if sis == sistema_valor
         }
 
-        # Casamento de perfil: exato por padrao; aproximado (normalizado) para
-        # os sistemas em _SISTEMAS_PERFIL_APROXIMADO (hoje so o IC).
+        # Casamento de perfil:
+        #  - SEMPRE case-insensitive (+ acento/trim) via _norm: a matriz pode vir
+        #    'Analista_M_C' e o extrato 'ANALISTA_M_C' — e' o mesmo perfil.
+        #  - Para os sistemas em _SISTEMAS_PERFIL_APROXIMADO (hoje so o IC), tambem
+        #    aproxima '_' <-> espaco (extrato usa '_', matriz usa espaco).
         aproximado = sistema_valor in _SISTEMAS_PERFIL_APROXIMADO
 
         def _adere(esperado: str) -> bool:
             if aproximado:
                 alvo = _norm_perfil(esperado)
                 return any(_norm_perfil(a) == alvo for a in acessos_atuais)
-            return esperado in acessos_atuais
+            alvo = _norm(esperado)
+            return any(_norm(a) == alvo for a in acessos_atuais)
 
         # Sistema SEM nenhum dado de acesso no banco (fora de escopo / extrato
         # nao recebido): nao da pra validar -> SEM_DADOS (NAO gera pendencia).
