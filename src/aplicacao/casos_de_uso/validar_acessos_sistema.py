@@ -16,7 +16,9 @@ def _norm(s: str) -> str:
         return ""
     s = s.upper().strip()
     s = unicodedata.normalize("NFKD", s)
-    return "".join(c for c in s if not unicodedata.combining(c))
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    # colapsa espacos internos: 'ANALISTA  PL' == 'ANALISTA PL'
+    return " ".join(s.split())
 
 
 # Sistemas que casam perfil por APROXIMACAO (nao por string exata). Por
@@ -45,7 +47,7 @@ class ValidarAcessosSistema:
 
         registros: List[Dict] = []
         for func in ativos:
-            cc = func.centro_custo_codigo or ""
+            cc = _norm(func.centro_custo_codigo or "")   # normaliza p/ casar com matriz/CCO
             # MATRIZ de perfis casa por (cc, cargo); CCO casa por (cc, GESTOR)
             # — o gestor desambigua qual subconjunto de funcoes do cc se aplica.
             chave_matriz = (cc, _norm(func.cargo_descricao or ""))
@@ -135,14 +137,14 @@ class ValidarAcessosSistema:
         perfis_por_chave: Dict[Tuple[str, str], Dict[str, List[Tuple[str, bool]]]] = \
             defaultdict(lambda: defaultdict(list))
         for pe in repo.obter_perfis_esperados():
-            chave = (pe.cargo_codigo, _norm(pe.cargo_descricao))
+            chave = (_norm(pe.cargo_codigo), _norm(pe.cargo_descricao))
             perfis_por_chave[chave][pe.sistema.value].append((pe.perfil, pe.acesso_manual))
 
         # (cc, gestor_norm) → lista de (sistema_str, perfil), sem duplicatas.
         # A CCO casa por centro de custo + GESTOR (nao por funcao/cargo).
         cco: Dict[Tuple[str, str], List[Tuple[str, str]]] = defaultdict(list)
         for r in repo.obter_cco():
-            chave = (r["cc"], _norm(r.get("gestor", "")))
+            chave = (_norm(r["cc"]), _norm(r.get("gestor", "")))
             entry = (r["sistema"], r["perfil"])
             if entry not in cco[chave]:
                 cco[chave].append(entry)
