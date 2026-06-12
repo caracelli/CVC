@@ -919,6 +919,11 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
           <div class="vg-bar-track"><div class="vg-bar-fill" id="vg-ch-re" style="background:#F5B800;width:0%;"></div></div>
           <span class="vg-bar-val" id="vg-ch-re-v">—</span>
         </div>
+        <div class="vg-chamado-row">
+          <span class="vg-chamado-lbl">Aderentes</span>
+          <div class="vg-bar-track"><div class="vg-bar-fill" id="vg-ch-ader" style="background:#2E8B57;width:0%;"></div></div>
+          <span class="vg-bar-val" id="vg-ch-ader-v">—</span>
+        </div>
         <div class="vg-saldo">
           <span>Saldo aberto: <span id="vg-saldo">—</span></span>
         </div>
@@ -943,7 +948,8 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
               <span class="vg-seg-k">Resolvido → Aderente</span><b id="vg-seg-ra-v">—</b></div>
           </div>
           <div class="vg-seg-empty-msg" id="vg-seg-empty-msg" style="display:none;">
-            Sem ciclos completos ainda.
+            Detalhe por etapa (Pendência → Resolvido → Aderente) só para ciclos
+            resolvidos por ticket. O total inclui liberações feitas fora do sistema.
           </div>
         </div>
       </div>
@@ -2320,14 +2326,18 @@ function _vgMovimentacao(vg){
   foot.innerHTML = '';
 }
 function _vgChamados(vg){
-  const ch = vg.chamados || {identificados:0, resolvidos:0, tempo_medio_dias:0};
-  const max = Math.max(ch.identificados, ch.resolvidos, 1);
+  const ch = vg.chamados || {identificados:0, resolvidos:0, aderentes:0, tempo_medio_dias:0};
+  const ader = ch.aderentes || 0;
+  const max = Math.max(ch.identificados, ch.resolvidos, ader, 1);
   const pId = 100 * ch.identificados / max;
   const pRe = 100 * ch.resolvidos / max;
+  const pAd = 100 * ader / max;
   document.getElementById('vg-ch-id').style.width = pId.toFixed(1) + '%';
   document.getElementById('vg-ch-re').style.width = pRe.toFixed(1) + '%';
+  const _adB = document.getElementById('vg-ch-ader'); if(_adB) _adB.style.width = pAd.toFixed(1) + '%';
   document.getElementById('vg-ch-id-v').textContent = _vgFmt(ch.identificados);
   document.getElementById('vg-ch-re-v').textContent = _vgFmt(ch.resolvidos);
+  const _adV = document.getElementById('vg-ch-ader-v'); if(_adV) _adV.textContent = _vgFmt(ader);
   const saldo = ch.identificados - ch.resolvidos;
   const sinal = saldo > 0 ? '+' : '';
   const cls = saldo > 0 ? 'vg-saldo-pos' : (saldo < 0 ? 'vg-saldo-neg' : '');
@@ -2337,7 +2347,9 @@ function _vgTempos(vg){
   const t = vg.tempos || {};
   const pr = +t.seg_pr || 0, ra = +t.seg_ra || 0, sum = pr + ra;
   const tot = document.getElementById('vg-t-tot');
-  if(tot) tot.textContent = sum ? (t.total || '—') : '—';
+  // total = pendencia->aderencia (conta tambem P->A direto, sem ticket); mostra
+  // sempre que houver ciclo (t.n), nao so quando ha segmentos por resolucao.
+  if(tot) tot.textContent = t.n ? (t.total || '—') : '—';
   const tn = document.getElementById('vg-t-tot-n');
   if(tn) tn.textContent = t.n ? `· ${t.n} ciclo${t.n>1?'s':''}` : '';
   const pPr = sum ? Math.round(100*pr/sum) : 0, pRa = sum ? 100 - pPr : 0;

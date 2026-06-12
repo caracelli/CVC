@@ -117,9 +117,11 @@ class TestCicloVida(unittest.TestCase):
         self.assertEqual(t["resolv_ader"], "3d")     # (2d + 4d) / 2
         self.assertEqual(t["pend_resolv"], "2d")     # (2d + 2d) / 2
 
-    def test_vg_ignora_ciclos_incompletos(self):
-        # So ciclos COMPLETOS (3 datas) entram na media. O caso EMERSON
-        # (pendencia + aderente, SEM resolvido) NAO pode distorcer nem contar.
+    def test_vg_total_inclui_organico_segmentos_so_completos(self):
+        # O TOTAL (pendencia -> aderencia) conta TAMBEM o P->A direto (liberacao
+        # feita FORA do sistema, sem ticket): nao podemos perder esse tempo. Os
+        # SEGMENTOS (P->R, R->A) so existem para ciclos resolvidos por ticket.
+        # E (pendencia + aderente, SEM resolvido) entra no total, nao nos segmentos.
         import visualizador.main as vm
         c = sqlite3.connect(self.db)
         c.execute(
@@ -131,10 +133,10 @@ class TestCicloVida(unittest.TestCase):
         vg = vm._calcular_visao_geral(c, "")
         c.close()
         t = vg["tempos"]
-        self.assertEqual(t["n"], 2)                 # so C e D; E (incompleto) fora
-        self.assertEqual(t["pend_resolv"], "2d")     # jan1 -> jan3
+        self.assertEqual(t["n"], 3)                  # C, D e E (P->A direto) no TOTAL
+        self.assertEqual(t["total"], "5d 8h")        # (4d + 4d + 8d) / 3 = 16d/3
+        self.assertEqual(t["pend_resolv"], "2d")     # segmentos so C,D: jan1 -> jan3
         self.assertEqual(t["resolv_ader"], "2d")     # jan3 -> jan5
-        self.assertEqual(t["total"], "4d")
 
     def test_fmt_duracao(self):
         from visualizador.main import _fmt_duracao

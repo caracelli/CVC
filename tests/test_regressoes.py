@@ -65,35 +65,9 @@ class TestStatusLabel(unittest.TestCase):
         self.assertEqual(_STATUS_LABEL["NAO_MAPEADO"], "Não Mapeado")
 
 
-class TestGerarSaidasExcluiPerfilInvalido(unittest.TestCase):
-    def _div(self, tipo, usuario):
-        return Divergencia(id=f"{tipo.value}-{usuario}", tipo=tipo, sistema=Sistema.IC_INTEGRADOR_CONTABIL,
-                           usuario=usuario, nome_usuario=usuario, descricao="x")
-
-    def test_excel_nao_traz_perfil_invalido_nem_desligado(self):
-        tmp = tempfile.mkdtemp(prefix="cvc_reg_saidas_")
-        conexao = ConexaoBancoDados(os.path.join(tmp, "s.db"))
-        conexao.inicializar()
-        RepositorioDivergenciaSqlite(conexao).salvar_lote([
-            self._div(TipoDivergencia.ACESSO_SEM_VINCULO_RH, "u1"),
-            self._div(TipoDivergencia.PERFIL_INVALIDO, "u2"),
-            self._div(TipoDivergencia.ACESSO_DESLIGADO, "u3"),
-        ])
-        saidas = os.path.join(tmp, "OUT")
-        GerarSaidas(conexao=conexao, pasta_saidas=saidas).executar()
-
-        arqs = glob.glob(os.path.join(saidas, "DIVERGENCIAS_*.xlsx"))
-        self.assertEqual(len(arqs), 1)
-        wb = openpyxl.load_workbook(arqs[0], read_only=True)
-        ws = wb["TODAS"]
-        linhas = list(ws.iter_rows(values_only=True))
-        wb.close()
-        header = list(linhas[0])
-        i_tipo = header.index("Tipo")
-        tipos = {r[i_tipo] for r in linhas[1:] if r[i_tipo]}
-        self.assertIn("ACESSO_SEM_VINCULO_RH", tipos)
-        self.assertNotIn("PERFIL_INVALIDO", tipos)
-        self.assertNotIn("ACESSO_DESLIGADO", tipos)
+# (removido) TestGerarSaidasExcluiPerfilInvalido — o Excel automatico de saidas
+# foi retirado do pipeline (gerava lixo em SAIDAS/ a cada run; export e' sob
+# demanda pelo painel). GerarSaidas agora so contabiliza/loga.
 
 
 class TestConfigSemDeprecationElementTree(unittest.TestCase):

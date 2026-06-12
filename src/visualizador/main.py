@@ -1153,7 +1153,7 @@ def _calcular_visao_geral(c, sistema=""):
     # mes-calendario: na virada do mes (dia 1) o calendario zerava e a tela
     # vinha vazia. 30 dias terminando hoje sempre mostra o recente. (Mesma
     # janela da Movimentação RH.) Parametrizar a janela: ver docs/ROADMAP_VISAO_GERAL.
-    chamados = {"identificados": 0, "resolvidos": 0, "tempo_medio_dias": 0}
+    chamados = {"identificados": 0, "resolvidos": 0, "aderentes": 0, "tempo_medio_dias": 0}
     corte = (hoje - datetime.timedelta(days=VG_JANELA_DIAS)).isoformat()
     try:
         chamados["identificados"] = c.execute(
@@ -1169,17 +1169,34 @@ def _calcular_visao_geral(c, sistema=""):
         ).fetchone()[0]
     except Exception:
         pass  # tabela resolucoes ainda nao existe em banco virgem
+    try:
+        # Aderentes: viraram conforme na janela (3o estagio do ciclo). Inclui
+        # quem foi liberado FORA do sistema (P->A direto, sem ticket).
+        chamados["aderentes"] = c.execute(
+            "SELECT COUNT(*) FROM ciclo_vida_acesso "
+            "WHERE dt_aderente IS NOT NULL AND date(dt_aderente) >= ?", (corte,)
+        ).fetchone()[0]
+    except Exception:
+        pass  # tabela ciclo_vida_acesso pode nao existir em banco antigo
     out["chamados"] = chamados
 
-    # Tempo de tratamento (ciclo de vida): medias sobre os ciclos COMPLETOS
-    # (as 3 datas presentes), p/ a barra segmentada — os 2 segmentos somam o
-    # total exato. seg_* em segundos (p/ a proporcao da barra no front).
+    # Tempo de tratamento (ciclo de vida).
+    # TOTAL = pendencia -> aderencia (liberacao do acesso), contando TAMBEM os
+    # casos resolvidos FORA do sistema (P->A direto, sem ticket): nao podemos
+    # perder esse tempo. SEGMENTOS (P->R e R->A) so existem p/ ciclos resolvidos
+    # PELO sistema (com ticket) — alimentam a barra segmentada quando houver.
     filtro_sis = " AND sistema = ?" if sistema else ""
     par_sis = (sistema,) if sistema else ()
     tempos = {"total": "—", "pend_resolv": "—", "resolv_ader": "—",
               "seg_pr": 0, "seg_ra": 0, "n": 0}
     try:
-        r = c.execute(
+        rt = c.execute(
+            "SELECT AVG((julianday(dt_aderente)-julianday(dt_pendencia))*86400.0), COUNT(*) "
+            "FROM ciclo_vida_acesso "
+            "WHERE dt_pendencia IS NOT NULL AND dt_aderente IS NOT NULL "
+            "  AND dt_aderente >= dt_pendencia" + filtro_sis, par_sis).fetchone()
+        seg_total, n = (rt[0] or 0), (rt[1] or 0)
+        rs = c.execute(
             "SELECT AVG((julianday(dt_resolvido)-julianday(dt_pendencia))*86400.0), "
             "       AVG((julianday(dt_aderente )-julianday(dt_resolvido))*86400.0), "
             "       COUNT(*) "
@@ -1188,13 +1205,13 @@ def _calcular_visao_geral(c, sistema=""):
             "  AND dt_aderente IS NOT NULL "
             "  AND dt_resolvido >= dt_pendencia AND dt_aderente >= dt_resolvido"
             + filtro_sis, par_sis).fetchone()
-        seg_pr, seg_ra, n = (r[0] or 0), (r[1] or 0), (r[2] or 0)
+        seg_pr, seg_ra, n_seg = (rs[0] or 0), (rs[1] or 0), (rs[2] or 0)
         if n:
             tempos.update({
                 "seg_pr": seg_pr, "seg_ra": seg_ra, "n": n,
-                "pend_resolv": _fmt_duracao(seg_pr),
-                "resolv_ader": _fmt_duracao(seg_ra),
-                "total": _fmt_duracao(seg_pr + seg_ra),
+                "pend_resolv": _fmt_duracao(seg_pr) if n_seg else "—",
+                "resolv_ader": _fmt_duracao(seg_ra) if n_seg else "—",
+                "total": _fmt_duracao(seg_total),
             })
     except Exception:
         pass

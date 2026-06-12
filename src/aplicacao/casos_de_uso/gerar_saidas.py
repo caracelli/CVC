@@ -4,7 +4,6 @@ from loguru import logger
 
 from dominio.objetos_valor.tipo_divergencia import TipoDivergencia
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
-from infraestrutura.escritores_arquivos.escritor_excel import EscritorExcel
 from infraestrutura.repositorios.repositorio_divergencia_sqlite import RepositorioDivergenciaSqlite
 from infraestrutura.repositorios.repositorio_matriz_sqlite import RepositorioMatrizSqlite
 
@@ -28,7 +27,6 @@ class GerarSaidas:
     ):
         self._repo_div = RepositorioDivergenciaSqlite(conexao)
         self._repo_matriz = RepositorioMatrizSqlite(conexao)
-        self._escritor_excel = EscritorExcel()
         self._pasta_saidas = pasta_saidas
 
     def executar(self) -> int:
@@ -86,18 +84,11 @@ class GerarSaidas:
         all_rows = rows_validacao + rows_sem_vinculo
 
         if not all_rows:
-            logger.warning("Nenhuma divergencia encontrada — saidas nao geradas.")
+            logger.warning("Nenhuma divergencia encontrada.")
             return 0
 
-        # Excel (usa entidades Divergencia originais). Escopo Fase 1 (SYSTUR
-        # inclusao/alteracao): exclui ACESSO_DESLIGADO (fluxo separado) e
-        # PERFIL_INVALIDO (fora do painel desde 21/05 — "some perfil invalido
-        # por enquanto"), mantendo o Excel alinhado a grid.
-        _TIPOS_EXCLUIDOS = {TipoDivergencia.ACESSO_DESLIGADO, TipoDivergencia.PERFIL_INVALIDO}
-        divergencias_excel = [d for d in self._repo_div.obter_todas() if d.tipo not in _TIPOS_EXCLUIDOS]
-        if divergencias_excel:
-            caminho_excel = self._escritor_excel.salvar_divergencias(divergencias_excel, self._pasta_saidas)
-            logger.info(f"Excel gerado: {caminho_excel}")
-
-        logger.info(f"=== Saidas geradas: {len(all_rows)} registros ===")
+        # Excel automatico REMOVIDO (gerava um arquivo por run em SAIDAS/, sem
+        # uso — o usuario exporta da grid do painel sob demanda). Esta etapa
+        # so contabiliza/loga as divergencias do cenario.
+        logger.info(f"=== Divergencias do cenario: {len(all_rows)} registros ===")
         return len(all_rows)
