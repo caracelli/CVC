@@ -882,9 +882,15 @@ def _montar_base():
         sis_dist = {r["sistema"]: r["n"] for r in c.execute(
             "SELECT sistema, COUNT(*) n FROM bi_divergencias GROUP BY sistema")}
 
+        # REGRA: todo card conta USUARIOS distintos (qualitativo), nao acessos
+        # (quantitativo). Um usuario pode ter varios acessos do mesmo tipo — Em
+        # Analise com N perfis candidatos, ou varios acessos sem vinculo — mas no
+        # card conta como 1 pessoa. (Bate com o nivel superior da grid: 1 linha
+        # por usuario.) Antes contava linhas e inflava (ex.: Em Analise 523 op. de
+        # 154 pessoas; Nao Mapeado 5540 acessos de 5036 pessoas).
         def cont(t):
             return c.execute(
-                f"SELECT COUNT(*) FROM bi_divergencias {whereS} "
+                f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias {whereS} "
                 f"{'AND' if whereS else 'WHERE'} tipo=?", argS + [t]).fetchone()[0]
 
         kpis = {
@@ -893,12 +899,12 @@ def _montar_base():
             "em_analise": cont("EM_ANALISE"),
             "nao_mapeado": cont("ACESSO_SEM_VINCULO_RH"),
             "ok": cont("OK"),                       # conforme — nao e' pendencia
-            "total": c.execute(                     # total de PENDENCIAS (exclui OK)
-                f"SELECT COUNT(*) FROM bi_divergencias {whereS} "
-                f"{'AND' if whereS else 'WHERE'} tipo <> 'OK'", argS).fetchone()[0],
         }
+        # total de PENDENCIAS = soma dos cards exibidos (bate com a soma na tela).
+        kpis["total"] = (kpis["sem_acesso"] + kpis["divergente"]
+                         + kpis["em_analise"] + kpis["nao_mapeado"])
         acao_dist = {r["acao"]: r["n"] for r in c.execute(
-            f"SELECT acao, COUNT(*) n FROM bi_divergencias {whereS} "
+            f"SELECT acao, COUNT(DISTINCT usuario) n FROM bi_divergencias {whereS} "
             f"GROUP BY acao ORDER BY n DESC", argS)}
 
         # Usuarios de TODA a base; o filtro de quarentena e aplicado por
@@ -970,16 +976,23 @@ def _montar_base():
             vg = {}
 
         # ── Conformidade (aba Aderentes): quem está conforme + a trilha/datas ─
+        # REGRA (mesma das pendencias): conta USUARIOS, nao acessos. 1 linha por
+        # matricula — se a pessoa for aderente em +de um sistema, mantemos a
+        # aderencia mais recente (ORDER BY dt_aderente DESC -> primeira vista).
         aderentes = []
         try:
             cond_a, par_a = "WHERE dt_aderente IS NOT NULL", []
             if SISTEMA:
                 cond_a += " AND sistema = ?"
                 par_a.append(SISTEMA)
+            _vistos_ader = set()
             for r in c.execute(
                 "SELECT matricula,nome,login,cargo,sistema,perfil,dt_aderente,"
                 "       dt_pendencia,dt_resolvido,ticket "
                 "FROM ciclo_vida_acesso " + cond_a + " ORDER BY dt_aderente DESC", par_a):
+                if r["matricula"] in _vistos_ader:
+                    continue
+                _vistos_ader.add(r["matricula"])
                 aderentes.append({
                     "m": r["matricula"], "n": r["nome"] or "", "login": r["login"] or "",
                     "cargo": r["cargo"] or "", "sis": r["sistema"] or "",
@@ -1153,18 +1166,20 @@ def _calcular_visao_geral(c, sistema=""):
     # mes-calendario: na virada do mes (dia 1) o calendario zerava e a tela
     # vinha vazia. 30 dias terminando hoje sempre mostra o recente. (Mesma
     # janela da Movimentação RH.) Parametrizar a janela: ver docs/ROADMAP_VISAO_GERAL.
+    # Chamados contam USUARIOS distintos a tratar (nao acessos): o que importa e'
+    # quantas pessoas preciso tratar, nao quantos acessos cada uma tem.
     chamados = {"identificados": 0, "resolvidos": 0, "aderentes": 0, "tempo_medio_dias": 0}
     corte = (hoje - datetime.timedelta(days=VG_JANELA_DIAS)).isoformat()
     try:
         chamados["identificados"] = c.execute(
-            "SELECT COUNT(*) FROM validacao_acessos "
+            "SELECT COUNT(DISTINCT matricula) FROM validacao_acessos "
             "WHERE situacao_acao='PENDENTE' AND date(dt_processamento) >= ?", (corte,)
         ).fetchone()[0]
     except Exception:
         pass
     try:
         chamados["resolvidos"] = c.execute(
-            "SELECT COUNT(*) FROM resolucoes "
+            "SELECT COUNT(DISTINCT registro_id) FROM resolucoes "
             "WHERE date(resolvido_em) >= ?", (corte,)
         ).fetchone()[0]
     except Exception:
@@ -1173,7 +1188,7 @@ def _calcular_visao_geral(c, sistema=""):
         # Aderentes: viraram conforme na janela (3o estagio do ciclo). Inclui
         # quem foi liberado FORA do sistema (P->A direto, sem ticket).
         chamados["aderentes"] = c.execute(
-            "SELECT COUNT(*) FROM ciclo_vida_acesso "
+            "SELECT COUNT(DISTINCT matricula) FROM ciclo_vida_acesso "
             "WHERE dt_aderente IS NOT NULL AND date(dt_aderente) >= ?", (corte,)
         ).fetchone()[0]
     except Exception:

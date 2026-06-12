@@ -1170,7 +1170,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   <!-- ═══ ADERENTES (CONFORMIDADE) ═══ -->
   <div class="page" id="pg-conf">
     <div class="conf-topo">
-      <div class="conf-kpi"><span id="conf-total">0</span> <small>acessos aderentes (conformes)</small></div>
+      <div class="conf-kpi"><span id="conf-total">0</span> <small>usuários aderentes (conformes)</small></div>
       <input id="conf-busca" class="conf-busca" placeholder="Buscar matrícula, nome, login, perfil, ticket…"
              oninput="confBuscar()">
       <span class="conf-note">Ciclo: 🔴 Pendência → 🟡 Resolvido (ticket) → 🟢 Aderente · <b>tempo total</b> (d/h/min)</span>
@@ -2148,7 +2148,7 @@ function pintarPagina(){
     '<tr><td colspan="15" style="text-align:center;padding:28px;color:#8A9099;">Nenhum registro com os filtros atuais.</td></tr>';
   const tot = document.getElementById('incl-total');
   if(tot) tot.innerHTML =
-    `<strong style="color:#1F2D5C;font-size:14px;">${total.toLocaleString('pt-BR')}</strong> registros filtrados`;
+    `<strong style="color:#1F2D5C;font-size:14px;">${total.toLocaleString('pt-BR')}</strong> usuários filtrados`;
   const pg = document.getElementById('pager');
   if(pg) pg.innerHTML = total === 0 ? '' :
     `<button class="pg-btn" ${paginaAtual<=1?'disabled':''} onclick="irPara(1)">«</button>` +

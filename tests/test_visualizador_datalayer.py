@@ -131,5 +131,48 @@ class TestVisualizadorDataLayer(unittest.TestCase):
         self.assertEqual(b["sis_dist"], {IC: 3, SYSTUR: 1})
 
 
+class TestKpisContamUsuariosNaoAcessos(unittest.TestCase):
+    """REGRA: o card conta USUARIOS a tratar (qualitativo), nao acessos
+    (quantitativo). Um usuario com N opcoes Em Analise, ou varios acessos sem
+    vinculo, conta como 1 — nao infla o KPI."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.mkdtemp(prefix="cvc_vis_user_")
+        cls.db = os.path.join(cls._tmp, "iam.db")
+        ConexaoBancoDados(cls.db).inicializar()
+        c = sqlite3.connect(cls.db)
+        c.executescript("""
+            -- M1: 3 opcoes EM_ANALISE (1 usuario, nao 3)
+            INSERT INTO validacao_acessos (matricula,nome,sistema,perfil_esperado,
+                perfil_atual,status,situacao_acao,origem_matriz,dt_processamento)
+            VALUES ('M1','NOME M1','SYSTUR','P_A','','EM_ANALISE','PENDENTE','MATRIZ','2026-05-01 10:00:00'),
+                   ('M1','NOME M1','SYSTUR','P_B','','EM_ANALISE','PENDENTE','MATRIZ','2026-05-01 10:00:00'),
+                   ('M1','NOME M1','SYSTUR','P_C','','EM_ANALISE','PENDENTE','MATRIZ','2026-05-01 10:00:00');
+            -- loginZ: 4 acessos sem vinculo RH (1 usuario, nao 4)
+            INSERT INTO divergencias (id,tipo,sistema,usuario,nome_usuario,matricula,
+                perfil_encontrado,descricao,resolvida)
+            VALUES ('a','ACESSO_SEM_VINCULO_RH','SYSTUR','loginZ','Z','','P1','x',0),
+                   ('b','ACESSO_SEM_VINCULO_RH','SYSTUR','loginZ','Z','','P2','x',0),
+                   ('c','ACESSO_SEM_VINCULO_RH','SICA_RA','loginZ','Z','','P3','x',0),
+                   ('d','ACESSO_SEM_VINCULO_RH','SICA_RA','loginZ','Z','','P4','x',0);
+        """)
+        c.commit(); c.close()
+        cls._orig = (vm.DB_PATH, vm.SISTEMA, vm._BASE)
+        vm.DB_PATH = cls.db; vm.SISTEMA = ""; vm._BASE = None
+        vm.garantir_estrutura(force=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        vm.DB_PATH, vm.SISTEMA, vm._BASE = cls._orig
+
+    def test_em_analise_e_nao_mapeado_contam_pessoas(self):
+        vm.SISTEMA = ""; vm._BASE = None
+        k = vm._montar_base()["kpis"]
+        self.assertEqual(k["em_analise"], 1)    # M1: 3 opcoes -> 1 pessoa
+        self.assertEqual(k["nao_mapeado"], 1)   # loginZ: 4 acessos -> 1 pessoa
+        self.assertEqual(k["total"], 2)         # 1 + 1 (sem outros tipos)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
