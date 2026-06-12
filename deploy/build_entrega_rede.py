@@ -79,8 +79,8 @@ ENTRADA_ARQUIVOS = [
 ]
 
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
-VERSAO_INICIAL = "1.2.2"     # MAJOR.PROCESSADOR.VISUALIZADOR (isolamento matriz por sistema + aderentes no historico)
-VERSAO_NOVA = "1.2.2"        # entrega: Processador (isolamento/aderentes) + Visualizador (aderentes na trilha)
+VERSAO_INICIAL = "1.3.3"     # MAJOR.PROCESSADOR.VISUALIZADOR (case-insensitive/CC/desligamento + ordenacao/expand do painel)
+VERSAO_NOVA = "1.3.3"        # entrega: Processador (validacao) + Visualizador (ordenacao trilha + expand)
 
 ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",
