@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import Dict, List, Set, Tuple
 
 from loguru import logger
+from sqlalchemy import text
 
 from dominio.objetos_valor.sistema import Sistema, sistema_do_texto
 from dominio.objetos_valor.status_validacao import StatusValidacao
@@ -41,9 +42,13 @@ class ValidarAcessosSistema:
 
     def __init__(self, conexao: ConexaoBancoDados):
         self._conexao = conexao
+        # regra temporaria de provavel desligamento (sobrescritos no fluxo real)
+        self._aderentes_anteriores: Set[Tuple[str, str]] = set()
+        self._prov_deslig = 0
 
     def executar(self):
         ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco = self._carregar_dados()
+        self._prov_deslig = 0   # contador da regra temporaria de provavel desligamento
 
         registros: List[Dict] = []
         for func in ativos:
@@ -115,12 +120,31 @@ class ValidarAcessosSistema:
             f"Validação de acessos concluída: {len(registros)} avaliados, "
             f"{len(registros_salvos) - _n_ok} pendência(s) + {_n_ok} OK gravados."
         )
+        if self._prov_deslig:
+            logger.info(
+                f"[regra temporaria] {self._prov_deslig} caso(s) 'foi aderente + 0 "
+                f"acesso' retirado(s) como provavel DESLIGAMENTO (sai na fase de desligados)."
+            )
 
     # ------------------------------------------------------------------
     def _carregar_dados(self):
         with self._conexao.sessao() as sessao:
             ativos = sessao.query(RhAtivo).all()
             acessos_db = sessao.query(AcessoSistema).all()
+
+            # REGRA TEMPORARIA (sai na fase de desligados): (matricula, sistema)
+            # que JA foram aderentes — usado para tratar "foi aderente + agora 0
+            # acesso" como provavel desligamento. Tabela pode nao existir em
+            # banco antigo -> set vazio (sem efeito).
+            self._aderentes_anteriores: Set[Tuple[str, str]] = set()
+            try:
+                self._aderentes_anteriores = {
+                    (r[0], r[1]) for r in sessao.execute(text(
+                        "SELECT matricula, sistema FROM ciclo_vida_acesso "
+                        "WHERE dt_aderente IS NOT NULL")).fetchall()
+                }
+            except Exception:
+                pass
 
         # matricula → lista de (sistema_valor, perfil)
         acessos_por_matricula: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
@@ -231,6 +255,15 @@ class ValidarAcessosSistema:
                 "status": StatusValidacao.OK.value,
                 "origem_matriz": o_ok,
             }]
+
+        # REGRA TEMPORARIA (sai na fase de desligados): a pessoa JA foi aderente
+        # neste sistema (tinha o acesso) e agora esta SEM NENHUM acesso ->
+        # provavel DESLIGAMENTO. Nao gera pendencia. Se tiver sido engano, o
+        # acesso e' reincluido no sistema e ela reaparece como Aderente no
+        # proximo extrato (auto-corrige). Conta para o log auditavel.
+        if not acessos_atuais and (func.matricula, sistema_valor) in self._aderentes_anteriores:
+            self._prov_deslig += 1
+            return []
 
         # Daqui pra baixo: NENHUM perfil esperado e' aderente.
         # REGRA: vai pra Em Análise quando o cargo tem 2+ perfis ESPERADOS
