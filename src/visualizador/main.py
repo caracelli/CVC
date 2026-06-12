@@ -1187,32 +1187,41 @@ def _calcular_visao_geral(c, sistema=""):
     # PELO sistema (com ticket) — alimentam a barra segmentada quando houver.
     filtro_sis = " AND sistema = ?" if sistema else ""
     par_sis = (sistema,) if sistema else ()
+    # Cada etapa e' medida INDEPENDENTE, na sua propria populacao — nao exigimos
+    # o ciclo completo (P->R->A). Assim um RESOLVIDO que ainda nao virou aderente
+    # aparece em P->R (antes caia num limbo: nem no total P->A, nem nos segmentos),
+    # e o P->A (total) e' um item proprio (inclui o P->A direto, sem ticket).
     tempos = {"total": "—", "pend_resolv": "—", "resolv_ader": "—",
-              "seg_pr": 0, "seg_ra": 0, "n": 0}
+              "seg_pr": 0, "seg_ra": 0, "seg_pa": 0, "n": 0, "n_pr": 0, "n_ra": 0}
     try:
-        rt = c.execute(
+        # P -> A (total): conta TAMBEM o P->A direto (liberacao feita fora do sistema)
+        rpa = c.execute(
             "SELECT AVG((julianday(dt_aderente)-julianday(dt_pendencia))*86400.0), COUNT(*) "
             "FROM ciclo_vida_acesso "
             "WHERE dt_pendencia IS NOT NULL AND dt_aderente IS NOT NULL "
             "  AND dt_aderente >= dt_pendencia" + filtro_sis, par_sis).fetchone()
-        seg_total, n = (rt[0] or 0), (rt[1] or 0)
-        rs = c.execute(
-            "SELECT AVG((julianday(dt_resolvido)-julianday(dt_pendencia))*86400.0), "
-            "       AVG((julianday(dt_aderente )-julianday(dt_resolvido))*86400.0), "
-            "       COUNT(*) "
+        seg_pa, n_pa = (rpa[0] or 0), (rpa[1] or 0)
+        # P -> R: qualquer resolvido por ticket, mesmo sem aderencia ainda
+        rpr = c.execute(
+            "SELECT AVG((julianday(dt_resolvido)-julianday(dt_pendencia))*86400.0), COUNT(*) "
             "FROM ciclo_vida_acesso "
             "WHERE dt_pendencia IS NOT NULL AND dt_resolvido IS NOT NULL "
-            "  AND dt_aderente IS NOT NULL "
-            "  AND dt_resolvido >= dt_pendencia AND dt_aderente >= dt_resolvido"
-            + filtro_sis, par_sis).fetchone()
-        seg_pr, seg_ra, n_seg = (rs[0] or 0), (rs[1] or 0), (rs[2] or 0)
-        if n:
-            tempos.update({
-                "seg_pr": seg_pr, "seg_ra": seg_ra, "n": n,
-                "pend_resolv": _fmt_duracao(seg_pr) if n_seg else "—",
-                "resolv_ader": _fmt_duracao(seg_ra) if n_seg else "—",
-                "total": _fmt_duracao(seg_total),
-            })
+            "  AND dt_resolvido >= dt_pendencia" + filtro_sis, par_sis).fetchone()
+        seg_pr, n_pr = (rpr[0] or 0), (rpr[1] or 0)
+        # R -> A: resolvidos que ja viraram aderente
+        rra = c.execute(
+            "SELECT AVG((julianday(dt_aderente)-julianday(dt_resolvido))*86400.0), COUNT(*) "
+            "FROM ciclo_vida_acesso "
+            "WHERE dt_resolvido IS NOT NULL AND dt_aderente IS NOT NULL "
+            "  AND dt_aderente >= dt_resolvido" + filtro_sis, par_sis).fetchone()
+        seg_ra, n_ra = (rra[0] or 0), (rra[1] or 0)
+        tempos.update({
+            "seg_pr": seg_pr, "seg_ra": seg_ra, "seg_pa": seg_pa,
+            "n": n_pa, "n_pr": n_pr, "n_ra": n_ra,
+            "pend_resolv": _fmt_duracao(seg_pr) if n_pr else "—",
+            "resolv_ader": _fmt_duracao(seg_ra) if n_ra else "—",
+            "total": _fmt_duracao(seg_pa) if n_pa else "—",
+        })
     except Exception:
         pass
     out["tempos"] = tempos

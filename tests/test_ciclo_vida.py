@@ -138,6 +138,25 @@ class TestCicloVida(unittest.TestCase):
         self.assertEqual(t["pend_resolv"], "2d")     # segmentos so C,D: jan1 -> jan3
         self.assertEqual(t["resolv_ader"], "2d")     # jan3 -> jan5
 
+    def test_resolvido_sem_aderencia_aparece_em_pend_resolvido(self):
+        # BUG do cliente: um RESOLVIDO que ainda nao virou aderente caia num limbo
+        # (nem no total P->A, nem nos segmentos, que exigiam ciclo completo).
+        # Agora cada etapa e' independente: P->R aparece mesmo sem dt_aderente.
+        import visualizador.main as vm
+        c = sqlite3.connect(self.db)
+        c.execute(
+            """INSERT INTO ciclo_vida_acesso (matricula,sistema,perfil,dt_pendencia,dt_resolvido,dt_aderente)
+               VALUES ('R1','SYSTUR','P','2026-01-01 00:00:00','2026-01-03 00:00:00',NULL)""")
+        c.commit()
+        vg = vm._calcular_visao_geral(c, "")
+        c.close()
+        t = vg["tempos"]
+        self.assertEqual(t["n_pr"], 1)               # aparece em P->R
+        self.assertEqual(t["pend_resolv"], "2d")     # jan1 -> jan3
+        self.assertEqual(t["n"], 0)                  # NAO entra no total P->A (sem aderencia)
+        self.assertEqual(t["total"], "—")
+        self.assertEqual(t["n_ra"], 0)               # nem em R->A (sem aderencia)
+
     def test_fmt_duracao(self):
         from visualizador.main import _fmt_duracao
         self.assertEqual(_fmt_duracao(5 * 86400), "5d")

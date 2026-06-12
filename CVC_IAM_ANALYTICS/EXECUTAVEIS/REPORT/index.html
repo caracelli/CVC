@@ -398,15 +398,14 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .vg-tempo-total-val{font-size:24px;font-weight:800;color:#16A085;letter-spacing:-.5px;}
 .vg-tempo-total-lbl{font-size:11.5px;color:#5A6377;font-weight:600;}
 .vg-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none;}
-.vg-seg-bar{display:flex;height:30px;border-radius:7px;overflow:hidden;background:rgba(31,45,92,.06);
-  box-shadow:inset 0 1px 2px rgba(20,28,55,.10);}
-.vg-seg{transition:width .6s cubic-bezier(.22,.68,.24,1);}
-.vg-seg-pr{background:#B33A3A;}
-.vg-seg-ra{background:#F5B800;}
-.vg-seg-rows{margin-top:11px;display:flex;flex-direction:column;gap:8px;}
-.vg-seg-row{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#5A6377;font-weight:600;}
-.vg-seg-k{flex:1;min-width:0;}
-.vg-seg-row b{color:#1F2D5C;font-weight:800;white-space:nowrap;}
+.vg-seg-rows{margin-top:2px;display:flex;flex-direction:column;gap:11px;}
+.vg-seg-row{display:flex;align-items:center;gap:9px;font-size:11.5px;color:#5A6377;font-weight:600;}
+.vg-seg-k{flex:none;width:150px;}
+.vg-mini{flex:1;min-width:50px;height:9px;border-radius:5px;background:rgba(31,45,92,.07);
+  overflow:hidden;box-shadow:inset 0 1px 2px rgba(20,28,55,.08);}
+.vg-mini-fill{display:block;height:100%;width:0;border-radius:5px;
+  transition:width .6s cubic-bezier(.22,.68,.24,1);}
+.vg-seg-row b{color:#1F2D5C;font-weight:800;white-space:nowrap;min-width:96px;text-align:right;}
 .vg-seg-empty-msg{font-size:11px;color:#9AA3B5;font-style:italic;margin-top:8px;}
 
 /* ── Aba Aderentes (usa o padrão de grid navy do projeto) ───────────── */
@@ -935,21 +934,25 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
         <div class="vg-tempos">
           <div class="vg-tempo-head">
             <span class="vg-tempo-total-val" id="vg-t-tot">—</span>
-            <span class="vg-tempo-total-lbl">médio total <span class="vg-soft" id="vg-t-tot-n"></span></span>
-          </div>
-          <div class="vg-seg-bar" id="vg-seg-bar">
-            <div class="vg-seg vg-seg-pr" id="vg-seg-pr"></div>
-            <div class="vg-seg vg-seg-ra" id="vg-seg-ra"></div>
+            <span class="vg-tempo-total-lbl">Pendência → Aderente (médio) <span class="vg-soft" id="vg-t-tot-n"></span></span>
           </div>
           <div class="vg-seg-rows">
             <div class="vg-seg-row"><i class="vg-dot" style="background:#B33A3A"></i>
-              <span class="vg-seg-k">Pendência → Resolvido</span><b id="vg-seg-pr-v">—</b></div>
+              <span class="vg-seg-k">Pendência → Resolvido</span>
+              <span class="vg-mini"><span class="vg-mini-fill" id="vg-bar-pr" style="background:#B33A3A"></span></span>
+              <b id="vg-seg-pr-v">—</b></div>
             <div class="vg-seg-row"><i class="vg-dot" style="background:#F5B800"></i>
-              <span class="vg-seg-k">Resolvido → Aderente</span><b id="vg-seg-ra-v">—</b></div>
+              <span class="vg-seg-k">Resolvido → Aderente</span>
+              <span class="vg-mini"><span class="vg-mini-fill" id="vg-bar-ra" style="background:#F5B800"></span></span>
+              <b id="vg-seg-ra-v">—</b></div>
+            <div class="vg-seg-row"><i class="vg-dot" style="background:#16A085"></i>
+              <span class="vg-seg-k">Pendência → Aderente</span>
+              <span class="vg-mini"><span class="vg-mini-fill" id="vg-bar-pa" style="background:#16A085"></span></span>
+              <b id="vg-seg-pa-v">—</b></div>
           </div>
           <div class="vg-seg-empty-msg" id="vg-seg-empty-msg" style="display:none;">
-            Detalhe por etapa (Pendência → Resolvido → Aderente) só para ciclos
-            resolvidos por ticket. O total inclui liberações feitas fora do sistema.
+            Pendência → Resolvido e Resolvido → Aderente medem ciclos com ticket.
+            Pendência → Aderente inclui também liberações feitas fora do sistema.
           </div>
         </div>
       </div>
@@ -2345,22 +2348,28 @@ function _vgChamados(vg){
 }
 function _vgTempos(vg){
   const t = vg.tempos || {};
-  const pr = +t.seg_pr || 0, ra = +t.seg_ra || 0, sum = pr + ra;
+  // Cada etapa e' independente: P->R, R->A e P->A, cada uma com sua propria
+  // contagem. A mini-barra de cada linha e' proporcional ao MAIOR dos tempos,
+  // entao "a barra mexe" mesmo que so exista uma etapa (ex.: um resolvido que
+  // ainda nao virou aderente aparece em P->R).
+  const pr = +t.seg_pr||0, ra = +t.seg_ra||0, pa = +t.seg_pa||0;
   const tot = document.getElementById('vg-t-tot');
-  // total = pendencia->aderencia (conta tambem P->A direto, sem ticket); mostra
-  // sempre que houver ciclo (t.n), nao so quando ha segmentos por resolucao.
   if(tot) tot.textContent = t.n ? (t.total || '—') : '—';
   const tn = document.getElementById('vg-t-tot-n');
   if(tn) tn.textContent = t.n ? `· ${t.n} ciclo${t.n>1?'s':''}` : '';
-  const pPr = sum ? Math.round(100*pr/sum) : 0, pRa = sum ? 100 - pPr : 0;
-  const segPr = document.getElementById('vg-seg-pr'), segRa = document.getElementById('vg-seg-ra');
-  if(segPr) segPr.style.width = pPr + '%';
-  if(segRa) segRa.style.width = pRa + '%';
-  const prV = document.getElementById('vg-seg-pr-v'), raV = document.getElementById('vg-seg-ra-v');
-  if(prV) prV.textContent = sum ? `${t.pend_resolv} · ${pPr}%` : '—';
-  if(raV) raV.textContent = sum ? `${t.resolv_ader} · ${pRa}%` : '—';
+  const mx = Math.max(pr, ra, pa, 1);
+  const _cs = n => `${n} caso${n>1?'s':''}`;
+  const setRow = (barId, valId, seg, n, txt) => {
+    const bar = document.getElementById(barId), v = document.getElementById(valId);
+    if(bar) bar.style.width = (n ? Math.max(5, Math.round(100*seg/mx)) : 0) + '%';
+    if(v) v.textContent = n ? `${txt} · ${_cs(n)}` : '—';
+  };
+  setRow('vg-bar-pr','vg-seg-pr-v', pr, +t.n_pr||0, t.pend_resolv);
+  setRow('vg-bar-ra','vg-seg-ra-v', ra, +t.n_ra||0, t.resolv_ader);
+  setRow('vg-bar-pa','vg-seg-pa-v', pa, +t.n||0,   t.total);
+  // mensagem-guia so quando NAO ha nenhum segmento de ticket (P->R nem R->A)
   const msg = document.getElementById('vg-seg-empty-msg');
-  if(msg) msg.style.display = sum ? 'none' : 'block';
+  if(msg) msg.style.display = ((+t.n_pr||0)||(+t.n_ra||0)) ? 'none' : 'block';
 }
 /* ── Atalhos personalizados (gravados via /api, padrão JSONL) ──────── */
 const ATL = { incl: [], consulta: [], hist: [], conf: [], limite: 9, usuario: '' };
