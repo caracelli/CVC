@@ -24,8 +24,8 @@ class TestConfigProducao(unittest.TestCase):
     def setUpClass(cls):
         cls.cfg = LeitorConfig(str(CONFIG)).carregar()
 
-    def test_versao_1_3_3(self):
-        self.assertEqual(self.cfg.versao, "1.3.3")
+    def test_versao_1_3_4(self):
+        self.assertEqual(self.cfg.versao, "1.3.4")
 
     def test_systur_ativo_ic_temporariamente_off(self):
         # SYSTUR ativo. IC DESATIVADO temporariamente (estava atrapalhando a
