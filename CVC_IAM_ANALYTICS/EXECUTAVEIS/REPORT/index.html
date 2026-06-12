@@ -3524,10 +3524,15 @@ function _histGrupos(){
     mapa[k].recs.push(r);
   });
   const grupos=ordem.map(k=>mapa[k]);
-  // dentro do grupo: mais recente vira o cabeçalho (_ord = data + hora;
-  // a resolução fica acima da "identificada" mesmo no mesmo dia).
-  grupos.forEach(g=>g.recs.sort((a,b)=>
-    String(b._ord||'').localeCompare(String(a._ord||''))));
+  // dentro do grupo: mais recente vira o cabeçalho (_ord = data + hora). No
+  // EMPATE de instante (ex.: pendência "identificada" com a data limitada à da
+  // resolução), desempata pelo ESTÁGIO do ciclo — decrescente Aderente >
+  // Resolvido > Pendência. Assim a resolvida nunca fica abaixo da identificada.
+  const _histRank={ADERENTE:3,RESOLUCAO:2,PENDENCIA:1};
+  grupos.forEach(g=>g.recs.sort((a,b)=>{
+    const c=String(b._ord||'').localeCompare(String(a._ord||''));
+    return c || ((_histRank[b.tipo]||0)-(_histRank[a.tipo]||0));
+  }));
   // ordem dos grupos: pela coluna clicada, ou pela interação mais recente
   if(_histOrd){
     grupos.sort((a,b)=>_gxCmp(_histDisp(_histOrd.c,a.recs[0]),
