@@ -1,0 +1,53 @@
+2026-06-10 14:33:31.947 | INFO     | __main__:_executar:213 - IAM Analytics — CVC v1.1.1
+2026-06-10 14:33:35.428 | INFO     | infraestrutura.banco_dados.conexao:_migrar_gestor:126 - Migration: rh_ativos.gestor adicionada.
+2026-06-10 14:33:35.975 | INFO     | infraestrutura.banco_dados.conexao:_migrar_gestor:132 - Migration: matriz_cco.gestor adicionada.
+2026-06-10 14:33:35.997 | INFO     | infraestrutura.banco_dados.conexao:inicializar:19 - Banco de dados inicializado.
+2026-06-10 14:33:37.082 | INFO     | aplicacao.casos_de_uso.dobrar_interacoes:_aplicar:225 - Dobra: 0 em quarentena, 0 resolvido(s), 0 resolucao(oes) de pendencia, 1 atalho(s) criado/atualizado, 0 atalho(s) excluido(s) aplicado(s) na base.
+2026-06-10 14:33:37.649 | INFO     | aplicacao.casos_de_uso.dobrar_interacoes:_dobrar:132 - Dobra: 1 interacao(es) consolidada(s) de 'INTERACOES_processando'.
+2026-06-10 14:33:37.656 | INFO     | aplicacao.casos_de_uso.importar_rh:executar:33 - === Importação RH iniciada ===
+2026-06-10 14:33:37.705 | INFO     | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:40 - 1 arquivo(s) encontrado(s) em ATIVOS (recursivo)
+2026-06-10 14:33:40.196 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:52 - Movido para processados: Z:\CVC\CVC_IAM_ANALYTICS\ENTRADA\RH\ATIVOS\PROCESSADOS
+2026-06-10 14:33:40.205 | SUCCESS  | infraestrutura.leitores_arquivos.leitor_rh:ler_ativos:168 - RH Ativos [FUNCIONARIO]: 2031 registros de 'PROJETOIAM.CSV'
+2026-06-10 14:33:40.739 | INFO     | aplicacao.casos_de_uso.registrar_historico:_registrar:152 - Historico RH_ATIVO: 3 novos, 10 alterados, 0 removidos (total na base: 2031).
+2026-06-10 14:33:44.774 | INFO     | infraestrutura.repositorios.repositorio_funcionario_sqlite:salvar_ativos:45 - 2031 ativos gravados no banco.
+2026-06-10 14:33:44.783 | INFO     | aplicacao.casos_de_uso.importar_rh:executar:52 - Desligados fora de escopo nesta fase — ignorado.
+2026-06-10 14:33:44.792 | INFO     | aplicacao.casos_de_uso.importar_rh:executar:54 - === Importação RH concluída: 2031 ativos, 0 desligados ===
+2026-06-10 14:33:44.802 | INFO     | aplicacao.casos_de_uso.padronizar_rh:executar:15 - === Padronização RH iniciada ===
+2026-06-10 14:33:45.289 | INFO     | aplicacao.casos_de_uso.padronizar_rh:_padronizar_ativos:31 - 2040 ativos padronizados.
+2026-06-10 14:33:45.311 | INFO     | aplicacao.casos_de_uso.padronizar_rh:executar:18 - === Padronização concluída: 2040 ativos, 0 desligados ===
+2026-06-10 14:33:45.323 | INFO     | aplicacao.casos_de_uso.importar_matrizes:executar:32 - === Importação Matrizes iniciada ===
+2026-06-10 14:33:45.372 | INFO     | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:40 - 1 arquivo(s) encontrado(s) em PERFIS_SISTEMAS (recursivo)
+2026-06-10 14:33:48.263 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:52 - Movido para processados: Z:\CVC\CVC_IAM_ANALYTICS\ENTRADA\MATRIZES\PERFIS_SISTEMAS\PROCESSADOS
+2026-06-10 14:33:48.273 | SUCCESS  | infraestrutura.leitores_arquivos.leitor_matriz:ler:148 - Matriz Perfis [SYSTUR]: 1971 registros de 'MATRIZ DE PERFIL DE ACESSO SYSTUR.xlsx'
+2026-06-10 14:33:48.796 | INFO     | infraestrutura.repositorios.repositorio_matriz_sqlite:salvar_perfis_esperados:31 - 1971 perfis esperados gravados no banco.
+2026-06-10 14:33:48.848 | INFO     | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:40 - 1 arquivo(s) encontrado(s) em ORGANIZACIONAL (recursivo)
+2026-06-10 14:33:50.032 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:52 - Movido para processados: Z:\CVC\CVC_IAM_ANALYTICS\ENTRADA\MATRIZES\ORGANIZACIONAL\PROCESSADOS
+2026-06-10 14:33:50.041 | SUCCESS  | infraestrutura.leitores_arquivos.leitor_matriz:ler:227 - Matriz CCO/CSC: 1169 mapeamentos de 'MATRIZ OPERACAO.xlsx'
+2026-06-10 14:33:50.459 | INFO     | infraestrutura.repositorios.repositorio_matriz_sqlite:salvar_cco:62 - 1169 mapeamentos CCO/CSC gravados no banco.
+2026-06-10 14:33:50.471 | INFO     | aplicacao.casos_de_uso.importar_matrizes:executar:43 - === Matrizes: 1971 perfis esperados, 1169 mapeamentos CCO ===
+2026-06-10 14:33:50.485 | INFO     | aplicacao.casos_de_uso.importar_sistema:executar:31 - === Importacao SYSTUR iniciada ===
+2026-06-10 14:33:50.697 | INFO     | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:40 - 2 arquivo(s) encontrado(s) em SYSTUR (recursivo)
+2026-06-10 14:34:00.402 | INFO     | infraestrutura.repositorios.repositorio_acesso_sqlite:substituir_sistema:73 - SYSTUR: 6963 acesso(s) da importacao anterior removido(s), 6970 do arquivo gravado(s) (substituicao).
+2026-06-10 14:34:00.649 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:52 - Movido para processados: Z:\CVC\CVC_IAM_ANALYTICS\ENTRADA\SISTEMAS\SYSTUR\06-2026\PROCESSADOS
+2026-06-10 14:34:00.660 | SUCCESS  | aplicacao.casos_de_uso.importar_sistema:executar:67 - SYSTUR: 'view_systur_09_06_2026_08-00.csv' processado (6970 linhas) e movido para PROCESSADOS.
+2026-06-10 14:34:09.451 | INFO     | infraestrutura.repositorios.repositorio_acesso_sqlite:substituir_sistema:73 - SYSTUR: 6970 acesso(s) da importacao anterior removido(s), 6966 do arquivo gravado(s) (substituicao).
+2026-06-10 14:34:09.649 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:52 - Movido para processados: Z:\CVC\CVC_IAM_ANALYTICS\ENTRADA\SISTEMAS\SYSTUR\06-2026\PROCESSADOS
+2026-06-10 14:34:09.658 | SUCCESS  | aplicacao.casos_de_uso.importar_sistema:executar:67 - SYSTUR: 'view_systur_10_06_2026_08-00.csv' processado (6966 linhas) e movido para PROCESSADOS.
+2026-06-10 14:34:09.685 | INFO     | aplicacao.casos_de_uso.importar_sistema:executar:73 - === SYSTUR: 2 arquivo(s) processado(s); 6966 acessos no banco (estado final) ===
+2026-06-10 14:34:09.700 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:30 - === Vinculacao Acessos x RH iniciada (cascata multi-chave) ===
+2026-06-10 14:34:13.123 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:51 -   CPF                      1316  ( 18.9%)
+2026-06-10 14:34:13.135 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:51 -   EMAIL                      88  (  1.3%)
+2026-06-10 14:34:13.144 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:51 -   NOME                        3  (  0.0%)
+2026-06-10 14:34:13.156 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:51 -   NAO_VINCULADO            5559  ( 79.8%)
+2026-06-10 14:34:13.166 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:53 - === Vinculacao: 6966 acessos processados ===
+2026-06-10 14:34:13.179 | INFO     | aplicacao.casos_de_uso.analisar_divergencias:executar:20 - === Analise de Divergencias iniciada ===
+2026-06-10 14:34:17.260 | INFO     | infraestrutura.repositorios.repositorio_divergencia_sqlite:salvar_lote:37 - 5592 divergencias gravadas no banco.
+2026-06-10 14:34:17.275 | INFO     | aplicacao.casos_de_uso.analisar_divergencias:executar:42 - === Divergencias encontradas: 5592 (ACESSO_SEM_VINCULO_RH=5535, PERFIL_INVALIDO=57) ===
+2026-06-10 14:34:22.320 | INFO     | infraestrutura.repositorios.repositorio_matriz_sqlite:salvar_validacoes:80 - 2178 validações de acesso gravadas no banco.
+2026-06-10 14:34:22.333 | SUCCESS  | aplicacao.casos_de_uso.validar_acessos_sistema:executar:112 - Validação de acessos concluída: 3405 avaliados, 1084 pendência(s) + 1094 OK gravados.
+2026-06-10 14:34:22.491 | SUCCESS  | aplicacao.casos_de_uso.registrar_ciclo_vida:_executar:91 - Ciclo de vida registrado: 1804 (matricula, sistema) rastreado(s).
+2026-06-10 14:34:22.501 | INFO     | aplicacao.casos_de_uso.gerar_saidas:executar:35 - === Geracao de Saidas iniciada ===
+2026-06-10 14:34:32.084 | SUCCESS  | infraestrutura.escritores_arquivos.escritor_excel:salvar_divergencias:65 - Excel de divergencias gerado: Z:\CVC\CVC_IAM_ANALYTICS\DADOS\SAIDAS\DIVERGENCIAS\DIVERGENCIAS_20260610_143423.xlsx (5535 registros)
+2026-06-10 14:34:32.092 | INFO     | aplicacao.casos_de_uso.gerar_saidas:executar:100 - Excel gerado: Z:\CVC\CVC_IAM_ANALYTICS\DADOS\SAIDAS\DIVERGENCIAS\DIVERGENCIAS_20260610_143423.xlsx
+2026-06-10 14:34:32.101 | INFO     | aplicacao.casos_de_uso.gerar_saidas:executar:102 - === Saidas geradas: 7713 registros ===
+2026-06-10 14:34:33.849 | SUCCESS  | __main__:_executar:322 - Processamento finalizado em 58s (1.0 min).

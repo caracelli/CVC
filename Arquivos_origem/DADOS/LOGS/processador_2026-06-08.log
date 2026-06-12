@@ -1,0 +1,59 @@
+2026-06-08 11:22:42.091 | INFO     | __main__:_executar:211 - IAM Analytics — CVC v1.0.0
+2026-06-08 11:22:52.830 | INFO     | infraestrutura.banco_dados.conexao:inicializar:19 - Banco de dados inicializado.
+2026-06-08 11:22:53.344 | INFO     | aplicacao.casos_de_uso.dobrar_interacoes:_dobrar:132 - Dobra: 0 interacao(es) consolidada(s) de 'INTERACOES_processando'.
+2026-06-08 11:22:53.354 | INFO     | aplicacao.casos_de_uso.importar_rh:executar:33 - === Importação RH iniciada ===
+2026-06-08 11:22:53.400 | INFO     | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:40 - 1 arquivo(s) encontrado(s) em ATIVOS (recursivo)
+2026-06-08 11:22:55.804 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:53 - Movido para processados: PROJETOIAM.CSV
+2026-06-08 11:22:55.816 | SUCCESS  | infraestrutura.leitores_arquivos.leitor_rh:ler_ativos:167 - RH Ativos [FUNCIONARIO]: 2037 registros de 'PROJETOIAM.CSV'
+2026-06-08 11:22:56.225 | INFO     | aplicacao.casos_de_uso.registrar_historico:_registrar:104 - Historico RH_ATIVO: carga inicial — baseline de 2037 registros estabelecida, trilha nao gerada.
+2026-06-08 11:23:00.658 | INFO     | infraestrutura.repositorios.repositorio_funcionario_sqlite:salvar_ativos:44 - 2037 ativos gravados no banco.
+2026-06-08 11:23:00.670 | INFO     | aplicacao.casos_de_uso.importar_rh:executar:52 - Desligados fora de escopo nesta fase — ignorado.
+2026-06-08 11:23:00.680 | INFO     | aplicacao.casos_de_uso.importar_rh:executar:54 - === Importação RH concluída: 2037 ativos, 0 desligados ===
+2026-06-08 11:23:00.692 | INFO     | aplicacao.casos_de_uso.padronizar_rh:executar:15 - === Padronização RH iniciada ===
+2026-06-08 11:23:01.934 | INFO     | aplicacao.casos_de_uso.padronizar_rh:_padronizar_ativos:30 - 2037 ativos padronizados.
+2026-06-08 11:23:01.969 | INFO     | aplicacao.casos_de_uso.padronizar_rh:executar:18 - === Padronização concluída: 2037 ativos, 0 desligados ===
+2026-06-08 11:23:01.979 | INFO     | aplicacao.casos_de_uso.importar_matrizes:executar:32 - === Importação Matrizes iniciada ===
+2026-06-08 11:23:02.016 | INFO     | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:40 - 1 arquivo(s) encontrado(s) em PERFIS_SISTEMAS (recursivo)
+2026-06-08 11:23:04.951 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:53 - Movido para processados: MATRIZ DE PERFIL DE ACESSO SYSTUR.xlsx
+2026-06-08 11:23:04.963 | SUCCESS  | infraestrutura.leitores_arquivos.leitor_matriz:ler:148 - Matriz Perfis [SYSTUR]: 1968 registros de 'MATRIZ DE PERFIL DE ACESSO SYSTUR.xlsx'
+2026-06-08 11:23:05.803 | INFO     | infraestrutura.repositorios.repositorio_matriz_sqlite:salvar_perfis_esperados:31 - 1968 perfis esperados gravados no banco.
+2026-06-08 11:23:05.873 | INFO     | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:40 - 1 arquivo(s) encontrado(s) em ORGANIZACIONAL (recursivo)
+2026-06-08 11:23:07.311 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:53 - Movido para processados: MATRIZ OPERACAO.xlsx
+2026-06-08 11:23:07.322 | SUCCESS  | infraestrutura.leitores_arquivos.leitor_matriz:ler:224 - Matriz CCO/CSC: 1477 mapeamentos de 'MATRIZ OPERACAO.xlsx'
+2026-06-08 11:23:07.336 | WARNING  | infraestrutura.leitores_arquivos.leitor_matriz:ler:239 - Matriz CCO/CSC: 50 registros duplicados removidos.
+2026-06-08 11:23:08.067 | INFO     | infraestrutura.repositorios.repositorio_matriz_sqlite:salvar_cco:61 - 1427 mapeamentos CCO/CSC gravados no banco.
+2026-06-08 11:23:08.078 | INFO     | aplicacao.casos_de_uso.importar_matrizes:executar:43 - === Matrizes: 1968 perfis esperados, 1427 mapeamentos CCO ===
+2026-06-08 11:23:08.092 | INFO     | aplicacao.casos_de_uso.importar_sistema:executar:33 - === Importacao SYSTUR iniciada ===
+2026-06-08 11:23:08.200 | INFO     | infraestrutura.leitores_arquivos.leitor_base:listar_arquivos:40 - 5 arquivo(s) encontrado(s) em SYSTUR (recursivo)
+2026-06-08 11:23:17.201 | INFO     | infraestrutura.repositorios.repositorio_acesso_sqlite:substituir_sistema:73 - SYSTUR: 0 acesso(s) da importacao anterior removido(s), 6976 do arquivo gravado(s) (substituicao).
+2026-06-08 11:23:17.782 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:53 - Movido para processados: view_systur_04_06_2026_08-00.csv
+2026-06-08 11:23:17.792 | SUCCESS  | aplicacao.casos_de_uso.importar_sistema:executar:72 - SYSTUR: 'view_systur_04_06_2026_08-00.csv' processado (6976 linhas) e movido para PROCESSADOS.
+2026-06-08 11:23:27.191 | INFO     | infraestrutura.repositorios.repositorio_acesso_sqlite:substituir_sistema:73 - SYSTUR: 6976 acesso(s) da importacao anterior removido(s), 6948 do arquivo gravado(s) (substituicao).
+2026-06-08 11:23:27.759 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:53 - Movido para processados: view_systur_05_06_2026_08-00.csv
+2026-06-08 11:23:27.769 | SUCCESS  | aplicacao.casos_de_uso.importar_sistema:executar:72 - SYSTUR: 'view_systur_05_06_2026_08-00.csv' processado (6948 linhas) e movido para PROCESSADOS.
+2026-06-08 11:23:37.571 | INFO     | infraestrutura.repositorios.repositorio_acesso_sqlite:substituir_sistema:73 - SYSTUR: 6948 acesso(s) da importacao anterior removido(s), 6975 do arquivo gravado(s) (substituicao).
+2026-06-08 11:23:38.127 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:53 - Movido para processados: view_systur_06_06_2026_08-00.csv
+2026-06-08 11:23:38.141 | SUCCESS  | aplicacao.casos_de_uso.importar_sistema:executar:72 - SYSTUR: 'view_systur_06_06_2026_08-00.csv' processado (6975 linhas) e movido para PROCESSADOS.
+2026-06-08 11:23:47.921 | INFO     | infraestrutura.repositorios.repositorio_acesso_sqlite:substituir_sistema:73 - SYSTUR: 6975 acesso(s) da importacao anterior removido(s), 6970 do arquivo gravado(s) (substituicao).
+2026-06-08 11:23:48.509 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:53 - Movido para processados: view_systur_07_06_2026_08-00.csv
+2026-06-08 11:23:48.520 | SUCCESS  | aplicacao.casos_de_uso.importar_sistema:executar:72 - SYSTUR: 'view_systur_07_06_2026_08-00.csv' processado (6970 linhas) e movido para PROCESSADOS.
+2026-06-08 11:23:58.007 | INFO     | infraestrutura.repositorios.repositorio_acesso_sqlite:substituir_sistema:73 - SYSTUR: 6970 acesso(s) da importacao anterior removido(s), 6963 do arquivo gravado(s) (substituicao).
+2026-06-08 11:23:58.547 | INFO     | infraestrutura.leitores_arquivos.leitor_base:mover_para_processados:53 - Movido para processados: view_systur_08_06_2026_08-00.csv
+2026-06-08 11:23:58.557 | SUCCESS  | aplicacao.casos_de_uso.importar_sistema:executar:72 - SYSTUR: 'view_systur_08_06_2026_08-00.csv' processado (6963 linhas) e movido para PROCESSADOS.
+2026-06-08 11:23:58.601 | INFO     | aplicacao.casos_de_uso.importar_sistema:executar:78 - === SYSTUR: 5 arquivo(s) processado(s); 6963 acessos no banco (estado final) ===
+2026-06-08 11:23:58.616 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:30 - === Vinculacao Acessos x RH iniciada (cascata multi-chave) ===
+2026-06-08 11:24:03.624 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:47 -   CPF                      1299  ( 18.7%)
+2026-06-08 11:24:03.635 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:47 -   EMAIL                      88  (  1.3%)
+2026-06-08 11:24:03.646 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:47 -   NOME                        3  (  0.0%)
+2026-06-08 11:24:03.655 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:47 -   NAO_VINCULADO            5573  ( 80.0%)
+2026-06-08 11:24:03.668 | INFO     | aplicacao.casos_de_uso.vincular_acessos_rh:executar:49 - === Vinculacao: 6963 acessos processados ===
+2026-06-08 11:24:03.683 | INFO     | aplicacao.casos_de_uso.analisar_divergencias:executar:20 - === Analise de Divergencias iniciada ===
+2026-06-08 11:24:06.866 | INFO     | infraestrutura.repositorios.repositorio_divergencia_sqlite:salvar_lote:37 - 5602 divergencias gravadas no banco.
+2026-06-08 11:24:06.883 | INFO     | aplicacao.casos_de_uso.analisar_divergencias:executar:42 - === Divergencias encontradas: 5602 (ACESSO_SEM_VINCULO_RH=5540, PERFIL_INVALIDO=62) ===
+2026-06-08 11:24:08.284 | INFO     | infraestrutura.repositorios.repositorio_matriz_sqlite:salvar_validacoes:78 - 1280 validações de acesso gravadas no banco.
+2026-06-08 11:24:08.296 | SUCCESS  | aplicacao.casos_de_uso.validar_acessos_sistema:executar:84 - Validação de acessos concluída: 2508 avaliados, 1280 com ação pendente gravados.
+2026-06-08 11:24:08.318 | INFO     | aplicacao.casos_de_uso.gerar_saidas:executar:34 - === Geracao de Saidas iniciada ===
+2026-06-08 11:24:16.956 | SUCCESS  | infraestrutura.escritores_arquivos.escritor_excel:salvar_divergencias:65 - Excel de divergencias gerado: Z:\CVC\CVC_IAM_ANALYTICS\DADOS\SAIDAS\DIVERGENCIAS\DIVERGENCIAS_20260608_112409.xlsx (5540 registros)
+2026-06-08 11:24:16.968 | INFO     | aplicacao.casos_de_uso.gerar_saidas:executar:99 - Excel gerado: Z:\CVC\CVC_IAM_ANALYTICS\DADOS\SAIDAS\DIVERGENCIAS\DIVERGENCIAS_20260608_112409.xlsx
+2026-06-08 11:24:16.979 | INFO     | aplicacao.casos_de_uso.gerar_saidas:executar:101 - === Saidas geradas: 6820 registros ===
+2026-06-08 11:24:17.503 | SUCCESS  | __main__:_executar:306 - Processamento finalizado em 85s (1.4 min).
