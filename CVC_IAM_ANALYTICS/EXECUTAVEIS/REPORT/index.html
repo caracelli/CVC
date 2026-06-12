@@ -1391,8 +1391,10 @@ function exportarAderentes(){
   const rows = _confRowsFiltradas();
   const cols = ['Matrícula','Nome','Login','Cargo','Sistema','Perfil aderente',
                 'Pendência','Resolvido','Aderente','Ticket','Tempo total'];
+  // datas formatadas (dd/mm/aaaa hh:mm:ss) igual a grid — nao crua/ISO
   const linhas = rows.map(a => [a.m, a.n, a.login, a.cargo, a.sis, a.perfil,
-                a.dt_pend || '', a.dt_resol || '', a.dt || '', a.ticket || '',
+                a.dt_pend ? fmtDH(a.dt_pend) : '', a.dt_resol ? fmtDH(a.dt_resol) : '',
+                a.dt ? fmtDH(a.dt) : '', a.ticket || '',
                 _durStr(a.dt_pend, a.dt)]);
   baixarExcel('Aderentes', cols, linhas, linhas.map(() => 0));
 }
@@ -4242,7 +4244,7 @@ function csExportar(){
     const pend = u.divs.filter(d => d.s === 'Pendente').length;
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     const ultDt = datas.length ? fmtDH(datas[datas.length-1]) : '';
-    return [u.m||'', u.n, u.u||'', u.cpf||'', u.c||'', u.d||'', u.cc||'',
+    return [u.m||'', u.n, u.login||'', u.cpf||'', u.c||'', u.d||'', u.cc||'',
             sis, u.divs.length, ultDt,
             pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'Aderente'];
   });
@@ -4266,7 +4268,7 @@ function exportarInclusao(){
   _usersFiltrados.forEach(u => {
     const rc = u.resolucao || {};
     u.divs.filter(divPassa).forEach((d, i) => {
-      linhas.push([d.vinc||'', u.u, u.n, u.m||'', u.d||'', u.cc||'', u.c||'', d.tl,
+      linhas.push([d.vinc||'', u.login||'', u.n, u.m||'', u.d||'', u.cc||'', u.c||'', d.tl,
                    d.pe||'', d.pp||'', fmtDate(d.dt), d.s, d.o||'',
                    rc.ticket||'', rc.ticket_url||'', rc.descricao||'',
                    rc.em ? fmtDate(rc.em) : '']);
