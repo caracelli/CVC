@@ -282,32 +282,52 @@ def construir():
              "PROCESSADOS dentro da própria pasta de origem.", italico=True, cor=CINZA)
 
     h2(doc, "5.3. Passo a passo")
+    par(doc, "Importante: os programas NÃO rodam da rede. Cada máquina copia a pasta "
+             "EXECUTAVEIS para o disco local e roda DE LÁ. A rede (Z:) guarda apenas "
+             "os dados — o config aponta a raiz para Z:, então o programa local "
+             "lê/grava na rede normalmente.", italico=True, cor=NAVY)
     passos = [
         ("Preparar a rede (uma vez)",
          "Extrair o pacote e copiar a pasta CVC_IAM_ANALYTICS para a raiz de rede "
-         "(ex.: Z:\\CVC\\). O banco nasce vazio."),
-        ("Depositar os arquivos",
-         "Colocar os quatro arquivos nas pastas de ENTRADA conforme a tabela 5.2."),
-        ("Rodar o Processador",
-         "Executar EXECUTAVEIS\\Processador.exe uma vez. Ao final: o banco "
-         "iam_analytics.db é criado em DADOS/BANCO, os arquivos lidos vão para "
-         "PROCESSADOS e o log fica em DADOS/LOGS. Arquivos com problema vão para ERROS."),
-        ("Instalar o Visualizador em cada máquina",
-         "Copiar a pasta EXECUTAVEIS para a máquina do usuário (ex.: C:\\CVC\\) e rodar "
-         "o visualizador.exe de lá. Ele se auto-atualiza a partir da rede."),
-        ("Abrir o painel",
-         "O visualizador.exe abre o painel no navegador (http://127.0.0.1:8800/). "
-         "Acompanhar e tratar as pendências pelas seis abas."),
+         "(ex.: Z:\\CVC\\). Fica Z:\\CVC\\CVC_IAM_ANALYTICS\\. O banco nasce vazio."),
+        ("Copiar a pasta EXECUTAVEIS para o seu PC (cada máquina)",
+         "Copiar Z:\\CVC\\CVC_IAM_ANALYTICS\\EXECUTAVEIS para um local no seu "
+         "computador (ex.: C:\\CVC\\EXECUTAVEIS). Tanto o responsável pelo "
+         "processamento quanto cada usuário do painel fazem isso e rodam da SUA "
+         "cópia local. A rede continua sendo só o repositório dos dados."),
+        ("Depositar os arquivos (na rede)",
+         "Colocar os quatro arquivos nas pastas de ENTRADA da rede, conforme a "
+         "tabela 5.2."),
+        ("Rodar o Processador (responsável)",
+         "Da SUA pasta EXECUTAVEIS local, executar o Processador.exe uma vez. Ele "
+         "lê/grava na rede: cria o banco iam_analytics.db em DADOS/BANCO, move os "
+         "arquivos lidos para PROCESSADOS, registra o log em DADOS/LOGS e manda para "
+         "ERROS os arquivos com problema."),
+        ("Abrir o painel (cada usuário)",
+         "Da sua pasta EXECUTAVEIS local, dois cliques no visualizador.exe. Ele copia "
+         "o banco da rede para um cache local e abre o painel no navegador "
+         "(http://127.0.0.1:8800/). Acompanhar e tratar as pendências pelas seis abas."),
         ("Atualizar o cenário",
-         "Sempre que houver bases novas, repetir os passos 2 e 3 (depositar + "
-         "Processador). Mudanças só no painel NÃO exigem reprocessar — basta "
-         "reabrir/atualizar o Visualizador."),
+         "Quando houver bases novas, repetir os passos 3 e 4 (depositar + Processador). "
+         "Mudanças só no painel NÃO exigem reprocessar — basta reabrir/atualizar o "
+         "Visualizador."),
     ]
     for i, (titulo, desc) in enumerate(passos, 1):
         p = doc.add_paragraph()
         r = p.add_run(f"Passo {i} — {titulo}. ")
         r.font.bold = True; r.font.size = Pt(10.5); r.font.color.rgb = NAVY
         r2 = p.add_run(desc); r2.font.size = Pt(10.5)
+
+    h2(doc, "5.4. Atualização automática (auto-update)")
+    par(doc, "Como cada máquina roda de uma cópia local, os executáveis se mantêm "
+             "atualizados sozinhos a partir da rede — não é preciso reinstalar "
+             "manualmente em cada PC quando sai uma versão nova:")
+    bullet(doc, "ao abrir o visualizador.exe (ou rodar o Processador.exe) local, ele compara a versão do seu config com a versão da pasta EXECUTAVEIS na rede.")
+    bullet(doc, "se a versão da rede for diferente, ele copia os arquivos novos da rede por cima da sua cópia local, renomeia o executável antigo para .old e reinicia já atualizado.")
+    bullet(doc, "se a rede estiver indisponível no momento, ele segue rodando com a cópia local e tenta atualizar na próxima abertura.")
+    par(doc, "Para publicar uma nova versão para todos, basta atualizar a pasta "
+             "EXECUTAVEIS na rede (Z:) — cada máquina se atualiza na próxima abertura.",
+        italico=True, cor=CINZA)
 
     # ---- 6. PAINEIS ----
     h1(doc, "6. Resumo dos painéis")
