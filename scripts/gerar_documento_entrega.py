@@ -262,23 +262,29 @@ def construir():
 
     h2(doc, "5.1. Organização das pastas")
     par(doc, "Ao receber a solução, esta é a organização das pastas. No dia a dia "
-             "você usa principalmente duas: a de entrada (onde você coloca os "
-             "arquivos) e a de resultados (preenchida pela ferramenta).")
+             "você usa principalmente duas: a ENTRADA (onde você coloca os arquivos) "
+             "e a DADOS (preenchida pela ferramenta com os resultados).")
     code_block(doc,
-        "CVC IAM Analytics\n"
+        "CVC_IAM_ANALYTICS\n"
         "│\n"
         "├── ENTRADA  ← aqui VOCÊ coloca os arquivos\n"
-        "│     ├── RH .............. base de funcionários\n"
-        "│     ├── MATRIZES ........ matriz de perfil e mapeamento\n"
-        "│     └── SISTEMAS ........ extrato de acesso (SYSTUR)\n"
+        "│     ├── RH ............. base de funcionários\n"
+        "│     ├── MATRIZES ....... Matriz de Perfil de Acesso e Mapeamento CCO/CSC\n"
+        "│     └── SISTEMAS ....... extrato de acesso (SYSTUR)\n"
         "│\n"
-        "├── RESULTADOS  ← a ferramenta preenche sozinha\n"
-        "│     (base de dados, relatórios, arquivos já usados, registros)\n"
+        "├── DADOS  ← a ferramenta preenche sozinha\n"
+        "│     ├── BANCO ......... a base de dados gerada\n"
+        "│     ├── SAIDAS ........ relatórios\n"
+        "│     ├── PROCESSADOS ... arquivos já usados\n"
+        "│     ├── ERROS ......... arquivos com problema\n"
+        "│     └── LOGS .......... registros de cada execução\n"
         "│\n"
-        "└── PROGRAMAS  ← o Processador e o Painel")
-    par(doc, "Observação: os nomes das subpastas que aparecem ao abrir a solução estão "
-             "em letras maiúsculas (ENTRADA, RH, MATRIZES, SISTEMAS). É só seguir esses "
-             "nomes ao guardar cada arquivo.", italico=True, cor=CINZA)
+        "├── EXECUTAVEIS  ← os programas (Processador e Painel)\n"
+        "│\n"
+        "└── INTERACOES  ← ações dos usuários (preenchida automaticamente)")
+    par(doc, "Observação: as pastas aparecem com os nomes em maiúsculas exatamente "
+             "assim (ENTRADA, DADOS, EXECUTAVEIS, INTERACOES). É só seguir esses nomes "
+             "ao guardar cada arquivo.", italico=True, cor=CINZA)
 
     h2(doc, "5.2. Onde colocar cada arquivo")
     par(doc, "São quatro arquivos. Cada um vai na sua pasta. Podem estar em Excel ou "
