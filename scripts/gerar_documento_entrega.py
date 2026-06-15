@@ -353,34 +353,77 @@ def construir():
 
     # ---- 6. AS TELAS DO PAINEL ----
     h1(doc, "6. As telas do Painel")
-    par(doc, "O Painel tem seis telas. Abaixo, o que cada uma mostra e como usar. "
-             "As imagens são ilustrativas, com dados reais do ambiente.")
+    par(doc, "O Painel tem seis telas. Abaixo, o que cada uma mostra, o que dá para "
+             "fazer e como usar. As imagens são ilustrativas, com dados reais do "
+             "ambiente.")
+    par(doc, "Em todas as listas você pode: buscar por texto, filtrar por qualquer "
+             "coluna (clicando no título da coluna), ordenar, escolher quantos itens "
+             "ver por página e exportar para Excel — e a exportação sai igual ao que "
+             "está na tela, respeitando os filtros aplicados.", italico=True, cor=CINZA)
     telas = [
         ("Visão Geral", "01_visao_geral.png",
-         "Resumo do dia a dia: quantas pessoas há em cada classificação, a evolução "
-         "dos atendimentos (identificados, resolvidos e regularizados) e o tempo de "
-         "tratamento. Use para enxergar o todo e priorizar o trabalho."),
+         "É o resumo gerencial do dia a dia. Não tem ações — é uma tela de leitura "
+         "para enxergar o todo e priorizar.",
+         "Mostra:",
+         ["quantas pessoas há em cada classificação (Incluir, Alterar, Em Análise, "
+          "Não Mapeado, Aderente);",
+          "a evolução dos atendimentos nos últimos 30 dias: identificados, resolvidos "
+          "e regularizados;",
+          "o tempo de tratamento do ciclo (Pendência → Resolvido → Aderente);",
+          "a distribuição das pendências por tipo e por sistema;",
+          "o tempo que as pendências estão abertas (aging) e a movimentação de RH."]),
         ("Consulta", "02_consulta.png",
-         "Busca por pessoa — por nome, matrícula, login ou CPF. Use para ver a "
-         "situação completa de acessos e pendências de alguém específico, com atalhos "
-         "para as outras telas."),
+         "Para investigar uma pessoa específica e ver a situação completa dela.",
+         "Você pode:",
+         ["buscar por nome, matrícula, login, CPF ou e-mail;",
+          "expandir a pessoa para ver todos os acessos e pendências dela;",
+          "abrir um painel lateral com os detalhes;",
+          "saltar direto para as telas de Pendências, Histórico ou Aderentes daquela "
+          "pessoa, pelos atalhos."]),
         ("Pendências", "03_pendencias.png",
-         "A lista de trabalho: por pessoa, o que precisa ser incluído, alterado ou "
-         "analisado. Use para tratar caso a caso; permite filtrar, agrupar e exportar "
-         "para Excel."),
+         "É a lista de trabalho — por pessoa, o que precisa ser incluído, alterado ou "
+         "analisado. É aqui que o tratamento acontece.",
+         "Você pode:",
+         ["filtrar por qualquer coluna (vínculo, departamento, status, tipo…) e por "
+          "período;",
+          "agrupar por pessoa e expandir/recolher os acessos (botão +/−);",
+          "resolver uma pendência, informando o chamado e uma descrição;",
+          "enviar um acesso para quarentena (observação por prazo);",
+          "salvar filtros favoritos para reusar; exportar para Excel igual à tela."]),
         ("Aderentes", "04_aderentes.png",
-         "As pessoas que já estão com os acessos corretos, com o histórico de datas e "
-         "o tempo que levou para regularizar. Use para conferir o que já foi resolvido."),
+         "As pessoas que já estão com os acessos corretos (conformes). Use para "
+         "conferir o que já foi resolvido.",
+         "Mostra / você pode:",
+         ["a trilha de datas do ciclo (quando virou pendência, quando foi resolvido, "
+          "quando ficou aderente) e o tempo total até regularizar;",
+          "buscar e filtrar por coluna (cargo, sistema, perfil…);",
+          "exportar a lista para Excel."]),
         ("Histórico", "05_historico.png",
-         "A trilha do que aconteceu — admissões, mudanças de cargo/área e a evolução "
-         "de cada acesso ao longo do tempo. Use como evidência para auditoria."),
+         "A trilha do que aconteceu ao longo do tempo. Serve como evidência para "
+         "auditoria.",
+         "Mostra / você pode:",
+         ["admissões, mudanças de cargo/área e a evolução de cada acesso "
+          "(pendência → resolvido → aderente);",
+          "filtrar por período e buscar por matrícula ou nome;",
+          "expandir cada pessoa para ver a sequência completa; exportar para Excel."]),
         ("Quarentena", "06_quarentena.png",
          "Acessos colocados em observação por um prazo, antes de uma decisão "
-         "definitiva. Use quando precisar de um tempo para avaliar antes de agir."),
+         "definitiva. Use quando precisar de um tempo para avaliar antes de agir.",
+         "Você pode:",
+         ["ver as quarentenas ativas, com os dias restantes de cada uma;",
+          "consultar o histórico de quarentenas já encerradas;",
+          "filtrar e exportar para Excel."]),
     ]
-    for nome, arq, desc in telas:
+    for nome, arq, desc, lead, acoes in telas:
+        doc.add_page_break()          # cada tela na sua pagina (titulo junto do print)
         h2(doc, nome)
         par(doc, desc)
+        if lead:
+            p = doc.add_paragraph()
+            r = p.add_run(lead); r.font.bold = True; r.font.size = Pt(10.5)
+            r.font.color.rgb = NAVY
+        for a in acoes:
+            bullet(doc, a)
         imagem(doc, arq)
 
     # ---- 7. ATENDIMENTO ----
