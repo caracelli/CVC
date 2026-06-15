@@ -94,6 +94,26 @@ def par(doc, texto, *, italico=False, cor=None, size=10.5):
     return p
 
 
+def code_block(doc, texto):
+    """Bloco monoespacado (Consolas) com fundo claro — para a arvore de pastas."""
+    p = doc.add_paragraph()
+    pf = p.paragraph_format
+    pf.space_after = Pt(6); pf.space_before = Pt(4)
+    # sombreamento do paragrafo
+    pPr = p._p.get_or_add_pPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear"); shd.set(qn("w:fill"), CLARO_HEX)
+    pPr.append(shd)
+    for i, linha in enumerate(texto.split("\n")):
+        if i:
+            p.add_run().add_break()
+        run = p.add_run(linha)
+        run.font.name = "Consolas"
+        run.font.size = Pt(8.5)
+        run.font.color.rgb = NAVY
+    return p
+
+
 def bullet(doc, texto, *, neg=None):
     p = doc.add_paragraph(style="List Bullet")
     if neg:
@@ -211,21 +231,83 @@ def construir():
 
     # ---- 5. COMO UTILIZAR ----
     h1(doc, "5. Como utilizar")
-    h2(doc, "5.1. Preparar a rede (uma vez)")
-    par(doc, "Extrair o pacote e copiar a pasta CVC_IAM_ANALYTICS para a raiz de rede "
-             "(ex.: Z:\\CVC\\). O banco nasce vazio — será gerado no primeiro "
-             "processamento.")
-    h2(doc, "5.2. Depositar os arquivos")
-    par(doc, "Colocar os arquivos atuais nas pastas de ENTRADA conforme a tabela do "
-             "item 2.1.")
-    h2(doc, "5.3. Primeiro processamento")
-    par(doc, "Rodar o Processador.exe uma vez. Ao final: o banco iam_analytics.db é "
-             "criado, os arquivos lidos vão para PROCESSADOS e o log fica em DADOS/LOGS.")
-    h2(doc, "5.4. Abrir o painel")
-    par(doc, "Cada usuário copia a pasta EXECUTAVEIS para a sua máquina e roda o "
-             "visualizador.exe. O painel abre no navegador (http://127.0.0.1:8800/). "
-             "Atualizações na base aparecem ao reabrir/atualizar — mudanças no painel "
-             "não exigem reprocessar.")
+
+    h2(doc, "5.1. Estrutura de pastas")
+    par(doc, "Ao extrair o pacote, esta é a estrutura. As pastas em destaque são as "
+             "que você usa no dia a dia (ENTRADA para depositar, DADOS para os "
+             "resultados):")
+    code_block(doc,
+        "CVC_IAM_ANALYTICS/\n"
+        "├── ENTRADA/                      <- você COLOCA os arquivos aqui\n"
+        "│   ├── RH/\n"
+        "│   │   ├── ATIVOS/               <- base de RH (funcionários ativos)\n"
+        "│   │   └── DESLIGADOS/           (próxima fase)\n"
+        "│   ├── MATRIZES/\n"
+        "│   │   ├── ORGANIZACIONAL/       <- Mapeamento CCO/CSC\n"
+        "│   │   └── PERFIS_SISTEMAS/      <- matriz de perfil por cargo (SYSTUR)\n"
+        "│   └── SISTEMAS/\n"
+        "│       ├── SYSTUR/               <- extrato de acessos do SYSTUR\n"
+        "│       ├── IC/ SIGOT/ SICA_RA/ ...   (próximas fases)\n"
+        "├── DADOS/                        <- o sistema GERA os resultados aqui\n"
+        "│   ├── BANCO/                    -> iam_analytics.db (gerado)\n"
+        "│   ├── PROCESSADOS/              -> arquivos já importados\n"
+        "│   ├── ERROS/                    -> arquivos rejeitados\n"
+        "│   ├── SAIDAS/                   -> relatórios\n"
+        "│   └── LOGS/                     -> logs de cada execução\n"
+        "├── EXECUTAVEIS/                  <- Processador.exe, visualizador.exe,\n"
+        "│                                    CONFIG/, REPORT/, launcher/\n"
+        "└── INTERACOES/                   <- ações dos usuários (automático)")
+
+    h2(doc, "5.2. Onde colocar cada arquivo")
+    par(doc, "Para a Fase 1 (SYSTUR) são quatro arquivos. Cada um vai na sua pasta. "
+             "Os importadores aceitam .xlsx e .csv. As colunas esperadas são "
+             "configuráveis em EXECUTAVEIS/CONFIG/config.xml:")
+    tabela(doc,
+           ["Arquivo (exemplo)", "Pasta de destino", "Colunas esperadas"],
+           [["Base de RH ativos\n(ex.: PROJETOIAM.csv)",
+             "ENTRADA/RH/ATIVOS",
+             "MATRICULA, NOME, CPF, CARGO_CODIGO, CARGO_DESCRICAO, DEPARTAMENTO, CENTRO_CUSTO, DATA_ADMISSAO, EMAIL, SITUACAO"],
+            ["Mapeamento CCO/CSC\n(ex.: Mapeamento CCO_CSC.xlsx)",
+             "ENTRADA/MATRIZES/ORGANIZACIONAL",
+             "CARGO_CODIGO, CARGO_DESCRICAO, DEPARTAMENTO, CENTRO_CUSTO"],
+            ["Matriz de perfil SYSTUR\n(ex.: MATRIZ DE PERFIL ... SYSTUR.xlsx)",
+             "ENTRADA/MATRIZES/PERFIS_SISTEMAS",
+             "CARGO_CODIGO, SISTEMA, PERFIL"],
+            ["Extrato de acessos SYSTUR\n(ex.: relatorio systur.xlsx)",
+             "ENTRADA/SISTEMAS/SYSTUR",
+             "USUARIO, NOME, PERFIL, SITUACAO, DATA_CRIACAO, ULTIMO_ACESSO"]],
+           larguras=[2.1, 2.0, 3.0])
+    par(doc, "Dica: pode colocar mais de um arquivo na mesma pasta — o Processador lê "
+             "todos. Após importar, cada arquivo é movido para uma subpasta "
+             "PROCESSADOS dentro da própria pasta de origem.", italico=True, cor=CINZA)
+
+    h2(doc, "5.3. Passo a passo")
+    passos = [
+        ("Preparar a rede (uma vez)",
+         "Extrair o pacote e copiar a pasta CVC_IAM_ANALYTICS para a raiz de rede "
+         "(ex.: Z:\\CVC\\). O banco nasce vazio."),
+        ("Depositar os arquivos",
+         "Colocar os quatro arquivos nas pastas de ENTRADA conforme a tabela 5.2."),
+        ("Rodar o Processador",
+         "Executar EXECUTAVEIS\\Processador.exe uma vez. Ao final: o banco "
+         "iam_analytics.db é criado em DADOS/BANCO, os arquivos lidos vão para "
+         "PROCESSADOS e o log fica em DADOS/LOGS. Arquivos com problema vão para ERROS."),
+        ("Instalar o Visualizador em cada máquina",
+         "Copiar a pasta EXECUTAVEIS para a máquina do usuário (ex.: C:\\CVC\\) e rodar "
+         "o visualizador.exe de lá. Ele se auto-atualiza a partir da rede."),
+        ("Abrir o painel",
+         "O visualizador.exe abre o painel no navegador (http://127.0.0.1:8800/). "
+         "Acompanhar e tratar as pendências pelas seis abas."),
+        ("Atualizar o cenário",
+         "Sempre que houver bases novas, repetir os passos 2 e 3 (depositar + "
+         "Processador). Mudanças só no painel NÃO exigem reprocessar — basta "
+         "reabrir/atualizar o Visualizador."),
+    ]
+    for i, (titulo, desc) in enumerate(passos, 1):
+        p = doc.add_paragraph()
+        r = p.add_run(f"Passo {i} — {titulo}. ")
+        r.font.bold = True; r.font.size = Pt(10.5); r.font.color.rgb = NAVY
+        r2 = p.add_run(desc); r2.font.size = Pt(10.5)
 
     # ---- 6. PAINEIS ----
     h1(doc, "6. Resumo dos painéis")
