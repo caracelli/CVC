@@ -228,16 +228,16 @@ def construir():
     bullet(doc, "lê os arquivos colocados na pasta de entrada (RH, matriz e extrato);")
     bullet(doc, "padroniza as informações (acerta maiúsculas, acentos, espaços, códigos) para comparar corretamente;")
     bullet(doc, "cruza o que cada pessoa acessa com o que o cargo prevê e gera a classificação (Aderente, Incluir, Alterar, Em Análise, Não Mapeado);")
-    bullet(doc, "grava o resultado na base de dados compartilhada — é essa base que o Painel lê;")
+    bullet(doc, "grava o resultado na base de dados compartilhada — é essa base que o Visualizador lê;")
     bullet(doc, "arquiva os arquivos já usados e registra um log de cada execução (e separa os que tiveram problema).")
     par(doc, "Quando usar: sob demanda, sempre que chegarem bases novas. Quem usa: a "
              "pessoa responsável pelo processamento. Não precisa ficar aberto — roda, "
              "conclui e fecha.")
 
-    h2(doc, "3.2. O Painel")
-    par(doc, "É a tela de trabalho do dia a dia. Ele lê a base gerada pelo Processador "
-             "e apresenta tudo de forma visual, no navegador, organizado em seis telas "
-             "(detalhadas no item 6). No Painel o time:")
+    h2(doc, "3.2. O Visualizador (Painel)")
+    par(doc, "É o programa do dia a dia. O Visualizador lê a base gerada pelo "
+             "Processador e abre o painel no navegador — a parte visual, organizada em "
+             "seis telas (detalhadas no item 6). No painel, o time:")
     bullet(doc, "consulta a situação de acesso de qualquer pessoa;")
     bullet(doc, "acompanha os indicadores e a evolução dos atendimentos;")
     bullet(doc, "trata as pendências: resolve (sob um chamado), coloca em quarentena e exporta para Excel.")
@@ -245,15 +245,15 @@ def construir():
              "uma no seu computador, vendo o mesmo cenário. Diferente do Processador, "
              "ele fica aberto enquanto a pessoa trabalha.")
 
-    par(doc, "Em resumo: o Processador gera os dados; o Painel mostra e trata. Quem só "
-             "acompanha precisa apenas do Painel.", italico=True, cor=NAVY)
+    par(doc, "Em resumo: o Processador gera os dados; o Visualizador mostra e trata. "
+             "Quem só acompanha precisa apenas do Visualizador.", italico=True, cor=NAVY)
 
     # ---- 4. VARIAS PESSOAS AO MESMO TEMPO ----
     h1(doc, "4. Como várias pessoas usam ao mesmo tempo")
     par(doc, "A ferramenta foi pensada para uma equipe trabalhar junta, com "
              "tranquilidade:")
     bullet(doc, "os dados ficam em um lugar compartilhado da empresa, acessível a todos do time.")
-    bullet(doc, "cada pessoa abre o Painel no seu próprio computador e enxerga o mesmo cenário.")
+    bullet(doc, "cada pessoa abre o Visualizador no seu próprio computador e enxerga o mesmo cenário.")
     bullet(doc, "as ações de cada pessoa (tratar uma pendência, colocar um acesso em observação) são guardadas com segurança, sem uma atrapalhar a outra.")
     bullet(doc, "os programas se mantêm atualizados sozinhos (explicado no item 5.4).")
 
@@ -279,7 +279,7 @@ def construir():
         "│     ├── ERROS ......... arquivos com problema\n"
         "│     └── LOGS .......... registros de cada execução\n"
         "│\n"
-        "├── EXECUTAVEIS  ← os programas (Processador e Painel)\n"
+        "├── EXECUTAVEIS  ← os programas (Processador e Visualizador)\n"
         "│\n"
         "└── INTERACOES  ← ações dos usuários (preenchida automaticamente)")
     par(doc, "Observação: as pastas aparecem com os nomes em maiúsculas exatamente "
@@ -319,15 +319,15 @@ def construir():
         ("Levar os programas para o seu computador (cada pessoa)",
          "Copiar a pasta de programas para uma pasta no seu próprio computador e usar a "
          "partir dela. Isso vale tanto para quem vai processar quanto para quem só vai "
-         "acompanhar o Painel."),
+         "acompanhar pelo Visualizador."),
         ("Colocar os arquivos",
          "Guardar os quatro arquivos nas pastas indicadas no item 5.2."),
         ("Processar (pessoa responsável)",
          "Abrir o Processador a partir da sua cópia. Ele compara tudo e prepara os "
          "resultados. Os arquivos usados são arquivados automaticamente; se algum "
          "arquivo tiver problema, ele é separado para conferência."),
-        ("Abrir o Painel (cada pessoa)",
-         "Abrir o Painel a partir da sua cópia. Ele abre sozinho no navegador, já com "
+        ("Abrir o Visualizador (cada pessoa)",
+         "Abrir o Visualizador a partir da sua cópia. Ele abre o painel sozinho no navegador, já com "
          "os resultados. A partir daí, é só acompanhar e tratar as pendências pelas "
          "telas (item 6)."),
         ("Atualizar o cenário",
