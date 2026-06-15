@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Gera o documento de entrega (.docx) da Fase 1 — SYSTUR.
 
+PUBLICO: pessoa de NEGOCIO (nao tecnica). Linguagem simples, sem jargao,
+sem nomes de arquivo .exe/paths/colunas em MAIUSCULA/termos de TI.
+
 Saida: ENTREGA/CVC_IAM_Analytics_Entrega_SYSTUR_v1.0.docx
 
 Uso:  python scripts/gerar_documento_entrega.py
@@ -17,12 +20,15 @@ from docx.shared import Pt, RGBColor, Inches
 
 RAIZ = Path(__file__).resolve().parent.parent
 SAIDA = RAIZ / "ENTREGA" / "CVC_IAM_Analytics_Entrega_SYSTUR_v1.0.docx"
+# Logo OFICIAL da CVC Corp: deixe o arquivo neste caminho que o gerador o insere
+# na capa automaticamente. (Sem o arquivo, a capa sai sem logo.)
+LOGO = RAIZ / "scripts" / "cvc_logo_oficial.png"
+PRINTS = RAIZ / "docs" / "prints_painel"
 
 NAVY = RGBColor(0x1F, 0x2D, 0x5C)
 TEAL = RGBColor(0x16, 0xA0, 0x85)
 CINZA = RGBColor(0x5A, 0x63, 0x77)
 NAVY_HEX = "1F2D5C"
-TEAL_HEX = "16A085"
 CLARO_HEX = "EAF1F4"
 
 
@@ -95,11 +101,10 @@ def par(doc, texto, *, italico=False, cor=None, size=10.5):
 
 
 def code_block(doc, texto):
-    """Bloco monoespacado (Consolas) com fundo claro — para a arvore de pastas."""
+    """Bloco com fundo claro — para a 'organizacao das pastas'."""
     p = doc.add_paragraph()
     pf = p.paragraph_format
     pf.space_after = Pt(6); pf.space_before = Pt(4)
-    # sombreamento do paragrafo
     pPr = p._p.get_or_add_pPr()
     shd = OxmlElement("w:shd")
     shd.set(qn("w:val"), "clear"); shd.set(qn("w:fill"), CLARO_HEX)
@@ -109,7 +114,7 @@ def code_block(doc, texto):
             p.add_run().add_break()
         run = p.add_run(linha)
         run.font.name = "Consolas"
-        run.font.size = Pt(8.5)
+        run.font.size = Pt(9)
         run.font.color.rgb = NAVY
     return p
 
@@ -125,9 +130,17 @@ def bullet(doc, texto, *, neg=None):
     return p
 
 
+def imagem(doc, arquivo, width=6.7):
+    cam = PRINTS / arquivo
+    if not cam.exists():
+        return
+    p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(3); p.paragraph_format.space_after = Pt(8)
+    p.add_run().add_picture(str(cam), width=Inches(width))
+
+
 def construir():
     doc = Document()
-    # margens
     for s in doc.sections:
         s.top_margin = Inches(0.8); s.bottom_margin = Inches(0.8)
         s.left_margin = Inches(0.9); s.right_margin = Inches(0.9)
@@ -136,8 +149,12 @@ def construir():
     normal.font.size = Pt(10.5)
 
     # ---- CAPA ----
+    if LOGO.exists():
+        p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_before = Pt(60)
+        p.add_run().add_picture(str(LOGO), width=Inches(2.3))
     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.paragraph_format.space_before = Pt(80)
+    p.paragraph_format.space_before = Pt(20)
     r = p.add_run("CVC IAM Analytics"); r.font.size = Pt(30); r.font.bold = True
     r.font.color.rgb = NAVY
     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -148,169 +165,153 @@ def construir():
     r = p.add_run("Documento de Entrega — Fase 1 (SYSTUR)")
     r.font.size = Pt(18); r.font.bold = True; r.font.color.rgb = TEAL
     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("Versão 1.0.0")
-    r.font.size = Pt(13); r.font.color.rgb = CINZA
+    r = p.add_run("Versão 1.0.0"); r.font.size = Pt(13); r.font.color.rgb = CINZA
     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before = Pt(8)
     r = p.add_run(date.today().strftime("Inclusão e Alteração de Acessos · %d/%m/%Y"))
     r.font.size = Pt(11); r.font.color.rgb = CINZA
     doc.add_page_break()
 
-    # ---- 1. SUMARIO EXECUTIVO ----
-    h1(doc, "1. Sumário Executivo")
-    par(doc, "O CVC IAM Analytics é a solução de governança de acessos (IAM) da CVC "
-             "Corp. Ela processa as bases de RH e os extratos de acesso dos sistemas "
-             "corporativos, cruza com as matrizes de perfis esperados por cargo e "
-             "evidencia, por usuário, as divergências de acesso — apontando o que "
-             "precisa ser incluído, alterado ou analisado.")
-    par(doc, "Esta primeira entrega cobre o sistema SYSTUR no fluxo de Inclusão e "
-             "Alteração de acessos. Ela já é a fundação multiusuário e multi-sistema "
-             "sobre a qual as próximas fases (demais sistemas, desligados, "
-             "transferidos e integração Jira) serão acopladas por configuração, sem "
-             "retrabalho.")
-    par(doc, "Princípio de leitura dos números: o sistema conta USUÁRIOS a tratar, "
-             "não acessos. Um usuário com várias opções de perfil ou vários acessos "
-             "conta como uma pessoa — o foco é \"quantas pessoas preciso tratar\".",
-        italico=True, cor=NAVY)
+    # ---- 1. VISAO GERAL ----
+    h1(doc, "1. Visão geral")
+    par(doc, "O CVC IAM Analytics é a ferramenta que ajuda a CVC a manter os acessos "
+             "aos sistemas sob controle. Ela compara o que cada pessoa PODE acessar "
+             "(de acordo com o cargo) com o que ela REALMENTE acessa, e mostra, de "
+             "forma simples, onde existem diferenças: quem precisa receber um acesso, "
+             "quem está com o acesso errado e quem precisa de uma análise.")
+    par(doc, "Esta primeira entrega cobre o sistema SYSTUR. Ela é a base sobre a qual "
+             "os demais sistemas e as próximas etapas serão acrescentados, sem "
+             "necessidade de refazer o que já foi feito.")
+    par(doc, "Como ler os números: a ferramenta conta PESSOAS a tratar, não acessos. "
+             "Se uma pessoa tem várias pendências, ela aparece como uma pessoa só — o "
+             "foco é \"quantas pessoas eu preciso resolver\".", italico=True, cor=NAVY)
 
-    # ---- 2. ESCOPO ----
+    # ---- 2. O QUE A ENTREGA CONTEMPLA ----
     h1(doc, "2. O que esta entrega contempla")
-    h2(doc, "2.1. Sistema e bases")
-    par(doc, "Escopo da Fase 1: sistema SYSTUR (Sistema de Turismo), fluxo de "
-             "Inclusão/Alteração. O Processador consome quatro insumos:")
+    h2(doc, "2.1. Informações usadas")
+    par(doc, "Nesta fase, a ferramenta analisa o sistema SYSTUR. Para isso, ela usa "
+             "quatro arquivos, normalmente fornecidos pelas áreas de RH e de TI:")
     tabela(doc,
-           ["Insumo", "Conteúdo", "Pasta de entrada"],
-           [["RH Ativos", "Funcionários ativos (matrícula, nome, cargo, centro de custo)", "ENTRADA/RH/ATIVOS"],
-            ["Mapeamento CCO/CSC", "De-para organizacional (centro de custo × gestor)", "ENTRADA/MATRIZES/ORGANIZACIONAL"],
-            ["Matriz SYSTUR", "Perfis esperados por cargo no SYSTUR", "ENTRADA/MATRIZES/PERFIS_SISTEMAS"],
-            ["Extrato SYSTUR", "Acessos atuais dos usuários no SYSTUR", "ENTRADA/SISTEMAS/SYSTUR"]],
-           larguras=[1.5, 3.2, 2.0])
+           ["Arquivo", "Para que serve"],
+           [["Funcionários ativos (RH)", "Quem são as pessoas e quais são os seus cargos."],
+            ["Mapeamento CCO/CSC", "Liga o centro de custo e o gestor ao acesso esperado."],
+            ["Matriz de Perfil de Acesso SYSTUR", "Quais acessos cada cargo deve ter no SYSTUR."],
+            ["Extrato do SYSTUR", "Os acessos que as pessoas realmente têm hoje."]],
+           larguras=[2.4, 4.3])
 
-    h2(doc, "2.2. O que o sistema identifica")
-    par(doc, "Cada usuário é classificado pelo cruzamento entre o acesso atual e o "
-             "perfil esperado para o cargo:")
+    h2(doc, "2.2. O que a ferramenta aponta")
+    par(doc, "Cada pessoa recebe uma classificação simples, conforme a comparação "
+             "entre o que ela acessa e o que o cargo prevê:")
     tabela(doc,
-           ["Classificação", "Significado", "Ação"],
-           [["Aderente", "O acesso bate com o perfil esperado", "Nenhuma (conforme)"],
-            ["Incluir Acesso", "O cargo exige acesso que o usuário não tem", "Incluir o acesso"],
-            ["Alterar Perfil", "O usuário tem acesso, mas com perfil divergente", "Ajustar o perfil"],
-            ["Em Análise", "O cargo admite mais de um perfil possível", "Análise manual"],
-            ["Não Mapeado", "Acesso de quem não está na base de RH ativa", "Investigar vínculo"]],
-           larguras=[1.6, 3.4, 1.7])
+           ["Classificação", "O que significa", "O que fazer"],
+           [["Aderente", "O acesso está correto, conforme o cargo.", "Nada — está tudo certo."],
+            ["Incluir Acesso", "O cargo exige um acesso que a pessoa ainda não tem.", "Conceder o acesso."],
+            ["Alterar Perfil", "A pessoa tem acesso, mas com o perfil errado.", "Ajustar o perfil."],
+            ["Em Análise", "O cargo admite mais de um perfil possível.", "Analisar e decidir."],
+            ["Não Mapeado", "Há um acesso de alguém que não está na base de RH ativa.", "Investigar quem é."]],
+           larguras=[1.5, 3.5, 1.7])
 
-    h2(doc, "2.3. Fora do escopo desta fase")
-    par(doc, "Para manter a Fase 1 enxuta e sem ruído, ficam desativados por "
-             "configuração (serão ligados nas fases seguintes):")
-    bullet(doc, "revogação de acesso é um fluxo separado (fase de desligados).", neg="Desligados:")
-    bullet(doc, "aguardam a definição da regra de espelho.", neg="Terceiros:")
-    bullet(doc, "SIGOT, SICA RA, SICA ESFERA, IC, SIG, Oracle EBS, Opera entram nas próximas fases.", neg="Demais sistemas:")
-    bullet(doc, "acesso a MAIS do que o cargo exige ainda não é sinalizado (em avaliação).", neg="Perfil excessivo:")
+    h2(doc, "2.3. O que ainda não entra nesta fase")
+    par(doc, "Para manter esta primeira entrega objetiva, alguns pontos ficam para as "
+             "próximas etapas:")
+    bullet(doc, "a retirada de acesso de quem saiu da empresa é tratada em uma etapa separada.", neg="Desligados:")
+    bullet(doc, "aguardam a definição da regra de tratamento.", neg="Terceiros:")
+    bullet(doc, "os outros sistemas entram nas próximas fases.", neg="Demais sistemas:")
 
-    # ---- 3. APLICATIVOS ----
-    h1(doc, "3. Os dois aplicativos")
+    # ---- 3. OS DOIS PROGRAMAS ----
+    h1(doc, "3. Os dois programas")
+    par(doc, "A solução tem dois programas, com papéis bem definidos:")
     tabela(doc,
-           ["Aplicativo", "Para que serve", "Quem usa"],
-           [["Processador.exe",
-             "Lê as bases de ENTRADA, padroniza, cruza com as matrizes, grava o banco "
-             "(iam_analytics.db) e consolida as interações. Roda sob demanda.",
-             "Responsável pelo processamento"],
-            ["visualizador.exe",
-             "Abre o painel no navegador lendo o banco ao vivo. É onde o time acompanha "
-             "e trata as pendências.",
-             "Todos os usuários"]],
+           ["Programa", "Para que serve", "Quem usa"],
+           [["O Processador",
+             "Lê os arquivos, faz a comparação e prepara os resultados. É usado quando "
+             "há bases novas para analisar.",
+             "A pessoa responsável pelo processamento"],
+            ["O Painel",
+             "Mostra os resultados na tela e é onde o time acompanha e trata as "
+             "pendências, no dia a dia.",
+             "Todas as pessoas do time"]],
            larguras=[1.5, 4.0, 1.7])
 
-    # ---- 4. ARQUITETURA ----
-    h1(doc, "4. Arquitetura multiusuário")
-    par(doc, "A base e os dados ficam em uma raiz de rede compartilhada. Vários "
-             "usuários abrem o Visualizador ao mesmo tempo, com segurança:")
-    bullet(doc, "o Processador grava o banco na rede; cada Visualizador copia o banco para um cache local no startup (mais rápido e sem ler durante a escrita).")
-    bullet(doc, "as ações de cada usuário (quarentena, resolução) são gravadas em arquivos por usuário na pasta INTERACOES/ — seguro sobre rede.")
-    bullet(doc, "a cada execução, o Processador consolida essas interações no banco.")
-    bullet(doc, "os executáveis se auto-atualizam: comparam a versão local com a da rede e se copiam sozinhos quando há versão nova.")
+    # ---- 4. VARIAS PESSOAS AO MESMO TEMPO ----
+    h1(doc, "4. Como várias pessoas usam ao mesmo tempo")
+    par(doc, "A ferramenta foi pensada para uma equipe trabalhar junta, com "
+             "tranquilidade:")
+    bullet(doc, "os dados ficam em um lugar compartilhado da empresa, acessível a todos do time.")
+    bullet(doc, "cada pessoa abre o Painel no seu próprio computador e enxerga o mesmo cenário.")
+    bullet(doc, "as ações de cada pessoa (tratar uma pendência, colocar um acesso em observação) são guardadas com segurança, sem uma atrapalhar a outra.")
+    bullet(doc, "os programas se mantêm atualizados sozinhos (explicado no item 5.4).")
 
     # ---- 5. COMO UTILIZAR ----
     h1(doc, "5. Como utilizar")
 
-    h2(doc, "5.1. Estrutura de pastas")
-    par(doc, "Ao extrair o pacote, esta é a estrutura. As pastas em destaque são as "
-             "que você usa no dia a dia (ENTRADA para depositar, DADOS para os "
-             "resultados):")
+    h2(doc, "5.1. Organização das pastas")
+    par(doc, "Ao receber a solução, esta é a organização das pastas. No dia a dia "
+             "você usa principalmente duas: a de entrada (onde você coloca os "
+             "arquivos) e a de resultados (preenchida pela ferramenta).")
     code_block(doc,
-        "CVC_IAM_ANALYTICS/\n"
-        "├── ENTRADA/                      <- você COLOCA os arquivos aqui\n"
-        "│   ├── RH/\n"
-        "│   │   ├── ATIVOS/               <- base de RH (funcionários ativos)\n"
-        "│   │   └── DESLIGADOS/           (próxima fase)\n"
-        "│   ├── MATRIZES/\n"
-        "│   │   ├── ORGANIZACIONAL/       <- Mapeamento CCO/CSC\n"
-        "│   │   └── PERFIS_SISTEMAS/      <- matriz de perfil por cargo (SYSTUR)\n"
-        "│   └── SISTEMAS/\n"
-        "│       ├── SYSTUR/               <- extrato de acessos do SYSTUR\n"
-        "│       ├── IC/ SIGOT/ SICA_RA/ ...   (próximas fases)\n"
-        "├── DADOS/                        <- o sistema GERA os resultados aqui\n"
-        "│   ├── BANCO/                    -> iam_analytics.db (gerado)\n"
-        "│   ├── PROCESSADOS/              -> arquivos já importados\n"
-        "│   ├── ERROS/                    -> arquivos rejeitados\n"
-        "│   ├── SAIDAS/                   -> relatórios\n"
-        "│   └── LOGS/                     -> logs de cada execução\n"
-        "├── EXECUTAVEIS/                  <- Processador.exe, visualizador.exe,\n"
-        "│                                    CONFIG/, REPORT/, launcher/\n"
-        "└── INTERACOES/                   <- ações dos usuários (automático)")
+        "CVC IAM Analytics\n"
+        "│\n"
+        "├── ENTRADA  ← aqui VOCÊ coloca os arquivos\n"
+        "│     ├── RH .............. base de funcionários\n"
+        "│     ├── MATRIZES ........ matriz de perfil e mapeamento\n"
+        "│     └── SISTEMAS ........ extrato de acesso (SYSTUR)\n"
+        "│\n"
+        "├── RESULTADOS  ← a ferramenta preenche sozinha\n"
+        "│     (base de dados, relatórios, arquivos já usados, registros)\n"
+        "│\n"
+        "└── PROGRAMAS  ← o Processador e o Painel")
+    par(doc, "Observação: os nomes das subpastas que aparecem ao abrir a solução estão "
+             "em letras maiúsculas (ENTRADA, RH, MATRIZES, SISTEMAS). É só seguir esses "
+             "nomes ao guardar cada arquivo.", italico=True, cor=CINZA)
 
     h2(doc, "5.2. Onde colocar cada arquivo")
-    par(doc, "Para a Fase 1 (SYSTUR) são quatro arquivos. Cada um vai na sua pasta. "
-             "Os importadores aceitam .xlsx e .csv. As colunas esperadas são "
-             "configuráveis em EXECUTAVEIS/CONFIG/config.xml:")
+    par(doc, "São quatro arquivos. Cada um vai na sua pasta. Podem estar em Excel ou "
+             "em CSV. Ao lado, as informações que cada arquivo precisa conter:")
     tabela(doc,
-           ["Arquivo (exemplo)", "Pasta de destino", "Colunas esperadas"],
-           [["Base de RH ativos\n(ex.: PROJETOIAM.csv)",
-             "ENTRADA/RH/ATIVOS",
-             "MATRICULA, NOME, CPF, CARGO_CODIGO, CARGO_DESCRICAO, DEPARTAMENTO, CENTRO_CUSTO, DATA_ADMISSAO, EMAIL, SITUACAO"],
-            ["Mapeamento CCO/CSC\n(ex.: Mapeamento CCO_CSC.xlsx)",
-             "ENTRADA/MATRIZES/ORGANIZACIONAL",
-             "CARGO_CODIGO, CARGO_DESCRICAO, DEPARTAMENTO, CENTRO_CUSTO"],
-            ["Matriz de perfil SYSTUR\n(ex.: MATRIZ DE PERFIL ... SYSTUR.xlsx)",
-             "ENTRADA/MATRIZES/PERFIS_SISTEMAS",
-             "CARGO_CODIGO, SISTEMA, PERFIL"],
-            ["Extrato de acessos SYSTUR\n(ex.: relatorio systur.xlsx)",
-             "ENTRADA/SISTEMAS/SYSTUR",
-             "USUARIO, NOME, PERFIL, SITUACAO, DATA_CRIACAO, ULTIMO_ACESSO"]],
-           larguras=[2.1, 2.0, 3.0])
-    par(doc, "Dica: pode colocar mais de um arquivo na mesma pasta — o Processador lê "
-             "todos. Após importar, cada arquivo é movido para uma subpasta "
-             "PROCESSADOS dentro da própria pasta de origem.", italico=True, cor=CINZA)
+           ["Arquivo", "Onde colocar", "Informações que precisa ter"],
+           [["Funcionários ativos (RH)",
+             "ENTRADA › RH › ATIVOS",
+             "Matrícula, Nome, CPF, Cargo, Departamento, Centro de custo, Data de admissão, E-mail, Situação"],
+            ["Mapeamento CCO/CSC",
+             "ENTRADA › MATRIZES › ORGANIZACIONAL",
+             "Cargo (código e descrição), Departamento, Centro de custo"],
+            ["Matriz de Perfil de Acesso SYSTUR",
+             "ENTRADA › MATRIZES › PERFIS_SISTEMAS",
+             "Cargo, Sistema, Perfil"],
+            ["Extrato do SYSTUR",
+             "ENTRADA › SISTEMAS › SYSTUR",
+             "Usuário, Nome, Perfil, Situação, Data de criação, Último acesso"]],
+           larguras=[1.9, 2.1, 3.1])
+    par(doc, "Dica: pode colocar mais de um arquivo na mesma pasta — a ferramenta lê "
+             "todos. Depois de usados, os arquivos são arquivados automaticamente.",
+        italico=True, cor=CINZA)
 
     h2(doc, "5.3. Passo a passo")
-    par(doc, "Importante: os programas NÃO rodam da rede. Cada máquina copia a pasta "
-             "EXECUTAVEIS para o disco local e roda DE LÁ. A rede (Z:) guarda apenas "
-             "os dados — o config aponta a raiz para Z:, então o programa local "
-             "lê/grava na rede normalmente.", italico=True, cor=NAVY)
+    par(doc, "Importante: os programas funcionam no computador de cada pessoa, e não "
+             "\"na rede\". O lugar compartilhado serve apenas para guardar os dados, "
+             "que todos enxergam.", italico=True, cor=NAVY)
     passos = [
-        ("Preparar a rede (uma vez)",
-         "Extrair o pacote e copiar a pasta CVC_IAM_ANALYTICS para a raiz de rede "
-         "(ex.: Z:\\CVC\\). Fica Z:\\CVC\\CVC_IAM_ANALYTICS\\. O banco nasce vazio."),
-        ("Copiar a pasta EXECUTAVEIS para o seu PC (cada máquina)",
-         "Copiar Z:\\CVC\\CVC_IAM_ANALYTICS\\EXECUTAVEIS para um local no seu "
-         "computador (ex.: C:\\CVC\\EXECUTAVEIS). Tanto o responsável pelo "
-         "processamento quanto cada usuário do painel fazem isso e rodam da SUA "
-         "cópia local. A rede continua sendo só o repositório dos dados."),
-        ("Depositar os arquivos (na rede)",
-         "Colocar os quatro arquivos nas pastas de ENTRADA da rede, conforme a "
-         "tabela 5.2."),
-        ("Rodar o Processador (responsável)",
-         "Da SUA pasta EXECUTAVEIS local, executar o Processador.exe uma vez. Ele "
-         "lê/grava na rede: cria o banco iam_analytics.db em DADOS/BANCO, move os "
-         "arquivos lidos para PROCESSADOS, registra o log em DADOS/LOGS e manda para "
-         "ERROS os arquivos com problema."),
-        ("Abrir o painel (cada usuário)",
-         "Da sua pasta EXECUTAVEIS local, dois cliques no visualizador.exe. Ele copia "
-         "o banco da rede para um cache local e abre o painel no navegador "
-         "(http://127.0.0.1:8800/). Acompanhar e tratar as pendências pelas seis abas."),
+        ("Preparar o espaço compartilhado (uma vez)",
+         "Copiar a pasta da solução para o lugar compartilhado da empresa (a área de "
+         "pastas que o time acessa). A base começa vazia."),
+        ("Levar os programas para o seu computador (cada pessoa)",
+         "Copiar a pasta de programas para uma pasta no seu próprio computador e usar a "
+         "partir dela. Isso vale tanto para quem vai processar quanto para quem só vai "
+         "acompanhar o Painel."),
+        ("Colocar os arquivos",
+         "Guardar os quatro arquivos nas pastas indicadas no item 5.2."),
+        ("Processar (pessoa responsável)",
+         "Abrir o Processador a partir da sua cópia. Ele compara tudo e prepara os "
+         "resultados. Os arquivos usados são arquivados automaticamente; se algum "
+         "arquivo tiver problema, ele é separado para conferência."),
+        ("Abrir o Painel (cada pessoa)",
+         "Abrir o Painel a partir da sua cópia. Ele abre sozinho no navegador, já com "
+         "os resultados. A partir daí, é só acompanhar e tratar as pendências pelas "
+         "telas (item 6)."),
         ("Atualizar o cenário",
-         "Quando houver bases novas, repetir os passos 3 e 4 (depositar + Processador). "
-         "Mudanças só no painel NÃO exigem reprocessar — basta reabrir/atualizar o "
-         "Visualizador."),
+         "Sempre que chegarem bases novas, repetir os passos 3 e 4 (colocar os "
+         "arquivos e processar). Mexer apenas no Painel não exige processar de novo."),
     ]
     for i, (titulo, desc) in enumerate(passos, 1):
         p = doc.add_paragraph()
@@ -318,105 +319,110 @@ def construir():
         r.font.bold = True; r.font.size = Pt(10.5); r.font.color.rgb = NAVY
         r2 = p.add_run(desc); r2.font.size = Pt(10.5)
 
-    h2(doc, "5.4. Atualização automática (auto-update)")
-    par(doc, "Como cada máquina roda de uma cópia local, os executáveis se mantêm "
-             "atualizados sozinhos a partir da rede — não é preciso reinstalar "
-             "manualmente em cada PC quando sai uma versão nova:")
-    bullet(doc, "ao abrir o visualizador.exe (ou rodar o Processador.exe) local, ele compara a versão do seu config com a versão da pasta EXECUTAVEIS na rede.")
-    bullet(doc, "se a versão da rede for diferente, ele copia os arquivos novos da rede por cima da sua cópia local, renomeia o executável antigo para .old e reinicia já atualizado.")
-    bullet(doc, "se a rede estiver indisponível no momento, ele segue rodando com a cópia local e tenta atualizar na próxima abertura.")
-    par(doc, "Para publicar uma nova versão para todos, basta atualizar a pasta "
-             "EXECUTAVEIS na rede (Z:) — cada máquina se atualiza na próxima abertura.",
+    h2(doc, "5.4. Atualização automática")
+    par(doc, "Como cada pessoa usa uma cópia no próprio computador, os programas se "
+             "atualizam sozinhos — não é preciso reinstalar em cada máquina quando sai "
+             "uma versão nova:")
+    bullet(doc, "ao abrir, o programa verifica se existe uma versão mais nova no lugar compartilhado.")
+    bullet(doc, "se existir, ele se atualiza sozinho e reabre já na versão nova.")
+    bullet(doc, "se o lugar compartilhado estiver indisponível no momento, ele continua funcionando normalmente e tenta atualizar na próxima abertura.")
+    par(doc, "Para liberar uma versão nova para todo o time, basta atualizar os "
+             "programas no lugar compartilhado — cada computador se atualiza sozinho na "
+             "próxima vez que abrir.", italico=True, cor=CINZA)
+
+    # ---- 6. AS TELAS DO PAINEL ----
+    h1(doc, "6. As telas do Painel")
+    par(doc, "O Painel tem seis telas. Abaixo, o que cada uma mostra e como usar. "
+             "As imagens são ilustrativas, com dados reais do ambiente.")
+    telas = [
+        ("Visão Geral", "01_visao_geral.png",
+         "Resumo do dia a dia: quantas pessoas há em cada classificação, a evolução "
+         "dos atendimentos (identificados, resolvidos e regularizados) e o tempo de "
+         "tratamento. Use para enxergar o todo e priorizar o trabalho."),
+        ("Consulta", "02_consulta.png",
+         "Busca por pessoa — por nome, matrícula, login ou CPF. Use para ver a "
+         "situação completa de acessos e pendências de alguém específico, com atalhos "
+         "para as outras telas."),
+        ("Pendências", "03_pendencias.png",
+         "A lista de trabalho: por pessoa, o que precisa ser incluído, alterado ou "
+         "analisado. Use para tratar caso a caso; permite filtrar, agrupar e exportar "
+         "para Excel."),
+        ("Aderentes", "04_aderentes.png",
+         "As pessoas que já estão com os acessos corretos, com o histórico de datas e "
+         "o tempo que levou para regularizar. Use para conferir o que já foi resolvido."),
+        ("Histórico", "05_historico.png",
+         "A trilha do que aconteceu — admissões, mudanças de cargo/área e a evolução "
+         "de cada acesso ao longo do tempo. Use como evidência para auditoria."),
+        ("Quarentena", "06_quarentena.png",
+         "Acessos colocados em observação por um prazo, antes de uma decisão "
+         "definitiva. Use quando precisar de um tempo para avaliar antes de agir."),
+    ]
+    for nome, arq, desc in telas:
+        h2(doc, nome)
+        par(doc, desc)
+        imagem(doc, arq)
+
+    # ---- 7. ATENDIMENTO ----
+    h1(doc, "7. Como funciona o atendimento")
+    par(doc, "Cada pendência percorre três etapas, e a ferramenta registra a data de "
+             "cada uma (a trilha completa fica na tela de Histórico):")
+    tabela(doc,
+           ["Etapa", "Quando acontece"],
+           [["1. Identificada", "A ferramenta encontra a diferença de acesso."],
+            ["2. Resolvida", "A pessoa responsável trata o caso (sob um chamado) e marca como resolvido."],
+            ["3. Regularizada", "Em uma próxima análise, o acesso passa a estar correto."]],
+           larguras=[1.7, 5.0])
+    par(doc, "Pontos importantes:")
+    bullet(doc, "o tratamento é feito por pessoa, sempre vinculado a um chamado, com uma breve descrição do que foi feito.")
+    bullet(doc, "a ferramenta mede quanto tempo leva cada etapa, ajudando a acompanhar o ritmo de atendimento.")
+    bullet(doc, "tudo o que é exportado para Excel sai igual ao que está na tela, respeitando os filtros aplicados.")
+
+    # ---- 8. PROXIMAS ETAPAS ----
+    h1(doc, "8. O que ainda será entregue")
+    par(doc, "As próximas etapas se somam a esta entrega. A sequência prevista é:")
+    tabela(doc,
+           ["Etapa", "Entrega", "Quando"],
+           [["Demais sistemas", "Inclusão dos outros sistemas, um a um", "junho/2026"],
+            ["Visão unificada", "Os acessos de todos os sistemas em uma visão só", "junho/2026"],
+            ["Regras completas", "Matrizes e regras de acesso de todos os sistemas", "julho/2026"],
+            ["Desligados", "Retirada de acesso de quem saiu da empresa", "julho/2026"],
+            ["Transferidos", "Revisão de acesso após mudança de área", "jul-ago/2026"],
+            ["Chamados automáticos", "Abertura automática de chamados no Jira", "agosto/2026"]],
+           larguras=[1.6, 3.7, 1.4])
+    par(doc, "Quando um novo sistema entra, ele é simplesmente \"ligado\" na "
+             "ferramenta — o Painel já está preparado para vários sistemas.",
         italico=True, cor=CINZA)
-
-    # ---- 6. PAINEIS ----
-    h1(doc, "6. Resumo dos painéis")
-    par(doc, "O Visualizador tem seis abas:")
-    tabela(doc,
-           ["Aba", "O que mostra"],
-           [["Visão Geral",
-             "Dashboard operacional: KPIs por classificação (sempre por usuário), "
-             "evolução de chamados (identificados × resolvidos × aderentes na janela "
-             "de 30 dias), tempo de tratamento do ciclo (Pendência→Resolvido→Aderente) "
-             "e movimentação de RH."],
-            ["Consulta",
-             "Busca por usuário (matrícula, nome, login, CPF) com a visão consolidada "
-             "de acessos, pendências e atalhos para as demais abas."],
-            ["Pendências",
-             "Grid de tratamento: por usuário, os acessos a Incluir/Alterar/Analisar, "
-             "com filtros, agrupamento e exportação Excel."],
-            ["Aderentes",
-             "Usuários conformes, com a trilha de datas do ciclo e o tempo total de "
-             "tratamento."],
-            ["Histórico",
-             "Trilha de movimentações: admissões, alterações de RH e o ciclo de vida "
-             "de cada acesso (pendência, resolução, aderência)."],
-            ["Quarentena",
-             "Acessos colocados em observação por prazo (90 dias), com acompanhamento "
-             "do tempo restante."]],
-           larguras=[1.4, 5.7])
-
-    # ---- 7. FLUXO DE ATENDIMENTO ----
-    h1(doc, "7. Fluxo de atendimento")
-    par(doc, "Cada acesso pendente segue um ciclo de vida de três estágios, com "
-             "registro de data em cada marco (a trilha fica no Histórico):")
-    tabela(doc,
-           ["Estágio", "Quando acontece"],
-           [["1. Pendência", "O Processador identifica a divergência (Incluir/Alterar/Em Análise)."],
-            ["2. Resolvido", "O analista trata o caso sob um ticket do Jira e marca como resolvido."],
-            ["3. Aderente", "Em um próximo processamento, o acesso passa a bater com o esperado."]],
-           larguras=[1.7, 5.4])
-    par(doc, "Observações do fluxo:")
-    bullet(doc, "a resolução é feita por usuário, sempre vinculada a um ticket do Jira (com descrição).")
-    bullet(doc, "o tempo de tratamento é medido em cada etapa de forma independente (Pendência→Resolvido, Resolvido→Aderente e Pendência→Aderente), inclusive liberações feitas fora do sistema.")
-    bullet(doc, "a quarentena permite colocar um acesso em observação por prazo antes de uma decisão definitiva.")
-    bullet(doc, "toda exportação para Excel reflete exatamente a grid (mesmas colunas, valores e formatação), respeitando os filtros aplicados.")
-
-    # ---- 8. ROADMAP ----
-    h1(doc, "8. O que ainda será entregue (roadmap)")
-    par(doc, "As próximas fases acoplam-se a esta fundação. Sequenciamento previsto:")
-    tabela(doc,
-           ["Fase / Card", "Entrega", "Janela"],
-           [["Cards 8-13", "Demais sistemas: IC, SICA RA, SIGOT, Oracle EBS, SIG, SICA Esfera", "jun/2026"],
-            ["Card 14", "Consolidação multi-sistema dos acessos", "jun/2026"],
-            ["Cards 15-17", "Matrizes organizacionais e motor de divergências completo", "jul/2026"],
-            ["Cards 19-21", "Motor de desligados (revogação) e auditoria", "jul/2026"],
-            ["Cards 22-24", "Movimentações e revalidação pós-transferência", "jul-ago/2026"],
-            ["Cards 25-26", "Integração Jira: abertura automática de chamados e fechamento", "ago/2026"]],
-           larguras=[1.4, 4.3, 1.4])
-    par(doc, "Quando um sistema entra, ele é ativado por configuração — o painel já é "
-             "multi-sistema e não precisa de reescrita.", italico=True, cor=CINZA)
 
     # ---- 9. SUGESTOES ----
     h1(doc, "9. Sugestões e recomendações")
-    par(doc, "Itens que recomendamos definir com o cliente para extrair mais valor da "
+    par(doc, "Alguns pontos que recomendamos combinar para aproveitar melhor a "
              "ferramenta e preparar as próximas fases:")
-    bullet(doc, "definir a periodicidade de extração das bases e do processamento (ex.: mensal/quinzenal), para que os números reflitam um ciclo previsível.", neg="Periodicidade:")
-    bullet(doc, "definir o responsável por tratar cada classificação (Incluir, Alterar, Analisar, Não Mapeado) e o prazo-alvo (SLA) de cada um.", neg="Responsáveis e SLA:")
-    bullet(doc, "padronizar o uso do ticket do Jira na resolução (todo tratamento sob um chamado) — isso já prepara a automação dos Cards 25-26.", neg="Disciplina de ticket:")
-    bullet(doc, "estabelecer o prazo e o critério de saída da quarentena (hoje 90 dias) e quem decide.", neg="Política de quarentena:")
-    bullet(doc, "rotina de backup do iam_analytics.db (a base guarda o histórico e o ciclo de vida).", neg="Backup:")
-    bullet(doc, "a trilha do Histórico serve como evidência para auditoria (SOX/LGPD); vale definir o período de retenção.", neg="Evidência para auditoria:")
-    bullet(doc, "avaliar a sinalização de acesso excessivo (mais do que o cargo exige) — hoje fora de escopo, mas relevante para risco.", neg="Perfil excessivo:")
-    bullet(doc, "revisar as matrizes de perfil por cargo periodicamente, já que elas definem o \"esperado\" — matriz desatualizada gera divergência falsa.", neg="Curadoria das matrizes:")
-    bullet(doc, "a Visão Geral é um dashboard operacional; o enriquecimento (metas/SLA, tendências) será guiado pelo uso e pela fase Jira — sugestões do time são bem-vindas.", neg="Evolução da Visão Geral:")
+    bullet(doc, "definir de quanto em quanto tempo as bases serão atualizadas e analisadas (por exemplo, uma vez por mês), para ter um ciclo previsível.", neg="Periodicidade:")
+    bullet(doc, "definir quem é responsável por tratar cada tipo de pendência e em quanto tempo (prazo-alvo).", neg="Responsáveis e prazos:")
+    bullet(doc, "padronizar o uso do chamado em todo tratamento — isso já prepara a abertura automática de chamados (etapa futura).", neg="Uso do chamado:")
+    bullet(doc, "combinar o prazo e o critério para um acesso sair da observação, e quem decide.", neg="Quarentena:")
+    bullet(doc, "manter uma rotina de cópia de segurança da base, que guarda todo o histórico.", neg="Cópia de segurança:")
+    bullet(doc, "o histórico serve como evidência para auditorias (inclusive LGPD); vale definir por quanto tempo guardar.", neg="Evidência para auditoria:")
+    bullet(doc, "revisar periodicamente as matrizes de perfil por cargo, pois elas definem o que é \"esperado\" — uma matriz desatualizada gera diferenças que não existem de fato.", neg="Revisão das matrizes:")
+    bullet(doc, "a tela de Visão Geral vai evoluir conforme o uso e o feedback do time — sugestões são bem-vindas.", neg="Evolução do Painel:")
 
     # ---- 10. GLOSSARIO ----
     h1(doc, "10. Glossário")
     tabela(doc,
-           ["Termo", "Definição"],
-           [["Aderente", "Usuário cujo acesso está conforme o perfil esperado."],
-            ["Pendência", "Divergência identificada que precisa de tratamento."],
-            ["Em Análise", "Cargo com mais de um perfil possível — exige decisão manual."],
-            ["Não Mapeado", "Acesso de quem não está na base de RH ativa."],
-            ["Quarentena", "Acesso colocado em observação por prazo antes da decisão."],
-            ["Matriz de perfil", "Tabela que define o perfil esperado por cargo em cada sistema."],
-            ["Mapeamento CCO/CSC", "De-para que liga centro de custo e gestor ao acesso esperado."]],
+           ["Termo", "O que quer dizer"],
+           [["Aderente", "Pessoa cujo acesso está correto, conforme o cargo."],
+            ["Pendência", "Uma diferença de acesso que precisa ser tratada."],
+            ["Em Análise", "Cargo que admite mais de um perfil — precisa de decisão."],
+            ["Não Mapeado", "Acesso de alguém que não está na base de RH ativa."],
+            ["Quarentena", "Acesso colocado em observação por um prazo antes da decisão."],
+            ["Perfil", "O conjunto de permissões que a pessoa tem dentro de um sistema."],
+            ["Matriz de perfil", "Tabela que define qual perfil cada cargo deve ter em cada sistema."],
+            ["Centro de custo", "Código que identifica a área/unidade à qual a pessoa pertence."]],
            larguras=[1.8, 5.3])
 
     par(doc, "")
     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("CVC IAM Analytics · v1.0.0 · Documento de entrega — Fase 1 (SYSTUR)")
+    r = p.add_run("CVC IAM Analytics · Versão 1.0.0 · Documento de entrega — Fase 1 (SYSTUR)")
     r.font.size = Pt(8); r.font.color.rgb = CINZA
 
     SAIDA.parent.mkdir(parents=True, exist_ok=True)

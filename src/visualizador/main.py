@@ -1044,16 +1044,17 @@ def _calcular_visao_geral(c, sistema=""):
     # KPIs principais — todos filtrados por `sistema` (primeira entrega = SYSTUR)
     # "Pendências Abertas" — TOTAL exibido na aba Inclusão / Alteração.
     # Fonte: bi_divergencias (validacao_acessos com ação + ACESSO_SEM_VINCULO_RH).
+    # REGRA: conta USUARIOS distintos (nao acessos), igual aos cards do topo.
     try:
         out["pendentes"] = c.execute(
-            f"SELECT COUNT(*) FROM bi_divergencias WHERE resolvida=0 AND tipo<>'OK'{whereS}",
+            f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias WHERE resolvida=0 AND tipo<>'OK'{whereS}",
             argS).fetchone()[0]
         out["ok"] = c.execute(
-            f"SELECT COUNT(*) FROM bi_divergencias WHERE tipo='OK'{whereS}",
+            f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias WHERE tipo='OK'{whereS}",
             argS).fetchone()[0]
     except Exception:
         out["pendentes"] = c.execute(
-            "SELECT COUNT(*) FROM validacao_acessos "
+            "SELECT COUNT(DISTINCT matricula) FROM validacao_acessos "
             "WHERE situacao_acao='PENDENTE'").fetchone()[0]
     # Acessos de desligado: limita ao sistema do escopo
     wsis = "WHERE a.sistema = ?" if sistema else ""
@@ -1089,19 +1090,28 @@ def _calcular_visao_geral(c, sistema=""):
     out["rh_ativos"] = c.execute("SELECT COUNT(*) FROM rh_ativos").fetchone()[0]
     out["rh_desligados"] = c.execute("SELECT COUNT(*) FROM rh_desligados").fetchone()[0]
 
-    # Divergências por tipo (do sistema do escopo)
-    out["div_tipos"] = {r[0]: r[1] for r in c.execute(
-        f"SELECT tipo, COUNT(*) FROM divergencias "
-        + (" WHERE sistema = ?" if sistema else "") + " GROUP BY tipo",
-        argS)}
+    # Divergências por tipo (do sistema do escopo) — USUARIOS distintos por tipo,
+    # da fonte unificada (bi_divergencias), excluindo OK (aderente nao e' divergencia).
+    # Defensivo: banco sem bi_divergencias (ex.: chamada direta em teste) degrada
+    # so este bloco, sem derrubar a Visao Geral inteira.
+    try:
+        out["div_tipos"] = {r[0]: r[1] for r in c.execute(
+            "SELECT tipo, COUNT(DISTINCT usuario) FROM bi_divergencias "
+            "WHERE tipo<>'OK'" + (" AND sistema = ?" if sistema else "")
+            + " GROUP BY tipo", argS)}
+    except Exception:
+        out["div_tipos"] = {}
     # Concentração por sistema. RESPEITA o escopo configurado (visualizador/sistema):
     # com escopo SYSTUR mostra SO SYSTUR (requisito da 1a entrega = nada alem de
     # SYSTUR); com escopo vazio (multi-sistema futuro) mostra TODOS. O painel
     # continua multi-sistema-ready — quem manda e' o escopo, nao um filtro fixo.
-    out["div_sistemas"] = {r[0]: r[1] for r in c.execute(
-        "SELECT sistema, COUNT(*) FROM divergencias "
-        + ("WHERE sistema = ? " if sistema else "")
-        + "GROUP BY sistema ORDER BY 2 DESC", argS)}
+    try:
+        out["div_sistemas"] = {r[0]: r[1] for r in c.execute(
+            "SELECT sistema, COUNT(DISTINCT usuario) FROM bi_divergencias "
+            "WHERE tipo<>'OK'" + (" AND sistema = ?" if sistema else "")
+            + " GROUP BY sistema ORDER BY 2 DESC", argS)}
+    except Exception:
+        out["div_sistemas"] = {}
 
     # Top 10 desligados recentes ainda com acesso ativo NO SISTEMA do escopo
     hoje = datetime.date.today()
@@ -1124,17 +1134,23 @@ def _calcular_visao_geral(c, sistema=""):
                     "cargo": r[2], "sistemas": r[3], "perfis": r[4]})
     out["top_urgentes"] = top
 
-    # Aging: agrupa validacao_acessos PENDENTE por faixa etária (dt_processamento)
-    aging = {"0-7": 0, "8-30": 0, "31-90": 0, "90+": 0}
-    for r in c.execute("""
-        SELECT dt_processamento FROM validacao_acessos
+    # Aging: faixa etária das pendências por USUARIO (nao por acesso). Cada
+    # pessoa entra uma vez, classificada pela sua pendência MAIS ANTIGA — assim a
+    # soma do aging bate com o nº de usuários pendentes (consistente com os cards).
+    _pend_idade = {}  # matricula -> maior idade (dias) entre suas pendências
+    for mat, dtp in c.execute("""
+        SELECT matricula, dt_processamento FROM validacao_acessos
         WHERE situacao_acao='PENDENTE' AND dt_processamento IS NOT NULL
     """):
         try:
-            dt = datetime.datetime.fromisoformat(str(r[0])[:19]).date()
+            dt = datetime.datetime.fromisoformat(str(dtp)[:19]).date()
             dias = (hoje - dt).days
         except Exception:
             continue
+        if mat not in _pend_idade or dias > _pend_idade[mat]:
+            _pend_idade[mat] = dias
+    aging = {"0-7": 0, "8-30": 0, "31-90": 0, "90+": 0}
+    for dias in _pend_idade.values():
         if dias <= 7: aging["0-7"] += 1
         elif dias <= 30: aging["8-30"] += 1
         elif dias <= 90: aging["31-90"] += 1

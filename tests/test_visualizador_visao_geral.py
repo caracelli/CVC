@@ -124,9 +124,13 @@ class TestVisaoGeral(unittest.TestCase):
         self.assertEqual(self.vg["rh_desligados"], 1)
 
     def test_divergencias_por_tipo_e_sistema(self):
+        # div_tipos/div_sistemas vem da fonte unificada (bi_divergencias) e contam
+        # USUARIOS distintos por tipo/sistema, excluindo OK — consistente com os
+        # cards do topo. bi = 4 SEM_ACESSO (V0-V3) + 1 ACESSO_SEM_VINCULO_RH (u3);
+        # PERFIL_INVALIDO da tabela 'divergencias' nao entra no bi.
         self.assertEqual(self.vg["div_tipos"],
-                         {"ACESSO_SEM_VINCULO_RH": 1, "PERFIL_INVALIDO": 1})
-        self.assertEqual(self.vg["div_sistemas"], {IC: 2})
+                         {"SEM_ACESSO": 4, "ACESSO_SEM_VINCULO_RH": 1})
+        self.assertEqual(self.vg["div_sistemas"], {IC: 5})
 
     def test_top_urgentes_desligado_com_acesso(self):
         top = self.vg["top_urgentes"]

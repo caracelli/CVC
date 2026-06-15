@@ -201,7 +201,10 @@ class DobrarInteracoes:
                      json.dumps(it.get("pendencias") or [], ensure_ascii=False),
                      it.get("cargo") or "", it.get("centro_custo") or "",
                      it.get("nome") or "", it.get("usuario") or "",
-                     it.get("data_acao") or "", agora])
+                     # normaliza ISO com 'T' -> espaco, para o formato de data ficar
+                     # uniforme no banco (dt_resolvido entra em comparacoes de string
+                     # com dt_pendencia/dt_aderente, que usam espaco).
+                     (it.get("data_acao") or "").replace("T", " "), agora])
                 n_resol += 1
 
             n_atalho_cri = n_atalho_exc = 0

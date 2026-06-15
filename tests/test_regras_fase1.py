@@ -284,7 +284,9 @@ class TestDobraResolucaoHistorico(unittest.TestCase):
         self.assertEqual(r["cargo"], "ANALISTA FISCAL")
         self.assertEqual(r["centro_custo"], "01.02 - FISCAL")
         self.assertEqual(r["resolvido_por"], "analista1")
-        self.assertEqual(r["resolvido_em"], "2026-05-22T10:00:00")
+        # 'T' do ISO normalizado para espaco: formato de data uniforme no banco
+        # (dt_resolvido entra em comparacoes de string com dt_pendencia/dt_aderente).
+        self.assertEqual(r["resolvido_em"], "2026-05-22 10:00:00")
 
     def test_snapshot_das_pendencias_preservado(self):
         # o detalhe das pendências (inclusive as opções do "Em Análise")
