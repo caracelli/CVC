@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Optional
 from dominio.objetos_valor.sistema import Sistema
 
 
@@ -9,6 +9,13 @@ class ConfigLeitorSistema:
     colunas: Dict[str, str]  # chave generica -> nome real da coluna no arquivo
     skiprows: int = 0
     separador: str = ";"
+    # Forca o encoding do CSV (ignora a deteccao automatica). Use quando o
+    # chardet erra — ex.: SIGOT e' cp1252 mas e' detectado como cp1250.
+    encoding: Optional[str] = None
+    # Extrato com BLOCOS de perfil repetidos na mesma linha (cabecalho repete
+    # ...;Grupo;... varias vezes -> pandas gera Grupo, Grupo.1, Grupo.2...).
+    # Com despivot=True cada grupo preenchido vira um acesso.
+    despivot: bool = False
     # Mapeamento de valores de situacao para padrao interno
     mapa_situacao: Dict[str, str] = field(default_factory=lambda: {
         "A": "ATIVO", "ATIVO": "ATIVO", "I": "INATIVO", "INATIVO": "INATIVO",
@@ -50,6 +57,8 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
     Sistema.SIGOT: ConfigLeitorSistema(
         sistema=Sistema.SIGOT,
         skiprows=2,
+        encoding="cp1252",   # chardet detecta cp1250 (errado); o arquivo e' cp1252
+        despivot=True,       # cabecalho repete Filial;Padrao;Grupo;... 4x
         colunas={
             "usuario":       "Usuario",
             "nome":          "Nome",
@@ -61,7 +70,8 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
             "ultimo_acesso": "Ultimo Acesso",
             "filial":        "Filial",
         },
-        mapa_situacao={"ATIVO": "ATIVO", "INATIVO": "INATIVO"},
+        # O extrato SIGOT nao traz status (coluna em branco) -> trata como ATIVO.
+        mapa_situacao={"": "ATIVO", "ATIVO": "ATIVO", "INATIVO": "INATIVO"},
     ),
 
     Sistema.IC_INTEGRADOR_CONTABIL: ConfigLeitorSistema(

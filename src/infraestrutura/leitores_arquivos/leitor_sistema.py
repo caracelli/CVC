@@ -88,26 +88,50 @@ class LeitorSistema(LeitorArquivoBase):
         chave = valor.strip().upper()
         return self._cfg.mapa_situacao.get(chave, chave)
 
+    def _cols_perfil(self, df: pd.DataFrame) -> List[str]:
+        """Despivot: todas as colunas de perfil repetidas. O cabecalho repete
+        a coluna de perfil (ex.: Grupo, Grupo.1, Grupo.2...) — pandas sufixa com
+        '.N'. Retorna a coluna base + as sufixadas, na ordem do arquivo."""
+        base = self._cfg.colunas.get("perfil")
+        if not base:
+            return []
+        return [c for c in df.columns if c == base or c.startswith(base + ".")]
+
     def ler_um(self, arquivo: Path) -> List[PerfilAcesso]:
         """Le UM arquivo de extrato e devolve a lista de acessos."""
-        enc = self.detectar_encoding(arquivo) if arquivo.suffix.lower() == ".csv" else "utf-8"
+        if self._cfg.encoding:
+            enc = self._cfg.encoding
+        else:
+            enc = self.detectar_encoding(arquivo) if arquivo.suffix.lower() == ".csv" else "utf-8"
         df = self._ler_df(arquivo, enc).dropna(how="all")
+        cols_perfil = self._cols_perfil(df) if self._cfg.despivot else None
 
         perfis: List[PerfilAcesso] = []
         for _, row in df.iterrows():
             usuario = self._valor(row, "usuario").strip()
             if not usuario:
                 continue
-            perfis.append(PerfilAcesso(
+            comuns = dict(
                 usuario=usuario,
                 nome_usuario=self._pad.normalizar_nome(self._valor(row, "nome")),
                 sistema=self._cfg.sistema,
-                perfil=self._valor(row, "perfil"),
                 situacao=self._normalizar_situacao(self._valor(row, "situacao")),
                 data_criacao=_parse_data(self._valor(row, "data_criacao")),
                 ultimo_acesso=_parse_datetime(self._valor(row, "ultimo_acesso")),
                 matricula_vinculada=None,
                 cpf=self._pad.normalizar_cpf(self._valor(row, "cpf")),
                 email=(self._valor(row, "email") or None),
-            ))
+            )
+            if cols_perfil is not None:
+                # um acesso por grupo preenchido (sem repetir o mesmo grupo)
+                vistos = []
+                for c in cols_perfil:
+                    v = row.get(c)
+                    v = "" if pd.isna(v) else str(v).strip()
+                    if v and v not in vistos:
+                        vistos.append(v)
+                        perfis.append(PerfilAcesso(perfil=v, **comuns))
+                # sem nenhum grupo -> usuario sem acesso no sistema (nao emite)
+            else:
+                perfis.append(PerfilAcesso(perfil=self._valor(row, "perfil"), **comuns))
         return perfis
