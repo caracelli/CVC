@@ -220,18 +220,33 @@ def construir():
 
     # ---- 3. OS DOIS PROGRAMAS ----
     h1(doc, "3. Os dois programas")
-    par(doc, "A solução tem dois programas, com papéis bem definidos:")
-    tabela(doc,
-           ["Programa", "Para que serve", "Quem usa"],
-           [["O Processador",
-             "Lê os arquivos, faz a comparação e prepara os resultados. É usado quando "
-             "há bases novas para analisar.",
-             "A pessoa responsável pelo processamento"],
-            ["O Painel",
-             "Mostra os resultados na tela e é onde o time acompanha e trata as "
-             "pendências, no dia a dia.",
-             "Todas as pessoas do time"]],
-           larguras=[1.5, 4.0, 1.7])
+    par(doc, "A solução tem dois programas que trabalham juntos: um prepara os "
+             "resultados e o outro os apresenta.")
+
+    h2(doc, "3.1. O Processador")
+    par(doc, "É o motor da análise. Ele faz, de ponta a ponta:")
+    bullet(doc, "lê os arquivos colocados na pasta de entrada (RH, matriz e extrato);")
+    bullet(doc, "padroniza as informações (acerta maiúsculas, acentos, espaços, códigos) para comparar corretamente;")
+    bullet(doc, "cruza o que cada pessoa acessa com o que o cargo prevê e gera a classificação (Aderente, Incluir, Alterar, Em Análise, Não Mapeado);")
+    bullet(doc, "grava o resultado na base de dados compartilhada — é essa base que o Painel lê;")
+    bullet(doc, "arquiva os arquivos já usados e registra um log de cada execução (e separa os que tiveram problema).")
+    par(doc, "Quando usar: sob demanda, sempre que chegarem bases novas. Quem usa: a "
+             "pessoa responsável pelo processamento. Não precisa ficar aberto — roda, "
+             "conclui e fecha.")
+
+    h2(doc, "3.2. O Painel")
+    par(doc, "É a tela de trabalho do dia a dia. Ele lê a base gerada pelo Processador "
+             "e apresenta tudo de forma visual, no navegador, organizado em seis telas "
+             "(detalhadas no item 6). No Painel o time:")
+    bullet(doc, "consulta a situação de acesso de qualquer pessoa;")
+    bullet(doc, "acompanha os indicadores e a evolução dos atendimentos;")
+    bullet(doc, "trata as pendências: resolve (sob um chamado), coloca em quarentena e exporta para Excel.")
+    par(doc, "Quem usa: todo o time. Várias pessoas podem abrir ao mesmo tempo, cada "
+             "uma no seu computador, vendo o mesmo cenário. Diferente do Processador, "
+             "ele fica aberto enquanto a pessoa trabalha.")
+
+    par(doc, "Em resumo: o Processador gera os dados; o Painel mostra e trata. Quem só "
+             "acompanha precisa apenas do Painel.", italico=True, cor=NAVY)
 
     # ---- 4. VARIAS PESSOAS AO MESMO TEMPO ----
     h1(doc, "4. Como várias pessoas usam ao mesmo tempo")
