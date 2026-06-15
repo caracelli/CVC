@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Regressao das DECISOES da entrega gravadas no config.xml de producao.
 
-Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.3.3,
+Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.0.0,
 SYSTUR ativo (IC e demais inativos), desligados/terceiros fora de escopo,
 painel multi-sistema (visualizador/sistema vazio). Se alguem mexer nesses
 flags sem querer, este teste acende.
@@ -24,8 +24,8 @@ class TestConfigProducao(unittest.TestCase):
     def setUpClass(cls):
         cls.cfg = LeitorConfig(str(CONFIG)).carregar()
 
-    def test_versao_1_3_4(self):
-        self.assertEqual(self.cfg.versao, "1.3.4")
+    def test_versao_1_0_0(self):
+        self.assertEqual(self.cfg.versao, "1.0.0")
 
     def test_systur_ativo_ic_temporariamente_off(self):
         # SYSTUR ativo. IC DESATIVADO temporariamente (estava atrapalhando a
