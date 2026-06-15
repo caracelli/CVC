@@ -309,30 +309,30 @@ def construir():
         italico=True, cor=CINZA)
 
     h2(doc, "5.3. Passo a passo")
-    par(doc, "Importante: os programas funcionam no computador de cada pessoa, e não "
-             "\"na rede\". O lugar compartilhado serve apenas para guardar os dados, "
-             "que todos enxergam.", italico=True, cor=NAVY)
+    par(doc, "Importante: a solução já estará instalada na pasta compartilhada da "
+             "empresa (instalação única, feita pela TI). Os programas, porém, NÃO "
+             "rodam de lá — cada pessoa copia a pasta EXECUTAVEIS para o seu próprio "
+             "computador e roda a partir dela. A pasta compartilhada guarda apenas os "
+             "dados, que todos enxergam.", italico=True, cor=NAVY)
     passos = [
-        ("Preparar o espaço compartilhado (uma vez)",
-         "Copiar a pasta da solução para o lugar compartilhado da empresa (a área de "
-         "pastas que o time acessa). A base começa vazia."),
-        ("Levar os programas para o seu computador (cada pessoa)",
-         "Copiar a pasta de programas para uma pasta no seu próprio computador e usar a "
-         "partir dela. Isso vale tanto para quem vai processar quanto para quem só vai "
-         "acompanhar pelo Visualizador."),
-        ("Colocar os arquivos",
-         "Guardar os quatro arquivos nas pastas indicadas no item 5.2."),
+        ("Copiar os programas para o seu computador (cada pessoa)",
+         "Na pasta compartilhada, copie a pasta EXECUTAVEIS para uma pasta no seu "
+         "computador (por exemplo, em C:\\CVC) e use a partir dela. Vale tanto para "
+         "quem vai processar quanto para quem só vai acompanhar."),
+        ("Colocar os arquivos (pessoa responsável)",
+         "Guardar os quatro arquivos nas pastas da ENTRADA, na pasta compartilhada, "
+         "conforme o item 5.2."),
         ("Processar (pessoa responsável)",
-         "Abrir o Processador a partir da sua cópia. Ele compara tudo e prepara os "
-         "resultados. Os arquivos usados são arquivados automaticamente; se algum "
-         "arquivo tiver problema, ele é separado para conferência."),
+         "Abrir o Processador a partir da sua cópia. Ele compara tudo e grava os "
+         "resultados na base compartilhada; arquiva os arquivos usados e separa os que "
+         "tiverem problema para conferência."),
         ("Abrir o Visualizador (cada pessoa)",
-         "Abrir o Visualizador a partir da sua cópia. Ele abre o painel sozinho no navegador, já com "
-         "os resultados. A partir daí, é só acompanhar e tratar as pendências pelas "
-         "telas (item 6)."),
+         "Abrir o Visualizador a partir da sua cópia. Ele abre o painel no navegador, "
+         "já com os resultados. A partir daí, é só acompanhar e tratar as pendências "
+         "pelas telas (item 6)."),
         ("Atualizar o cenário",
-         "Sempre que chegarem bases novas, repetir os passos 3 e 4 (colocar os "
-         "arquivos e processar). Mexer apenas no Painel não exige processar de novo."),
+         "Sempre que chegarem bases novas, repetir os passos 2 e 3 (colocar os "
+         "arquivos e processar). Mexer apenas no painel não exige processar de novo."),
     ]
     for i, (titulo, desc) in enumerate(passos, 1):
         p = doc.add_paragraph()
