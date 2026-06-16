@@ -103,4 +103,24 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
         },
         mapa_situacao={"ATIVO": "ATIVO", "INATIVO": "INATIVO", "BLOQUEADO": "BLOQUEADO"},
     ),
+
+    # Oracle EBS (Card 11). Extrato XLSX (aba "Select per_all_people_f"), formato
+    # LONGO (1 linha por usuario-perfil; sem despivot). CPF + MAIL = boa vinculacao.
+    # Sem matriz de perfil esperado (gestao "por espelho", como o SIG) — a
+    # validacao por cargo depende de decisao posterior. ativo=false (dormente).
+    Sistema.ORACLE_EBS: ConfigLeitorSistema(
+        sistema=Sistema.ORACLE_EBS,
+        skiprows=0,
+        colunas={
+            "usuario":       "USUÁRIO",
+            "nome":          "NM_USUÁRIO",
+            "cpf":           "CPF",
+            "email":         "MAIL",
+            "perfil":        "PERFIL",
+            "situacao":      "STATUS",
+            "ultimo_acesso": "ÚLTIMO_ACESSO_EBS",
+        },
+        mapa_situacao={"ACTIVE": "ATIVO", "INACTIVE": "INATIVO",
+                       "ATIVO": "ATIVO", "INATIVO": "INATIVO"},
+    ),
 }

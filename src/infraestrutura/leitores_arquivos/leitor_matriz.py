@@ -18,6 +18,8 @@ _SISTEMA_POR_NOME: Dict[str, Sistema] = {
     "SYSTUR":                   Sistema.SYSTUR,
     "IC INTEGRADOR CONTABIL":   Sistema.IC_INTEGRADOR_CONTABIL,
     "IC_INTEGRADOR_CONTABIL":   Sistema.IC_INTEGRADOR_CONTABIL,
+    "ORACLE EBS":               Sistema.ORACLE_EBS,
+    "ORACLE_EBS":               Sistema.ORACLE_EBS,
 }
 
 # Candidatos para a coluna de cost center (em ordem de preferência)
@@ -26,8 +28,9 @@ _CANDIDATOS_CC = ["CCUSTO", "CENTRO DE CUSTO", "CENTRO_DE_CUSTO"]
 # Candidatos para a coluna de cargo/função
 _CANDIDATOS_CARGO = ["CARGO", "FUNÇÃO", "FUNCAO", "DESCRICAO CARGO", "FUNÇÃO DO CARGO"]
 
-# Coluna de perfil esperado
-_COL_PERFIL = "PERFIL ACESSO"
+# Candidatos para a coluna de perfil esperado (SYSTUR/SIGOT/SICA: 'PERFIL ACESSO';
+# Oracle EBS: 'RESPONSABILIDADE'). Ordem = preferência.
+_CANDIDATOS_PERFIL = ["PERFIL ACESSO", "RESPONSABILIDADE", "PERFIL"]
 
 # Coluna de acesso manual (presente na matriz SYSTUR)
 _COL_ACESSO_MANUAL = "ACESSO MANUAL"
@@ -62,9 +65,26 @@ def _resolver_col_cargo(colunas: List[str]) -> Optional[str]:
     return None
 
 
+def _resolver_col_perfil(colunas: List[str]) -> Optional[str]:
+    colunas_upper = {c.upper(): c for c in colunas}
+    for candidato in _CANDIDATOS_PERFIL:
+        if candidato.upper() in colunas_upper:
+            return colunas_upper[candidato.upper()]
+    return None
+
+
 def _ler_df_perfis(arquivo: Path) -> pd.DataFrame:
-    # XLSX/XLS ou CSV (separador/encoding auto no CSV); cabecalho na 1a linha.
-    return _normalizar_colunas(ler_tabela(arquivo, dtype=str))
+    # XLSX/XLS ou CSV. Cabecalho normalmente na 1a linha (SYSTUR/SIGOT/SICA),
+    # mas algumas matrizes (Oracle EBS) trazem uma linha de titulo antes — entao
+    # se nao acharmos cargo/perfil no header=0, tentamos header=1 (so XLSX).
+    df = _normalizar_colunas(ler_tabela(arquivo, dtype=str))
+    if (_resolver_col_cargo(list(df.columns)) is None
+            and _resolver_col_perfil(list(df.columns)) is None
+            and arquivo.suffix.lower() in (".xlsx", ".xls")):
+        df2 = _normalizar_colunas(ler_tabela(arquivo, dtype=str, header=1))
+        if _resolver_col_cargo(list(df2.columns)) or _resolver_col_perfil(list(df2.columns)):
+            return df2
+    return df
 
 
 def _ler_df_org(arquivo: Path) -> pd.DataFrame:
@@ -113,9 +133,10 @@ class LeitorMatrizPerfis(LeitorArquivoBase):
                 df = _ler_df_perfis(arquivo).dropna(how="all")
                 col_cc = _resolver_col_cc(list(df.columns))
                 col_cargo = _resolver_col_cargo(list(df.columns))
+                col_perfil = _resolver_col_perfil(list(df.columns))
                 total_antes = len(perfis)
 
-                if not col_cc or _COL_PERFIL not in df.columns:
+                if not col_cc or not col_perfil:
                     logger.warning(
                         f"Matriz Perfis '{arquivo.name}': colunas esperadas não encontradas. "
                         f"Disponíveis: {list(df.columns)}"
@@ -127,7 +148,7 @@ class LeitorMatrizPerfis(LeitorArquivoBase):
 
                 for _, row in df.iterrows():
                     cc = str(row.get(col_cc, "")).strip()
-                    perfil = str(row.get(_COL_PERFIL, "")).strip()
+                    perfil = str(row.get(col_perfil, "")).strip()
                     if not (cc and perfil):
                         continue
                     cargo_desc = str(row.get(col_cargo, "")).strip() if col_cargo else ""
