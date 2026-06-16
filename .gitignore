@@ -44,9 +44,6 @@ CVC_IAM_ANALYTICS/INTERACOES_processando/
 # Logs
 CVC_IAM_ANALYTICS/DADOS/LOGS/
 
-# Pasta de arquivos de origem (dados brutos do cliente)
-Arquivos_origem/
-
 # IDEs
 .vscode/
 .idea/
