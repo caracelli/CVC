@@ -84,9 +84,12 @@ class TestVisualizadorDataLayer(unittest.TestCase):
     # ---- KPIs (todos os sistemas) ----
     def test_kpis_todos_os_sistemas(self):
         b = self._base("")
+        # total = PESSOAS distintas a tratar, nao a soma dos cards: M1 esta em DOIS
+        # tipos (SEM_ACESSO no IC + EM_ANALISE no SYSTUR) e conta 1x -> total 3
+        # (M1, M2, tercX), embora a soma dos cards seja 4.
         self.assertEqual(b["kpis"], {
             "sem_acesso": 1, "divergente": 1, "em_analise": 1,
-            "nao_mapeado": 1, "ok": 0, "total": 4})
+            "nao_mapeado": 1, "ok": 0, "total": 3})
 
     def test_sis_dist(self):
         b = self._base("")

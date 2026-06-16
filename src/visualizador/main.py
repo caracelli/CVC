@@ -900,9 +900,14 @@ def _montar_base():
             "nao_mapeado": cont("ACESSO_SEM_VINCULO_RH"),
             "ok": cont("OK"),                       # conforme — nao e' pendencia
         }
-        # total de PENDENCIAS = soma dos cards exibidos (bate com a soma na tela).
-        kpis["total"] = (kpis["sem_acesso"] + kpis["divergente"]
-                         + kpis["em_analise"] + kpis["nao_mapeado"])
+        # total de PENDENCIAS = PESSOAS distintas a tratar (resolvida=0, exclui OK).
+        # NAO e' a soma dos cards: no multi-sistema uma pessoa pode ter pendencia
+        # em mais de um sistema/tipo e contaria 2x na soma — aqui conta 1x (mesma
+        # base do "Pendencias Abertas" da Visao Geral). Em 1 sistema soma==distinto.
+        kpis["total"] = c.execute(
+            f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias {whereS} "
+            f"{'AND' if whereS else 'WHERE'} resolvida=0 AND tipo<>'OK'",
+            argS).fetchone()[0]
         acao_dist = {r["acao"]: r["n"] for r in c.execute(
             f"SELECT acao, COUNT(DISTINCT usuario) n FROM bi_divergencias {whereS} "
             f"GROUP BY acao ORDER BY n DESC", argS)}
