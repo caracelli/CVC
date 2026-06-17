@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Regressao das DECISOES da entrega gravadas no config.xml de producao.
 
-Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.1.0,
+Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.2.0,
 entrega multi-sistema ate Oracle EBS (SYSTUR+IC+SICA_RA+SIGOT+ORACLE_EBS ativos;
 SICA_ESFERA/SIG/OPERA inativos), desligados/terceiros fora de escopo, painel
 multi-sistema (visualizador/sistema vazio). Se alguem mexer nesses flags sem
@@ -25,8 +25,8 @@ class TestConfigProducao(unittest.TestCase):
     def setUpClass(cls):
         cls.cfg = LeitorConfig(str(CONFIG)).carregar()
 
-    def test_versao_1_1_0(self):
-        self.assertEqual(self.cfg.versao, "1.1.0")
+    def test_versao_1_2_0(self):
+        self.assertEqual(self.cfg.versao, "1.2.0")
 
     def test_sistemas_ate_oracle_ativos(self):
         # Entrega multi-sistema ate Oracle EBS (Cards 6-11).

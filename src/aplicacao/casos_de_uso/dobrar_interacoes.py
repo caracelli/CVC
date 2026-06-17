@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS quarentena (
   origem TEXT,
   data_inicio TEXT NOT NULL, data_fim TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'Em quarentena',
+  dias INTEGER, ticket TEXT, titulo TEXT, motivo_entrada TEXT,
   criado_por TEXT, criado_em TEXT NOT NULL
 )
 """
@@ -48,10 +49,25 @@ CREATE TABLE IF NOT EXISTS quarentena_historico (
   origem TEXT,
   data_inicio TEXT NOT NULL, data_fim TEXT NOT NULL,
   data_saida TEXT NOT NULL, motivo TEXT NOT NULL,
+  dias INTEGER, ticket TEXT, titulo TEXT, motivo_entrada TEXT,
   criado_por TEXT, criado_em TEXT, encerrado_por TEXT,
   movido_em TEXT NOT NULL
 )
 """
+
+# Colunas adicionadas depois (formulario de quarentena). Migração ADITIVA — bancos
+# em HML ganham as colunas via ALTER, sem perder dados (ver _migrar_colunas_quar).
+_COLS_QUAR_FORM = [("dias", "INTEGER"), ("ticket", "TEXT"),
+                   ("titulo", "TEXT"), ("motivo_entrada", "TEXT")]
+
+
+def _migrar_colunas_quar(c):
+    """ALTER TABLE ADD COLUMN idempotente p/ quarentena e _historico (bancos antigos)."""
+    for tab in ("quarentena", "quarentena_historico"):
+        existentes = {r[1] for r in c.execute(f"PRAGMA table_info({tab})")}
+        for nome, tipo in _COLS_QUAR_FORM:
+            if nome not in existentes:
+                c.execute(f"ALTER TABLE {tab} ADD COLUMN {nome} {tipo}")
 
 _SQL_RES = """
 CREATE TABLE IF NOT EXISTS resolucoes (
@@ -176,6 +192,7 @@ class DobrarInteracoes:
             c.executescript(_SQL_HIST)
             c.executescript(_SQL_RES)
             c.executescript(_SQL_ATALHOS)
+            _migrar_colunas_quar(c)
             n_env = n_res = 0
             for rid, its in por_reg.items():
                 its.sort(key=lambda x: str(x.get("data_acao", "")))
@@ -233,10 +250,18 @@ class DobrarInteracoes:
         finally:
             c.close()
 
-    def _data_fim(self, di: str) -> str:
+    def _dias_de(self, env: dict) -> int:
+        """Prazo (dias) informado na interacao; cai no default se ausente/invalido."""
+        try:
+            d = int(env.get("dias"))
+            return d if d > 0 else self._dias
+        except (TypeError, ValueError):
+            return self._dias
+
+    def _data_fim(self, di: str, dias: int = None) -> str:
         try:
             return (datetime.strptime(di, "%Y-%m-%d")
-                    + timedelta(days=self._dias)).strftime("%Y-%m-%d")
+                    + timedelta(days=int(dias) if dias else self._dias)).strftime("%Y-%m-%d")
         except Exception:
             return di
 
@@ -245,12 +270,16 @@ class DobrarInteracoes:
         if c.execute("SELECT 1 FROM quarentena WHERE usuario=?", [rid]).fetchone():
             return False
         di = (env.get("data_acao") or "")[:10]
+        dias = self._dias_de(env)
         c.execute(
             "INSERT INTO quarentena (usuario,nome_usuario,sistema,matricula,origem,"
-            "data_inicio,data_fim,status,criado_por,criado_em) "
-            "VALUES (?,?,?,?,?,?,?, 'Em quarentena', ?, ?)",
+            "data_inicio,data_fim,status,dias,ticket,titulo,motivo_entrada,"
+            "criado_por,criado_em) "
+            "VALUES (?,?,?,?,?,?,?, 'Em quarentena', ?,?,?,?, ?, ?)",
             [rid, env.get("nome") or rid, env.get("sistema") or "", rid,
-             env.get("origem") or "Inclusão / Alteração", di, self._data_fim(di),
+             env.get("origem") or "Inclusão / Alteração", di, self._data_fim(di, dias),
+             dias, env.get("ticket") or "", env.get("titulo") or "",
+             env.get("motivo") or "",
              env.get("usuario") or "", env.get("data_acao") or di])
         return True
 
@@ -263,24 +292,31 @@ class DobrarInteracoes:
             return False
         row = c.execute(
             "SELECT nome_usuario,sistema,matricula,origem,data_inicio,data_fim,"
-            "criado_por,criado_em FROM quarentena WHERE usuario=?", [rid]).fetchone()
+            "dias,ticket,titulo,motivo_entrada,criado_por,criado_em "
+            "FROM quarentena WHERE usuario=?", [rid]).fetchone()
         if row:
-            nome, sis, mat, origem, di, df, crp, cre = row
+            nome, sis, mat, origem, di, df, dias, tk, titulo, motent, crp, cre = row
         elif env:
             di = (env.get("data_acao") or "")[:10]
             nome, sis, mat = env.get("nome") or rid, env.get("sistema") or "", rid
-            origem, df = env.get("origem") or "", self._data_fim(di)
+            dias = self._dias_de(env)
+            origem, df = env.get("origem") or "", self._data_fim(di, dias)
+            tk, titulo, motent = env.get("ticket") or "", env.get("titulo") or "", env.get("motivo") or ""
             crp, cre = env.get("usuario") or "", env.get("data_acao") or di
         else:
             nome, sis, mat, origem = rid, "", rid, ""
             di = df = cre = ds
-            crp = ""
+            dias, tk, titulo, motent, crp = None, "", "", "", ""
         agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # motivo de SAIDA: vem da interacao (retirada manual exige motivo);
+        # default p/ compat com interacoes antigas sem motivo.
+        motivo_saida = (res.get("motivo") or "").strip() or "Retirado da quarentena"
         c.execute(
             "INSERT INTO quarentena_historico (usuario,nome_usuario,sistema,matricula,"
-            "origem,data_inicio,data_fim,data_saida,motivo,criado_por,criado_em,"
-            "encerrado_por,movido_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            [rid, nome, sis, mat, origem, di, df, ds, "Resolvido", crp, cre,
-             res.get("usuario") or "", agora])
+            "origem,data_inicio,data_fim,data_saida,motivo,dias,ticket,titulo,"
+            "motivo_entrada,criado_por,criado_em,encerrado_por,movido_em) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            [rid, nome, sis, mat, origem, di, df, ds, motivo_saida, dias, tk, titulo,
+             motent, crp, cre, res.get("usuario") or "", agora])
         c.execute("DELETE FROM quarentena WHERE usuario=?", [rid])
         return True

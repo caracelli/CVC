@@ -88,14 +88,20 @@ class TestWritesQuarentena(_Base):
         return ri.ler_todas(self.inter)
 
     def test_retirar_quarentena_grava_resolver(self):
-        n = vm.retirar_quarentena("R1")
+        n = vm.retirar_quarentena("R1", "saiu por teste")
         self.assertEqual(n, 1)
         its = [i for i in self._interacoes()
                if i.get("tipo_interacao") == "QUARENTENA" and i.get("acao") == "RESOLVER"]
         self.assertEqual([i["registro_id"] for i in its], ["R1"])
+        self.assertEqual(its[0]["motivo"], "saiu por teste")
 
     def test_retirar_quarentena_id_vazio_nao_grava(self):
-        self.assertEqual(vm.retirar_quarentena(""), 0)
+        self.assertEqual(vm.retirar_quarentena("", "m"), 0)
+        self.assertEqual(self._interacoes(), [])
+
+    def test_retirar_quarentena_sem_motivo_nao_grava(self):
+        # motivo e' OBRIGATORIO na retirada
+        self.assertEqual(vm.retirar_quarentena("R1", ""), 0)
         self.assertEqual(self._interacoes(), [])
 
     def test_resolver_pendencia_grava_resolucao(self):

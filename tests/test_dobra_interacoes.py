@@ -15,15 +15,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from aplicacao.casos_de_uso.dobrar_interacoes import DobrarInteracoes
 
 
-def _q_enviar(rid, nome="ANA", data="2026-06-01T10:00:00", usuario="op1"):
+def _q_enviar(rid, nome="ANA", data="2026-06-01T10:00:00", usuario="op1",
+              dias=15, ticket="IAM-9", titulo="Aguardando gestor", motivo="motivo entrada"):
     return {"tipo_interacao": "QUARENTENA", "registro_id": rid, "acao": "ENVIAR",
             "nome": nome, "sistema": "SYSTUR", "origem": "Inclusão / Alteração",
-            "usuario": usuario, "data_acao": data}
+            "usuario": usuario, "data_acao": data,
+            "dias": dias, "ticket": ticket, "titulo": titulo, "motivo": motivo}
 
 
-def _q_resolver(rid, data="2026-06-02T10:00:00", usuario="op2"):
+def _q_resolver(rid, data="2026-06-02T10:00:00", usuario="op2", motivo="retirado no teste"):
     return {"tipo_interacao": "QUARENTENA", "registro_id": rid, "acao": "RESOLVER",
-            "usuario": usuario, "data_acao": data}
+            "usuario": usuario, "data_acao": data, "motivo": motivo}
 
 
 def _atalho(rid, acao="CRIAR", nome="filtro X", data="2026-06-01T10:00:00", usuario="op1"):
@@ -68,6 +70,12 @@ class TestQuarentenaFluxo(_Base):
         self.assertEqual(len(q), 1)
         self.assertEqual(q[0]["usuario"], "R1")
         self.assertEqual(q[0]["data_inicio"], "2026-06-01")
+        # prazo por caso (dias do formulario): data_fim = inicio + 15 dias
+        self.assertEqual(q[0]["dias"], 15)
+        self.assertEqual(q[0]["data_fim"], "2026-06-16")
+        self.assertEqual(q[0]["titulo"], "Aguardando gestor")
+        self.assertEqual(q[0]["ticket"], "IAM-9")
+        self.assertEqual(q[0]["motivo_entrada"], "motivo entrada")
 
     def test_enviar_idempotente_nao_duplica(self):
         self._gravar(_q_enviar("R1"))
@@ -86,7 +94,11 @@ class TestQuarentenaFluxo(_Base):
         hist = self._rows("quarentena_historico")
         self.assertEqual(len(hist), 1)
         self.assertEqual(hist[0]["usuario"], "R1")
-        self.assertEqual(hist[0]["motivo"], "Resolvido")
+        # motivo de SAIDA vem da interacao de retirada (motivo obrigatorio)
+        self.assertEqual(hist[0]["motivo"], "retirado no teste")
+        # campos de ENTRADA preservados no historico (para a lupa)
+        self.assertEqual(hist[0]["titulo"], "Aguardando gestor")
+        self.assertEqual(hist[0]["motivo_entrada"], "motivo entrada")
 
 
 class TestMultiusuarioEOrfao(_Base):

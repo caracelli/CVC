@@ -426,13 +426,23 @@ def _resolucoes_mescladas(interacoes=None):
     return out
 
 
+def _dias_quar(it):
+    """Prazo (dias) da interacao de envio; default QUAR_DIAS se ausente/invalido."""
+    try:
+        d = int(it.get("dias"))
+        return d if d > 0 else QUAR_DIAS
+    except (TypeError, ValueError):
+        return QUAR_DIAS
+
+
 def _sintetizar_ativa(rid, it):
     """Linha de quarentena ativa a partir de uma interacao ENVIAR viva.
-    nome/sistema vem da propria interacao (gravados no envio)."""
+    nome/sistema/prazo/ticket/titulo/motivo vem da propria interacao (gravados no envio)."""
     di = (it.get("data_acao") or "")[:10]
+    dias = _dias_quar(it)
     try:
         df = (datetime.strptime(di, "%Y-%m-%d")
-              + timedelta(days=QUAR_DIAS)).strftime("%Y-%m-%d")
+              + timedelta(days=dias)).strftime("%Y-%m-%d")
     except Exception:
         df = di
     return {"id": rid, "usuario": rid,
@@ -440,11 +450,13 @@ def _sintetizar_ativa(rid, it):
             "sistema": it.get("sistema") or "",
             "origem": it.get("origem") or "Inclusão / Alteração",
             "data_inicio": di, "data_fim": df,
+            "dias": dias, "ticket": it.get("ticket") or "",
+            "titulo": it.get("titulo") or "", "motivo_entrada": it.get("motivo") or "",
             "criado_por": it.get("usuario") or ""}
 
 
 def _sintetizar_historico(rid, it, anterior):
-    """Linha de historico a partir de uma interacao RESOLVER viva."""
+    """Linha de historico a partir de uma interacao RESOLVER viva (retirada manual)."""
     ds = (it.get("data_acao") or "")[:10]
     if anterior:
         base = dict(anterior)
@@ -453,7 +465,8 @@ def _sintetizar_historico(rid, it, anterior):
         base = {"nome_usuario": nome, "sistema": sis, "origem": "",
                 "data_inicio": ds, "data_fim": ds}
     base.update({"id": rid, "usuario": rid, "data_saida": ds,
-                 "motivo": "Resolvido", "movido_em": it.get("data_acao") or ds,
+                 "motivo": (it.get("motivo") or "").strip() or "Retirado da quarentena",
+                 "movido_em": it.get("data_acao") or ds,
                  "encerrado_por": it.get("usuario") or ""})
     return base
 
@@ -508,6 +521,7 @@ CREATE TABLE IF NOT EXISTS quarentena (
   origem TEXT,
   data_inicio TEXT NOT NULL, data_fim TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'Em quarentena',
+  dias INTEGER, ticket TEXT, titulo TEXT, motivo_entrada TEXT,
   criado_por TEXT, criado_em TEXT NOT NULL
 )
 """
@@ -520,10 +534,15 @@ CREATE TABLE IF NOT EXISTS quarentena_historico (
   origem TEXT,
   data_inicio TEXT NOT NULL, data_fim TEXT NOT NULL,
   data_saida TEXT NOT NULL, motivo TEXT NOT NULL,
+  dias INTEGER, ticket TEXT, titulo TEXT, motivo_entrada TEXT,
   criado_por TEXT, criado_em TEXT, encerrado_por TEXT,
   movido_em TEXT NOT NULL
 )
 """
+
+# Colunas do formulario de quarentena (migracao ADITIVA p/ bancos em HML).
+_COLS_QUAR_FORM = [("dias", "INTEGER"), ("ticket", "TEXT"),
+                   ("titulo", "TEXT"), ("motivo_entrada", "TEXT")]
 
 
 def conn_rw():
@@ -580,6 +599,10 @@ def garantir_estrutura(force=False):
                 c.execute(f"ALTER TABLE {_tab} ADD COLUMN origem TEXT")
             c.execute(f"UPDATE {_tab} SET origem='Inclusão / Alteração' "
                       "WHERE origem IS NULL OR origem=''")
+            # colunas do formulario de quarentena (aditivo, HML-safe)
+            for _nome, _tipo in _COLS_QUAR_FORM:
+                if _nome not in _cols:
+                    c.execute(f"ALTER TABLE {_tab} ADD COLUMN {_nome} {_tipo}")
         c.commit()
         n = c.execute("SELECT COUNT(*) FROM bi_divergencias").fetchone()[0]
         print(f"  bi_divergencias: {n} linhas | quarentena: OK")
@@ -620,16 +643,17 @@ def sweep_expiradas(c=None):
         agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         venc = c.execute(
             "SELECT id,usuario,nome_usuario,sistema,matricula,origem,data_inicio,"
-            "data_fim,criado_por,criado_em FROM quarentena "
-            "WHERE substr(data_fim,1,10) < ?", [hoje]).fetchall()
+            "data_fim,dias,ticket,titulo,motivo_entrada,criado_por,criado_em "
+            "FROM quarentena WHERE substr(data_fim,1,10) < ?", [hoje]).fetchall()
         for r in venc:
             c.execute(
                 "INSERT INTO quarentena_historico (usuario,nome_usuario,sistema,"
                 "matricula,origem,data_inicio,data_fim,data_saida,motivo,"
+                "dias,ticket,titulo,motivo_entrada,"
                 "criado_por,criado_em,encerrado_por,movido_em) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 [r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[7],
-                 "Prazo vencido", r[8], r[9], None, agora])
+                 "Prazo vencido", r[8], r[9], r[10], r[11], r[12], r[13], None, agora])
             c.execute("DELETE FROM quarentena WHERE id=?", [r[0]])
         if venc:
             c.commit()
@@ -1265,11 +1289,24 @@ def _calcular_visao_geral(c, sistema=""):
     return out
 
 
-def enviar_quarentena(usuarios, origem="Inclusão / Alteração"):
-    """Grava uma interacao ENVIAR (QUARENTENA) na rede para cada usuario novo.
-    Nao escreve mais na tabela local — a tabela e' snapshot do Processador."""
+def enviar_quarentena(usuarios, origem="Inclusão / Alteração",
+                      dias=None, ticket="", titulo="", motivo=""):
+    """Grava uma interacao ENVIAR (QUARENTENA) na rede para cada usuario novo,
+    com o prazo (dias) e os dados do formulario. data_fim = inicio + dias.
+    Nao escreve na tabela local — a tabela e' snapshot do Processador."""
+    try:
+        dias = int(dias)
+    except (TypeError, ValueError):
+        dias = 0
+    if dias <= 0:
+        return {"erro": "Informe a quantidade de dias (maior que zero)."}
+    titulo = str(titulo or "").strip()
+    if not titulo:
+        return {"erro": "O título/descrição é obrigatório."}
+    ticket = str(ticket or "").strip()
+    motivo = str(motivo or "").strip()
     agora = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    fim = (datetime.now() + timedelta(days=QUAR_DIAS)).strftime("%Y-%m-%d")
+    fim = (datetime.now() + timedelta(days=dias)).strftime("%Y-%m-%d")
     # ja em quarentena: snapshot do DB local + interacoes vivas da rede
     c = conn_ro()
     try:
@@ -1290,11 +1327,12 @@ def enviar_quarentena(usuarios, origem="Inclusão / Alteração"):
             "tipo_interacao": "QUARENTENA", "registro_id": u, "acao": "ENVIAR",
             "usuario": USUARIO, "data_acao": agora, "origem": origem,
             "nome": nome, "sistema": sis,
+            "dias": dias, "ticket": ticket, "titulo": titulo, "motivo": motivo,
         })
         ja.add(u)
         novos += 1
     print(f"  [QUARENTENA] +{novos} ENVIAR por {USUARIO} "
-          f"(ignorados {len(usuarios)-novos} ja ativos)")
+          f"({dias}d, ticket='{ticket}') (ignorados {len(usuarios)-novos} ja ativos)")
     return {"novos": novos, "total": len(ja), "data_fim": fim}
 
 
@@ -1307,10 +1345,12 @@ def listar_quarentena():
     try:
         ativas = {r["usuario"]: dict(r) for r in c.execute(
             "SELECT id,usuario,nome_usuario,sistema,origem,data_inicio,"
-            "data_fim,criado_por FROM quarentena ORDER BY data_fim")}
+            "data_fim,dias,ticket,titulo,motivo_entrada,criado_por "
+            "FROM quarentena ORDER BY data_fim")}
         historico = [dict(r) for r in c.execute(
             "SELECT id,usuario,nome_usuario,sistema,origem,data_inicio,"
-            "data_fim,data_saida,motivo,encerrado_por,movido_em "
+            "data_fim,data_saida,motivo,dias,ticket,titulo,motivo_entrada,"
+            "encerrado_por,movido_em "
             "FROM quarentena_historico ORDER BY movido_em DESC")]
     finally:
         c.close()
@@ -1333,17 +1373,19 @@ def listar_quarentena():
     return {"ativas": lista, "historico": historico}
 
 
-def retirar_quarentena(registro_id):
-    """Grava uma interacao RESOLVER (QUARENTENA) na rede. Devolve 1 se gravou."""
+def retirar_quarentena(registro_id, motivo=""):
+    """Grava uma interacao RESOLVER (QUARENTENA) na rede com o MOTIVO da retirada
+    (obrigatorio). Devolve 1 se gravou, 0 se invalido."""
     rid = str(registro_id or "").strip()
-    if not rid:
+    motivo = str(motivo or "").strip()
+    if not rid or not motivo:
         return 0
     _interacao_gravar({
         "tipo_interacao": "QUARENTENA", "registro_id": rid, "acao": "RESOLVER",
-        "usuario": USUARIO,
+        "usuario": USUARIO, "motivo": motivo,
         "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
     })
-    print(f"  [QUARENTENA] RESOLVER ({rid}) por {USUARIO}")
+    print(f"  [QUARENTENA] RESOLVER ({rid}) por {USUARIO} — motivo: {motivo}")
     return 1
 
 
@@ -1619,7 +1661,15 @@ class H(BaseHTTPRequestHandler):
                     self._send(400, '{"ok":false,"erro":"sem usuarios"}',
                                "application/json")
                     return
-                res = enviar_quarentena(us, origem)
+                res = enviar_quarentena(
+                    us, origem, dias=payload.get("dias"),
+                    ticket=payload.get("ticket"), titulo=payload.get("titulo"),
+                    motivo=payload.get("motivo"))
+                if res.get("erro"):
+                    self._send(200, json.dumps(
+                        {"ok": False, "erro": res["erro"]}, ensure_ascii=False),
+                        "application/json; charset=utf-8")
+                    return
                 self._send(200, json.dumps(
                     {"ok": True, "resultado": res,
                      "quarentena": listar_quarentena()}, ensure_ascii=False),
@@ -1629,11 +1679,16 @@ class H(BaseHTTPRequestHandler):
                 n = int(self.headers.get("Content-Length", 0))
                 payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
                 qid = payload.get("id")
+                motivo = str(payload.get("motivo") or "").strip()
                 if qid is None:
                     self._send(400, '{"ok":false,"erro":"sem id"}',
                                "application/json")
                     return
-                linhas = retirar_quarentena(qid)
+                if not motivo:
+                    self._send(200, '{"ok":false,"erro":"O motivo da retirada é obrigatório."}',
+                               "application/json; charset=utf-8")
+                    return
+                linhas = retirar_quarentena(qid, motivo)
                 self._send(200, json.dumps(
                     {"ok": linhas > 0,
                      "erro": None if linhas > 0 else "quarentena nao encontrada",

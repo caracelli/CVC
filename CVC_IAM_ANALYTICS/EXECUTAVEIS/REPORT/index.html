@@ -3085,14 +3085,61 @@ function proc(on){
   return new Promise(res => setTimeout(() => { ov.classList.remove('show'); res(); }, espera));
 }
 
-async function quarentenar(u){
-  if(!confirm('Enviar o usuário ' + u + ' para quarentena?')) return;
+/* ── Enviar para quarentena (modal → grava interação QUARENTENA) ───────── */
+let _quarAlvo = null;
+
+function quarentenar(uid){
+  // Abre o formulário (prazo/ticket/título/motivo) — espelha abrirResolver.
+  const u = DB.users.find(x => String(x.u) === String(uid));
+  _quarAlvo = u ? u.u : uid;
+  const nome = u ? (u.n + ' — ' + u.u) : uid;
+  _modal(
+    '<div class="modal-hd"><h3>Enviar para quarentena</h3>'
+    + '<p>' + esc(nome) + '</p></div>'
+    + '<div class="modal-bd">'
+    + '<label>Quantidade de dias <span class="req">*</span></label>'
+    + '<input id="quar-dias" type="number" min="1" step="1" placeholder="ex: 30" '
+    + 'autocomplete="off" inputmode="numeric">'
+    + '<label>Nº do ticket (opcional)</label>'
+    + '<input id="quar-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
+    + '<label>Título / descrição <span class="req">*</span></label>'
+    + '<input id="quar-titulo" placeholder="ex: Aguardando retorno do gestor" '
+    + 'autocomplete="off" maxlength="120">'
+    + '<label>Motivo (opcional)</label>'
+    + '<textarea id="quar-motivo" placeholder="Detalhe do motivo (opcional)" '
+    + 'maxlength="600"></textarea>'
+    + '<div class="modal-err" id="quar-err"></div></div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
+    + '<button class="mf-ok" onclick="confirmarQuarentena()">Enviar para quarentena</button>'
+    + '</div>');
+  setTimeout(() => { const i = document.getElementById('quar-dias'); if(i) i.focus(); }, 60);
+}
+
+async function confirmarQuarentena(){
+  if(!_quarAlvo) return;
+  const dias   = parseInt(document.getElementById('quar-dias').value, 10);
+  const ticket = document.getElementById('quar-ticket').value.trim();
+  const titulo = document.getElementById('quar-titulo').value.trim();
+  const motivo = document.getElementById('quar-motivo').value.trim();
+  const err = document.getElementById('quar-err');
+  if(!dias || dias < 1){
+    err.textContent = 'Informe a quantidade de dias (maior que zero).';
+    document.getElementById('quar-dias').focus(); return;
+  }
+  if(!titulo){
+    err.textContent = 'O título/descrição é obrigatório.';
+    document.getElementById('quar-titulo').focus(); return;
+  }
+  const u = _quarAlvo;
+  fecharModal();
   proc(true);
   let msg;
   try{
     const r = await fetch('/api/quarentena', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({usuarios:[u], origem:'Inclusão / Alteração'})
+      body: JSON.stringify({usuarios:[u], origem:'Inclusão / Alteração',
+        dias:dias, ticket:ticket, titulo:titulo, motivo:motivo})
     });
     const j = await r.json();
     if(j && j.ok){
@@ -3285,6 +3332,46 @@ function verResolucao(uid){
   _modalResolucao(u.n + ' — ' + u.u, u.resolucao);
 }
 
+/* Popup DADOS DA QUARENTENA — o que foi informado no envio (e a saída, se houver). */
+const QUAR_LUPA = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" '
+  + 'stroke="#1F2D5C" stroke-width="2.4" stroke-linecap="round">'
+  + '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+function _modalQuarentena(rec){
+  rec = rec || {};
+  const saida = rec.data_saida
+    ? '<div class="vw-grid2">'
+      + '<div><div class="vw-lbl">Saída</div><div class="vw-val">' + fmtDT(rec.data_saida) + '</div></div>'
+      + '<div><div class="vw-lbl">Motivo da saída</div><div class="vw-val">' + (esc(rec.motivo) || '—') + '</div></div></div>'
+    : '';
+  const motent = esc(rec.motivo_entrada)
+    ? '<div class="vw-desc">' + esc(rec.motivo_entrada) + '</div>'
+    : '<span class="vw-vazio">— sem motivo —</span>';
+  _modal(
+    '<div class="modal-hd"><h3>Dados da quarentena</h3>'
+    + '<p>' + esc((rec.nome_usuario || '') + ' — ' + (rec.usuario || '')) + '</p></div>'
+    + '<div class="modal-bd modal-vw">'
+    + '<div class="vw-grid2">'
+    + '<div><div class="vw-lbl">Título / descrição</div><div class="vw-val" style="font-size:14px;">'
+    + (esc(rec.titulo) || '—') + '</div></div>'
+    + '<div><div class="vw-lbl">Ticket</div><div class="vw-val">' + (esc(rec.ticket) || '—') + '</div></div></div>'
+    + '<div class="vw-grid3 vw-mt">'
+    + '<div><div class="vw-lbl">Prazo</div><div class="vw-val">' + (rec.dias ? rec.dias + ' dia(s)' : '—') + '</div></div>'
+    + '<div><div class="vw-lbl">Início</div><div class="vw-val">' + (rec.data_inicio ? fmtDT(rec.data_inicio) : '—') + '</div></div>'
+    + '<div><div class="vw-lbl">Fim</div><div class="vw-val">' + (rec.data_fim ? fmtDT(rec.data_fim) : '—') + '</div></div></div>'
+    + '<div class="vw-lbl vw-mt">Motivo</div><div>' + motent + '</div>'
+    + (saida ? '<div class="vw-mt">' + saida + '</div>' : '')
+    + (rec.criado_por ? '<div class="vw-lbl vw-mt">Enviado por</div><div class="vw-val">' + esc(rec.criado_por) + '</div>' : '')
+    + '</div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Fechar</button></div>');
+}
+function verQuarentena(id){
+  if(!quarData) return;
+  const rec = (quarData.ativas || []).find(x => String(x.id) === String(id))
+    || (quarData.historico || []).find(x => String(x.id) === String(id));
+  if(rec) _modalQuarentena(rec);
+}
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (document.getElementById('modal-bg').classList.contains('show'))
@@ -3383,7 +3470,7 @@ function pintarQuarentena(){
       <td>${fmtDT(q.data_inicio)}</td>
       <td>${fmtDT(q.data_fim)}</td>
       <td style="text-align:center;font-weight:700;">${q.dias_restantes}</td>
-      <td style="text-align:center;"><button class="qbtn-out" onclick="retirarQuarentena('${q.id}')">↩ Retirar</button></td>
+      <td style="text-align:center;white-space:nowrap;"><button class="btn-res lupa" title="Ver dados da quarentena" onclick="verQuarentena('${q.id}')">${QUAR_LUPA}</button> <button class="qbtn-out" onclick="retirarQuarentena('${q.id}')">↩ Retirar</button></td>
     </tr>`).join('')
       : `<tr><td colspan="7" style="text-align:center;padding:26px;color:#8A9099;">Ninguém em quarentena no momento.</td></tr>`;
     cnt.textContent = rows.length + ' em quarentena';
@@ -3413,7 +3500,7 @@ function pintarQuarentena(){
         <td>${fmtDT(e0.data_inicio)}</td>
         <td>${fmtDT(e0.data_saida)}</td>
         <td style="text-align:center;">${e0.periodo_dias} dia(s)</td>
-        <td>${esc(e0.motivo)}</td>
+        <td style="white-space:nowrap;">${esc(e0.motivo)} <button class="btn-res lupa" title="Ver dados da quarentena" onclick="verQuarentena('${e0.id}')">${QUAR_LUPA}</button></td>
       </tr>`;
       eps.slice(1).forEach(e => {
         h += `<tr class="sub-row" data-sub="${idx}" style="display:${_quarHistExpand.has(u)?'table-row':'none'};">
@@ -3423,7 +3510,7 @@ function pintarQuarentena(){
           <td>${fmtDT(e.data_inicio)}</td>
           <td>${fmtDT(e.data_saida)}</td>
           <td style="text-align:center;">${e.periodo_dias} dia(s)</td>
-          <td>${esc(e.motivo)}</td>
+          <td style="white-space:nowrap;">${esc(e.motivo)} <button class="btn-res lupa" title="Ver dados da quarentena" onclick="verQuarentena('${e.id}')">${QUAR_LUPA}</button></td>
         </tr>`;
       });
     });
@@ -3447,14 +3534,39 @@ function toggleHist(btn){
   if(hk){ if(open) _quarHistExpand.delete(hk); else _quarHistExpand.add(hk); }
 }
 
-async function retirarQuarentena(id){
-  if(!confirm('Retirar este usuário da quarentena?')) return;
+let _retAlvo = null;
+function retirarQuarentena(id){
+  // Motivo OBRIGATÓRIO na retirada (modal pequeno).
+  _retAlvo = id;
+  _modal(
+    '<div class="modal-hd"><h3>Retirar da quarentena</h3>'
+    + '<p>Informe o motivo da retirada</p></div>'
+    + '<div class="modal-bd">'
+    + '<label>Motivo <span class="req">*</span></label>'
+    + '<textarea id="ret-motivo" placeholder="Por que este acesso está saindo da quarentena?" '
+    + 'maxlength="600"></textarea>'
+    + '<div class="modal-err" id="ret-err"></div></div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
+    + '<button class="mf-ok" onclick="confirmarRetirada()">Retirar</button></div>');
+  setTimeout(() => { const i = document.getElementById('ret-motivo'); if(i) i.focus(); }, 60);
+}
+
+async function confirmarRetirada(){
+  if(_retAlvo == null) return;
+  const motivo = document.getElementById('ret-motivo').value.trim();
+  if(!motivo){
+    document.getElementById('ret-err').textContent = 'O motivo da retirada é obrigatório.';
+    document.getElementById('ret-motivo').focus(); return;
+  }
+  const id = _retAlvo;
+  fecharModal();
   proc(true);
   let msg;
   try{
     const r = await fetch('/api/quarentena/retirar', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({id:id})
+      body: JSON.stringify({id:id, motivo:motivo})
     });
     const j = await r.json();
     if(j && j.ok){

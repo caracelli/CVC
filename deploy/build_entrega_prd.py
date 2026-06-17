@@ -35,7 +35,7 @@ EXECS = APP / "EXECUTAVEIS"
 ENTREGA = RAIZ / "ENTREGA"
 STAGING = RAIZ / "_entrega_prd_staging"
 
-VERSAO = "1.1.0"
+VERSAO = "1.2.0"
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
 
 LAUNCHER_DIR = EXECS / "launcher"
