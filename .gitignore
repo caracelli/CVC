@@ -71,6 +71,11 @@ CVC_IAM_ANALYTICS/EXECUTAVEIS/*.db-shm
 deploy/_build/
 deploy/_build_visualizador/
 
+# Staging temporario dos builds de entrega (criados/removidos pelos build_*.py)
+/_update_staging/
+/_entrega_prd_staging/
+/_entrega_rede_staging/
+
 # Zips de entrega — VERSIONADOS via Git LFS (ver .gitattributes), para pull
 # pronto na maquina de deploy. Regra: limpar os zips antigos e gerar os novos
 # a cada release (nao acumular). Gerados por build_all.py + build_entrega_rede.py.
