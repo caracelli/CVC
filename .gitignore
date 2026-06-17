@@ -74,6 +74,9 @@ deploy/_build_visualizador/
 # Zips de entrega — VERSIONADOS via Git LFS (ver .gitattributes), para pull
 # pronto na maquina de deploy. Regra: limpar os zips antigos e gerar os novos
 # a cada release (nao acumular). Gerados por build_all.py + build_entrega_rede.py.
+# Pastas EXTRAIDAS de pacotes em ENTREGA/ nao entram no git (so os .zip/.docx) —
+# evita commitar exes descompactados por engano.
+ENTREGA/*/
 
 # Configurações locais do Claude
 .claude/
