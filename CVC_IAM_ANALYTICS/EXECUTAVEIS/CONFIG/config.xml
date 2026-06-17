@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <configuracao>
-    <versao>1.0.0</versao>
+    <versao>1.1.0</versao>
     <cliente>CVC</cliente>
     <projeto>IAM Analytics</projeto>
 
@@ -65,7 +65,7 @@
             <caminho_entrada>ENTRADA/SISTEMAS/SIGOT</caminho_entrada>
             <caminho_parquet>DADOS/PARQUET/ACESSOS/SIGOT</caminho_parquet>
             <!-- Fase 1: fora de escopo (so SYSTUR). ativo=true quando implementado. -->
-            <ativo>false</ativo>
+            <ativo>true</ativo>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -82,7 +82,7 @@
             <caminho_entrada>ENTRADA/SISTEMAS/SICA_RA</caminho_entrada>
             <caminho_parquet>DADOS/PARQUET/ACESSOS/SICA_RA</caminho_parquet>
             <!-- Fase 1: fora de escopo (so SYSTUR). ativo=true quando implementado. -->
-            <ativo>false</ativo>
+            <ativo>true</ativo>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -135,7 +135,7 @@
             <!-- Em escopo: extrato + matriz integrados. Perfil casa por aproximacao
                  (extrato usa NM_GRUPO com '_'; matriz usa espaco).
                  DESATIVADO temporariamente: IC atrapalhando a validacao do SYSTUR. -->
-            <ativo>false</ativo>
+            <ativo>true</ativo>
             <colunas>
                 <usuario>USUARIO</usuario>
                 <nome>NOME</nome>
@@ -183,7 +183,7 @@
                 <perfil>PERFIL</perfil>
                 <situacao>SITUACAO</situacao>
             </colunas>
-            <ativo>false</ativo>
+            <ativo>true</ativo>
         </sistema>
 
         <!-- OPERA OPERACIONAL — scaffold preparado. Aparece no Mapeamento CCO_CSC

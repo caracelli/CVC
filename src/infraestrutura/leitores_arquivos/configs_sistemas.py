@@ -77,6 +77,7 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
     Sistema.IC_INTEGRADOR_CONTABIL: ConfigLeitorSistema(
         sistema=Sistema.IC_INTEGRADOR_CONTABIL,
         skiprows=0,
+        separador=None,   # auto-detecta: extrato vem ora .xlsx ora .csv (virgula)
         colunas={
             "usuario":  "CD_LOGIN",
             "nome":     "NM_PESSOA",

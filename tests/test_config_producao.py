@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Regressao das DECISOES da entrega gravadas no config.xml de producao.
 
-Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.0.0,
-SYSTUR ativo (IC e demais inativos), desligados/terceiros fora de escopo,
-painel multi-sistema (visualizador/sistema vazio). Se alguem mexer nesses
-flags sem querer, este teste acende.
+Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.1.0,
+entrega multi-sistema ate Oracle EBS (SYSTUR+IC+SICA_RA+SIGOT+ORACLE_EBS ativos;
+SICA_ESFERA/SIG/OPERA inativos), desligados/terceiros fora de escopo, painel
+multi-sistema (visualizador/sistema vazio). Se alguem mexer nesses flags sem
+querer, este teste acende.
 """
 import sys
 import unittest
@@ -24,17 +25,17 @@ class TestConfigProducao(unittest.TestCase):
     def setUpClass(cls):
         cls.cfg = LeitorConfig(str(CONFIG)).carregar()
 
-    def test_versao_1_0_0(self):
-        self.assertEqual(self.cfg.versao, "1.0.0")
+    def test_versao_1_1_0(self):
+        self.assertEqual(self.cfg.versao, "1.1.0")
 
-    def test_systur_ativo_ic_temporariamente_off(self):
-        # SYSTUR ativo. IC DESATIVADO temporariamente (estava atrapalhando a
-        # validacao do SYSTUR) — reativar com <ativo>true</ativo> no bloco IC.
-        self.assertTrue(self.cfg.sistemas["SYSTUR"].ativo)
-        self.assertFalse(self.cfg.sistemas["IC"].ativo)
+    def test_sistemas_ate_oracle_ativos(self):
+        # Entrega multi-sistema ate Oracle EBS (Cards 6-11).
+        for sid in ("SYSTUR", "IC", "SICA_RA", "SIGOT", "ORACLE_EBS"):
+            self.assertTrue(self.cfg.sistemas[sid].ativo, f"{sid} deveria estar ativo")
 
     def test_demais_sistemas_inativos(self):
-        for sid in ("SIGOT", "SICA_RA", "SICA_ESFERA", "SIG", "ORACLE_EBS"):
+        # Fora do escopo desta entrega (entram nas proximas fases).
+        for sid in ("SICA_ESFERA", "SIG", "OPERA_OPERACIONAL"):
             self.assertFalse(self.cfg.sistemas[sid].ativo, f"{sid} deveria estar inativo")
 
     def test_desligados_e_terceiros_fora_de_escopo(self):
