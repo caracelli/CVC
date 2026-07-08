@@ -8,9 +8,18 @@ from ..objetos_valor.tipo_divergencia import TipoDivergencia
 class RegraAcessoSemVinculo:
 
     def verificar(self, acessos: List[PerfilAcesso]) -> List[Divergencia]:
+        # "Sem Vínculo RH" é um achado POR LOGIN/SISTEMA (a pessoa não está no
+        # RH), não por perfil. Um login com N perfis no sistema gera 1 achado,
+        # não N. Deduplica por (login normalizado, sistema) — caixa é ignorada
+        # (INTADM527 == intadm527). Mantém o primeiro acesso visto como amostra.
         divergencias = []
+        vistos = set()
         for acesso in acessos:
             if acesso.cpf and not acesso.matricula_vinculada:
+                chave = ((acesso.usuario or "").strip().lower(), acesso.sistema)
+                if chave in vistos:
+                    continue
+                vistos.add(chave)
                 divergencias.append(
                     Divergencia(
                         id=str(uuid.uuid4()),

@@ -150,6 +150,7 @@ class LogImportacao(Base):
     mensagem_erro = Column(Text)
     hash_arquivo = Column(String, index=True)  # md5 do conteudo — detecta reimportacao
     dt_importacao = Column(DateTime, default=datetime.now)
+    dt_arquivo = Column(DateTime)  # data de modificacao do PROPRIO arquivo (disponibilizacao)
 
 
 class PerfilEsperadoModel(Base):

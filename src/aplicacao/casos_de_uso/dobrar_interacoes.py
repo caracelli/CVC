@@ -68,6 +68,10 @@ def _migrar_colunas_quar(c):
         for nome, tipo in _COLS_QUAR_FORM:
             if nome not in existentes:
                 c.execute(f"ALTER TABLE {tab} ADD COLUMN {nome} {tipo}")
+    # resolucoes.motivo (combobox obrigatorio do XML) — aditivo p/ bases antigas
+    existe_res = {r[1] for r in c.execute("PRAGMA table_info(resolucoes)")}
+    if existe_res and "motivo" not in existe_res:
+        c.execute("ALTER TABLE resolucoes ADD COLUMN motivo TEXT")
 
 _SQL_RES = """
 CREATE TABLE IF NOT EXISTS resolucoes (
@@ -75,6 +79,7 @@ CREATE TABLE IF NOT EXISTS resolucoes (
   ticket TEXT NOT NULL,
   ticket_url TEXT,
   descricao TEXT,
+  motivo TEXT,
   pendencias TEXT,
   cargo TEXT,
   centro_custo TEXT,
@@ -210,11 +215,11 @@ class DobrarInteracoes:
             for rid, it in res_reg.items():
                 c.execute(
                     "INSERT OR REPLACE INTO resolucoes (registro_id,ticket,"
-                    "ticket_url,descricao,pendencias,cargo,centro_custo,nome,"
+                    "ticket_url,descricao,motivo,pendencias,cargo,centro_custo,nome,"
                     "resolvido_por,resolvido_em,dobrado_em) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                     [rid, it.get("ticket") or "", it.get("ticket_url") or "",
-                     it.get("descricao") or "",
+                     it.get("descricao") or "", it.get("motivo") or "",
                      json.dumps(it.get("pendencias") or [], ensure_ascii=False),
                      it.get("cargo") or "", it.get("centro_custo") or "",
                      it.get("nome") or "", it.get("usuario") or "",
@@ -259,17 +264,18 @@ class DobrarInteracoes:
             return self._dias
 
     def _data_fim(self, di: str, dias: int = None) -> str:
+        # di pode vir com hora ("aaaa-mm-dd hh:mm:ss"); o prazo conta em dias.
         try:
-            return (datetime.strptime(di, "%Y-%m-%d")
+            return (datetime.strptime((di or "")[:10], "%Y-%m-%d")
                     + timedelta(days=int(dias) if dias else self._dias)).strftime("%Y-%m-%d")
         except Exception:
-            return di
+            return (di or "")[:10]
 
     def _ativar(self, c, rid: str, env: dict) -> bool:
         """Insere o funcionario na quarentena. Idempotente (ja ativo = no-op)."""
         if c.execute("SELECT 1 FROM quarentena WHERE usuario=?", [rid]).fetchone():
             return False
-        di = (env.get("data_acao") or "")[:10]
+        di = (env.get("data_acao") or "").replace("T", " ")   # data_inicio com hora
         dias = self._dias_de(env)
         c.execute(
             "INSERT INTO quarentena (usuario,nome_usuario,sistema,matricula,origem,"
@@ -285,7 +291,7 @@ class DobrarInteracoes:
 
     def _resolver(self, c, rid: str, res: dict, env: dict) -> bool:
         """Move o funcionario para o historico. Idempotente (mesma saida = no-op)."""
-        ds = (res.get("data_acao") or "")[:10]
+        ds = (res.get("data_acao") or "").replace("T", " ")   # data_saida com hora
         if c.execute("SELECT 1 FROM quarentena_historico "
                      "WHERE usuario=? AND data_saida=?", [rid, ds]).fetchone():
             c.execute("DELETE FROM quarentena WHERE usuario=?", [rid])
@@ -297,7 +303,7 @@ class DobrarInteracoes:
         if row:
             nome, sis, mat, origem, di, df, dias, tk, titulo, motent, crp, cre = row
         elif env:
-            di = (env.get("data_acao") or "")[:10]
+            di = (env.get("data_acao") or "").replace("T", " ")
             nome, sis, mat = env.get("nome") or rid, env.get("sistema") or "", rid
             dias = self._dias_de(env)
             origem, df = env.get("origem") or "", self._data_fim(di, dias)

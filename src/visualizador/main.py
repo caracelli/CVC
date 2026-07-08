@@ -202,6 +202,27 @@ def carregar_config():
 
 REDE_RAIZ, BANCO_SUB, SISTEMA, QUAR_DIAS, CONFIG_SRC = carregar_config()
 
+# Limite maximo de dias que uma quarentena pode receber no formulario (regra de
+# negocio; o front tambem bloqueia). Acima disso, enviar_quarentena rejeita.
+QUAR_MAX_DIAS = 90
+
+MOTIVOS_RES_PATH = os.path.join(os.path.dirname(CONFIG_PATH), "motivos_resolucao.xml")
+
+
+def listar_motivos_resolucao():
+    """Motivos do combobox obrigatorio de 'Resolver pendencia', lidos do XML
+    em CONFIG/motivos_resolucao.xml (versionado/auto-atualizado com o sistema).
+    Ordem do arquivo = ordem no combobox. Fallback minimo se faltar/invalido."""
+    try:
+        root = ET.parse(MOTIVOS_RES_PATH).getroot()
+        motivos = [(m.text or "").strip() for m in root.findall("motivo")]
+        motivos = [m for m in motivos if m]
+        if motivos:
+            return motivos
+    except Exception as e:
+        print(f"  [motivos] falha lendo {MOTIVOS_RES_PATH}: {e!r}")
+    return ["Resolvido", "Outro"]
+
 # Visão Geral: janela movel (dias) dos blocos de FLUXO (Chamados, Movimentação).
 # Fixo por enquanto; tornar parametrizavel e' item do docs/ROADMAP_VISAO_GERAL.md.
 VG_JANELA_DIAS = 30
@@ -383,9 +404,12 @@ def _resolucoes_db():
                         "AND name='resolucoes'").fetchone()
         if not tem:
             return {}
+        # base ainda nao dobrada com a coluna motivo -> nao quebra
+        cols = {r[1] for r in c.execute("PRAGMA table_info(resolucoes)")}
+        col_mot = "motivo" if "motivo" in cols else "'' AS motivo"
         out = {}
         for r in c.execute(
-                "SELECT registro_id,ticket,ticket_url,descricao,pendencias,"
+                f"SELECT registro_id,ticket,ticket_url,descricao,{col_mot},pendencias,"
                 "cargo,centro_custo,nome,resolvido_por,resolvido_em "
                 "FROM resolucoes"):
             try:
@@ -394,7 +418,7 @@ def _resolucoes_db():
                 pend = []
             out[r["registro_id"]] = {
                 "ticket": r["ticket"] or "", "ticket_url": r["ticket_url"] or "",
-                "descricao": r["descricao"] or "",
+                "descricao": r["descricao"] or "", "motivo": r["motivo"] or "",
                 "cargo": r["cargo"] or "", "centro_custo": r["centro_custo"] or "",
                 "nome": r["nome"] or "",
                 "por": r["resolvido_por"] or "", "em": r["resolvido_em"] or "",
@@ -416,6 +440,7 @@ def _resolucoes_mescladas(interacoes=None):
             "ticket": it.get("ticket") or "",
             "ticket_url": it.get("ticket_url") or "",
             "descricao": it.get("descricao") or "",
+            "motivo": it.get("motivo") or "",
             "cargo": it.get("cargo") or "",
             "centro_custo": it.get("centro_custo") or "",
             "nome": it.get("nome") or "",
@@ -437,36 +462,39 @@ def _dias_quar(it):
 
 def _sintetizar_ativa(rid, it):
     """Linha de quarentena ativa a partir de uma interacao ENVIAR viva.
-    nome/sistema/prazo/ticket/titulo/motivo vem da propria interacao (gravados no envio)."""
-    di = (it.get("data_acao") or "")[:10]
+    nome/sistema/prazo/ticket/titulo/motivo vem da propria interacao (gravados no envio).
+    data_inicio mantem a HORA do envio; data_fim = dia do inicio + dias (prazo)."""
+    inicio = (it.get("data_acao") or "").replace("T", " ")   # com hora
     dias = _dias_quar(it)
     try:
-        df = (datetime.strptime(di, "%Y-%m-%d")
+        df = (datetime.strptime(inicio[:10], "%Y-%m-%d")
               + timedelta(days=dias)).strftime("%Y-%m-%d")
     except Exception:
-        df = di
+        df = inicio[:10]
     return {"id": rid, "usuario": rid,
             "nome_usuario": it.get("nome") or rid,
             "sistema": it.get("sistema") or "",
             "origem": it.get("origem") or "Inclusão / Alteração",
-            "data_inicio": di, "data_fim": df,
+            "data_inicio": inicio, "data_fim": df,
             "dias": dias, "ticket": it.get("ticket") or "",
             "titulo": it.get("titulo") or "", "motivo_entrada": it.get("motivo") or "",
             "criado_por": it.get("usuario") or ""}
 
 
 def _sintetizar_historico(rid, it, anterior):
-    """Linha de historico a partir de uma interacao RESOLVER viva (retirada manual)."""
-    ds = (it.get("data_acao") or "")[:10]
+    """Linha de historico a partir de uma interacao RESOLVER viva (retirada manual).
+    `anterior` traz os dados de ENTRADA (titulo/dias/ticket/motivo) — vem da linha
+    ativa (DB) OU sintetizada do ENVIAR vivo. data_saida mantem a HORA da retirada."""
+    ds = (it.get("data_acao") or "").replace("T", " ")       # com hora
     if anterior:
         base = dict(anterior)
     else:
         nome, sis, _ = _meta_divergencia(rid)
         base = {"nome_usuario": nome, "sistema": sis, "origem": "",
-                "data_inicio": ds, "data_fim": ds}
+                "data_inicio": ds, "data_fim": ds[:10]}
     base.update({"id": rid, "usuario": rid, "data_saida": ds,
                  "motivo": (it.get("motivo") or "").strip() or "Retirado da quarentena",
-                 "movido_em": it.get("data_acao") or ds,
+                 "movido_em": (it.get("data_acao") or "").replace("T", " ") or ds,
                  "encerrado_por": it.get("usuario") or ""})
     return base
 
@@ -836,6 +864,751 @@ def gerar_xlsx(colunas, linhas, niveis=None, formatos=None):
     return buf.getvalue()
 
 
+def gerar_xlsx_vg(secoes, titulo="Visão Geral"):
+    """XLSX de UMA aba com TODAS as seções (gráficos) empilhadas, cada uma com
+    título + tabela dos dados que a alimentam (espelha o painel). stdlib puro.
+    secoes = [{'titulo': str, 'colunas': [..], 'linhas': [[..], ..]}]."""
+    def cel(ci, r, valor, estilo=0):
+        ref = f"{_col_letra(ci + 1)}{r + 1}"
+        s = f' s="{estilo}"' if estilo else ""
+        if isinstance(valor, bool):
+            valor = str(valor)
+        if isinstance(valor, (int, float)):
+            return f'<c r="{ref}"{s}><v>{valor}</v></c>'
+        return (f'<c r="{ref}"{s} t="inlineStr"><is>'
+                f'<t xml:space="preserve">{_xml_esc(valor)}</t></is></c>')
+    SHEET = "Visão Geral"
+    rows_xml, ri, ncols, charts = [], 0, 1, []
+    rows_xml.append(f'<row r="{ri + 1}">' + cel(0, ri, titulo, 1) + '</row>'); ri += 2
+    for sec in (secoes or []):
+        cols = sec.get("colunas") or []
+        linhas = sec.get("linhas") or []
+        ncols = max(ncols, len(cols))
+        t0 = ri
+        rows_xml.append(f'<row r="{ri + 1}">' + cel(0, ri, sec.get("titulo") or "", 2) + '</row>'); ri += 1
+        rows_xml.append(f'<row r="{ri + 1}">'
+                        + "".join(cel(ci, ri, c, 1) for ci, c in enumerate(cols)) + '</row>'); ri += 1
+        for linha in linhas:
+            rows_xml.append(f'<row r="{ri + 1}">'
+                            + "".join(cel(ci, ri, v) for ci, v in enumerate(linha)) + '</row>'); ri += 1
+        ch = sec.get("chart")
+        if ch and linhas:
+            cc, vc = ch.get("cat", 0), ch.get("val", 1)
+            f1, l1 = t0 + 3, t0 + 2 + len(linhas)   # 1-based: 1a e ultima linha de dados
+            cL, vL = _col_letra(cc + 1), _col_letra(vc + 1)
+            charts.append({
+                "tipo": ch.get("tipo", "bar"), "titulo": sec.get("titulo") or "",
+                "cat": f"'{SHEET}'!${cL}${f1}:${cL}${l1}",
+                "val": f"'{SHEET}'!${vL}${f1}:${vL}${l1}",
+                "fc": 3, "fr": t0, "tc": 12, "tr": t0 + 15})
+            ri = t0 + 17          # reserva espaço vertical p/ o gráfico
+        else:
+            ri += 1               # linha em branco entre seções
+    larg = []
+    for ci in range(ncols):
+        m = 12
+        for sec in (secoes or []):
+            cols = sec.get("colunas") or []
+            if ci < len(cols):
+                m = max(m, len(str(cols[ci])))
+            for linha in (sec.get("linhas") or []):
+                if ci < len(linha):
+                    m = max(m, len(str(linha[ci])))
+        larg.append(min(70, max(14, m + 3)))
+    cols_xml = ("<cols>" + "".join(
+        f'<col min="{i+1}" max="{i+1}" width="{w}" customWidth="1"/>'
+        for i, w in enumerate(larg)) + "</cols>") if larg else ""
+    draw_ref = '<drawing r:id="rId1"/>' if charts else ''
+    sheet = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<sheetViews><sheetView tabSelected="1" workbookViewId="0">'
+        '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'
+        '</sheetView></sheetViews>'
+        + cols_xml +
+        '<sheetData>' + "".join(rows_xml) + '</sheetData>' + draw_ref + '</worksheet>')
+    chart_ov = ""
+    if charts:
+        chart_ov = ('<Override PartName="/xl/drawings/drawing1.xml" '
+                    'ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>')
+        for _i in range(len(charts)):
+            chart_ov += (f'<Override PartName="/xl/charts/chart{_i+1}.xml" '
+                         'ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>')
+    ctypes = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+        '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        + chart_ov +
+        '</Types>')
+    rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+        '</Relationships>')
+    workbook = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<sheets><sheet name="Visão Geral" sheetId="1" r:id="rId1"/></sheets></workbook>')
+    wb_rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+        '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+        '</Relationships>')
+    styles = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        '<fonts count="3">'
+        '<font><sz val="11"/><name val="Calibri"/></font>'
+        '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>'
+        '<font><b/><sz val="12"/><color rgb="FF1F2D5C"/><name val="Calibri"/></font>'
+        '</fonts>'
+        '<fills count="4">'
+        '<fill><patternFill patternType="none"/></fill>'
+        '<fill><patternFill patternType="gray125"/></fill>'
+        '<fill><patternFill patternType="solid"><fgColor rgb="FF1F2D5C"/></patternFill></fill>'
+        '<fill><patternFill patternType="solid"><fgColor rgb="FFF5E9C8"/></patternFill></fill>'
+        '</fills>'
+        '<borders count="1"><border/></borders>'
+        '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+        '<cellXfs count="3">'
+        '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+        '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+        '<xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+        '</cellXfs>'
+        '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+        '</styleSheet>')
+
+    # ── Gráficos nativos (OOXML): 1 chart por seção com 'chart', à direita da tabela ──
+    chart_parts, drawing, draw_rels, sheet_rels = [], None, None, None
+    if charts:
+        def _chart_xml(c):
+            ser = ('<c:ser><c:idx val="0"/><c:order val="0"/>'
+                   '<c:cat><c:strRef><c:f>' + _xml_esc(c["cat"]) + '</c:f></c:strRef></c:cat>'
+                   '<c:val><c:numRef><c:f>' + _xml_esc(c["val"]) + '</c:f></c:numRef></c:val></c:ser>')
+            t = c["tipo"]
+            if t in ("doughnut", "pie"):
+                plot = (('<c:doughnutChart><c:varyColors val="1"/>' + ser + '<c:holeSize val="55"/></c:doughnutChart>')
+                        if t == "doughnut" else
+                        ('<c:pieChart><c:varyColors val="1"/>' + ser + '</c:pieChart>'))
+            else:
+                bd = "bar" if t == "bar" else "col"
+                cap, vap = ("l", "b") if bd == "bar" else ("b", "l")
+                plot = (
+                    '<c:barChart><c:barDir val="' + bd + '"/><c:grouping val="clustered"/>'
+                    + ser + '<c:axId val="111"/><c:axId val="222"/></c:barChart>'
+                    '<c:catAx><c:axId val="111"/><c:scaling><c:orientation val="minMax"/></c:scaling>'
+                    '<c:delete val="0"/><c:axPos val="' + cap + '"/><c:crossAx val="222"/></c:catAx>'
+                    '<c:valAx><c:axId val="222"/><c:scaling><c:orientation val="minMax"/></c:scaling>'
+                    '<c:delete val="0"/><c:axPos val="' + vap + '"/><c:crossAx val="111"/></c:valAx>')
+            return (
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
+                'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+                'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><c:chart>'
+                '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>'
+                + _xml_esc(c["titulo"]) + '</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>'
+                '<c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>' + plot + '</c:plotArea>'
+                '<c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend>'
+                '<c:plotVisOnly val="1"/></c:chart></c:chartSpace>')
+        anchors = ""
+        draw_rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">')
+        for i, c in enumerate(charts):
+            chart_parts.append((f"xl/charts/chart{i+1}.xml", _chart_xml(c)))
+            draw_rels += (f'<Relationship Id="rId{i+1}" '
+                          'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" '
+                          f'Target="../charts/chart{i+1}.xml"/>')
+            anchors += (
+                '<xdr:twoCellAnchor>'
+                f'<xdr:from><xdr:col>{c["fc"]}</xdr:col><xdr:colOff>0</xdr:colOff>'
+                f'<xdr:row>{c["fr"]}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'
+                f'<xdr:to><xdr:col>{c["tc"]}</xdr:col><xdr:colOff>0</xdr:colOff>'
+                f'<xdr:row>{c["tr"]}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'
+                '<xdr:graphicFrame macro="">'
+                f'<xdr:nvGraphicFramePr><xdr:cNvPr id="{i+2}" name="Chart {i+1}"/>'
+                '<xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>'
+                '<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>'
+                '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">'
+                '<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
+                'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+                f'r:id="rId{i+1}"/></a:graphicData></a:graphic></xdr:graphicFrame>'
+                '<xdr:clientData/></xdr:twoCellAnchor>')
+        draw_rels += '</Relationships>'
+        drawing = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                   '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" '
+                   'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' + anchors + '</xdr:wsDr>')
+        sheet_rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                      '<Relationship Id="rId1" '
+                      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" '
+                      'Target="../drawings/drawing1.xml"/></Relationships>')
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", ctypes)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("xl/workbook.xml", workbook)
+        z.writestr("xl/_rels/workbook.xml.rels", wb_rels)
+        z.writestr("xl/styles.xml", styles)
+        z.writestr("xl/worksheets/sheet1.xml", sheet)
+        if charts:
+            z.writestr("xl/worksheets/_rels/sheet1.xml.rels", sheet_rels)
+            z.writestr("xl/drawings/drawing1.xml", drawing)
+            z.writestr("xl/drawings/_rels/drawing1.xml.rels", draw_rels)
+            for path, xml in chart_parts:
+                z.writestr(path, xml)
+    return buf.getvalue()
+
+
+def _vg_chart_xml(c):
+    """XML de UM gráfico OOXML (doughnut/pie/bar/col) ligado a ranges da aba."""
+    ser = ('<c:ser><c:idx val="0"/><c:order val="0"/>'
+           '<c:cat><c:strRef><c:f>' + _xml_esc(c["cat"]) + '</c:f></c:strRef></c:cat>'
+           '<c:val><c:numRef><c:f>' + _xml_esc(c["val"]) + '</c:f></c:numRef></c:val></c:ser>')
+    t = c["tipo"]
+    if t in ("doughnut", "pie"):
+        plot = (('<c:doughnutChart><c:varyColors val="1"/>' + ser + '<c:holeSize val="55"/></c:doughnutChart>')
+                if t == "doughnut" else
+                ('<c:pieChart><c:varyColors val="1"/>' + ser + '</c:pieChart>'))
+    else:
+        bd = "bar" if t == "bar" else "col"
+        cap, vap = ("l", "b") if bd == "bar" else ("b", "l")
+        plot = (
+            '<c:barChart><c:barDir val="' + bd + '"/><c:grouping val="clustered"/>'
+            + ser + '<c:axId val="111"/><c:axId val="222"/></c:barChart>'
+            '<c:catAx><c:axId val="111"/><c:scaling><c:orientation val="minMax"/></c:scaling>'
+            '<c:delete val="0"/><c:axPos val="' + cap + '"/><c:crossAx val="222"/></c:catAx>'
+            '<c:valAx><c:axId val="222"/><c:scaling><c:orientation val="minMax"/></c:scaling>'
+            '<c:delete val="0"/><c:axPos val="' + vap + '"/><c:crossAx val="111"/></c:valAx>')
+    return (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
+        'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<c:roundedCorners val="1"/><c:chart>'
+        '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p>'
+        '<a:pPr><a:defRPr sz="1200" b="1"><a:solidFill><a:srgbClr val="1F2D5C"/></a:solidFill></a:defRPr></a:pPr>'
+        '<a:r><a:rPr lang="pt-BR" sz="1200" b="1"><a:solidFill><a:srgbClr val="1F2D5C"/></a:solidFill></a:rPr><a:t>'
+        + _xml_esc(c["titulo"]) + '</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>'
+        '<c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>' + plot + '</c:plotArea>'
+        '<c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend>'
+        '<c:plotVisOnly val="0"/></c:chart>'
+        '<c:spPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>'
+        '<a:ln w="9525"><a:solidFill><a:srgbClr val="E7EBF2"/></a:solidFill></a:ln></c:spPr>'
+        '</c:chartSpace>')
+
+
+def _vg_chart_pack(charts):
+    """(chart_parts, drawing.xml, drawing.rels, sheet1.rels) para os gráficos."""
+    chart_parts = []
+    anchors = ""
+    draw_rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                 '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">')
+    for i, c in enumerate(charts):
+        chart_parts.append((f"xl/charts/chart{i+1}.xml", _vg_chart_xml(c)))
+        draw_rels += (f'<Relationship Id="rId{i+1}" '
+                      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" '
+                      f'Target="../charts/chart{i+1}.xml"/>')
+        anchors += (
+            '<xdr:twoCellAnchor>'
+            f'<xdr:from><xdr:col>{c["fc"]}</xdr:col><xdr:colOff>0</xdr:colOff>'
+            f'<xdr:row>{c["fr"]}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'
+            f'<xdr:to><xdr:col>{c["tc"]}</xdr:col><xdr:colOff>0</xdr:colOff>'
+            f'<xdr:row>{c["tr"]}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'
+            '<xdr:graphicFrame macro="">'
+            f'<xdr:nvGraphicFramePr><xdr:cNvPr id="{i+2}" name="Chart {i+1}"/>'
+            '<xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>'
+            '<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>'
+            '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">'
+            '<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+            f'r:id="rId{i+1}"/></a:graphicData></a:graphic></xdr:graphicFrame>'
+            '<xdr:clientData/></xdr:twoCellAnchor>')
+    draw_rels += '</Relationships>'
+    drawing = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+               '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" '
+               'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' + anchors + '</xdr:wsDr>')
+    sheet1_rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId1" '
+                   'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" '
+                   'Target="../drawings/drawing1.xml"/></Relationships>')
+    return chart_parts, drawing, draw_rels, sheet1_rels
+
+
+# Paleta dos cards KPI da Visão Geral (fill claro, texto colorido) — espelha o painel.
+_VG_CARD_CORES = [
+    ("FFF7E0", "1F2D5C"), ("EBF5FB", "2980B9"), ("E8F8F5", "16A085"),
+    ("E8EEF7", "1F2D5C"), ("EDE9F7", "5B47A8"), ("FBEAEA", "B33A3A"),
+]
+# Cor da barrinha lateral (accent) de cada card — como o inset box-shadow do painel.
+_VG_CARD_BAR = ["F5B800", "2980B9", "16A085", "1F2D5C", "5B47A8", "B33A3A"]
+
+
+def _vg_styles_xml():
+    """styles.xml com: 0=normal, 1=header(navy), 2=título-seção(gold), 3=título-grande,
+    e 2 estilos por card (valor grande + rótulo), índice 4 + k*2 / 5 + k*2."""
+    fonts = [
+        '<font><sz val="11"/><name val="Calibri"/></font>',
+        '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>',
+        '<font><b/><sz val="12"/><color rgb="FF1F2D5C"/><name val="Calibri"/></font>',
+        '<font><b/><sz val="15"/><color rgb="FF1F2D5C"/><name val="Calibri"/></font>',
+    ]
+    fills = [
+        '<fill><patternFill patternType="none"/></fill>',
+        '<fill><patternFill patternType="gray125"/></fill>',
+        '<fill><patternFill patternType="solid"><fgColor rgb="FF1F2D5C"/></patternFill></fill>',
+        '<fill><patternFill patternType="solid"><fgColor rgb="FFF5E9C8"/></patternFill></fill>',
+    ]
+    xfs = [
+        '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>',
+        '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>',
+        '<xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>',
+        '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>',
+    ]
+    for fill, txt in _VG_CARD_CORES:
+        fi = len(fills)
+        fills.append(f'<fill><patternFill patternType="solid"><fgColor rgb="FF{fill}"/></patternFill></fill>')
+        fvi = len(fonts); fonts.append(f'<font><b/><sz val="20"/><color rgb="FF{txt}"/><name val="Calibri"/></font>')
+        fli = len(fonts); fonts.append(f'<font><b/><sz val="10"/><color rgb="FF{txt}"/><name val="Calibri"/></font>')
+        xfs.append(f'<xf numFmtId="0" fontId="{fvi}" fillId="{fi}" borderId="0" xfId="0" '
+                   'applyFont="1" applyFill="1" applyAlignment="1">'
+                   '<alignment horizontal="center" vertical="center"/></xf>')
+        xfs.append(f'<xf numFmtId="0" fontId="{fli}" fillId="{fi}" borderId="0" xfId="0" '
+                   'applyFont="1" applyFill="1" applyAlignment="1">'
+                   '<alignment horizontal="center" vertical="center"/></xf>')
+    return (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        f'<fonts count="{len(fonts)}">' + "".join(fonts) + '</fonts>'
+        f'<fills count="{len(fills)}">' + "".join(fills) + '</fills>'
+        '<borders count="1"><border/></borders>'
+        '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+        f'<cellXfs count="{len(xfs)}">' + "".join(xfs) + '</cellXfs>'
+        '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+        '</styleSheet>')
+
+
+def gerar_xlsx_painel(dash_secoes, analiticos, titulo="Visão Geral"):
+    """Workbook multi-aba: aba 'Visão Geral' (réplica do painel, com gráficos) +
+    uma aba ANALÍTICA por fonte de dados (o detalhe que gerou cada gráfico)."""
+    SH1 = "Visão Geral"
+
+    def cel(ci, r, v, s=0):
+        ref = f"{_col_letra(ci + 1)}{r + 1}"
+        st = f' s="{s}"' if s else ""
+        if isinstance(v, bool):
+            v = str(v)
+        if isinstance(v, (int, float)):
+            return f'<c r="{ref}"{st}><v>{v}</v></c>'
+        return (f'<c r="{ref}"{st} t="inlineStr"><is>'
+                f'<t xml:space="preserve">{_xml_esc(v)}</t></is></c>')
+
+    def fcel(ci, r, formula, s=0):
+        ref = f"{_col_letra(ci + 1)}{r + 1}"
+        st = f' s="{s}"' if s else ""
+        return f'<c r="{ref}"{st}><f>{_xml_esc(formula)}</f></c>'
+
+    def cols_xml(pares):
+        nc = max([1] + [len(cc) for cc, _ in pares])
+        larg = []
+        for ci in range(nc):
+            m = 12
+            for cc, ll in pares:
+                if ci < len(cc):
+                    m = max(m, len(str(cc[ci])))
+                for row in ll:
+                    if ci < len(row):
+                        m = max(m, len(str(row[ci])))
+            larg.append(min(70, max(12, m + 2)))
+        return ("<cols>" + "".join(
+            f'<col min="{i+1}" max="{i+1}" width="{w}" customWidth="1"/>'
+            for i, w in enumerate(larg)) + "</cols>")
+
+    # ---- aba 1: ESPELHO do painel (formas flutuantes posicionadas em px) ----
+    from collections import defaultdict
+    kpis = next((s for s in dash_secoes if s.get("kind") == "kpis"), None)
+    tempo = next((s for s in dash_secoes if s.get("kind") == "tempo"), None)
+    mov = next((s for s in dash_secoes if s.get("kind") == "mov"), None)
+    acao = next((s for s in dash_secoes if s.get("kind") == "acao"), None)
+    chart_secs = [s for s in dash_secoes if s.get("chart")]
+    # Dados-fonte dos gráficos vão em células ESCONDIDAS (cols U+); o visual é
+    # 100% desenho flutuante (espelho do painel).
+    cells = {}
+    def put(r, c, v, s=0):
+        cells[(r, c)] = (v, s)
+    # posições (px do painel) de cada gráfico
+    _POS = {"Chamados": (14, 190, 610, 196), "Divergências": (14, 402, 610, 224),
+            "Motivos": (636, 402, 610, 224), "Concentração": (1258, 402, 610, 224),
+            "Aging": (14, 638, 738, 200)}
+    def _slot(t):
+        for k, v in _POS.items():
+            if t.startswith(k):
+                return v
+        return None
+    HCOL, hr, charts = 20, 1, []
+    for sec in chart_secs:
+        cols = sec.get("colunas") or []
+        linhas = sec.get("linhas") or []
+        ch = sec.get("chart"); cc, vc = ch.get("cat", 0), ch.get("val", 1)
+        put(hr + 1, HCOL + cc, cols[cc] if cc < len(cols) else "Categoria", 1)
+        put(hr + 1, HCOL + vc, cols[vc] if vc < len(cols) else "Qtd", 1)
+        for j, row in enumerate(linhas):
+            for kk, val in enumerate(row):
+                put(hr + 2 + j, HCOL + kk, val)
+        f1, l1 = hr + 3, hr + 2 + len(linhas)
+        cL, vL = _col_letra(HCOL + cc + 1), _col_letra(HCOL + vc + 1)
+        pos = _slot(sec.get("titulo") or "")
+        if pos and linhas:
+            charts.append({"tipo": ch.get("tipo", "bar"), "titulo": sec.get("titulo") or "",
+                           "cat": f"'{SH1}'!${cL}${f1}:${cL}${l1}",
+                           "val": f"'{SH1}'!${vL}${f1}:${vL}${l1}", "px": pos})
+        hr += len(linhas) + 3
+    rowmap = defaultdict(list)
+    for (r, c), (v, s) in cells.items():
+        rowmap[r].append((c, v, s))
+    rows1 = [f'<row r="{r + 1}">' + "".join(cel(c, r, v, s) for c, v, s in sorted(rowmap[r])) + '</row>'
+             for r in sorted(rowmap)]
+    draw_ref = '<drawing r:id="rId1"/>' if charts else ''
+    sheet1 = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<sheetViews><sheetView tabSelected="1" showGridLines="0" showRowColHeaders="0" '
+        'workbookViewId="0"/></sheetViews>'
+        '<cols><col min="21" max="90" hidden="1"/></cols>'
+        '<sheetData>' + "".join(rows1) + '</sheetData>'
+        '<sheetProtection sheet="1" objects="1" scenarios="1" '
+        'selectLockedCells="1" selectUnlockedCells="1"/>'
+        + draw_ref + '</worksheet>')
+
+    # ---- abas analíticas (tabela por fonte) + coluna-auxiliar de visibilidade ----
+    # Cada aba ganha 2 colunas ocultas: 'n' (=1, sempre preenchida) e 'vis'
+    # (=SUBTOTAL(103, n) → 1 se a linha está VISÍVEL no autoFilter, 0 se filtrada).
+    # É o que faz os gráficos da aba 'Análise Interativa' responderem aos filtros.
+    ana_sheets = []
+    ana_meta = {}
+
+    def _cats(linhas, ci, faixa=False):
+        seen, s = [], set()
+        for row in linhas:
+            v = str(row[ci]) if ci < len(row) else ""
+            if v and v not in s:
+                s.add(v); seen.append(v)
+        if faixa:
+            ordem = {"0-7": 0, "8-30": 1, "31-90": 2, "90+": 3}
+            seen.sort(key=lambda x: ordem.get(x, 9))
+        return seen
+
+    for a in (analiticos or []):
+        cols = a.get("colunas") or []
+        linhas = a.get("linhas") or []
+        nd = max(1, len(cols))
+        n_ci, vis_ci = nd, nd + 1
+        hdr = "".join(cel(ci, 0, c, 1) for ci, c in enumerate(cols))
+        hdr += cel(n_ci, 0, "n", 1) + cel(vis_ci, 0, "vis", 1)
+        rws = ['<row r="1">' + hdr + '</row>']
+        for i, row in enumerate(linhas, start=1):
+            body = "".join(cel(ci, i, v) for ci, v in enumerate(row))
+            body += cel(n_ci, i, 1)
+            body += fcel(vis_ci, i, f"SUBTOTAL(103,{_col_letra(n_ci + 1)}{i + 1})")
+            rws.append(f'<row r="{i + 1}">' + body + '</row>')
+        ref = f"A1:{_col_letra(nd)}{len(linhas) + 1}"
+        cols_block = cols_xml([(cols, linhas)])[:-len("</cols>")] + \
+            f'<col min="{n_ci + 1}" max="{vis_ci + 1}" hidden="1"/></cols>'
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            '<sheetViews><sheetView workbookViewId="0">'
+            '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'
+            '</sheetView></sheetViews>'
+            + cols_block + '<sheetData>' + "".join(rws) + '</sheetData>'
+            + f'<autoFilter ref="{ref}"/></worksheet>')
+        nome = a.get("nome") or "Dados"
+        ana_sheets.append((nome, xml))
+        ana_meta[nome] = {"nrows": len(linhas), "helper_letra": _col_letra(vis_ci + 1),
+                          "linhas": linhas}
+
+    # ---- aba 'Análise Interativa': gráficos por fórmula (SUMPRODUCT + SUBTOTAL)
+    #      que recalculam ao FILTRAR as abas analíticas (nível registro/auditável) ----
+    SH2 = "Análise Interativa"
+    INTER = [
+        {"titulo": "Divergências por Tipo (registros)", "tipo": "doughnut",
+         "aba": "Divergências (analítico)", "cat_ci": 4, "px": (14, 128, 610, 250)},
+        {"titulo": "Concentração por Sistema (registros)", "tipo": "bar",
+         "aba": "Divergências (analítico)", "cat_ci": 3, "px": (636, 128, 610, 250)},
+        {"titulo": "Aging das Pendências (registros)", "tipo": "col",
+         "aba": "Aging (analítico)", "cat_ci": 7, "px": (14, 396, 610, 250)},
+        {"titulo": "Motivos dos Tratamentos (registros)", "tipo": "doughnut",
+         "aba": "Motivos (analítico)", "cat_ci": 2, "px": (636, 396, 610, 250)},
+    ]
+    icells = {}
+
+    def iput(r, c, v, s=0):
+        icells[(r, c)] = ("v", v, s)
+
+    def iputf(r, c, f, s=0):
+        icells[(r, c)] = ("f", f, s)
+
+    HCOL2, hr2, inter_charts = 20, 1, []
+    for cfg in INTER:
+        meta = ana_meta.get(cfg["aba"])
+        if not meta or meta["nrows"] == 0:
+            continue
+        last = meta["nrows"] + 1
+        catL = _col_letra(cfg["cat_ci"] + 1)
+        hlpL = meta["helper_letra"]
+        aba = cfg["aba"]
+        cats = _cats(meta["linhas"], cfg["cat_ci"],
+                     faixa=(cfg["cat_ci"] == 7 and "Aging" in aba))
+        if not cats:
+            continue
+        iput(hr2 + 1, HCOL2, "Categoria", 1)
+        iput(hr2 + 1, HCOL2 + 1, "Qtd", 1)
+        for j, cat in enumerate(cats):
+            rr = hr2 + 2 + j
+            iput(rr, HCOL2, cat)
+            catref = f"{_col_letra(HCOL2 + 1)}{rr + 1}"
+            iputf(rr, HCOL2 + 1,
+                  f"SUMPRODUCT(('{aba}'!${catL}$2:${catL}${last}={catref})"
+                  f"*('{aba}'!${hlpL}$2:${hlpL}${last}))")
+        f1, l1 = hr2 + 3, hr2 + 2 + len(cats)
+        cL, vL = _col_letra(HCOL2 + 1), _col_letra(HCOL2 + 2)
+        inter_charts.append({"tipo": cfg["tipo"], "titulo": cfg["titulo"],
+                             "cat": f"'{SH2}'!${cL}${f1}:${cL}${l1}",
+                             "val": f"'{SH2}'!${vL}${f1}:${vL}${l1}", "px": cfg["px"]})
+        hr2 += len(cats) + 3
+    irowmap = defaultdict(list)
+    for (r, c), (kind, v, s) in icells.items():
+        irowmap[r].append((c, kind, v, s))
+
+    def _icell(c, r, kind, v, s):
+        return fcel(c, r, v, s) if kind == "f" else cel(c, r, v, s)
+
+    rows2 = [f'<row r="{r + 1}">' + "".join(_icell(c, r, kind, v, s)
+             for c, kind, v, s in sorted(irowmap[r])) + '</row>'
+             for r in sorted(irowmap)]
+    draw2_ref = '<drawing r:id="rId1"/>' if inter_charts else ''
+    sheet2 = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<sheetViews><sheetView showGridLines="0" showRowColHeaders="0" '
+        'workbookViewId="0"/></sheetViews>'
+        '<cols><col min="21" max="90" hidden="1"/></cols>'
+        '<sheetData>' + "".join(rows2) + '</sheetData>'
+        '<sheetProtection sheet="1" objects="1" scenarios="1" '
+        'selectLockedCells="1" selectUnlockedCells="1"/>'
+        + draw2_ref + '</worksheet>')
+
+    sheets_all = [(SH1, sheet1), (SH2, sheet2)] + ana_sheets
+    n = len(sheets_all)
+    sheets_tag = "".join(
+        f'<sheet name="{_xml_esc(nm[:31])}" sheetId="{i+1}" r:id="rId{i+1}"/>'
+        for i, (nm, _) in enumerate(sheets_all))
+    workbook = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<sheets>' + sheets_tag + '</sheets>'
+        '<calcPr calcId="0" fullCalcOnLoad="1"/></workbook>')
+    wb_rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+               '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">')
+    for i in range(n):
+        wb_rels += (f'<Relationship Id="rId{i+1}" '
+                    'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
+                    f'Target="worksheets/sheet{i+1}.xml"/>')
+    wb_rels += (f'<Relationship Id="rId{n+1}" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" '
+                'Target="styles.xml"/></Relationships>')
+
+    # ---- DESENHOS FLUTUANTES (factory: 1 desenho por aba com gráficos) ----
+    _E = lambda px: int(round(px * 9525))
+    chart_parts = []
+    _chart_seq = [0]
+
+    def _anchor(x, y, w, h, inner):
+        return ('<xdr:absoluteAnchor>'
+                f'<xdr:pos x="{_E(x)}" y="{_E(y)}"/>'
+                f'<xdr:ext cx="{_E(w)}" cy="{_E(h)}"/>' + inner
+                + '<xdr:clientData/></xdr:absoluteAnchor>')
+
+    def _build_drawing(fill_fn):
+        objs, drels, idc = [], [], [1]
+
+        def sp(x, y, w, h, fill, line, texts, radius=True):
+            idc[0] += 1
+            body = "".join(
+                f'<a:p><a:pPr algn="{algn}"/><a:r><a:rPr lang="pt-BR" sz="{sz}" b="{1 if b else 0}">'
+                f'<a:solidFill><a:srgbClr val="{col}"/></a:solidFill></a:rPr>'
+                f'<a:t>{_xml_esc(str(t))}</a:t></a:r></a:p>'
+                for (t, sz, b, col, algn) in texts) or '<a:p><a:endParaRPr lang="pt-BR"/></a:p>'
+            geom = ('<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 7000"/></a:avLst></a:prstGeom>'
+                    if radius else '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>')
+            ln = (f'<a:ln><a:solidFill><a:srgbClr val="{line}"/></a:solidFill></a:ln>'
+                  if line else '<a:ln><a:noFill/></a:ln>')
+            inner = ('<xdr:sp macro="" textlink="">'
+                     f'<xdr:nvSpPr><xdr:cNvPr id="{idc[0]}" name="sp{idc[0]}"/><xdr:cNvSpPr/></xdr:nvSpPr>'
+                     f'<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{_E(w)}" cy="{_E(h)}"/></a:xfrm>'
+                     + geom + f'<a:solidFill><a:srgbClr val="{fill}"/></a:solidFill>' + ln + '</xdr:spPr>'
+                     '<xdr:txBody><a:bodyPr anchor="ctr" wrap="square" '
+                     'lIns="54000" tIns="36000" rIns="54000" bIns="36000"/><a:lstStyle/>'
+                     + body + '</xdr:txBody></xdr:sp>')
+            objs.append(_anchor(x, y, w, h, inner))
+
+        def chart(x, y, w, h, spec):
+            idc[0] += 1
+            _chart_seq[0] += 1
+            k = _chart_seq[0]
+            chart_parts.append((f"xl/charts/chart{k}.xml", _vg_chart_xml(spec)))
+            rid = len(drels) + 1
+            drels.append(f'<Relationship Id="rId{rid}" '
+                         'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" '
+                         f'Target="../charts/chart{k}.xml"/>')
+            inner = ('<xdr:graphicFrame macro="">'
+                     f'<xdr:nvGraphicFramePr><xdr:cNvPr id="{idc[0]}" name="Chart{idc[0]}"/>'
+                     '<xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>'
+                     f'<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="{_E(w)}" cy="{_E(h)}"/></xdr:xfrm>'
+                     '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">'
+                     '<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
+                     'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+                     f'r:id="rId{rid}"/></a:graphicData></a:graphic></xdr:graphicFrame>')
+            objs.append(_anchor(x, y, w, h, inner))
+
+        fill_fn(sp, chart)
+        if not objs:
+            return None, None
+        dxml = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" '
+                'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                + "".join(objs) + '</xdr:wsDr>')
+        rxml = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                + "".join(drels) + '</Relationships>')
+        return dxml, rxml
+
+    def _sheet_draw_rels(fn):
+        return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                '<Relationship Id="rId1" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" '
+                f'Target="../drawings/{fn}"/></Relationships>')
+
+    # desenho 1 — ESPELHO do painel (sheet1)
+    def _draw_vg(_sp, _chart):
+        if not charts:
+            return
+        _sp(0, 0, 1880, 72, "1F2D5C", "", [(titulo, 1500, True, "FFFFFF", "l")], radius=False)
+        if kpis:
+            for k, row in enumerate(kpis.get("linhas", [])[:6]):
+                lbl, val = (list(row) + ["", ""])[:2]
+                cx = 14 + k * 310
+                fill, txt = _VG_CARD_CORES[k % len(_VG_CARD_CORES)]
+                bar = _VG_CARD_BAR[k % len(_VG_CARD_BAR)]
+                _sp(cx, 88, 298, 84, fill, "D5DCEA",
+                    [(val, 2000, True, txt, "ctr"), (lbl, 1000, True, txt, "ctr")])
+                _sp(cx + 1, 94, 6, 72, bar, "", [], radius=False)
+        if tempo:
+            tx = [(tempo.get("titulo") or "Tempo de Tratamento", 1100, True, "1F2D5C", "l")]
+            for row in tempo.get("linhas", []):
+                a, b = (list(row) + ["", ""])[:2]
+                tx.append((f"{a}:  {b}", 1000, False, "3A3F4C", "l"))
+            _sp(636, 190, 610, 196, "FFFFFF", "E7EBF2", tx)
+        mtx = [((mov.get("titulo") if mov else None) or "Movimentação RH (últimos 30 dias)",
+                1100, True, "1F2D5C", "l")]
+        for row in (mov.get("linhas", []) if mov else []):
+            a, b = (list(row) + ["", ""])[:2]
+            vazio = str(b) == ""
+            mtx.append((str(a) if vazio else f"{a}:  {b}", 1000, False,
+                        ("8A9099" if vazio else "3A3F4C"), "l"))
+        _sp(1258, 190, 610, 196, "FFFFFF", "E7EBF2", mtx)
+        atx = [((acao.get("titulo") if acao else None) or "Ação Imediata — Recém-desligados com Acesso",
+                1100, True, "1F2D5C", "l")]
+        for row in (acao.get("linhas", []) if acao else []):
+            parts = [str(x) for x in row if str(x) != ""]
+            if not parts:
+                continue
+            vazio = len(parts) == 1 and parts[0].lower().startswith("sem desligados")
+            atx.append((" · ".join(parts), 1000, False, ("8A9099" if vazio else "3A3F4C"), "l"))
+        _sp(766, 638, 1102, 200, "FFFFFF", "E7EBF2", atx)
+        for spec in charts:
+            x, y, w, h = spec["px"]
+            _chart(x, y, w, h, spec)
+
+    # desenho 2 — ANÁLISE INTERATIVA (sheet2): responde aos filtros das analíticas
+    def _draw_inter(_sp, _chart):
+        if not inter_charts:
+            return
+        _sp(0, 0, 1260, 60, "1F2D5C", "",
+            [("Análise Interativa — filtre as abas analíticas para atualizar",
+              1300, True, "FFFFFF", "l")], radius=False)
+        _sp(14, 72, 1232, 44, "EEF3FB", "D5DCEA",
+            [("Estes gráficos contam REGISTROS e recalculam conforme os filtros das "
+              "abas analíticas. Os números do painel 'Visão Geral' são fixos "
+              "(usuários distintos).", 900, False, "3A3F4C", "l")])
+        for spec in inter_charts:
+            x, y, w, h = spec["px"]
+            _chart(x, y, w, h, spec)
+
+    drawing1, draw1_rels = _build_drawing(_draw_vg)
+    drawing2, draw2_rels = _build_drawing(_draw_inter)
+    # (sheet_index, arquivo, drawing_xml, rels_xml) para cada desenho existente
+    draw_files = []
+    if drawing1:
+        draw_files.append((1, "drawing1.xml", drawing1, draw1_rels))
+    if drawing2:
+        draw_files.append((2, "drawing2.xml", drawing2, draw2_rels))
+
+    ct_sheets = "".join(
+        f'<Override PartName="/xl/worksheets/sheet{i+1}.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        for i in range(n))
+    chart_ov = ""
+    for _si, _fn, _dx, _rx in draw_files:
+        chart_ov += (f'<Override PartName="/xl/drawings/{_fn}" '
+                     'ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>')
+    for _i in range(len(chart_parts)):
+        chart_ov += (f'<Override PartName="/xl/charts/chart{_i+1}.xml" '
+                     'ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>')
+    ctypes = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+        + ct_sheets + chart_ov + '</Types>')
+    rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+        '</Relationships>')
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", ctypes)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("xl/workbook.xml", workbook)
+        z.writestr("xl/_rels/workbook.xml.rels", wb_rels)
+        z.writestr("xl/styles.xml", _vg_styles_xml())
+        for i, (nm, xml) in enumerate(sheets_all):
+            z.writestr(f"xl/worksheets/sheet{i+1}.xml", xml)
+        for si, fn, dxml, rxml in draw_files:
+            z.writestr(f"xl/worksheets/_rels/sheet{si}.xml.rels", _sheet_draw_rels(fn))
+            z.writestr(f"xl/drawings/{fn}", dxml)
+            z.writestr(f"xl/drawings/_rels/{fn}.rels", rxml)
+        for path, xml in chart_parts:
+            z.writestr(path, xml)
+    return buf.getvalue()
+
+
 def construir_db():
     """DB para o index.html. A parte cara (bi_divergencias + JOIN rh_ativos) e
     calculada 1x e cacheada; so o filtro de quarentena re-roda a cada request
@@ -967,6 +1740,8 @@ def _montar_base():
                      "m": r["matricula"] or "", "c": r["cargo"], "d": r["depto"],
                      "cc": (r["cc_cod"] + " - " + r["cc_nome"]).strip(" -"),
                      "cpf": r["cpf"] or "", "email": r["email"] or "",
+                     # vinculo (Funcionario/Terceiro) — mesmo p/ toda a pessoa
+                     "vinc": "Terceiro" if r["tipo_vinc"] == "TERCEIRO" else "Funcionário",
                      "divs": []}
                 users[r["usuario"]] = u
             tp = r["tipo"]
@@ -986,9 +1761,17 @@ def _montar_base():
             })
         # Login do usuario = logins distintos dos seus acessos (96% tem 1).
         # Vazio quando so ha SEM_ACESSO (ainda nao tem login no sistema).
+        # Deduplica IGNORANDO caixa: o mesmo login em sistemas diferentes pode
+        # vir em caixas distintas (INTADM527 no SYSTUR, intadm527 no SIGOT) — e'
+        # o mesmo login, mostra uma vez so. Logins realmente distintos (ex.:
+        # mariliadavid no SIG) continuam aparecendo.
         for _u in users.values():
-            _logins = sorted({d["login"] for d in _u["divs"] if d.get("login")})
-            _u["login"] = ", ".join(_logins)
+            _por_caixa = {}
+            for d in _u["divs"]:
+                lg = d.get("login")
+                if lg and lg.strip().lower() not in _por_caixa:
+                    _por_caixa[lg.strip().lower()] = lg
+            _u["login"] = ", ".join(sorted(_por_caixa.values()))
         maxdt = c.execute(
             "SELECT MAX(data_identificacao) FROM bi_divergencias "
             "WHERE data_identificacao <> ''").fetchone()[0] or ""
@@ -1016,9 +1799,13 @@ def _montar_base():
                 par_a.append(SISTEMA)
             _vistos_ader = set()
             for r in c.execute(
-                "SELECT matricula,nome,login,cargo,sistema,perfil,dt_aderente,"
-                "       dt_pendencia,dt_resolvido,ticket "
-                "FROM ciclo_vida_acesso " + cond_a + " ORDER BY dt_aderente DESC", par_a):
+                "SELECT cv.matricula,cv.nome,cv.login,cv.cargo,cv.sistema,cv.perfil,"
+                "       cv.dt_aderente,cv.dt_pendencia,cv.dt_resolvido,cv.ticket,"
+                "       COALESCE(rh.tipo_vinculo,'FUNCIONARIO') tipo_vinc "
+                "FROM ciclo_vida_acesso cv "
+                "LEFT JOIN rh_ativos rh ON rh.matricula = cv.matricula "
+                + cond_a.replace("dt_aderente", "cv.dt_aderente").replace("sistema =", "cv.sistema =")
+                + " ORDER BY cv.dt_aderente DESC", par_a):
                 if r["matricula"] in _vistos_ader:
                     continue
                 _vistos_ader.add(r["matricula"])
@@ -1028,6 +1815,7 @@ def _montar_base():
                     "perfil": r["perfil"] or "", "dt": r["dt_aderente"] or "",
                     "dt_pend": r["dt_pendencia"] or "", "dt_resol": r["dt_resolvido"] or "",
                     "ticket": r["ticket"] or "",
+                    "vinc": "Terceiro" if r["tipo_vinc"] == "TERCEIRO" else "Funcionário",
                 })
         except Exception as e:
             print(f"  [conf] falha ao montar aderentes: {e!r}")
@@ -1075,8 +1863,14 @@ def _calcular_visao_geral(c, sistema=""):
     # Fonte: bi_divergencias (validacao_acessos com ação + ACESSO_SEM_VINCULO_RH).
     # REGRA: conta USUARIOS distintos (nao acessos), igual aos cards do topo.
     try:
+        # "Incluir Acesso" (SEM_ACESSO) NAO e' pendencia: fica FORA de "Pendencias
+        # Abertas" e ganha contagem propria (out["incluir"]).
         out["pendentes"] = c.execute(
-            f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias WHERE resolvida=0 AND tipo<>'OK'{whereS}",
+            f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias "
+            f"WHERE resolvida=0 AND tipo<>'OK' AND tipo<>'SEM_ACESSO'{whereS}",
+            argS).fetchone()[0]
+        out["incluir"] = c.execute(
+            f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias WHERE tipo='SEM_ACESSO'{whereS}",
             argS).fetchone()[0]
         out["ok"] = c.execute(
             f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias WHERE tipo='OK'{whereS}",
@@ -1300,6 +2094,8 @@ def enviar_quarentena(usuarios, origem="Inclusão / Alteração",
         dias = 0
     if dias <= 0:
         return {"erro": "Informe a quantidade de dias (maior que zero)."}
+    if dias > QUAR_MAX_DIAS:
+        return {"erro": f"O limite da quarentena é {QUAR_MAX_DIAS} dias."}
     titulo = str(titulo or "").strip()
     if not titulo:
         return {"erro": "O título/descrição é obrigatório."}
@@ -1355,13 +2151,26 @@ def listar_quarentena():
     finally:
         c.close()
 
-    for rid, it in _quarentena_viva().items():
+    # Le as interacoes 1x: estado vivo (ultima acao por rid) + o ENVIAR mais
+    # recente por rid (traz os dados de ENTRADA — necessario p/ o historico de
+    # uma quarentena que entrou e saiu antes de o Processador dobrar).
+    _inter = _interacoes_ler()
+    _envios = {}
+    for it in _inter:
+        if it.get("tipo_interacao") == "QUARENTENA" and it.get("acao") == "ENVIAR":
+            erid = it.get("registro_id")
+            if erid and (erid not in _envios or
+                         str(it.get("data_acao", "")) >= str(_envios[erid].get("data_acao", ""))):
+                _envios[erid] = it
+    for rid, it in _quarentena_viva(_inter).items():
         acao = it.get("acao")
         if acao == "ENVIAR":
             if rid not in ativas:
                 ativas[rid] = _sintetizar_ativa(rid, it)
         elif acao == "RESOLVER":
             anterior = ativas.pop(rid, None)
+            if anterior is None and rid in _envios:
+                anterior = _sintetizar_ativa(rid, _envios[rid])   # carrega entrada
             historico.insert(0, _sintetizar_historico(rid, it, anterior))
 
     lista = list(ativas.values())
@@ -1370,7 +2179,83 @@ def listar_quarentena():
         r["dias_restantes"] = max(0, _dias(hoje, r.get("data_fim", "")))
     for r in historico:
         r["periodo_dias"] = _dias(r.get("data_inicio", ""), r.get("data_saida", ""))
+
+    # Vinculo (Funcionario/Terceiro) por usuario (matricula) — lookup em rh_ativos
+    _mats = {r["usuario"] for r in lista} | {r["usuario"] for r in historico}
+    _vinc = {}
+    if _mats:
+        cv = conn_ro()
+        try:
+            qm = ",".join("?" * len(_mats))
+            for row in cv.execute(
+                "SELECT matricula, COALESCE(tipo_vinculo,'FUNCIONARIO') tv "
+                f"FROM rh_ativos WHERE matricula IN ({qm})", list(_mats)):
+                _vinc[row["matricula"]] = ("Terceiro" if row["tv"] == "TERCEIRO"
+                                           else "Funcionário")
+        except Exception:
+            pass
+        finally:
+            cv.close()
+    for r in lista:
+        r["vinc"] = _vinc.get(r["usuario"], "Funcionário")
+    for r in historico:
+        r["vinc"] = _vinc.get(r["usuario"], "Funcionário")
     return {"ativas": lista, "historico": historico}
+
+
+# tipo (em log_importacoes) -> (grupo, rotulo amigavel) para o painel "Bases"
+_BASES_GRUPOS = ["RH", "Matrizes", "Extratos dos Sistemas"]
+_BASES_LABEL = {
+    "RH_ATIVOS":              ("RH", "Funcionários Ativos"),
+    "MATRIZ_PERFIS":          ("Matrizes", "Matriz de Perfis de Acesso"),
+    "MATRIZ_CCO":             ("Matrizes", "Mapeamento CCO_CSC"),
+    "SYSTUR":                 ("Extratos dos Sistemas", "SYSTUR"),
+    "IC_INTEGRADOR_CONTABIL": ("Extratos dos Sistemas", "IC — Integrador Contábil"),
+    "SICA_RA":                ("Extratos dos Sistemas", "SICA RA"),
+    "SICA_ESFERA":            ("Extratos dos Sistemas", "SICA Esfera"),
+    "SIGOT":                  ("Extratos dos Sistemas", "SIGOT"),
+    "SIG":                    ("Extratos dos Sistemas", "SIG"),
+    "ORACLE_EBS":             ("Extratos dos Sistemas", "Oracle EBS"),
+}
+
+
+def listar_bases():
+    """Catalogo das bases: por tipo, SO a ULTIMA importacao bem-sucedida —
+    nome do arquivo e a data do PROPRIO arquivo (disponibilizacao). Agrupado
+    em RH / Matrizes / Extratos dos Sistemas. Fonte: log_importacoes (o SQLite
+    devolve o arquivo/dt_arquivo da linha de maior dt_importacao por tipo)."""
+    c = conn_ro()
+    try:
+        # base ainda nao migrada (sem dt_arquivo) — Visualizador nao pode quebrar:
+        # mostra o nome do arquivo; a data so existe apos o Processador rodar.
+        tem_dt = any(r["name"] == "dt_arquivo"
+                     for r in c.execute("PRAGMA table_info(log_importacoes)"))
+        col_dt = "dt_arquivo" if tem_dt else "'' AS dt_arquivo"
+        rows = c.execute(
+            f"SELECT tipo, arquivo, {col_dt}, total_registros, MAX(dt_importacao) AS dt_imp "
+            "FROM log_importacoes WHERE status='SUCESSO' "
+            "GROUP BY tipo").fetchall()
+    except Exception:
+        rows = []
+    finally:
+        c.close()
+
+    def _item(tipo, rotulo, r):
+        return {"tipo": tipo, "base": rotulo, "arquivo": r["arquivo"] or "",
+                "dt_arquivo": r["dt_arquivo"] or "", "dt_importacao": r["dt_imp"] or "",
+                "registros": r["total_registros"] if r["total_registros"] is not None else ""}
+
+    por_tipo = {r["tipo"]: r for r in rows}
+    grupos = {g: [] for g in _BASES_GRUPOS}
+    for tipo, (grupo, rotulo) in _BASES_LABEL.items():
+        r = por_tipo.get(tipo)
+        if r:
+            grupos[grupo].append(_item(tipo, rotulo, r))
+    # tipos sem rotulo conhecido caem em "Extratos dos Sistemas" com o tipo cru
+    for tipo, r in por_tipo.items():
+        if tipo not in _BASES_LABEL:
+            grupos["Extratos dos Sistemas"].append(_item(tipo, tipo, r))
+    return [{"grupo": g, "itens": grupos[g]} for g in _BASES_GRUPOS if grupos[g]]
 
 
 def retirar_quarentena(registro_id, motivo=""):
@@ -1389,12 +2274,14 @@ def retirar_quarentena(registro_id, motivo=""):
     return 1
 
 
-def resolver_pendencia(registro_id, ticket, ticket_url="", descricao=""):
+def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=""):
     """Grava uma interacao RESOLUCAO na rede — marca o funcionario como
-    resolvido sob um ticket do Jira. Devolve 1 se gravou."""
+    resolvido sob um ticket do Jira, com o MOTIVO (obrigatorio, vindo do combobox
+    do XML). Devolve 1 se gravou, 0 se invalido."""
     rid = str(registro_id or "").strip()
     tk = str(ticket or "").strip()
-    if not rid or not tk:
+    motivo = str(motivo or "").strip()
+    if not rid or not tk or not motivo:
         return 0
     nome, _, _ = _meta_divergencia(rid)
     # Snapshot completo para auditoria — cargo, centro de custo e as pendencias
@@ -1451,6 +2338,7 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao=""):
         "ticket": tk,
         "ticket_url": str(ticket_url or "").strip(),
         "descricao": str(descricao or "").strip(),
+        "motivo": motivo,
         "cargo": cargo, "centro_custo": centro_custo,
         "pendencias": pend,
         "nome": nome, "usuario": USUARIO,
@@ -1495,6 +2383,7 @@ def listar_historico_rh():
                     "ticket": rdat.get("ticket") or "",
                     "ticket_url": rdat.get("ticket_url") or "",
                     "descricao": rdat.get("descricao") or "",
+                    "motivo": rdat.get("motivo") or "",
                     "cargo": rdat.get("cargo") or "",
                     "centro_custo": rdat.get("centro_custo") or "",
                     "por": rdat.get("por") or "",
@@ -1545,25 +2434,291 @@ def listar_historico_rh():
             except Exception:
                 d = {}
             dt = d.get("data") or str(row[2] or "")   # datetime p/ ordem correta
+            _sis = d.get("sistema") or ""
+            _perf = d.get("perfil") or ""
+            # Detalhe do marco: o front so exibe o que vier em 'pendencias'. Monta
+            # um card com o sistema + perfil do proprio marco. Em PENDENCIA o
+            # perfil e' o ESPERADO; em ADERENTE a pessoa TEM = esperado.
+            _lbl = {"PENDENCIA": "Pendência", "RESOLVIDO": "Resolvido",
+                    "ADERENTE": "Aderente"}.get(tm, tm)
+            _pend = ([{"tipo": _lbl, "acao": "", "sistema": _sis, "origem": "—",
+                       "pe": (_perf if tm == "ADERENTE" else ""),
+                       "pp": _perf, "opcoes": []}]
+                     if (_sis or _perf) else [])
             out.append({
                 "tipo": tipo, "data": dt, "_ord": dt,
                 "matricula": mat, "nome": d.get("nome") or mat,
                 "movimentacao": mov, "campos": d.get("ticket") or "",
-                "sistema": d.get("sistema") or "", "perfil": d.get("perfil") or "",
+                "sistema": _sis, "perfil": _perf,
                 "cargo": d.get("cargo") or "", "ticket": d.get("ticket") or "",
                 "ticket_url": "", "descricao": "", "por": "", "em": "",
-                "pendencias": [],
+                "centro_custo": "",
+                "pendencias": _pend,
             })
     except Exception:
         pass  # tabela historico pode nao existir em banco antigo
     finally:
         ch.close()
 
+    # vinculo (Funcionario/Terceiro) por matricula — lookup em rh_ativos
+    _mats = {e.get("matricula") for e in out if e.get("matricula")}
+    if _mats:
+        cvh = conn_ro()
+        _vm, _ccm = {}, {}
+        try:
+            qm = ",".join("?" * len(_mats))
+            for r in cvh.execute(
+                    "SELECT matricula, COALESCE(tipo_vinculo,'FUNCIONARIO'), "
+                    "COALESCE(centro_custo_codigo,''), COALESCE(centro_custo_nome,'') "
+                    f"FROM rh_ativos WHERE matricula IN ({qm})", list(_mats)):
+                _vm[r[0]] = ("Terceiro" if r[1] == "TERCEIRO" else "Funcionário")
+                _ccm[r[0]] = (str(r[2]) + " - " + str(r[3])).strip(" -")
+        except Exception:
+            pass
+        finally:
+            cvh.close()
+        for e in out:
+            e["vinc"] = _vm.get(e.get("matricula"), "Funcionário")
+            if not e.get("centro_custo"):
+                e["centro_custo"] = _ccm.get(e.get("matricula"), "")
+
     out.sort(key=lambda x: x.get("_ord") or "", reverse=True)
     return out
 
 
+def motivos_tratados(de="", ate=""):
+    """Distribuição dos MOTIVOS dos casos tratados no período + 'Sem motivo'
+    para as ADERÊNCIAS que ocorreram sem resolução no sistema (viraram conformes
+    por reprocesso, sem ticket). Conta USUÁRIOS (matrícula) distintos.
+    de/ate: 'YYYY-MM-DD' inclusivo; vazio = sem limite. Período por data da
+    resolução (tratados) e por data da aderência (sem motivo)."""
+    def _conds(col):
+        cs, args = [], []
+        if de:  cs.append(f"substr({col},1,10) >= ?"); args.append(de)
+        if ate: cs.append(f"substr({col},1,10) <= ?"); args.append(ate)
+        return cs, args
+    out = {}
+    tratados_mats = set()
+    c = conn_ro()
+    try:
+        def _tem(t):
+            return c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                             "AND name=?", [t]).fetchone() is not None
+        # ── Tratados: por motivo (tabela resolucoes) ──────────────────────
+        if _tem("resolucoes"):
+            cols = [r[1] for r in c.execute("PRAGMA table_info(resolucoes)")]
+            mot = "COALESCE(NULLIF(TRIM(motivo),''),'(motivo não informado)')" \
+                  if "motivo" in cols else "'(motivo não informado)'"
+            cs, args = _conds("resolvido_em")
+            where = (" WHERE " + " AND ".join(cs)) if cs else ""
+            for r in c.execute(
+                    f"SELECT {mot} m, COUNT(DISTINCT registro_id) n "
+                    f"FROM resolucoes{where} GROUP BY m", args):
+                out[r[0]] = out.get(r[0], 0) + (r[1] or 0)
+            for r in c.execute("SELECT DISTINCT registro_id FROM resolucoes"):
+                if r[0]:
+                    tratados_mats.add(str(r[0]))
+        # ── Sem motivo: aderências sem resolução (ciclo_vida_acesso) ──────
+        if _tem("ciclo_vida_acesso"):
+            cs, args = _conds("dt_aderente")
+            cond = ["dt_aderente IS NOT NULL"] + cs
+            for r in c.execute(
+                    "SELECT DISTINCT matricula FROM ciclo_vida_acesso WHERE "
+                    + " AND ".join(cond), args):
+                m = str(r[0] or "")
+                if m and m not in tratados_mats:
+                    out["Sem motivo"] = out.get("Sem motivo", 0) + 1
+    finally:
+        c.close()
+    itens = sorted(out.items(), key=lambda x: (x[0] == "Sem motivo", -x[1]))
+    return {"total": sum(out.values()),
+            "itens": [{"motivo": k, "n": v} for k, v in itens]}
+
+
+def _vg_secoes(de="", ate=""):
+    """Monta as seções da Visão Geral para o Excel (uma tabela por gráfico,
+    com a fonte de dados). Motivos respeita o período de/ate."""
+    vg = construir_db().get("vg", {}) or {}
+    mot = motivos_tratados(de, ate)
+    TL = {'ACESSO_SEM_VINCULO_RH': 'Sem Vínculo RH', 'DIVERGENTE': 'Alterar Perfil',
+          'EM_ANALISE': 'Em Análise', 'SEM_ACESSO': 'Incluir Acesso',
+          'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido'}
+    SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
+          'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
+    pct = lambda n, t: (round(100 * n / t, 1) if t else 0)
+    ch = vg.get("chamados") or {}
+    tp = vg.get("tempos") or {}
+    dt = vg.get("div_tipos") or {}
+    ds = vg.get("div_sistemas") or {}
+    ag = vg.get("aging") or {}
+    tot_dt, tot_m = sum(dt.values()), mot.get("total", 0)
+    secoes = [
+        {"titulo": "Indicadores", "kind": "kpis", "colunas": ["Indicador", "Valor"], "linhas": [
+            ["Pendências Abertas", vg.get("pendentes", 0)],
+            ["Incluir Acesso", vg.get("incluir", 0)],
+            ["Aderentes", vg.get("ok", 0)],
+            ["Cobertura RH (%)", vg.get("cobertura_pct", 0)],
+            ["Em Quarentena", vg.get("quarentena_ativa", 0)],
+            ["Acessos de Desligado", vg.get("acessos_deslig", 0)],
+            ["RH Ativos", vg.get("rh_ativos", 0)]]},
+        {"titulo": "Tempo de Tratamento (ciclo)", "kind": "tempo", "colunas": ["Etapa", "Tempo"], "linhas": [
+            ["Pendência → Aderente (médio)", tp.get("total") or "—"],
+            ["Pendência → Resolvido", tp.get("pend_resolv") or "—"],
+            ["Resolvido → Aderente", tp.get("resolv_ader") or "—"]]},
+        {"titulo": "Chamados (últimos 30 dias)", "chart": {"tipo": "bar"}, "colunas": ["Categoria", "Qtd"], "linhas": [
+            ["Identificados", ch.get("identificados", 0)],
+            ["Resolvidos", ch.get("resolvidos", 0)],
+            ["Aderentes", ch.get("aderentes", 0)]]},
+        {"titulo": "Divergências por Tipo", "chart": {"tipo": "doughnut"}, "colunas": ["Tipo", "Qtd", "%"],
+         "linhas": [[TL.get(k, k), v, pct(v, tot_dt)]
+                    for k, v in sorted(dt.items(), key=lambda x: -x[1])]},
+        {"titulo": "Concentração por Sistema", "chart": {"tipo": "bar"}, "colunas": ["Sistema", "Qtd"],
+         "linhas": [[SL.get(k, k), v] for k, v in sorted(ds.items(), key=lambda x: -x[1])]},
+        {"titulo": "Aging das Pendências", "chart": {"tipo": "col"}, "colunas": ["Faixa (dias)", "Qtd"],
+         "linhas": [[k, v] for k, v in ag.items()]},
+        {"titulo": "Motivos dos Tratamentos" + (f" ({de} a {ate})" if (de or ate) else " (todo o período)"),
+         "chart": {"tipo": "doughnut"}, "colunas": ["Motivo", "Qtd", "%"],
+         "linhas": [[it["motivo"], it["n"], pct(it["n"], tot_m)] for it in mot.get("itens", [])]},
+    ]
+    # Movimentação RH (painel do dashboard) — data-driven
+    mv = vg.get("movimentacao")
+    _MOVLBL = {"admissoes": "Admissões", "alteracoes": "Alterações",
+               "desligamentos": "Desligamentos"}
+    if isinstance(mv, dict) and mv:
+        mov_linhas = [[_MOVLBL.get(k, str(k)), v] for k, v in mv.items()]
+    else:
+        mov_linhas = [["(sem dados de movimentação no período)", ""]]
+    secoes.append({"titulo": "Movimentação RH (últimos 30 dias)", "kind": "mov",
+                   "colunas": ["Tipo", "Qtd"], "linhas": mov_linhas})
+    # Ação Imediata — recém-desligados ainda com acesso (Top 10) — data-driven
+    tu = vg.get("top_urgentes") or []
+    if tu and isinstance(tu[0], dict):
+        acao_linhas = [[t.get("nome", ""), t.get("cargo", ""),
+                        t.get("sistemas", 0), t.get("perfis", 0)] for t in tu[:8]]
+    else:
+        acao_linhas = [["Sem desligados com acesso ativo", "", "", ""]]
+    secoes.append({"titulo": "Ação Imediata — Recém-desligados com Acesso", "kind": "acao",
+                   "colunas": ["Nome", "Cargo", "Sistemas", "Perfis"], "linhas": acao_linhas})
+    return secoes
+
+
+def _vg_analiticos(de="", ate=""):
+    """Abas ANALÍTICAS: o detalhe (registros) que gerou cada gráfico, pro cliente
+    auditar quais informações foram usadas. Uma aba por fonte de dados."""
+    TL = {'ACESSO_SEM_VINCULO_RH': 'Sem Vínculo RH', 'DIVERGENTE': 'Alterar Perfil',
+          'EM_ANALISE': 'Em Análise', 'SEM_ACESSO': 'Incluir Acesso', 'OK': 'Aderente',
+          'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido'}
+    SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
+          'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
+    d19 = lambda s: (str(s) if s else "")[:19]
+    from datetime import datetime as _dt
+    hoje = _dt.now()
+    out = []
+    c = conn_ro()
+    try:
+        def _tem(t):
+            return c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                             [t]).fetchone() is not None
+        # Escopo = mesmo do painel (config visualizador/sistema; vazio = todos).
+        # Mantém as abas analíticas/interativas no mesmo recorte da Visão Geral.
+        whereW = " WHERE sistema = ?" if SISTEMA else ""
+        whereAnd = " AND sistema = ?" if SISTEMA else ""
+        argS = (SISTEMA,) if SISTEMA else ()
+        # 1) Divergências → 'Divergências por Tipo' + 'Concentração por Sistema'
+        L = [[r["usuario"] or "", r["nome_usuario"] or "", r["matricula"] or "",
+              SL.get(r["sistema"], r["sistema"] or ""), TL.get(r["tipo"], r["tipo"] or ""),
+              r["acao"] or "", r["perfil_encontrado"] or "", r["perfil_esperado"] or "",
+              r["origem"] or "", d19(r["data_identificacao"])]
+             for r in c.execute(
+                "SELECT usuario,nome_usuario,matricula,sistema,tipo,acao,perfil_encontrado,"
+                "perfil_esperado,origem,data_identificacao FROM bi_divergencias"
+                + whereW + " ORDER BY sistema,tipo", argS)]
+        out.append({"nome": "Divergências (analítico)",
+                    "colunas": ["Usuário/Login", "Nome", "Matrícula", "Sistema", "Tipo", "Ação",
+                                "Perfil Encontrado", "Perfil Esperado", "Origem", "Data"],
+                    "linhas": L})
+        # 2) Aging → 'Aging das Pendências'
+        A = []
+        for r in c.execute("SELECT usuario,nome_usuario,sistema,tipo,acao,data_identificacao "
+                           "FROM bi_divergencias WHERE resolvida=0 AND tipo<>'OK' "
+                           "AND data_identificacao<>''" + whereAnd, argS):
+            try:
+                dias = (hoje - _dt.fromisoformat(str(r["data_identificacao"])[:19])).days
+            except Exception:
+                dias = ""
+            fa = ("" if dias == "" else "0-7" if dias <= 7 else "8-30" if dias <= 30
+                  else "31-90" if dias <= 90 else "90+")
+            A.append([r["usuario"] or "", r["nome_usuario"] or "", SL.get(r["sistema"], r["sistema"] or ""),
+                      TL.get(r["tipo"], r["tipo"] or ""), r["acao"] or "",
+                      d19(r["data_identificacao"]), dias, fa])
+        out.append({"nome": "Aging (analítico)",
+                    "colunas": ["Usuário/Login", "Nome", "Sistema", "Tipo", "Ação",
+                                "Data Identificação", "Dias", "Faixa"],
+                    "linhas": A})
+        # 3) Ciclo de vida → 'Chamados' + 'Tempo de Tratamento'
+        if _tem("ciclo_vida_acesso"):
+            CV = [[r["matricula"] or "", r["nome"] or "", SL.get(r["sistema"], r["sistema"] or ""),
+                   r["perfil"] or "", d19(r["dt_pendencia"]), d19(r["dt_resolvido"]),
+                   r["ticket"] or "", d19(r["dt_aderente"])]
+                  for r in c.execute(
+                    "SELECT matricula,nome,sistema,perfil,dt_pendencia,dt_resolvido,ticket,"
+                    "dt_aderente FROM ciclo_vida_acesso" + whereW + " ORDER BY dt_pendencia", argS)]
+            out.append({"nome": "Ciclo de Vida (analítico)",
+                        "colunas": ["Matrícula", "Nome", "Sistema", "Perfil", "Pendência",
+                                    "Resolvido", "Ticket", "Aderente"],
+                        "linhas": CV})
+        # 4) Motivos → donut 'Motivos dos Tratamentos'
+        M, tratados = [], set()
+        if _tem("resolucoes"):
+            cr = {r[1] for r in c.execute("PRAGMA table_info(resolucoes)")}
+            mc = "motivo" if "motivo" in cr else "'' AS motivo"
+            for r in c.execute(f"SELECT registro_id,nome,{mc},ticket,resolvido_em FROM resolucoes"):
+                dd = d19(r["resolvido_em"])
+                if (de and dd[:10] < de) or (ate and dd[:10] > ate):
+                    continue
+                tratados.add(str(r["registro_id"]))
+                M.append([r["registro_id"] or "", r["nome"] or "",
+                          (r["motivo"] or "(não informado)"), r["ticket"] or "", dd, ""])
+        if _tem("ciclo_vida_acesso"):
+            # 1 linha por USUÁRIO (distinto) — bate com o donut (conta usuários)
+            for r in c.execute("SELECT matricula, MAX(nome) nome, MAX(sistema) sistema, "
+                               "MAX(dt_aderente) dt_aderente FROM ciclo_vida_acesso "
+                               "WHERE dt_aderente IS NOT NULL GROUP BY matricula"):
+                m = str(r["matricula"] or "")
+                dd = d19(r["dt_aderente"])
+                if (de and dd[:10] < de) or (ate and dd[:10] > ate):
+                    continue
+                if m and m not in tratados:
+                    M.append([m, r["nome"] or "", "Sem motivo", "", dd,
+                              SL.get(r["sistema"], r["sistema"] or "")])
+        out.append({"nome": "Motivos (analítico)",
+                    "colunas": ["Matrícula", "Nome", "Motivo", "Ticket", "Data", "Sistema"],
+                    "linhas": M})
+    finally:
+        c.close()
+    return out
+
+
+_PAGINA_CACHE = {"chave": None, "html": None}
+
+
+def _chave_cache_pagina():
+    """Assinatura do estado que muda a pagina: mtime/tamanho do banco + mtime do
+    index.html. Enquanto nao muda, reusa a pagina montada (evita reconstruir o
+    DB de ~7MB e re-serializar a cada F5)."""
+    try:
+        sb = os.stat(DB_PATH)
+        si = os.stat(INDEX_PATH)
+        return (sb.st_mtime_ns, sb.st_size, si.st_mtime_ns)
+    except OSError:
+        return None
+
+
 def html_injetado():
+    # Cache: so remonta quando o banco (reprocesso) ou o index.html mudam.
+    chave = _chave_cache_pagina()
+    if chave is not None and _PAGINA_CACHE["chave"] == chave and _PAGINA_CACHE["html"]:
+        return _PAGINA_CACHE["html"]
     with open(INDEX_PATH, "r", encoding="utf-8") as f:
         linhas = f.read().split("\n")
     js = "const DB = " + json.dumps(construir_db(), ensure_ascii=False) + ";"
@@ -1573,14 +2728,27 @@ def html_injetado():
             break
     else:
         raise RuntimeError("linha 'const DB =' nao encontrada no index.html")
-    return "\n".join(linhas)
+    html = "\n".join(linhas)
+    if chave is not None:
+        _PAGINA_CACHE["chave"], _PAGINA_CACHE["html"] = chave, html
+    return html
 
 
 class H(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype):
         b = body.encode("utf-8") if isinstance(body, str) else body
+        # Compressao gzip: a pagina embute ~7MB de JSON e cai ~92% gzipada —
+        # decisivo na REDE (transfere ~0,6MB em vez de ~7MB). So comprime se o
+        # navegador aceitar (Accept-Encoding) e se valer a pena (>1KB).
+        comprimir = (len(b) > 1024 and
+                     "gzip" in (self.headers.get("Accept-Encoding") or "").lower())
+        if comprimir:
+            import gzip as _gzip
+            b = _gzip.compress(b, 5)
         self.send_response(code)
         self.send_header("Content-Type", ctype)
+        if comprimir:
+            self.send_header("Content-Encoding", "gzip")
         self.send_header("Content-Length", str(len(b)))
         self.end_headers()
         self.wfile.write(b)
@@ -1604,6 +2772,36 @@ class H(BaseHTTPRequestHandler):
                            "application/json; charset=utf-8")
             elif self.path == "/api/historico":
                 self._send(200, json.dumps(listar_historico_rh(), ensure_ascii=False),
+                           "application/json; charset=utf-8")
+            elif self.path == "/api/bases":
+                self._send(200, json.dumps(listar_bases(), ensure_ascii=False),
+                           "application/json; charset=utf-8")
+            elif self.path.startswith("/api/exportar-vg"):
+                from urllib.parse import urlparse, parse_qs
+                q = parse_qs(urlparse(self.path).query)
+                de = (q.get("de", [""])[0] or "").strip()
+                ate = (q.get("ate", [""])[0] or "").strip()
+                xlsx = gerar_xlsx_painel(_vg_secoes(de, ate), _vg_analiticos(de, ate),
+                                         "Visão Geral — CVC IAM Analytics")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/vnd.openxmlformats-"
+                                 "officedocument.spreadsheetml.sheet")
+                self.send_header("Content-Disposition",
+                                 'attachment; filename="Visao_Geral.xlsx"')
+                self.send_header("Content-Length", str(len(xlsx)))
+                self.end_headers()
+                self.wfile.write(xlsx)
+                print(f"  [EXPORT] Visao_Geral.xlsx ({len(xlsx)} bytes)")
+                return
+            elif self.path.startswith("/api/motivos-tratados"):
+                from urllib.parse import urlparse, parse_qs
+                q = parse_qs(urlparse(self.path).query)
+                de = (q.get("de", [""])[0] or "").strip()
+                ate = (q.get("ate", [""])[0] or "").strip()
+                self._send(200, json.dumps(motivos_tratados(de, ate), ensure_ascii=False),
+                           "application/json")
+            elif self.path == "/api/motivos-resolucao":
+                self._send(200, json.dumps(listar_motivos_resolucao(), ensure_ascii=False),
                            "application/json; charset=utf-8")
             elif self.path.split("?")[0] == "/api/atalhos":
                 # ?origem=incl|consulta — filtra; sem origem lista de todas as abas
@@ -1700,12 +2898,13 @@ class H(BaseHTTPRequestHandler):
                 payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
                 rid = str(payload.get("id") or "").strip()
                 ticket = str(payload.get("ticket") or "").strip()
-                if not rid or not ticket:
-                    self._send(400, '{"ok":false,"erro":"id e ticket obrigatorios"}',
+                motivo = str(payload.get("motivo") or "").strip()
+                if not rid or not ticket or not motivo:
+                    self._send(400, '{"ok":false,"erro":"id, ticket e motivo obrigatorios"}',
                                "application/json")
                     return
                 linhas = resolver_pendencia(rid, ticket, payload.get("ticket_url"),
-                                            payload.get("descricao"))
+                                            payload.get("descricao"), motivo)
                 self._send(200, json.dumps(
                     {"ok": linhas > 0,
                      "erro": None if linhas > 0 else "falha ao resolver",

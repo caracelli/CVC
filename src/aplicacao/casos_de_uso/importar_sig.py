@@ -24,7 +24,7 @@ from infraestrutura.leitores_arquivos.leitor_sig import LeitorCatalogoSig, Leito
 from infraestrutura.repositorios.repositorio_acesso_sqlite import RepositorioAcessoSqlite
 from infraestrutura.repositorios.repositorio_catalogo_perfil import RepositorioCatalogoPerfil
 from infraestrutura.repositorios.repositorio_log_importacao import (
-    RepositorioLogImportacao, loga_se_reimportacao,
+    RepositorioLogImportacao, loga_se_reimportacao, data_modificacao,
 )
 
 
@@ -78,6 +78,7 @@ class ImportarSig:
 
         total_perfis = 0
         for arquivo in arquivos:
+            dt_arq = data_modificacao(arquivo)
             try:
                 hash_arq = loga_se_reimportacao(self._repo_log, caminho=arquivo, tipo="SIG")
             except Exception as e:
@@ -91,6 +92,7 @@ class ImportarSig:
                 self._repo_log.registrar(
                     arquivo=arquivo.name, tipo="SIG",
                     hash_arquivo=hash_arq, status="ERRO", mensagem_erro=str(e),
+                    dt_arquivo=dt_arq,
                 )
                 self._extrato_leitor.mover_para_erros(arquivo, str(e))
                 continue
@@ -99,7 +101,7 @@ class ImportarSig:
             self._repo_log.registrar(
                 arquivo=arquivo.name, tipo="SIG",
                 hash_arquivo=hash_arq, total_registros=len(perfis),
-                status="SUCESSO",
+                status="SUCESSO", dt_arquivo=dt_arq,
             )
             self._extrato_leitor.mover_para_processados(arquivo)
             total_perfis += len(perfis)

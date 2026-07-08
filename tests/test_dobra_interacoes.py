@@ -69,7 +69,8 @@ class TestQuarentenaFluxo(_Base):
         q = self._rows("quarentena")
         self.assertEqual(len(q), 1)
         self.assertEqual(q[0]["usuario"], "R1")
-        self.assertEqual(q[0]["data_inicio"], "2026-06-01")
+        # data_inicio preserva a HORA do envio (bug: antes truncava p/ 00:00:00)
+        self.assertEqual(q[0]["data_inicio"], "2026-06-01 10:00:00")
         # prazo por caso (dias do formulario): data_fim = inicio + 15 dias
         self.assertEqual(q[0]["dias"], 15)
         self.assertEqual(q[0]["data_fim"], "2026-06-16")

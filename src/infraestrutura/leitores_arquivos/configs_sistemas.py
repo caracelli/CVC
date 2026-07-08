@@ -90,17 +90,21 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
 
     Sistema.SICA_ESFERA: ConfigLeitorSistema(
         sistema=Sistema.SICA_ESFERA,
-        skiprows=4,
+        skiprows=4,                  # 4 linhas de cabecalho de relatorio; header na 5a
+        encoding="cp1252",           # arquivo real e' cp1252 (acentos: Criacao/Alcada)
+        # Layout real do extrato (SICA_ESFERA_24_06.csv): login = 'ID',
+        # estabelecimento = 'Estab', sem acento em 'Data de Criacao'. CPF mascarado
+        # (vinculacao por e-mail/CPF-parcial+nome).
         colunas={
-            "usuario":       "Usuario",
+            "usuario":       "ID",
             "nome":          "Nome",
             "cpf":           "CPF",
             "email":         "E-mail",
             "perfil":        "Grupo",
             "situacao":      "Status",
-            "data_criacao":  "Data de Criaçăo",
+            "data_criacao":  "Data de Criacao",
             "ultimo_acesso": "Ultimo Acesso",
-            "filial":        "Filial",
+            "filial":        "Estab",
         },
         mapa_situacao={"ATIVO": "ATIVO", "INATIVO": "INATIVO", "BLOQUEADO": "BLOQUEADO"},
     ),

@@ -113,6 +113,19 @@ class TestVisualizadorDataLayer(unittest.TestCase):
         # tercX nao esta no rh_ativos -> default "Funcionário"
         self.assertEqual(users["tercX"]["divs"][0]["vinc"], "Funcionário")
 
+    # ---- Card 14: consolidacao multi-sistema + vinculo top-level (coluna das grids) ----
+    def test_consolidacao_multisistema_e_vinculo_top(self):
+        b = self._base("")
+        users = {u["u"]: u for u in b["users"]}
+        # CONSOLIDACAO: M1 aparece UMA vez com acessos em 2 sistemas (IC + SYSTUR)
+        self.assertEqual({d["sis"] for d in users["M1"]["divs"]}, {IC, SYSTUR})
+        # total global = PESSOAS distintas (multi-sistema conta 1x), nao a soma
+        self.assertEqual(len(b["users"]), 3)
+        # vinculo top-level por pessoa (fonte da coluna Vínculo nas grids)
+        self.assertEqual(users["M1"]["vinc"], "Funcionário")
+        self.assertEqual(users["M2"]["vinc"], "Terceiro")
+        self.assertEqual(users["tercX"]["vinc"], "Funcionário")
+
     def test_origem_label_por_div(self):
         b = self._base("")
         m1 = next(u for u in b["users"] if u["u"] == "M1")

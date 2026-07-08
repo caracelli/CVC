@@ -7,9 +7,10 @@ Permite:
 - (Futuro) Skip de reprocessamento se hash ja existe — hoje so loga aviso
 """
 import hashlib
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 from loguru import logger
 
@@ -27,6 +28,30 @@ def md5_arquivo(caminho: Path, bloco: int = 65536) -> str:
                 break
             h.update(chunk)
     return h.hexdigest()
+
+
+def data_modificacao(caminho) -> Optional[datetime]:
+    """Data de modificacao do PROPRIO arquivo (mtime) — a "Data de modificacao"
+    do Explorer, preservada na copia. E' a data de disponibilizacao do extrato,
+    nao a data em que foi importado."""
+    try:
+        return datetime.fromtimestamp(os.path.getmtime(caminho))
+    except OSError:
+        return None
+
+
+def mtimes_da_pasta(pasta) -> Dict[str, datetime]:
+    """{nome_do_arquivo: data de modificacao} de tudo na pasta (recursivo).
+    Tirado ANTES de o leitor mover os arquivos para PROCESSADOS."""
+    out: Dict[str, datetime] = {}
+    if not pasta or not os.path.isdir(pasta):
+        return out
+    for raiz, _dirs, arqs in os.walk(pasta):
+        for nome in arqs:
+            dt = data_modificacao(os.path.join(raiz, nome))
+            if dt is not None:
+                out[nome] = dt
+    return out
 
 
 class RepositorioLogImportacao:
@@ -47,7 +72,8 @@ class RepositorioLogImportacao:
 
     def registrar(self, *, arquivo: str, tipo: str, hash_arquivo: str,
                   total_registros: int = 0, status: str = "SUCESSO",
-                  mensagem_erro: str = None) -> None:
+                  mensagem_erro: str = None,
+                  dt_arquivo: datetime = None) -> None:
         with self._conexao.sessao() as sessao:
             sessao.add(LogImportacao(
                 arquivo=arquivo,
@@ -57,6 +83,7 @@ class RepositorioLogImportacao:
                 status=status,
                 mensagem_erro=mensagem_erro,
                 dt_importacao=datetime.now(),
+                dt_arquivo=dt_arquivo,
             ))
             sessao.commit()
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Regressao das DECISOES da entrega gravadas no config.xml de producao.
 
-Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.2.0,
+Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.3.1,
 entrega multi-sistema ate Oracle EBS (SYSTUR+IC+SICA_RA+SIGOT+ORACLE_EBS ativos;
 SICA_ESFERA/SIG/OPERA inativos), desligados/terceiros fora de escopo, painel
 multi-sistema (visualizador/sistema vazio). Se alguem mexer nesses flags sem
@@ -25,22 +25,22 @@ class TestConfigProducao(unittest.TestCase):
     def setUpClass(cls):
         cls.cfg = LeitorConfig(str(CONFIG)).carregar()
 
-    def test_versao_1_2_0(self):
-        self.assertEqual(self.cfg.versao, "1.2.0")
+    def test_versao_1_3_1(self):
+        self.assertEqual(self.cfg.versao, "1.3.1")
 
-    def test_sistemas_ate_oracle_ativos(self):
-        # Entrega multi-sistema ate Oracle EBS (Cards 6-11).
-        for sid in ("SYSTUR", "IC", "SICA_RA", "SIGOT", "ORACLE_EBS"):
+    def test_todos_os_sistemas_da_fase1_ativos(self):
+        # Fase 1 completa p/ homologacao: os 7 sistemas em escopo (Cards 6-13).
+        for sid in ("SYSTUR", "IC", "SICA_RA", "SIGOT", "ORACLE_EBS", "SIG", "SICA_ESFERA"):
             self.assertTrue(self.cfg.sistemas[sid].ativo, f"{sid} deveria estar ativo")
 
-    def test_demais_sistemas_inativos(self):
-        # Fora do escopo desta entrega (entram nas proximas fases).
-        for sid in ("SICA_ESFERA", "SIG", "OPERA_OPERACIONAL"):
-            self.assertFalse(self.cfg.sistemas[sid].ativo, f"{sid} deveria estar inativo")
+    def test_opera_fora_de_escopo(self):
+        # OPERA_OPERACIONAL nao esta no cronograma -> fora de escopo (inativo).
+        self.assertFalse(self.cfg.sistemas["OPERA_OPERACIONAL"].ativo)
 
-    def test_desligados_e_terceiros_fora_de_escopo(self):
+    def test_terceiros_em_escopo_desligados_fora(self):
+        # Terceiros ENTRARAM na Fase 1 (espelho); desligados sao Card 19 (fora).
+        self.assertTrue(self.cfg.rh_processar_terceiros)
         self.assertFalse(self.cfg.rh_processar_desligados)
-        self.assertFalse(self.cfg.rh_processar_terceiros)
 
     def test_painel_multi_sistema(self):
         # visualizador/sistema vazio = todos os sistemas ativos (SYSTUR + IC)

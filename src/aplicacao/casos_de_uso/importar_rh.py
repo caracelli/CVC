@@ -3,6 +3,9 @@ from loguru import logger
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.leitores_arquivos.leitor_rh import LeitorRh
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
+from infraestrutura.repositorios.repositorio_log_importacao import (
+    RepositorioLogImportacao, mtimes_da_pasta,
+)
 from aplicacao.casos_de_uso.registrar_historico import RegistrarHistorico
 
 
@@ -25,6 +28,7 @@ class ImportarRh:
         )
         self._repositorio = RepositorioFuncionarioSqlite(conexao)
         self._historico = RegistrarHistorico(conexao)
+        self._log = RepositorioLogImportacao(conexao)
         self._pasta_ativos = pasta_ativos
         self._pasta_desligados = pasta_desligados
         self._processar_desligados = processar_desligados
@@ -32,11 +36,19 @@ class ImportarRh:
     def executar(self):
         logger.info("=== Importação RH iniciada ===")
 
+        # data dos PROPRIOS arquivos (disponibilizacao) — capturada antes de o
+        # leitor mover os arquivos para PROCESSADOS.
+        mtimes = mtimes_da_pasta(self._pasta_ativos)
         ativos, arq_ativos = self._leitor.ler_ativos(self._pasta_ativos)
         if ativos:
             # CDC antes do merge: o estado anterior ainda está intacto no banco
             self._historico.registrar_ativos(ativos)
             self._repositorio.salvar_ativos(ativos, ", ".join(arq_ativos))
+            for nome in arq_ativos:
+                self._log.registrar(
+                    arquivo=nome, tipo="RH_ATIVOS", hash_arquivo="",
+                    total_registros=len(ativos), status="SUCESSO",
+                    dt_arquivo=mtimes.get(nome))
 
         desligados = []
         if self._processar_desligados:

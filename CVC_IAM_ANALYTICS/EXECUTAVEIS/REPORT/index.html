@@ -42,6 +42,41 @@ body{
 .hdr-meta{margin-left:auto;text-align:right;}
 .hdr-ref{font-size:15px;font-weight:700;color:var(--gold);text-shadow:0 1px 8px rgba(245,184,0,.4);}
 .hdr-upd{font-size:11px;color:#AEB8D4;}
+/* Link "Arquivos importados" — abaixo da faixa amarela, alinhado a direita */
+.bases-bar{flex:none;display:flex;justify-content:flex-end;padding:6px 32px 0;}
+.bases-link{display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  font:600 12px Arial;color:#2D6CDF;user-select:none;}
+.bases-link:hover{color:#1A4FB0;text-decoration:underline;}
+.bases-link:focus-visible{outline:2px solid #9DBDF5;outline-offset:2px;border-radius:4px;}
+.bases-link svg{width:15px;height:15px;flex:none;}
+
+/* Popup "Arquivos importados" — acordeao por setor (+/−) */
+.modal-bases{max-height:62vh;overflow-y:auto;overflow-x:hidden;}
+.bases-cap{font:700 10px Arial;color:#9099A6;text-transform:uppercase;letter-spacing:.5px;
+  margin-bottom:10px;}
+.bacc{border:1px solid #E7EBF2;border-radius:8px;margin-bottom:8px;overflow:hidden;}
+.bacc:last-child{margin-bottom:2px;}
+.bacc-h{width:100%;display:flex;align-items:center;gap:10px;background:#F7F9FC;border:none;
+  padding:10px 14px;cursor:pointer;text-align:left;}
+.bacc-h:hover{background:#EEF3FB;}
+.bacc-tg{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+  border-radius:4px;background:var(--gold);color:#1F2D5C;font:800 13px Arial;flex:none;line-height:1;}
+.bacc-tt{flex:1;font:700 11px Arial;color:#1F2D5C;text-transform:uppercase;letter-spacing:.4px;}
+.bacc-ct{font:700 10px Arial;color:#7B8294;background:#fff;border:1px solid #E2E7F0;
+  border-radius:10px;padding:1px 8px;}
+.bacc-b{padding:0 6px;}
+.bases-tbl{width:100%;border-collapse:collapse;table-layout:fixed;}
+.bases-tbl td{padding:8px;border-bottom:1px solid #F2F4F8;vertical-align:middle;font-size:12.5px;}
+.bases-tbl tr:last-child td{border-bottom:none;}
+.bases-tbl .bn{color:#1F2D5C;font-weight:700;}
+.bases-tbl .bd{color:#3A4156;text-align:right;white-space:nowrap;width:160px;
+  font-variant-numeric:tabular-nums;}
+.bases-tbl .bl{width:34px;text-align:right;}
+.bases-lupa{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+  border:1px solid #E2E7F0;border-radius:6px;background:#fff;cursor:pointer;color:#5A6376;
+  transition:.15s;}
+.bases-lupa:hover{border-color:var(--gold);background:#FFFBF0;color:#1F2D5C;}
+.bases-lupa svg{width:14px;height:14px;}
 
 /* ── Nav tabs ───────────────────────────────────────────────────────── */
 .nav{
@@ -311,6 +346,14 @@ tbody td{
 }
 /* Perfil encontrado com vários acessos: uma linha por perfil */
 td.perfil-cel{white-space:normal;line-height:1.45;overflow:visible;text-overflow:clip;}
+.esp-mais{display:inline-block;margin-left:5px;padding:0 6px;border-radius:9px;
+  background:#E8EEF7;color:#1F2D5C;border:1px solid #C5D2EA;font:700 10px Arial;
+  vertical-align:middle;cursor:pointer;transition:all .12s;}
+.esp-mais:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
+.esp-menos{display:inline-block;padding:0 7px;border-radius:9px;
+  background:#F4EDED;color:#B33A3A;border:1px solid #E2C9C9;font:700 10px Arial;
+  cursor:pointer;transition:all .12s;}
+.esp-menos:hover{background:#B33A3A;color:#fff;border-color:#B33A3A;}
 tbody td:last-child{border-right:none;}
 tbody tr{transition:background .12s;}
 tbody tr:nth-child(even){background:#F7F9FC;}
@@ -369,6 +412,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 #pg-vg::-webkit-scrollbar-thumb{background:rgba(31,45,92,.26);border-radius:5px;}
 #pg-vg::-webkit-scrollbar-thumb:hover{background:rgba(31,45,92,.45);}
 .vg-row{display:flex;gap:13px;flex:none;}
+.vg-exp-bar{flex:none;display:flex;justify-content:flex-end;margin-bottom:8px;}
 .vg-2col>.panel,.vg-2col-bg>.panel{flex:1;min-width:0;}
 .vg-3col>.panel{flex:1;min-width:0;}
 .vg-2col-bg>.panel:nth-child(1){flex:0 0 40%;}
@@ -433,6 +477,13 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .vg-donut-wrap{display:flex;gap:18px;align-items:center;}
 .vg-donut svg{width:140px;height:140px;}
 .vg-legenda{flex:1;display:flex;flex-direction:column;gap:7px;}
+.mot-combo{font:600 11px Arial;padding:3px 10px;border-radius:8px;border:1px solid #C5D2EA;
+  background:#F4F6FB;color:#1F2D5C;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+.mot-combo:hover{background:#EEF1F8;border-color:#1F2D5C;}
+.mot-combo .mot-caret{font-size:9px;opacity:.7;}
+.mot-wrap{align-items:flex-start;}
+.mot-wrap .vg-legenda{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:7px 22px;align-content:start;}
 .vg-leg-item{display:grid;grid-template-columns:12px 1fr auto;gap:8px;
   align-items:center;font-size:12px;}
 .vg-leg-item .dot{width:10px;height:10px;border-radius:50%;}
@@ -443,7 +494,8 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .vg-bars{display:flex;flex-direction:column;gap:7px;}
 .vg-bar-row{display:grid;grid-template-columns:90px 1fr 70px;gap:8px;
   align-items:center;font-size:12px;}
-.vg-bar-row .vg-bar-lbl{color:#5A6377;font-weight:600;}
+.vg-bar-row .vg-bar-lbl{color:#5A6377;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* Tabela top urgentes */
 .vg-tbl-wrap{flex:1;overflow:auto;}
@@ -712,6 +764,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .cs-pill.pend{background:#FBE5E5;color:#B33A3A;}
 .cs-pill.ok{background:#E5F3E5;color:#1E7B43;}
 .cs-pill.deslig{background:#FFF4DD;color:#A07000;}
+.cs-pill.incluir{background:#EBF5FB;color:#2980B9;}
 
 /* Popup flutuante da Consulta (não bloqueia a grid) */
 .cs-drawer-bg{display:none;} /* legado — overlay removido */
@@ -744,10 +797,21 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .cs-sub-acc-h .cs-sub-sis{background:var(--navy);color:#fff;
   padding:2px 8px;border-radius:4px;font-size:10px;}
 .cs-sub-acc-p{font:500 11.5px 'Segoe UI';color:#3A3F4C;
-  display:flex;justify-content:space-between;padding:3px 0;
-  border-top:1px dashed #E7EBF2;}
+  display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding:3px 0;border-top:1px dashed #E7EBF2;}
 .cs-sub-acc-p:first-of-type{border-top:none;}
-.cs-sub-acc-p .cs-sub-st{font-size:10.5px;font-weight:700;}
+.cs-sub-acc-p>span:first-child{min-width:0;overflow-wrap:anywhere;line-height:1.5;}
+.cs-sub-acc-p .cs-sub-st{font-size:10.5px;font-weight:700;flex:none;white-space:nowrap;}
+.cs-acc-toggle{display:inline-block;margin:5px 0 3px;font:700 10.5px Arial;
+  color:var(--navy);cursor:pointer;user-select:none;}
+.cs-acc-toggle:hover{text-decoration:underline;}
+.cs-acc-stgrp{margin:3px 0 5px;}
+.cs-acc-stlbl{font:800 10.5px Arial;padding:2px 0;letter-spacing:.2px;}
+td.cs-esp-cel{white-space:normal;font-size:11px;line-height:1.4;color:#3A3F4C;}
+td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
+.cs-esp-mais{display:inline-block;padding:0 6px;border-radius:9px;background:#E8EEF7;
+  color:#1F2D5C;border:1px solid #C5D2EA;font:700 10px Arial;cursor:pointer;transition:all .12s;}
+.cs-esp-mais:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
 .cs-expand-btn{cursor:pointer;color:var(--navy);font:700 14px Arial;
   text-align:center;user-select:none;transition:transform .15s;}
 .cs-expand-btn.aberto{transform:rotate(45deg);color:#B33A3A;}
@@ -790,10 +854,11 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .cs-drawer-bd .cs-acc-h .cs-acc-sis{background:var(--navy);color:#fff;
   padding:2px 8px;border-radius:4px;font-size:10px;}
 .cs-drawer-bd .cs-acc-p{font:500 11.5px 'Segoe UI';color:#3A3F4C;
-  display:flex;justify-content:space-between;padding:3px 0;
-  border-top:1px dashed #E7EBF2;}
+  display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding:3px 0;border-top:1px dashed #E7EBF2;}
 .cs-drawer-bd .cs-acc-p:first-of-type{border-top:none;}
-.cs-drawer-bd .cs-acc-p .cs-acc-st{font-size:10.5px;font-weight:700;}
+.cs-drawer-bd .cs-acc-p>span:first-child{min-width:0;overflow-wrap:anywhere;line-height:1.5;}
+.cs-drawer-bd .cs-acc-p .cs-acc-st{font-size:10.5px;font-weight:700;flex:none;white-space:nowrap;}
 .atl-btn.salvar{background:linear-gradient(180deg,var(--gold-l),var(--gold));
   border-color:var(--gold);color:var(--navy);
   box-shadow:0 2px 6px rgba(245,184,0,.35);}
@@ -871,6 +936,22 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   </div>
 </header>
 
+<div class="bases-bar">
+  <a class="bases-link" id="bases-btn" role="button" tabindex="0" onclick="abrirBases()"
+     title="Ver o último arquivo importado de cada base e a data do arquivo">
+    <svg class="bases-ico" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+      <!-- aba + corpo da pasta (amarelo do tema) -->
+      <path d="M2.5 6.4A1.6 1.6 0 0 1 4.1 4.8h3.9a1.6 1.6 0 0 1 1.13.47l1.02 1.02h8.25A1.6 1.6 0 0 1 22 7.9v9.7A1.6 1.6 0 0 1 20.4 19.2H4.1A1.6 1.6 0 0 1 2.5 17.6z" fill="#F5B800"/>
+      <path d="M2.5 9.2h19.5v8.4A1.6 1.6 0 0 1 20.4 19.2H4.1A1.6 1.6 0 0 1 2.5 17.6z" fill="#FFCE3A"/>
+      <!-- relogio dentro -->
+      <circle cx="12.2" cy="14" r="4" fill="#fff"/>
+      <circle cx="12.2" cy="14" r="4" fill="none" stroke="#1F2D5C" stroke-width="1.2"/>
+      <path d="M12.2 11.9V14l1.5 1" fill="none" stroke="#1F2D5C" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Arquivos importados
+  </a>
+</div>
+
 <nav class="nav">
   <div class="tab active" data-tab="vg">Visão Geral</div>
   <div class="tab"        data-tab="consulta">Consulta</div>
@@ -884,6 +965,12 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 
   <!-- ═══ VISÃO GERAL ═══ -->
   <div class="page active" id="pg-vg">
+    <div class="vg-exp-bar">
+      <button class="btn-exp" onclick="exportarVG()" title="Excel com todos os gráficos numa aba (com as fontes de dados)">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>
+        Exportar Visão Geral
+      </button>
+    </div>
     <!-- KPIs principais — paleta CVC (navy/gold) com acentos sóbrios de status -->
     <div class="kpi-row">
       <div class="kpi vg-kpi" style="background:#FFF7E0;border:1px solid #F5D77A;--kpi-bar:#F5B800;">
@@ -901,6 +988,11 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
       <div class="kpi vg-kpi" style="background:#EDE9F7;border:1px solid #C5BCE3;--kpi-bar:#5B47A8;">
         <div class="kpi-val" style="color:#5B47A8;" id="vg-k-quar">—</div>
         <div class="kpi-lbl" style="color:#5B47A8;">Em Quarentena</div>
+      </div>
+      <div class="kpi vg-kpi kpi-link" style="background:#EBF5FB;border:1px solid #C5D2EA;--kpi-bar:#2980B9;"
+           onclick="irConsultaIncluir()" title="Ver na Consulta os funcionários com acesso a incluir">
+        <div class="kpi-val" style="color:#2980B9;" id="vg-k-incluir">—</div>
+        <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso ↗</div>
       </div>
     </div>
 
@@ -965,14 +1057,27 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
       </div>
     </div>
 
-    <!-- Linha 3 — Divergências por tipo + Concentração por sistema -->
-    <div class="vg-row vg-2col-bg">
+    <!-- Linha 3 — Divergências por tipo + Motivos + Concentração por sistema -->
+    <div class="vg-row vg-3col">
       <div class="panel vg-panel">
         <div class="vg-title">🥧 Divergências por Tipo</div>
         <div class="vg-donut-wrap">
           <div id="vg-donut" class="vg-donut"></div>
           <div class="vg-legenda" id="vg-donut-leg"></div>
         </div>
+      </div>
+      <div class="panel vg-panel">
+        <div class="vg-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>🗂️ Motivos dos Tratamentos</span>
+          <button class="mot-combo" id="mot-combo" onclick="motAbrirPeriodo(this)" title="Selecionar período">
+            📅 <b id="mot-per-lbl">Tudo</b> <span class="mot-caret">▾</span>
+          </button>
+        </div>
+        <div class="vg-donut-wrap mot-wrap">
+          <div id="mot-donut" class="vg-donut"></div>
+          <div class="vg-legenda" id="mot-donut-leg"></div>
+        </div>
+        <p class="vg-soft vg-foot-note"><b>Sem motivo</b> = virou aderente sem tratamento no sistema.</p>
       </div>
       <div class="panel vg-panel">
         <div class="vg-title">📊 Concentração por Sistema</div>
@@ -1005,14 +1110,16 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
       </div>
     </div>
 
+
   </div>
 
   <!-- ═══ INCLUSÃO / ALTERAÇÃO ═══ -->
   <div class="page" id="pg-incl">
     <div class="kpi-row">
-      <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2980B9;">
-        <div class="kpi-val" style="color:#2980B9;">562</div>
-        <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso</div>
+      <div class="kpi kpi-link" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#2980B9;"
+           onclick="irConsultaIncluir()" title="Ver na Consulta os funcionários com acesso a incluir">
+        <div class="kpi-val" style="color:#2980B9;" id="kpi-incluir">0</div>
+        <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso ↗</div>
       </div>
       <div class="kpi" style="background:#EBF5FB;border:1px solid #D5E8F5;--kpi-bar:#154360;">
         <div class="kpi-val" style="color:#154360;">41</div>
@@ -1041,7 +1148,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
         <div id="filtros"></div>
       </div>
       <div class="incl-main">
-        <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="por-pagina" onchange="mudarPorPagina(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="pager"></span><span class="lista-total" id="incl-total"></span><span class="cs-vinculo-host" id="cs-vinculo-incl"></span><div class="atl-actions" id="atl-actions-incl"></div><button class="btn-exp" onclick="exportarInclusao()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+        <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="por-pagina" onchange="mudarPorPagina(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="pager"></span><span class="lista-total" id="incl-total"></span><span class="cs-vinculo-host" id="cs-vinculo-incl"></span><button class="atl-btn" onclick="limparFiltrosGrid()" title="Limpar todos os filtros desta grade (inclui o filtro salvo aplicado)">🧹 Limpar filtros</button><div class="atl-actions" id="atl-actions-incl"></div><button class="btn-exp" onclick="exportarInclusao()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
       <div class="content-panel">
         <div class="tbl-wrap">
           <table id="matrix-tbl">
@@ -1101,6 +1208,8 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
       <span class="pp-wrap">Itens por página:<select id="cs-pp" onchange="csPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span>
       <span class="pager" id="cs-pager"></span>
       <span class="lista-total" id="cs-total"></span>
+      <span id="cs-cat-badge"></span>
+      <button class="atl-btn" onclick="limparFiltrosGrid()" title="Limpar todos os filtros desta grade (busca, funis e o filtro salvo aplicado)">🧹 Limpar filtros</button>
       <div class="atl-actions" id="atl-actions-consulta"></div>
       <button class="btn-exp" onclick="csExportar()">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>
@@ -1125,6 +1234,9 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
             <col style="width:80px"><!-- Pendências -->
             <col style="width:130px"><!-- Última divergência -->
             <col style="width:120px"><!-- Status -->
+            <col style="width:240px"><!-- Perfil Encontrado -->
+            <col style="width:240px"><!-- Perfil Esperado -->
+            <col style="width:190px"><!-- E-mail -->
           </colgroup>
           <thead>
             <tr>
@@ -1134,6 +1246,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
               <th>Nome</th>
               <th>Login</th>
               <th>CPF</th>
+              <th>Vínculo</th>
               <th>Cargo</th>
               <th>Departamento</th>
               <th>Centro de Custo</th>
@@ -1141,6 +1254,9 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
               <th style="text-align:center;">Pendências</th>
               <th style="text-align:center;">Última divergência</th>
               <th style="text-align:center;">Status</th>
+              <th>Perfil Encontrado</th>
+              <th>Perfil Esperado</th>
+              <th>E-mail</th>
             </tr>
           </thead>
           <tbody id="cs-body"></tbody>
@@ -1175,7 +1291,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
              oninput="confBuscar()">
       <span class="conf-note">Ciclo: 🔴 Pendência → 🟡 Resolvido (ticket) → 🟢 Aderente · <b>tempo total</b> (d/h/min)</span>
     </div>
-    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="conf-pp" onchange="confPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="conf-pager"></span><span class="lista-total"></span><span class="cs-vinculo-host" id="cs-vinculo-conf"></span><div class="atl-actions" id="atl-actions-conf"></div><button class="btn-exp" onclick="exportarAderentes()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="conf-pp" onchange="confPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="conf-pager"></span><span class="lista-total"></span><span class="cs-vinculo-host" id="cs-vinculo-conf"></span><button class="atl-btn" onclick="limparFiltrosGrid()" title="Limpar todos os filtros desta grade (busca, funis e o filtro salvo aplicado)">🧹 Limpar filtros</button><div class="atl-actions" id="atl-actions-conf"></div><button class="btn-exp" onclick="exportarAderentes()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
     <div class="content-panel">
       <div class="tbl-wrap">
         <table id="conf-tbl">
@@ -1183,7 +1299,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
             <th>Matrícula</th><th>Nome</th><th>Login</th>
             <th>Sistema</th><th>Perfil aderente</th>
             <th>🔴 Pendência</th><th>🟡 Resolvido</th><th>🟢 Aderente</th>
-            <th>Ticket</th><th>⏱️ Tempo total</th>
+            <th>Ticket</th><th>⏱️ Tempo total</th><th>Vínculo</th>
           </tr></thead>
           <tbody id="conf-tbody"></tbody>
         </table>
@@ -1193,7 +1309,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 
   <!-- ═══ HISTÓRICO ═══ -->
   <div class="page" id="pg-hist">
-    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="hist-pp" onchange="histPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="hist-pager"></span><span class="lista-total" id="hist-count"></span><span class="cs-vinculo-host" id="cs-vinculo-hist"></span><div class="atl-actions" id="atl-actions-hist"></div><button class="btn-exp" onclick="exportarHistorico()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
+    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="hist-pp" onchange="histPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="hist-pager"></span><span class="lista-total" id="hist-count"></span><span class="cs-vinculo-host" id="cs-vinculo-hist"></span><button class="atl-btn" onclick="limparFiltrosGrid()" title="Limpar todos os filtros desta grade (funis, data e o filtro salvo aplicado)">🧹 Limpar filtros</button><div class="atl-actions" id="atl-actions-hist"></div><button class="btn-exp" onclick="exportarHistorico()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button></div>
     <div class="content-panel">
       <div class="tbl-wrap">
         <table id="hist-tbl">
@@ -1204,6 +1320,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
             <col style="width:170px">
             <col style="width:150px">
             <col style="width:260px">
+            <col style="width:96px">
           </colgroup>
           <thead>
             <tr>
@@ -1213,6 +1330,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
               <th>Movimentação</th>
               <th>Data</th>
               <th>Detalhe</th>
+              <th>Vínculo</th>
             </tr>
           </thead>
           <tbody id="hist-body"></tbody>
@@ -1227,6 +1345,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
       <button class="seg active" data-view="ativas"    onclick="quarView(this)">Ativas</button>
       <button class="seg"        data-view="historico" onclick="quarView(this)">Histórico</button>
       <span class="quar-count" id="quar-count"></span>
+      <button class="atl-btn" onclick="limparFiltrosGrid()" title="Limpar os filtros desta grade (funis e filtro de data)">🧹 Limpar filtros</button>
       <button class="btn-exp" style="margin-left:auto;" onclick="exportarQuarentena()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button>
     </div>
     <div class="content-panel">
@@ -1322,9 +1441,10 @@ function renderConformidade(){
     + `<td>${a.dt_resol ? fmtDH(a.dt_resol) : '—'}</td>`
     + `<td><span class="badge b-ok">${fmtDH(a.dt)}</span></td>`
     + `<td>${a.ticket ? esc(a.ticket) : '—'}</td>`
-    + `<td><b style="color:#16A085;white-space:nowrap;">${total}</b></td></tr>`;
+    + `<td><b style="color:#16A085;white-space:nowrap;">${total}</b></td>`
+    + `<td>${esc(a.vinc)||'—'}</td></tr>`;
   }).join('')
-    || '<tr><td colspan="10" style="text-align:center;color:#9AA3B5;padding:22px;">'
+    || '<tr><td colspan="11" style="text-align:center;color:#9AA3B5;padding:22px;">'
        + 'Nenhum acesso aderente ainda.</td></tr>';
   const pg = document.getElementById('conf-pager');
   if (pg) pg.innerHTML = rows.length === 0 ? '' :
@@ -1341,8 +1461,8 @@ const _confFilt = {};              // col idx -> Set de valores permitidos
 let _confData = {};                // col idx -> {tipo, de, ate}
 let _confDataCol = null;           // coluna do popover de data aberto
 const _CONF_DATECOL  = {5:'dt_pend', 6:'dt_resol', 7:'dt'};
-const _CONF_FUNILCOL = {3:'Sistema', 4:'Perfil aderente', 8:'Ticket'};
-const _CONF_NOME_COL = {'Sistema':3, 'Perfil aderente':4, 'Ticket':8};
+const _CONF_FUNILCOL = {3:'Sistema', 4:'Perfil aderente', 8:'Ticket', 10:'Vínculo'};
+const _CONF_NOME_COL = {'Sistema':3, 'Perfil aderente':4, 'Ticket':8, 'Vínculo':10};
 const _CONF_DATENOME = {5:'Pendência', 6:'Resolvido', 7:'Aderente'};
 const _CONF_DATENOME_COL = {'Pendência':5, 'Resolvido':6, 'Aderente':7};
 
@@ -1350,6 +1470,7 @@ function _confDisp(c, a){
   if (c === 3) return a.sis || '—';
   if (c === 4) return a.perfil || '—';
   if (c === 8) return a.ticket || '(sem ticket)';
+  if (c === 10) return a.vinc || '—';
   return '—';
 }
 function _confResolveData(fd){
@@ -1390,12 +1511,12 @@ function _confRowsFiltradas(){
 function exportarAderentes(){
   const rows = _confRowsFiltradas();
   const cols = ['Matrícula','Nome','Login','Cargo','Sistema','Perfil aderente',
-                'Pendência','Resolvido','Aderente','Ticket','Tempo total'];
+                'Pendência','Resolvido','Aderente','Ticket','Tempo total','Vínculo'];
   // datas formatadas (dd/mm/aaaa hh:mm:ss) igual a grid — nao crua/ISO
   const linhas = rows.map(a => [a.m, a.n, a.login, a.cargo, a.sis, a.perfil,
                 a.dt_pend ? fmtDH(a.dt_pend) : '', a.dt_resol ? fmtDH(a.dt_resol) : '',
                 a.dt ? fmtDH(a.dt) : '', a.ticket || '',
-                _durStr(a.dt_pend, a.dt)]);
+                _durStr(a.dt_pend, a.dt), a.vinc || '']);
   baixarExcel('Aderentes', cols, linhas, linhas.map(() => 0));
 }
 function _confMenu(c, th){
@@ -1610,7 +1731,10 @@ function montarFiltros(){
     let vals;
     if (f.id === 'status') vals = ['Pendente', 'Resolvido'];
     else { vals = valoresFiltro(f.campo);
-           if (f.id === 'tipo' || f.id === 'acao') vals = vals.filter(v => v !== 'Aderente'); }
+           // Aderente e Incluir Acesso (tipo "Sem Acesso") nao sao pendencias:
+           // fora dos slicers de Ação/Tipo da aba Pendências.
+           if (f.id === 'tipo' || f.id === 'acao')
+             vals = vals.filter(v => v !== 'Aderente' && v !== 'Incluir Acesso' && v !== 'Sem Acesso'); }
     filtroSel[f.id] = new Set(vals);
     const comInfo = (f.id === 'acao' || f.id === 'status' || f.id === 'tipo');
     const todos = `<button class="pill yellow" data-all="1" onclick="filtroTodos('${f.id}',this)">Desmarcar Todos</button>`;
@@ -1666,9 +1790,10 @@ function filtroTodos(fid, btn){
 }
 
 function divPassa(d){
-  // Aderente não é filtrável por Ação/Status/Tipo (não aparece em Pendências;
-  // na Consulta deve sempre passar). Filtra só por Vínculo e Sistema.
-  const ad = d.a === 'Aderente';
+  // Aderente e Incluir Acesso (SEM_ACESSO) NÃO são pendências: não aparecem na
+  // aba Pendências nem são filtráveis por Ação/Status/Tipo; na Consulta devem
+  // sempre passar. Filtram só por Vínculo e Sistema.
+  const ad = d.a === 'Aderente' || d.a === 'Incluir Acesso';
   return (!filtroSel.vinculo || filtroSel.vinculo.has(d.vinc)) &&
          (ad || !filtroSel.acao    || filtroSel.acao.has(d.a))    &&
          (ad || !filtroSel.status  || filtroSel.status.has(d.s))  &&
@@ -2079,7 +2204,7 @@ function renderMatrix(){
   // Pendências = só pendências. Aderente (conforme) NÃO entra aqui — tem a aba
   // própria (Aderentes). Remove as linhas Aderente e quem só tem Aderente.
   _usersFiltrados = DB.users
-    .map(u => ({...u, divs: u.divs.filter(d => d.a !== 'Aderente')}))
+    .map(u => ({...u, divs: u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso')}))
     .filter(u => u.divs.length > 0 && u.divs.some(divPassa));
   const fp = Object.entries(_filtPend);
   if(fp.length) _usersFiltrados = _usersFiltrados.filter(u =>
@@ -2110,6 +2235,9 @@ function pintarPagina(){
     const ddivs = _divsDisplayA(u.divs);   // Opção A: 1 linha por perfil ENCONTRADO
     const hasMore = ddivs.length > 1;
     const d0 = ddivs[0];
+    // So resume "+N" quando ha perfil ESPERADO de verdade. "Sem Vínculo RH"
+    // (nao mapeado) tem esperado "—" — ausencia de valor, nao um perfil.
+    const _temEsp = !!(d0.pp && String(d0.pp).trim() && String(d0.pp).trim() !== '—');
     h += `<tr data-u="${esc(u.u)}" data-n="${esc(u.n)}">
       <td>${fmtDH(d0.dt)}</td>
       <td style="text-align:center;"><button class="qbtn" title="Enviar para quarentena" aria-label="Enviar para quarentena" onclick="quarentenar('${u.u}')"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V7"/><path d="M6 13l6-6 6 6"/><path d="M5 21h14"/></svg></button></td>
@@ -2124,10 +2252,20 @@ function pintarPagina(){
       <td>${esc(u.c)||'—'}</td>
       <td>${tipoBadge(d0.t,d0.tl)}</td>
       <td class="perfil-cel">${_perfilBr(d0.pe)}</td>
-      <td class="perfil-cel">${_perfilBr(d0.pp)}</td>
+      <td class="perfil-cel">${hasMore
+        ? ('<span class="esp-resumo"' + (_inclExpand.has(u.u) ? ' style="display:none"' : '') + '>'
+            + (_temEsp
+                ? (_perfilBr(d0.pp) + ' <span class="esp-mais" onclick="expandirDaLinha(this)" title="' + (ddivs.length - 1) + ' outro(s) perfil(is) esperado(s) — clique para expandir">+' + (ddivs.length - 1) + '</span>')
+                : '—')
+            + '</span>'
+          + '<span class="esp-menos"' + (_inclExpand.has(u.u) ? '' : ' style="display:none"') + ' onclick="recolherDaLinha(this)" title="Recolher">− recolher</span>')
+        : _perfilBr(d0.pp)}</td>
       <td style="text-align:center;">${esc(d0.o)||'—'}</td>
     </tr>`;
-    ddivs.slice(1).forEach(d => {
+    // Quando ha varios perfis, TODOS (inclusive o 1o) viram sublinha e o
+    // "Perfil Esperado" da linha principal fica em branco. Com 1 so perfil,
+    // ele segue na propria linha principal (nada a expandir).
+    (hasMore ? ddivs : []).forEach(d => {
       h += `<tr class="sub-row" data-u="${esc(u.u)}" data-n="${esc(u.n)}" data-sub="${rowIdx}" style="display:${_inclExpand.has(u.u)?'table-row':'none'};">
         <td>${fmtDH(d.dt)}</td>
         <td></td>
@@ -2188,8 +2326,30 @@ function toggleSubs(btn){
   document.querySelectorAll(`#matrix-body [data-sub="${row}"]`).forEach(r =>
     r.style.display = isOpen ? 'none' : 'table-row'
   );
+  // Linha principal: resumo (Perfil Esperado) e Qtd aparecem recolhidos e somem
+  // ao expandir; o "− recolher" faz o inverso. isOpen = estava aberto (recolhendo).
+  const mainRow = btn.closest('tr');
+  if (mainRow) {
+    const resumo = mainRow.querySelector('.esp-resumo');
+    const menos  = mainRow.querySelector('.esp-menos');
+    if (resumo) resumo.style.display = isOpen ? '' : 'none';
+    if (menos)  menos.style.display  = isOpen ? 'none' : '';
+  }
   btn.textContent = isOpen ? '+' : '-';
   if (uid) { if (isOpen) _inclExpand.delete(uid); else _inclExpand.add(uid); }
+}
+
+/* Clique no badge "+N" (Perfil Esperado): expande a linha via o botao +/- dela. */
+function expandirDaLinha(el){
+  const tr = el.closest('tr');
+  const btn = tr && tr.querySelector('.expand-btn');
+  if (btn && btn.textContent === '+') toggleSubs(btn);
+}
+/* Clique no "− recolher" (Perfil Esperado, aparece expandido): recolhe a linha. */
+function recolherDaLinha(el){
+  const tr = el.closest('tr');
+  const btn = tr && tr.querySelector('.expand-btn');
+  if (btn && btn.textContent === '-') toggleSubs(btn);
 }
 
 /* ── Auto-refresh por ociosidade (10s sem interacao) ──────────────────── */
@@ -2275,6 +2435,12 @@ function _vgDonut(div_tipos){
     + `</svg>`;
   return { svg, leg };
 }
+// Rotulo curto/amigavel por sistema (so nomes reais; evita o id comprido
+// IC_INTEGRADOR_CONTABIL encavalar a barra). Chaves nao mapeadas ficam como vem.
+const SIS_LABEL = {
+  'IC_INTEGRADOR_CONTABIL':'IC', 'SICA_RA':'SICA RA', 'SICA_ESFERA':'SICA Esfera',
+  'ORACLE_EBS':'Oracle EBS', 'OPERA_OPERACIONAL':'Opera'
+};
 function _vgBarras(host, dados, opcoesCorPorChave){
   if (!dados || !Object.keys(dados).length) { host.innerHTML = '<div class="vg-soft">sem dados</div>'; return; }
   const max = Math.max(...Object.values(dados));
@@ -2282,7 +2448,8 @@ function _vgBarras(host, dados, opcoesCorPorChave){
   host.innerHTML = items.map(([k, v]) => {
     const pct = max ? (100 * v / max) : 0;
     const cor = (opcoesCorPorChave && opcoesCorPorChave[k]) || '#1F2D5C';
-    return `<div class="vg-bar-row"><span class="vg-bar-lbl">${k}</span>`
+    const lbl = SIS_LABEL[k] || k;
+    return `<div class="vg-bar-row"><span class="vg-bar-lbl" title="${esc(k)}">${esc(lbl)}</span>`
          + `<div class="vg-bar-track"><div class="vg-bar-fill" style="background:${cor};width:${pct.toFixed(1)}%"></div></div>`
          + `<span class="vg-bar-val">${_vgFmt(v)}</span></div>`;
   }).join('');
@@ -2564,6 +2731,45 @@ function limparFiltroAplicado(){
   try { localStorage.removeItem(_chaveLS(origem)); } catch(e) {}
 }
 
+/* Botao "Limpar filtros" das grids (sempre visivel na barra de cada aba).
+   Zera TODOS os filtros da grade em foco: funis por coluna, filtro de data,
+   slicers laterais, busca livre e o badge verde "Aplicado" (atalho salvo). */
+function limparFiltrosGrid(){
+  if (_tabAtual === 'quar') {
+    // Quarentena nao usa atalhos/badge: so funil generico + filtro de data
+    if (_gridSt['quar-tbl']) _gridSt['quar-tbl'].filt = {};   // mantem a ordenacao
+    _quarDataFilt = {};
+    pintarQuarentena();
+    return;
+  }
+  if (_tabAtual === 'incl') {
+    // Pendencias: limpa SO os filtros da GRADE (funis de coluna + filtro de
+    // data) e o badge verde "Aplicado". Os slicers laterais da ESQUERDA
+    // (Vinculo/Acao/Status/Tipo/Sistema) sao escopo do usuario — NAO tocar.
+    if (typeof _filtPend === 'object' && _filtPend)
+      Object.keys(_filtPend).forEach(k => delete _filtPend[k]);
+    if (typeof _filtData === 'object' && _filtData) {
+      _filtData.tipo = ''; _filtData.de = ''; _filtData.ate = '';
+    }
+    _atalhoAplicadoId.incl = null;
+    try { localStorage.removeItem(_chaveLS('incl')); } catch(e) {}
+    renderAtalhosOpcaoC('incl');
+    paginaAtual = 1;
+    comHandling(renderMatrix);
+    return;
+  }
+  // Consulta / Aderentes / Historico nao tem slicers laterais — limpam funis,
+  // data, busca livre e o badge verde. Busca livre faz parte dos filtros.
+  if (_tabAtual === 'consulta') {
+    _csBusca = '';
+    const b = document.getElementById('cs-busca'); if (b) b.value = '';
+  } else if (_tabAtual === 'conf') {
+    const b = document.getElementById('conf-busca'); if (b) b.value = '';
+  }
+  // Reusa o limpar existente: reseta filtros da aba + badge verde + localStorage
+  limparFiltroAplicado();
+}
+
 /* Reseta TODOS os filtros (da aba em foco) e re-renderiza a grid. */
 function _resetTodosFiltros(){
   if (_tabAtual === 'hist') {
@@ -2579,6 +2785,7 @@ function _resetTodosFiltros(){
       Object.keys(_csFilt).forEach(k => delete _csFilt[k]);
     _csData = null;
     _csAbasFilt = null;
+    _csCatFiltro = null;
     if (typeof renderConsulta === 'function') renderConsulta();
     return;
   }
@@ -2668,8 +2875,8 @@ const _HIST_NOME_COL = Object.fromEntries(
    Cols filtraveis: 6 Cargo, 7 Departamento, 8 Centro de Custo, 9 Sistemas,
                     10 Pendências, 11 Última divergência, 12 Status. */
 const _CS_COL_NOME = {
-  6:'Cargo', 7:'Departamento', 8:'Centro de Custo',
-  9:'Sistemas', 10:'Pendências', 11:'Última divergência', 12:'Status',
+  6:'Vínculo', 7:'Cargo', 8:'Departamento', 9:'Centro de Custo',
+  10:'Sistemas', 11:'Pendências', 12:'Última divergência', 13:'Status',
 };
 const _CS_NOME_COL = Object.fromEntries(
   Object.entries(_CS_COL_NOME).map(([c, n]) => [n, +c]));
@@ -2700,7 +2907,7 @@ function _filtrosAtivosAtuais(){
   if (t === 'consulta') {
     if (typeof _csFilt === 'object' && _csFilt) {
       Object.entries(_csFilt).forEach(([col, sel]) => {
-        if (+col === 11) return;            // Última div -> filtro de data
+        if (+col === 12) return;            // Última div -> filtro de data
         const nome = _CS_COL_NOME[+col];
         if (!nome || !sel) return;
         for (const v of sel) out.push(['cs:' + nome, v]);
@@ -3036,6 +3243,7 @@ function renderVisaoGeral(){
   const k = document.getElementById('vg-k-cob');
   if (k) k.textContent = (vg.cobertura_pct != null) ? Math.round(vg.cobertura_pct) + '%' : '—';
   _vgKpi('vg-k-quar', vg.quarentena_ativa);
+  _vgKpi('vg-k-incluir', vg.incluir);
   // Chamados
   _vgChamados(vg);
   // Tempo de tratamento (ciclo de vida)
@@ -3055,6 +3263,86 @@ function renderVisaoGeral(){
   _vgBarras(document.getElementById('vg-aging'), vg.aging, corAging);
   // Top urgentes
   _vgTopUrgentes(document.getElementById('vg-top-body'), vg.top_urgentes);
+  // Motivos dos tratamentos (donut com período próprio — busca no servidor)
+  carregarMotivos();
+}
+
+/* ── Motivos dos Tratamentos (donut com combo de período = _dtMenu das grids) ── */
+let _motFd = null;   // filtro de data no MESMO formato do _dtMenu ({tipo,de,ate})
+function _motRange(){
+  const fd = _motFd;
+  if (!fd || !fd.tipo) return { de: '', ate: '' };
+  const hoje = new Date();
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const dec = (d,n) => { const x=new Date(d); x.setDate(x.getDate()-n); return x; };
+  switch (fd.tipo) {
+    case 'hoje': return { de: fmt(hoje), ate: fmt(hoje) };
+    case '7d':   return { de: fmt(dec(hoje,6)), ate: fmt(hoje) };
+    case 'mes':  return { de: fmt(new Date(hoje.getFullYear(), hoje.getMonth(), 1)), ate: fmt(hoje) };
+    case 'ano':  return { de: fmt(new Date(hoje.getFullYear(), 0, 1)), ate: fmt(hoje) };
+    case 'range':return { de: fd.de || '', ate: fd.ate || '' };
+  }
+  return { de: '', ate: '' };
+}
+function _motSyncLabel(){
+  const el = document.getElementById('mot-per-lbl'); if (!el) return;
+  const fd = _motFd;
+  el.textContent = (!fd || !fd.tipo) ? 'Tudo'
+    : ({hoje:'Hoje','7d':'Últimos 7 dias',mes:'Este mês',ano:'Este ano'}[fd.tipo]
+       || (fd.tipo === 'range' ? `${fd.de||'…'} → ${fd.ate||'…'}` : 'Tudo'));
+}
+function motAbrirPeriodo(el){
+  _dtMenu(el, _motFd, fd => { _motFd = fd; _motSyncLabel(); carregarMotivos(); });
+}
+/* Exporta a Visão Geral inteira num Excel de UMA aba (todos os gráficos +
+   fontes de dados). O período segue o combo dos Motivos. */
+function exportarVG(){
+  const { de, ate } = _motRange();
+  window.location = `/api/exportar-vg?de=${encodeURIComponent(de||'')}&ate=${encodeURIComponent(ate||'')}`;
+}
+async function carregarMotivos(){
+  const host = document.getElementById('mot-donut'), leg = document.getElementById('mot-donut-leg');
+  if (!host || !leg) return;
+  const { de, ate } = _motRange();
+  let data = { total: 0, itens: [] };
+  try {
+    const r = await fetch(`/api/motivos-tratados?de=${encodeURIComponent(de)}&ate=${encodeURIComponent(ate)}`);
+    data = await r.json();
+  } catch (e) {}
+  if (!data.itens || !data.itens.length) {
+    host.innerHTML = '';
+    leg.innerHTML = '<div class="vg-soft" style="padding:8px;">Nenhum tratamento no período.</div>';
+    return;
+  }
+  const d = _motDonut(data.itens, data.total);
+  host.innerHTML = d.svg; leg.innerHTML = d.leg;
+}
+function _motDonut(itens, total){
+  const paleta = ['#2C7BB6','#27AE60','#E08A1E','#8E44AD','#16A085','#C0392B',
+                  '#2980B9','#D4AC0D','#7F8C8D','#5B47A8'];
+  const SEM = '#B0B7C3';
+  const tot = total || itens.reduce((a, b) => a + b.n, 0) || 1;
+  const cx = 70, cy = 70, r = 52, perim = 2 * Math.PI * r;
+  let inicio = -90, arcs = '', leg = '', ci = 0;
+  itens.forEach(it => {
+    const frac = it.n / tot, pct = (frac * 100).toFixed(1);
+    const cor = it.motivo === 'Sem motivo' ? SEM : paleta[ci++ % paleta.length];
+    const dash = frac * perim, gap = perim - dash, offVis = -inicio * (perim / 360);
+    arcs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${cor}" `
+         + `stroke-width="20" stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" `
+         + `stroke-dashoffset="${offVis.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})" />`;
+    inicio += frac * 360;
+    leg += `<div class="vg-leg-item"><span class="dot" style="background:${cor}"></span>`
+         + `<span>${esc(it.motivo)}</span>`
+         + `<span class="vg-leg-val">${_vgFmt(it.n)} <small>(${pct}%)</small></span></div>`;
+  });
+  const svg = `<svg viewBox="0 0 140 140">`
+    + `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(31,45,92,.08)" stroke-width="20" />`
+    + arcs
+    + `<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="19" font-weight="700" fill="#1F2D5C">${_vgFmt(tot)}</text>`
+    + `<text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="8.5" fill="#7B8294">casos</text>`
+    + `</svg>`;
+  return { svg, leg };
 }
 async function recarregarAbaAtual(){
   await refreshDB();
@@ -3097,8 +3385,8 @@ function quarentenar(uid){
     '<div class="modal-hd"><h3>Enviar para quarentena</h3>'
     + '<p>' + esc(nome) + '</p></div>'
     + '<div class="modal-bd">'
-    + '<label>Quantidade de dias <span class="req">*</span></label>'
-    + '<input id="quar-dias" type="number" min="1" step="1" placeholder="ex: 30" '
+    + '<label>Quantidade de dias <span class="req">*</span> <span style="color:#7B8294;font-weight:400;">(máx. 90)</span></label>'
+    + '<input id="quar-dias" type="number" min="1" max="90" step="1" placeholder="ex: 30" '
     + 'autocomplete="off" inputmode="numeric">'
     + '<label>Nº do ticket (opcional)</label>'
     + '<input id="quar-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
@@ -3125,6 +3413,10 @@ async function confirmarQuarentena(){
   const err = document.getElementById('quar-err');
   if(!dias || dias < 1){
     err.textContent = 'Informe a quantidade de dias (maior que zero).';
+    document.getElementById('quar-dias').focus(); return;
+  }
+  if(dias > 90){
+    err.textContent = 'O limite da quarentena é 90 dias. Informe um valor até 90.';
     document.getElementById('quar-dias').focus(); return;
   }
   if(!titulo){
@@ -3200,6 +3492,8 @@ function abrirResolver(uid){
     + '<div class="modal-bd">'
     + '<label>Nº do ticket do Jira <span class="req">*</span></label>'
     + '<input id="res-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
+    + '<label>Motivo <span class="req">*</span></label>'
+    + '<select id="res-motivo"><option value="" disabled selected>Carregando motivos…</option></select>'
     + '<label>Link do ticket</label>'
     + '<input id="res-url" placeholder="https://..." autocomplete="off">'
     + '<label>Descrição</label>'
@@ -3210,7 +3504,24 @@ function abrirResolver(uid){
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
     + '<button class="mf-ok" onclick="confirmarResolucao()">Confirmar resolução</button>'
     + '</div>');
+  _preencherMotivos();
   setTimeout(() => { const i = document.getElementById('res-ticket'); if(i) i.focus(); }, 60);
+}
+
+// Motivos do combobox de resolucao — vem do XML (via /api/motivos-resolucao),
+// carregados 1x e cacheados. Atualizam junto com a versao do sistema.
+let _MOTIVOS_RES = null;
+function _preencherMotivos(){
+  const fill = (lista) => {
+    const sel = document.getElementById('res-motivo');
+    if(!sel) return;
+    sel.innerHTML = '<option value="" disabled selected>Selecione o motivo…</option>'
+      + (lista||[]).map(m => '<option value="'+esc(m)+'">'+esc(m)+'</option>').join('');
+  };
+  if(_MOTIVOS_RES){ fill(_MOTIVOS_RES); return; }
+  fetch('/api/motivos-resolucao').then(r => r.json())
+    .then(m => { _MOTIVOS_RES = Array.isArray(m) ? m : []; fill(_MOTIVOS_RES); })
+    .catch(() => fill([]));
 }
 
 async function confirmarResolucao(){
@@ -3218,10 +3529,16 @@ async function confirmarResolucao(){
   const ticket = document.getElementById('res-ticket').value.trim();
   const url    = document.getElementById('res-url').value.trim();
   const desc   = document.getElementById('res-desc').value.trim();
+  const motivo = document.getElementById('res-motivo').value;
   if(!ticket){
     document.getElementById('res-err').textContent =
       'O número do ticket do Jira é obrigatório.';
     document.getElementById('res-ticket').focus();
+    return;
+  }
+  if(!motivo){
+    document.getElementById('res-err').textContent = 'Selecione o motivo da resolução.';
+    document.getElementById('res-motivo').focus();
     return;
   }
   const uid = _resAlvo.u;
@@ -3231,7 +3548,7 @@ async function confirmarResolucao(){
   try{
     const r = await fetch('/api/resolver', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({id:uid, ticket:ticket, ticket_url:url, descricao:desc})
+      body: JSON.stringify({id:uid, ticket:ticket, ticket_url:url, descricao:desc, motivo:motivo})
     });
     const j = await r.json();
     if(j && j.ok){
@@ -3320,6 +3637,8 @@ function _modalResolucao(sub, rc){
     + '</div></div>'
     + '<div><div class="vw-lbl">Resolvido em</div><div class="vw-val">'
     + (rc.em ? fmtDT(rc.em) : '—') + '</div></div></div>'
+    + '<div class="vw-lbl vw-mt">Motivo</div><div class="vw-val">'
+    + (esc(rc.motivo) || '—') + '</div>'
     + '<div class="vw-lbl vw-mt">Link do Jira</div><div>' + link + '</div>'
     + '<div class="vw-lbl vw-mt">Descrição</div><div>' + dsc + '</div>'
     + '</div>'
@@ -3360,7 +3679,6 @@ function _modalQuarentena(rec){
     + '<div><div class="vw-lbl">Fim</div><div class="vw-val">' + (rec.data_fim ? fmtDT(rec.data_fim) : '—') + '</div></div></div>'
     + '<div class="vw-lbl vw-mt">Motivo</div><div>' + motent + '</div>'
     + (saida ? '<div class="vw-mt">' + saida + '</div>' : '')
-    + (rec.criado_por ? '<div class="vw-lbl vw-mt">Enviado por</div><div class="vw-val">' + esc(rec.criado_por) + '</div>' : '')
     + '</div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Fechar</button></div>');
@@ -3370,6 +3688,78 @@ function verQuarentena(id){
   const rec = (quarData.ativas || []).find(x => String(x.id) === String(id))
     || (quarData.historico || []).find(x => String(x.id) === String(id));
   if(rec) _modalQuarentena(rec);
+}
+
+/* ── Popup "Arquivos importados": ultimo arquivo de cada base + data do arquivo ── */
+let _basesItens = {};   // tipo -> item (p/ a lupa de detalhe)
+function _dtArqHtml(it){
+  return it.dt_arquivo ? fmtDH(it.dt_arquivo)
+    : '<span style="color:#C0392B;font-weight:700;">— sem data —</span>';
+}
+function toggleBacc(gi){
+  const b = document.getElementById('bacc-b-' + gi);
+  const tg = document.getElementById('bacc-tg-' + gi);
+  if(!b) return;
+  b.hidden = !b.hidden;
+  tg.textContent = b.hidden ? '+' : '−';
+}
+function _modalBases(gs){
+  _basesItens = {};
+  let corpo;
+  if(!gs || !gs.length){
+    corpo = '<div class="bases-cap">Nenhuma importação registrada ainda — '
+          + 'os dados aparecem após o próximo processamento.</div>';
+  } else {
+    corpo = '<div class="bases-cap">Clique em um setor (+) para ver os arquivos e datas</div>';
+    gs.forEach((g, gi) => {
+      let linhas = '';
+      g.itens.forEach(it => {
+        _basesItens[it.tipo] = it;
+        linhas += '<tr><td class="bn">' + esc(it.base) + '</td>'
+                + '<td class="bd">' + _dtArqHtml(it) + '</td>'
+                + '<td class="bl"><button class="bases-lupa" title="Ver o arquivo processado" '
+                + 'onclick="verBase(\'' + it.tipo + '\')">' + QUAR_LUPA + '</button></td></tr>';
+      });
+      corpo += '<div class="bacc">'
+             + '<button class="bacc-h" onclick="toggleBacc(' + gi + ')">'
+             + '<span class="bacc-tg" id="bacc-tg-' + gi + '">+</span>'
+             + '<span class="bacc-tt">' + esc(g.grupo) + '</span>'
+             + '<span class="bacc-ct">' + g.itens.length + '</span></button>'
+             + '<div class="bacc-b" id="bacc-b-' + gi + '" hidden>'
+             + '<table class="bases-tbl"><tbody>' + linhas + '</tbody></table></div></div>';
+    });
+  }
+  _modal(
+    '<div class="modal-hd"><h3>Arquivos importados</h3>'
+    + '<p>Último arquivo de cada base e a data do próprio arquivo</p></div>'
+    + '<div class="modal-bd modal-bases">' + corpo + '</div>'
+    + '<div class="modal-ft"><button class="mf-cancel" onclick="fecharModal()">Fechar</button></div>',
+    'lg');
+}
+function verBase(tipo){
+  const it = _basesItens[tipo];
+  if(!it) return;
+  const reg = (it.registros !== '' && it.registros != null)
+    ? Number(it.registros).toLocaleString('pt-BR') : '—';
+  _modal(
+    '<div class="modal-hd"><h3>Arquivo processado</h3><p>' + esc(it.base) + '</p></div>'
+    + '<div class="modal-bd modal-vw">'
+    + '<div class="vw-row"><div class="vw-lbl">Arquivo</div><div style="word-break:break-all;">'
+    + (esc(it.arquivo) || '—') + '</div></div>'
+    + '<div class="vw-row"><div class="vw-lbl">Data do arquivo (disponibilização)</div><div>'
+    + _dtArqHtml(it) + '</div></div>'
+    + '<div class="vw-row"><div class="vw-lbl">Processado em</div><div>'
+    + (it.dt_importacao ? fmtDH(it.dt_importacao) : '—') + '</div></div>'
+    + '<div class="vw-row"><div class="vw-lbl">Registros importados</div><div>' + reg + '</div></div>'
+    + '</div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="abrirBases()">‹ Voltar</button>'
+    + '<button class="mf-cancel" onclick="fecharModal()">Fechar</button></div>');
+}
+function abrirBases(){
+  fetch('/api/bases').then(r => r.json())
+    .then(gs => _modalBases(gs))
+    .catch(() => _modalBases(null));
 }
 
 document.addEventListener('keydown', e => {
@@ -3456,10 +3846,10 @@ function pintarQuarentena(){
   if(quarVista === 'ativas'){
     const rows = _quarFiltrar(quarData.ativas || []);
     cols.innerHTML = `<col style="width:104px"><col style="width:220px">`
-      + `<col style="width:92px"><col style="width:132px">`
+      + `<col style="width:92px"><col style="width:92px"><col style="width:132px">`
       + `<col style="width:132px"><col style="width:96px"><col style="width:112px">`;
     head.innerHTML = `<tr>
-      <th>Usuário</th><th>Nome</th><th>Sistema</th>
+      <th>Usuário</th><th>Nome</th><th>Sistema</th><th>Vínculo</th>
       <th>Data início</th><th>Data fim</th>
       <th style="text-align:center;">Dias restantes</th>
       <th style="text-align:center;" data-nf>Ação</th></tr>`;
@@ -3467,12 +3857,13 @@ function pintarQuarentena(){
       <td><strong style="color:#1F2D5C;">${esc(q.usuario)}</strong></td>
       <td>${esc(q.nome_usuario)}</td>
       <td>${esc(q.sistema)}</td>
+      <td>${esc(q.vinc)||'—'}</td>
       <td>${fmtDT(q.data_inicio)}</td>
       <td>${fmtDT(q.data_fim)}</td>
       <td style="text-align:center;font-weight:700;">${q.dias_restantes}</td>
       <td style="text-align:center;white-space:nowrap;"><button class="btn-res lupa" title="Ver dados da quarentena" onclick="verQuarentena('${q.id}')">${QUAR_LUPA}</button> <button class="qbtn-out" onclick="retirarQuarentena('${q.id}')">↩ Retirar</button></td>
     </tr>`).join('')
-      : `<tr><td colspan="7" style="text-align:center;padding:26px;color:#8A9099;">Ninguém em quarentena no momento.</td></tr>`;
+      : `<tr><td colspan="8" style="text-align:center;padding:26px;color:#8A9099;">Ninguém em quarentena no momento.</td></tr>`;
     cnt.textContent = rows.length + ' em quarentena';
   } else {
     const recs = _quarFiltrar(quarData.historico || []);
@@ -3482,11 +3873,11 @@ function pintarQuarentena(){
       grupos[r.usuario].push(r);
     });
     cols.innerHTML = `<col style="width:30px"><col style="width:104px">`
-      + `<col style="width:222px"><col style="width:90px">`
+      + `<col style="width:222px"><col style="width:90px"><col style="width:92px">`
       + `<col style="width:112px"><col style="width:112px"><col style="width:96px">`
       + `<col style="width:130px">`;
     head.innerHTML = `<tr>
-      <th></th><th>Usuário</th><th>Nome</th><th>Sistema</th>
+      <th></th><th>Usuário</th><th>Nome</th><th>Sistema</th><th>Vínculo</th>
       <th>Início</th><th>Saída</th>
       <th style="text-align:center;">Período</th><th>Motivo</th></tr>`;
     let h = '';
@@ -3497,6 +3888,7 @@ function pintarQuarentena(){
         <td><strong style="color:#1F2D5C;">${esc(e0.usuario)}</strong>${mais ? ` <span style="color:#9099A6;font-weight:700;">${eps.length}×</span>` : ''}</td>
         <td>${esc(e0.nome_usuario)}</td>
         <td>${esc(e0.sistema)}</td>
+        <td>${esc(e0.vinc)||'—'}</td>
         <td>${fmtDT(e0.data_inicio)}</td>
         <td>${fmtDT(e0.data_saida)}</td>
         <td style="text-align:center;">${e0.periodo_dias} dia(s)</td>
@@ -3506,7 +3898,7 @@ function pintarQuarentena(){
         h += `<tr class="sub-row" data-sub="${idx}" style="display:${_quarHistExpand.has(u)?'table-row':'none'};">
           <td></td>
           <td style="padding-left:16px;color:#7B8085;">↳</td>
-          <td>—</td><td>—</td>
+          <td>—</td><td>—</td><td>—</td>
           <td>${fmtDT(e.data_inicio)}</td>
           <td>${fmtDT(e.data_saida)}</td>
           <td style="text-align:center;">${e.periodo_dias} dia(s)</td>
@@ -3515,7 +3907,7 @@ function pintarQuarentena(){
       });
     });
     body.innerHTML = recs.length ? h
-      : `<tr><td colspan="8" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma quarentena encerrada ainda.</td></tr>`;
+      : `<tr><td colspan="9" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma quarentena encerrada ainda.</td></tr>`;
     cnt.textContent = ordem.length +
       (ordem.length === 1 ? ' usuário no histórico' : ' usuários no histórico');
   }
@@ -3607,10 +3999,10 @@ let _histRecs=[], _histOrd=null, _histPag=1, _histPP=50;
 let _histData=null;   // filtro de data (col 4) — {tipo,de,ate}
 const _histFilt={};
 const _histExpand=new Set();   // grupos expandidos (persiste no auto-refresh)
-/* colunas: 0=expand 1=Matrícula 2=Nome 3=Movimentação 4=Data 5=Detalhe */
+/* colunas: 0=expand 1=Matrícula 2=Nome 3=Movimentação 4=Data 5=Detalhe 6=Vínculo */
 function _histDisp(c,r){
   if(c===4) return fmtDate(r.data)||'—';
-  const v=[null,r.matricula,r.nome,r.movimentacao,null,r.campos][c];
+  const v=[null,r.matricula,r.nome,r.movimentacao,null,r.campos,r.vinc][c];
   return (v==null||v==='')?'—':String(v);
 }
 const _HMOV_CSS={'Admitido':'h-adm','Alterado':'h-alt',
@@ -3636,8 +4028,14 @@ function _histLupa(r, txt, fn){
 function histDet(r){
   if(r.tipo==='RESOLUCAO')
     return _histLupa(r, r.ticket || 'ticket', 'verResolucaoHist');
-  if(r.tipo==='PENDENCIA')
-    return _histLupa(r, _resumoPend(r.pendencias) || 'ver detalhes', 'verDetalheHist');
+  if(r.tipo==='PENDENCIA'){
+    const t = [r.sistema, r.perfil].filter(Boolean).join(' · ');
+    return _histLupa(r, t || _resumoPend(r.pendencias) || 'ver detalhes', 'verDetalheHist');
+  }
+  if(r.tipo==='ADERENTE'){
+    const t = [r.sistema, r.perfil].filter(Boolean).join(' · ');
+    return t ? esc(t) : (esc(r.campos)||'—');
+  }
   return esc(r.campos)||'—';
 }
 async function renderHistorico(){
@@ -3697,6 +4095,7 @@ function pintarHistorico(){
       <td>${histMov(hdr)}</td>
       <td>${fmtDate(hdr.data)}</td>
       <td>${histDet(hdr)}</td>
+      <td>${esc(hdr.vinc)||'—'}</td>
     </tr>`;
     resto.forEach(r=>{
       h+=`<tr class="sub-row" data-hsub="${gi}" style="display:${_histExpand.has(g.chave)?'table-row':'none'};">
@@ -3706,11 +4105,12 @@ function pintarHistorico(){
         <td>${histMov(r)}</td>
         <td>${fmtDate(r.data)}</td>
         <td>${histDet(r)}</td>
+        <td>${esc(r.vinc)||'—'}</td>
       </tr>`;
     });
   });
   if(body) body.innerHTML = h ||
-    `<tr><td colspan="6" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma movimentação registrada.</td></tr>`;
+    `<tr><td colspan="7" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma movimentação registrada.</td></tr>`;
   const cnt=document.getElementById('hist-count');
   if(cnt) cnt.innerHTML=
     `<strong style="color:#1F2D5C;font-size:14px;">`+
@@ -3832,6 +4232,7 @@ async function baixarExcel(arquivo, colunas, linhas, niveis, formatos){
 
 /* ── Aba Consulta (busca livre + tabela agregada + drawer drill-down) ─ */
 let _csBusca = '';
+let _csCatFiltro = null;   // filtro de categoria vindo de card (ex.: 'incluir')
 let _csUserAtivo = null;   // user object aberto no drawer
 let _csTab = 'ident';
 let _csData = null;        // filtro de data (col 11 = Última div) — {tipo,de,ate}
@@ -3856,6 +4257,9 @@ function _csNorm(s){
 function _csFiltrarUsers(){
   // Aplica MESMOS filtros laterais que a Inclusao + busca livre + funil por coluna
   let users = DB.users.filter(u => u.divs.some(divPassa));
+  // Filtro de categoria vindo de card (ex.: card "Incluir Acesso" -> so quem tem)
+  if (_csCatFiltro === 'incluir')
+    users = users.filter(u => u.divs.some(d => d.a === 'Incluir Acesso'));
   // Funil por coluna (Cargo, Departamento, CC, Sistemas, Pendências, Status) — col 11 (Última div) tem filtro de data
   const cf = Object.entries(_csFilt).filter(([c]) => +c !== 11);
   if (cf.length) users = users.filter(u =>
@@ -3880,6 +4284,30 @@ function _csFiltrarUsers(){
   return users;
 }
 
+/* Card "Incluir Acesso" -> abre a Consulta filtrada so por quem tem acesso a
+   incluir (igual o card Aderente abre a aba Aderentes). */
+function irConsultaIncluir(){
+  _csCatFiltro = 'incluir';
+  _csBusca = '';
+  const b = document.getElementById('cs-busca'); if (b) b.value = '';
+  _csPag = 1;
+  showPage('consulta');
+}
+function limparCatConsulta(){
+  _csCatFiltro = null;
+  _renderBadgeCatConsulta();
+  renderConsulta();
+}
+function _renderBadgeCatConsulta(){
+  const h = document.getElementById('cs-cat-badge');
+  if (!h) return;
+  h.innerHTML = (_csCatFiltro === 'incluir')
+    ? `<span class="atl-aplicado" title="Mostrando só funcionários com acesso a incluir">`
+      + `✓ Filtro: <b>Incluir Acesso</b>`
+      + `<span class="atl-aplicado-x" onclick="limparCatConsulta()" title="Limpar filtro">×</span></span>`
+    : '';
+}
+
 function renderConsulta(){
   const body = document.getElementById('cs-body');
   const totEl = document.getElementById('cs-total');
@@ -3893,7 +4321,7 @@ function renderConsulta(){
     ? '1 funcionário' : `${users.length.toLocaleString('pt-BR')} funcionários`;
 
   if (!users.length) {
-    body.innerHTML = '<tr><td colspan="13"><div class="cs-vazio">'
+    body.innerHTML = '<tr><td colspan="17"><div class="cs-vazio">'
       + (_csBusca
           ? `Nenhum resultado para <b>${esc(_csBusca)}</b>. Tente outro termo.`
           : 'Nenhum funcionário com os filtros atuais. Limpe os filtros ou ajuste.')
@@ -3909,19 +4337,25 @@ function renderConsulta(){
   const ini = (_csPag - 1) * _csPP;
   const lim = users.slice(ini, ini + _csPP);
   body.innerHTML = lim.map(u => {
-    // Calcula resumo: sistemas distintos + qtd divergencias + ultima data
+    // Calcula resumo: sistemas distintos + qtd divergencias + ultima data.
+    // "Incluir Acesso" NAO e' pendencia: 3 estados no pino -> pendente /
+    // incluir acessos / aderente. Um usuario so-Incluir NAO mostra "pendente".
     const sistemas = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
-    const pendentes = u.divs.filter(d => d.s === 'Pendente').length;
+    const nPend = u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso').length;
+    const abertos = u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.s === 'Pendente').length;
+    const temIncl = u.divs.some(d => d.a === 'Incluir Acesso');
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     const ultDt = datas.length ? datas[datas.length-1] : '';
-    const cls = pendentes > 0 ? 'pend' : 'ok';
-    const lbl = pendentes > 0 ? `${pendentes} pendente${pendentes>1?'s':''}` : 'Aderente';
+    let cls, lbl;
+    if (abertos > 0)      { cls = 'pend';    lbl = `${abertos} pendente${abertos>1?'s':''}`; }
+    else if (temIncl)     { cls = 'incluir'; lbl = 'Incluir acessos'; }
+    else                  { cls = 'ok';      lbl = 'Aderente'; }
     const uidEsc = esc(u.u);
     const matEsc = esc(u.m||'');
     const nomeEsc = esc(u.n||u.u||'');
     // Botão H só funciona se existir matrícula (chave do Histórico)
     // Botões A/P/H só aparecem se houver dado correspondente
-    const temPend = u.divs.some(d => d.a !== 'Aderente');
+    const temPend = u.divs.some(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso');
     const temAder = !!u.m && u.divs.some(d => d.a === 'Aderente');
     const temHist = !!u.m && _histMats.has(u.m);
     const btnP = temPend ? `<span class="cs-aba-btn p" onclick="csIrParaPend('${matEsc}','${uidEsc}','${nomeEsc}')" title="Ir para Pendências filtrando por ${nomeEsc}">P</span>` : '';
@@ -3934,17 +4368,22 @@ function renderConsulta(){
       <td><span class="cs-nome-link" onclick="csAbrirDrawer('${uidEsc}')" title="Abrir detalhes laterais">${esc(u.n)}</span></td>
       <td>${esc(u.login)||'—'}</td>
       <td>${esc(u.cpf)||'—'}</td>
+      <td>${esc(u.vinc)||'—'}</td>
       <td>${esc(u.c)||'—'}</td>
       <td>${esc(u.d)||'—'}</td>
       <td>${esc(u.cc)||'—'}</td>
       <td style="text-align:center;font-weight:700;color:var(--navy)">${sistemas}</td>
-      <td style="text-align:center;font-weight:700;color:${pendentes?'#B33A3A':'#1E7B43'}">${u.divs.filter(d => d.a !== 'Aderente').length}</td>
+      <td style="text-align:center;font-weight:700;color:${nPend?'#B33A3A':'#1E7B43'}">${nPend}</td>
       <td style="text-align:center;color:#3A3F4C;font-size:11px;">${ultDt ? fmtDH(ultDt) : '—'}</td>
       <td style="text-align:center;"><span class="cs-pill ${cls}">${lbl}</span></td>
+      <td class="cs-esp-cel">${_csEncCol(u)}</td>
+      <td class="cs-esp-cel">${_csEspCol(u)}</td>
+      <td class="cs-email-cel">${esc(u.email)||'—'}</td>
     </tr>`;
   }).join('');
   equiparCs();
   _csPager(totPag);
+  _renderBadgeCatConsulta();
 }
 function _csPager(totPag){
   const pg = document.getElementById('cs-pager');
@@ -3961,22 +4400,23 @@ function csIr(p){ _csPag = p; renderConsulta(); }
 
 /* ── Funil por coluna na grid Consulta ───────────────────────────────── */
 function _csDisp(c, u){
-  if (c === 6) return u.c || '—';
-  if (c === 7) return u.d || '—';
-  if (c === 8) return u.cc || '—';
-  if (c === 9) {
+  if (c === 6) return u.vinc || '—';
+  if (c === 7) return u.c || '—';
+  if (c === 8) return u.d || '—';
+  if (c === 9) return u.cc || '—';
+  if (c === 10) {
     const n = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
     return String(n);
   }
-  if (c === 10) {
+  if (c === 11) {
     return String(u.divs.filter(d => d.s === 'Pendente').length);
   }
-  if (c === 11) {
+  if (c === 12) {
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     if (!datas.length) return '—';
     return fmtDate(datas[datas.length-1]) || '—';   // só data (dia)
   }
-  if (c === 12) {
+  if (c === 13) {
     return u.divs.some(d => d.s === 'Pendente') ? 'Pendente' : 'Aderente';
   }
   return '—';
@@ -4050,12 +4490,12 @@ function equiparCs(){
       mk.innerHTML = _SVG_FUNIL;
       mk.onclick = ev => { ev.stopPropagation();
         if (ehAbas) _csAbasMenu(th);
-        else if (c === 11) _dtMenu(th, _csData, fd => { _csData = fd; renderConsulta();
+        else if (c === 12) _dtMenu(th, _csData, fd => { _csData = fd; renderConsulta();
           if (_tabAtual === 'consulta') { renderAtalhosOpcaoC('consulta'); _persistirFiltroAplicado('consulta'); } });
         else _csMenu(c, th); };
       th.appendChild(mk);
     }
-    mk.classList.toggle('mk-filtrado', ehAbas ? !!_csAbasFilt : (c === 11 ? !!_csData : !!_csFilt[c]));
+    mk.classList.toggle('mk-filtrado', ehAbas ? !!_csAbasFilt : (c === 12 ? !!_csData : !!_csFilt[c]));
   });
 }
 // Atributos (botões) que o usuário tem na coluna Abas
@@ -4117,10 +4557,114 @@ function toggleCsExpand(uid){
   const sub = document.createElement('tr');
   sub.className = 'cs-sub';
   sub.dataset.uid = uid;
-  sub.innerHTML = `<td colspan="13"><div class="cs-sub-wrap">${conteudo}</div></td>`;
+  sub.innerHTML = `<td colspan="17"><div class="cs-sub-wrap">${conteudo}</div></td>`;
   tr.insertAdjacentElement('afterend', sub);
   _csExpand.add(uid);
   if (btn) { btn.classList.add('aberto'); btn.textContent = '+'; }
+}
+
+/* Texto do perfil no detalhe da Consulta: traz o PERFIL ESPERADO (o que o
+   cargo/matriz preve) junto do que a pessoa TEM hoje (encontrado). HTML ja
+   escapado. Aderente = tem == esperado. */
+function _csPerfilTxt(d){
+  // Perfil pode ser uma LISTA separada por virgula (ex.: SIG matricial, ~40
+  // perfis). Quebra em linhas pra nao virar uma linha gigante que vaza.
+  const br = v => String(v).split(',').map(s => esc(s.trim())).filter(Boolean).join('<br>');
+  const pe = (d.pe || '').trim(), pp = (d.pp || '').trim();
+  if (pe && pp) {
+    if (pe === pp) return '<span style="color:#1E7B43">' + br(pe) + '</span>';
+    return 'Encontrado: ' + br(pe) + '<br>Esperado: <b>' + br(pp) + '</b>';
+  }
+  if (pp) return 'Esperado: <b>' + br(pp) + '</b>';
+  if (pe) return 'Encontrado: ' + br(pe);
+  return '—';
+}
+
+let _csAccSeq = 0;
+/* Cor por ação/status do acesso (mesma paleta dos cards da Pendências). */
+function _csCorAcao(a){
+  return a === 'Aderente'       ? '#1E7B43'
+       : a === 'Em Análise'     ? '#856404'
+       : a === 'Incluir Acesso' ? '#2980B9'
+       : a === 'Alterar Perfil' ? '#B9770E'
+       : a === 'Não Mapeado'    ? '#7D3C98'
+       :                          '#B33A3A';
+}
+/* Bloco de acessos de UM sistema no detalhe da Consulta. Dentro do sistema,
+   agrupa por STATUS/ação (Incluir/Alterar/Em Análise/Não Mapeado/Aderente) com
+   rótulo colorido + contagem. Sistema com muitos perfis (ex.: SIG) nasce
+   RECOLHIDO; poucos perfis já vêm abertos. */
+function _csAccBloco(sis, lista, pfx, comData){
+  const cp = v => String(v || '').split(',').filter(x => x.trim()).length;
+  const nP = d => Math.max(cp(d.pe), cp(d.pp), 1);
+  const nProf = lista.reduce((s, d) => s + nP(d), 0);
+  const sisBadge = (pfx === 'cs-sub-acc') ? 'cs-sub-sis' : 'cs-acc-sis';
+  // Agrupa por ação/status, na ordem "acionável primeiro, aderente por último".
+  const grupos = {};
+  lista.forEach(d => { const k = d.a || d.tl || d.t || '—'; (grupos[k] = grupos[k] || []).push(d); });
+  const ordem = ['Incluir Acesso', 'Alterar Perfil', 'Em Análise', 'Não Mapeado', 'Aderente'];
+  const chaves = Object.keys(grupos).sort((a, b) => {
+    const ia = ordem.indexOf(a), ib = ordem.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  let corpo = '';
+  chaves.forEach(k => {
+    const g = grupos[k], cor = _csCorAcao(k);
+    const nk = g.reduce((s, d) => s + nP(d), 0);
+    // Data no CABEÇALHO do grupo quando todos compartilham a mesma; senão,
+    // por linha (grupos com datas diferentes — raro).
+    const datas = comData ? [...new Set(g.map(d => d.dt).filter(Boolean))] : [];
+    const umaData = datas.length === 1;
+    const dtHdr = umaData
+      ? ` <span style="color:#8A9099;font-weight:600">· ${fmtDH(datas[0])}</span>` : '';
+    corpo += `<div class="cs-acc-stgrp"><div class="cs-acc-stlbl" style="color:${cor}">● ${esc(k)} (${nk})${dtHdr}</div>`;
+    g.forEach(d => {
+      const data = (comData && !umaData && d.dt) ? ` <span style="color:#8A9099">· ${fmtDH(d.dt)}</span>` : '';
+      corpo += `<div class="${pfx}-p"><span>${_csPerfilTxt(d)}${data}</span></div>`;
+    });
+    corpo += `</div>`;
+  });
+  const colapsar = nProf > 4;
+  const id = 'csacc' + (++_csAccSeq);
+  const toggle = colapsar
+    ? `<span class="cs-acc-toggle" data-n="${nProf}" onclick="csAccToggle('${id}',this)">▸ ver ${nProf} perfis</span>`
+    : '';
+  const body = `<div class="cs-acc-body" id="${id}"${colapsar ? ' style="display:none"' : ''}>${corpo}</div>`;
+  return `<div class="${pfx}">`
+    + `<div class="${pfx}-h"><span>${esc(sis)}</span>`
+    + `<span class="${sisBadge}">${nProf} ${nProf > 1 ? 'perfis' : 'perfil'}</span></div>`
+    + toggle + body + `</div>`;
+}
+function csAccToggle(id, el){
+  const b = document.getElementById(id); if (!b) return;
+  const open = b.style.display !== 'none';
+  b.style.display = open ? 'none' : '';
+  el.textContent = open ? ('▸ ver ' + el.dataset.n + ' perfis') : '▾ recolher';
+}
+
+/* Colunas de perfil da grade da Consulta (Encontrado/Esperado): perfis
+   DISTINTOS do campo (uniao de todos os sistemas), resumidos (2 + "+N") com
+   tooltip do total. campo = 'pe' (encontrado/atual) ou 'pp' (esperado). */
+function _csPerfListCol(u, campo){
+  const set = new Set();
+  (u.divs || []).forEach(d => String(d[campo] || '').split(',').forEach(p => {
+    p = p.trim(); if (p) set.add(p);
+  }));
+  const arr = [...set].sort();
+  if (!arr.length) return '<span style="color:#8A9099">—</span>';
+  const full = esc(arr.join(', '));
+  if (arr.length <= 2) return `<span title="${full}">${esc(arr.join(', '))}</span>`;
+  return `<span title="${full}">${esc(arr.slice(0, 2).join(', '))} `
+       + `<span class="cs-esp-mais" onclick="csExpandDaLinha(event,this)" `
+       +   `title="Clique para expandir e ver todos os perfis">+${arr.length - 2}</span></span>`;
+}
+function _csEncCol(u){ return _csPerfListCol(u, 'pe'); }
+function _csEspCol(u){ return _csPerfListCol(u, 'pp'); }
+/* Clique no "+N" das colunas de perfil (Consulta): expande a linha (detalhe). */
+function csExpandDaLinha(ev, el){
+  if (ev) ev.stopPropagation();
+  const tr = el.closest('tr[data-uid]');
+  if (tr) toggleCsExpand(tr.dataset.uid);
 }
 
 function _csMontarSub(u){
@@ -4135,19 +4679,7 @@ function _csMontarSub(u){
   });
   let h = '<div class="cs-sub-titulo">Acessos / divergências</div>';
   Object.entries(porSis).forEach(([sis, lista]) => {
-    h += `<div class="cs-sub-acc">`
-      + `<div class="cs-sub-acc-h"><span>${esc(sis)}</span>`
-      + `<span class="cs-sub-sis">${lista.length} ${lista.length>1?'itens':'item'}</span></div>`;
-    lista.forEach(d => {
-      const stColor = d.s === 'Pendente' ? '#B33A3A' : '#1E7B43';
-      const perfil = d.pe || d.pp || '—';
-      const data = d.dt ? ` · ${fmtDH(d.dt)}` : '';
-      h += `<div class="cs-sub-acc-p">`
-        + `<span>${esc(d.tl || d.t)} · ${esc(perfil)}${data}</span>`
-        + `<span class="cs-sub-st" style="color:${stColor}">${esc(d.s)}</span>`
-        + `</div>`;
-    });
-    h += `</div>`;
+    h += _csAccBloco(sis, lista, 'cs-sub-acc', true);
   });
   return h;
 }
@@ -4316,18 +4848,7 @@ function csRenderDrawerBody(){
     });
     let h = '<div class="cs-sec">Acessos por sistema</div>';
     Object.entries(porSis).forEach(([sis, lista]) => {
-      h += `<div class="cs-acc">`
-        + `<div class="cs-acc-h"><span>${esc(sis)}</span>`
-        + `<span class="cs-acc-sis">${lista.length} ${lista.length>1?'itens':'item'}</span></div>`;
-      lista.forEach(d => {
-        const stColor = d.s === 'Pendente' ? '#B33A3A' : '#1E7B43';
-        const perfil = d.pe || d.pp || '—';
-        h += `<div class="cs-acc-p">`
-          + `<span>${esc(d.tl || d.t)} · ${esc(perfil)}</span>`
-          + `<span class="cs-acc-st" style="color:${stColor}">${esc(d.s)}</span>`
-          + `</div>`;
-      });
-      h += `</div>`;
+      h += _csAccBloco(sis, lista, 'cs-acc', false);
     });
     body.innerHTML = h;
   }
@@ -4349,16 +4870,23 @@ function _csLinha(k, v){
 
 function csExportar(){
   const users = _csFiltrarUsers();
-  const cols = ['Matrícula','Nome','Login','CPF','Cargo','Departamento',
-                'Centro de Custo','Sistemas','Pendências','Última divergência','Status'];
+  const cols = ['Matrícula','Nome','Login','CPF','Vínculo','Cargo','Departamento',
+                'Centro de Custo','Sistemas','Pendências','Última divergência','Status',
+                'Perfil Encontrado','Perfil Esperado','E-mail'];
   const rows = users.map(u => {
     const sis = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
     const pend = u.divs.filter(d => d.s === 'Pendente').length;
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     const ultDt = datas.length ? fmtDH(datas[datas.length-1]) : '';
-    return [u.m||'', u.n, u.login||'', u.cpf||'', u.c||'', u.d||'', u.cc||'',
+    const esp = new Set(), enc = new Set();
+    u.divs.forEach(d => {
+      String(d.pp || '').split(',').forEach(p => { p = p.trim(); if (p) esp.add(p); });
+      String(d.pe || '').split(',').forEach(p => { p = p.trim(); if (p) enc.add(p); });
+    });
+    return [u.m||'', u.n, u.login||'', u.cpf||'', u.vinc||'', u.c||'', u.d||'', u.cc||'',
             sis, u.divs.length, ultDt,
-            pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'Aderente'];
+            pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'Aderente',
+            [...enc].sort().join(', '), [...esp].sort().join(', '), u.email||''];
   });
   fetch('/api/exportar', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -4416,7 +4944,7 @@ function _pendDetalheTexto(ps){
 }
 function exportarHistorico(){
   const grupos = _histGrupos();
-  const cols = ['Matrícula','Nome','Cargo','Centro de Custo','Movimentação','Data',
+  const cols = ['Matrícula','Nome','Vínculo','Cargo','Centro de Custo','Movimentação','Data',
                 'Detalhe','Ticket Jira','Link do ticket','Descrição da resolução'];
   const linhas = [], niveis = [];
   grupos.forEach(g => {
@@ -4425,6 +4953,7 @@ function exportarHistorico(){
                                     : _pendDetalheTexto(r.pendencias);
       linhas.push([i === 0 ? g.matricula : '',
                    i === 0 ? g.nome : '',
+                   r.vinc || '',
                    r.cargo || '', r.centro_custo || '',
                    r.movimentacao || '', fmtDate(r.data),
                    det, r.ticket || '', r.ticket_url || '',
@@ -4463,18 +4992,18 @@ function exportarQuarentena(){
     return r;
   };
   if(quarVista === 'ativas'){
-    const cols = ['Usuário','Nome','Sistema','Data início',
+    const cols = ['Usuário','Nome','Sistema','Vínculo','Data início',
                   'Data fim','Dias restantes'];
-    const disp = (c,q) => [q.usuario, q.nome_usuario, q.sistema,
+    const disp = (c,q) => [q.usuario, q.nome_usuario, q.sistema, q.vinc,
       fmtDT(q.data_inicio), fmtDT(q.data_fim), String(q.dias_restantes)][c] || '';
     const linhas = visiveis(quarData.ativas||[], disp).map(q =>
-      [q.usuario, q.nome_usuario, q.sistema,
+      [q.usuario, q.nome_usuario, q.sistema, q.vinc,
        fmtDT(q.data_inicio), fmtDT(q.data_fim), q.dias_restantes]);
     baixarExcel('Quarentena_Ativas', cols, linhas);
   } else {
-    const cols = ['Usuário','Nome','Sistema','Início','Saída',
+    const cols = ['Usuário','Nome','Sistema','Vínculo','Início','Saída',
                   'Período (dias)','Motivo'];
-    const disp = (c,q) => ['', q.usuario, q.nome_usuario, q.sistema,
+    const disp = (c,q) => ['', q.usuario, q.nome_usuario, q.sistema, q.vinc,
       fmtDT(q.data_inicio), fmtDT(q.data_saida),
       q.periodo_dias+' dia(s)', q.motivo][c] || '';
     const grupos = {}, ordem = [];
@@ -4484,7 +5013,7 @@ function exportarQuarentena(){
     });
     const linhas = [], niveis = [];
     ordem.forEach(u => grupos[u].forEach((q, i) => {
-      linhas.push([q.usuario, q.nome_usuario, q.sistema, q.origem,
+      linhas.push([q.usuario, q.nome_usuario, q.sistema, q.vinc,
                    fmtDT(q.data_inicio), fmtDT(q.data_saida), q.periodo_dias, q.motivo]);
       niveis.push(i === 0 ? 0 : 1);
     }));
@@ -4535,12 +5064,21 @@ const ACAO_KPI = {
 // base. Assim os cards do topo SEGUEM os filtros. OK e' contado no card OK,
 // mas NAO entra no "Total c/ Ação" (pendencias).
 function kpisDoFiltro(){
+  // Conta PESSOAS distintas por categoria (não acessos) — bate com o grid, que
+  // conta usuários. Um usuário com N divs da mesma categoria conta 1×.
   const c = {sem_acesso:0, divergente:0, em_analise:0, nao_mapeado:0, ok:0, total:0};
-  DB.users.forEach(u => u.divs.forEach(d => {
-    if(!divPassa(d)) return;
-    const k = ACAO_KPI[d.a];
-    if(k){ c[k]++; if(k!=='ok') c.total++; }
-  }));
+  DB.users.forEach(u => {
+    const cats = new Set();      // categorias (kpi) distintas deste usuário
+    let temPend = false;
+    u.divs.forEach(d => {
+      if(!divPassa(d)) return;
+      const k = ACAO_KPI[d.a];
+      // 'sem_acesso' (Incluir Acesso) NAO conta como pendencia -> fora do Total c/ Ação
+      if(k){ cats.add(k); if(k!=='ok' && k!=='sem_acesso') temPend = true; }
+    });
+    cats.forEach(k => c[k]++);
+    if(temPend) c.total++;
+  });
   return c;
 }
 function aplicarKPIs(){
@@ -4556,6 +5094,9 @@ function aplicarKPIs(){
   // Card Aderente (informativo, link p/ aba): total de conformes
   const ae = document.getElementById('kpi-aderente');
   if(ae) ae.textContent = (DB.aderentes || []).length.toLocaleString('pt-BR');
+  // Card Incluir Acesso (informativo, link p/ Consulta filtrada): segue os filtros
+  const ie = document.getElementById('kpi-incluir');
+  if(ie) ie.textContent = Number(c.sem_acesso || 0).toLocaleString('pt-BR');
 }
 function distOrdenada(obj){
   const e = Object.entries(obj || {}).sort((a,b) => a[1]-b[1]);

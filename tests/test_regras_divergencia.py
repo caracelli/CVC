@@ -117,6 +117,32 @@ class TestRegraAcessoSemVinculoBordas(unittest.TestCase):
         self.assertEqual(len(divs), 2)
         self.assertTrue(all(d.tipo == TipoDivergencia.ACESSO_SEM_VINCULO_RH for d in divs))
 
+    def test_um_por_login_sistema_nao_por_perfil(self):
+        # Mesmo login com VARIOS perfis no mesmo sistema = 1 achado, nao N.
+        # (evita a inflacao tipo NICOLAS: 136 perfis no SIG -> 136 linhas iguais)
+        divs = self.regra.verificar([
+            _acesso("nicfranco", perfil="P1", cpf="999", vinc=None, sistema=Sistema.SIG),
+            _acesso("nicfranco", perfil="P2", cpf="999", vinc=None, sistema=Sistema.SIG),
+            _acesso("nicfranco", perfil="P3", cpf="999", vinc=None, sistema=Sistema.SIG),
+        ])
+        self.assertEqual(len(divs), 1)
+
+    def test_um_por_sistema_conta_cada_sistema(self):
+        # Mesmo login sem vinculo em 2 sistemas = 2 achados (um por sistema).
+        divs = self.regra.verificar([
+            _acesso("nicfranco", cpf="999", vinc=None, sistema=Sistema.SIG),
+            _acesso("nicfranco", cpf="999", vinc=None, sistema=Sistema.SYSTUR),
+        ])
+        self.assertEqual(len(divs), 2)
+
+    def test_dedup_ignora_caixa_do_login(self):
+        # INTADM527 e intadm527 no mesmo sistema = mesmo login = 1 achado.
+        divs = self.regra.verificar([
+            _acesso("INTADM527", cpf="999", vinc=None, sistema=Sistema.SIG),
+            _acesso("intadm527", cpf="999", vinc=None, sistema=Sistema.SIG),
+        ])
+        self.assertEqual(len(divs), 1)
+
 
 # ───────────────── ServicoAnaliseDivergencias (orquestracao) ─────────────────
 class TestServicoAnaliseDivergencias(unittest.TestCase):

@@ -75,11 +75,17 @@ class TestRegrasValidacaoSimulada(unittest.TestCase):
             _rh("5", "999", "DESCONHECIDO"), # NAO_MAPEADO (sem matriz)
             _rh("6", "300", "VENDEDOR"),     # SYSTUR DIVERGENTE (exato, '_' != ' ')
             _rh("7", "300", "VENDEDOR"),     # SYSTUR ADERENTE (exato)
+            # ---- B1: cargo ESTAGIARIO (cc 500) com 3 pessoas e ADESAO 0% ao IC
+            #      (matriz manda, mas ninguem do cargo tem) -> Inclusao suprimida
+            _rh("10", "500", "ESTAGIARIO"),
+            _rh("11", "500", "ESTAGIARIO"),
+            _rh("12", "500", "ESTAGIARIO"),
             # ---- Matriz de perfis esperados ----
             _pe("100", "ANALISTA", IC, "IC CONSULTA"),
             _pe("200", "GERENTE",  IC, "IC CONSULTA"),
             _pe("200", "GERENTE",  IC, "IC APROVADOR"),
             _pe("300", "VENDEDOR", SYSTUR, "P 1"),
+            _pe("500", "ESTAGIARIO", IC, "IC CONSULTA"),   # B1: matriz abrangente
             # ---- Acessos ja vinculados ao RH ----
             _acesso(IC, "u1", "IC_CONSULTA", "1"),   # underscore (extrato)
             _acesso(IC, "u2", "IC_APROVADOR", "2"),  # perfil diferente do esperado
@@ -131,6 +137,16 @@ class TestRegrasValidacaoSimulada(unittest.TestCase):
     def test_nao_mapeado_nao_gera_pendencia(self):
         # funcionario sem nenhum perfil esperado em nenhuma matriz
         self.assertEqual(self.regs("5"), [])
+
+    # ---------------- B1: gate de inclusao por adesao do cargo ----------------
+    def test_b1_inclusao_suprimida_cargo_baixa_adesao(self):
+        # ESTAGIARIO: matriz manda IC, mas 0/3 do cargo tem -> Inclusao SUPRIMIDA
+        for mat in ("10", "11", "12"):
+            self.assertEqual(self.regs(mat), [], f"mat {mat} nao deveria gerar Inclusao")
+
+    def test_b1_inclusao_mantida_cargo_alta_adesao(self):
+        # ANALISTA: 2/3 tem IC (adesao 67% >= 30%) -> a Inclusao que falta e' MANTIDA
+        self.assertEqual([x.status for x in self.regs("3")], ["SEM_ACESSO"])
 
     # ---------------- SYSTUR (casamento EXATO) ----------------
     def test_systur_nao_usa_aproximacao_diverge(self):

@@ -56,6 +56,18 @@ class TestExportReflecteGrid(unittest.TestCase):
         self.assertNotRegex(corpo, r"a\.dt_pend\s*\|\|\s*''",
                             "Aderentes voltou a exportar data crua (ISO) sem fmtDH")
 
+    def test_nao_exibe_quem_fez_a_acao(self):
+        # REGRA: nunca exibir "quem fez" (criado_por/encerrado_por = %USERNAME%
+        # do Windows). O dado e' capturado no backend mas NAO aparece na tela.
+        # Ver memoria: project_resolucao_pendencia / project_arquitetura_multiusuario.
+        corpo = _corpo_funcao(self.html, "_modalQuarentena")
+        self.assertNotIn("criado_por", corpo,
+                         "modal da quarentena voltou a exibir criado_por (ator)")
+        self.assertNotIn("encerrado_por", corpo,
+                         "modal da quarentena voltou a exibir encerrado_por (ator)")
+        self.assertNotIn("Enviado por", corpo,
+                         'modal da quarentena voltou a exibir "Enviado por"')
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

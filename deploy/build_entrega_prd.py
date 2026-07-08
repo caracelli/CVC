@@ -1,5 +1,5 @@
 """
-Monta o pacote de PRODUCAO — ENTREGA_PRD_v1.0.0.zip.
+Monta o pacote de PRODUCAO — ENTREGA_PRD_v1.3.1.zip.
 
 Pasta CVC_IAM_ANALYTICS/ completa e LIMPA para o go-live:
   - EXECUTAVEIS/  (visualizador.exe, Processador.exe, launcher/ COM motor,
@@ -35,8 +35,9 @@ EXECS = APP / "EXECUTAVEIS"
 ENTREGA = RAIZ / "ENTREGA"
 STAGING = RAIZ / "_entrega_prd_staging"
 
-VERSAO = "1.2.0"
-RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
+VERSAO = "1.3.1"
+# Producao usa o UNC real do cliente (o Z: era convencao de teste com subst).
+RAIZ_REDE = r"\\intra.cvc\fscvc\Processos_Antlia\CVC\CVC_IAM\ANALYTICS"
 
 LAUNCHER_DIR = EXECS / "launcher"
 PRINCIPAL_VISUALIZADOR = EXECS / "visualizador.exe"
@@ -46,6 +47,7 @@ LAUNCHER_VISUALIZADOR = LAUNCHER_DIR / "launcher_visualizador.exe"
 LAUNCHER_PROCESSADOR = LAUNCHER_DIR / "launcher_processador.exe"
 REPORT_DIR = EXECS / "REPORT"
 CONFIG_SRC = EXECS / "CONFIG" / "config.xml"
+MOTIVOS_SRC = EXECS / "CONFIG" / "motivos_resolucao.xml"
 LEIA_ME_EXECS = EXECS / "LEIA-ME.md"
 
 ENTRADA_SUBDIRS = [
@@ -65,7 +67,7 @@ DADOS_SUBDIRS = [
 def checar_prerequisitos():
     base = [PRINCIPAL_VISUALIZADOR, PRINCIPAL_PROCESSADOR,
             LAUNCHER_ATUALIZADOR, LAUNCHER_VISUALIZADOR, LAUNCHER_PROCESSADOR,
-            CONFIG_SRC, REPORT_DIR / "index.html"]
+            CONFIG_SRC, MOTIVOS_SRC, REPORT_DIR / "index.html"]
     faltando = [str(p) for p in base if not p.exists()]
     if faltando:
         print("FALHA — exes/arquivos ausentes:")
@@ -90,7 +92,7 @@ def grava_config(destino: Path, versao: str, raiz_valor: str):
 
 def montar_executaveis(execs_destino: Path):
     """EXECUTAVEIS/ completo: 2 principais + 3 launchers (com motor) + REPORT +
-    CONFIG (versao 1.0.0, raiz Z:)."""
+    CONFIG (versao 1.3.1, raiz UNC de producao)."""
     execs_destino.mkdir(parents=True, exist_ok=True)
     launcher_d = execs_destino / "launcher"
     launcher_d.mkdir(parents=True, exist_ok=True)
@@ -100,6 +102,10 @@ def montar_executaveis(execs_destino: Path):
         shutil.copy2(LEIA_ME_EXECS, execs_destino / "LEIA-ME.md")
     shutil.copytree(REPORT_DIR, execs_destino / "REPORT", dirs_exist_ok=True)
     grava_config(execs_destino / "CONFIG" / "config.xml", VERSAO, RAIZ_REDE)
+    # motivos_resolucao.xml — combobox obrigatorio de resolucao (Ajuste 2).
+    # Sem isso o painel cai no fallback de 2 motivos.
+    if MOTIVOS_SRC.exists():
+        shutil.copy2(MOTIVOS_SRC, execs_destino / "CONFIG" / "motivos_resolucao.xml")
     shutil.copy2(LAUNCHER_ATUALIZADOR, launcher_d / "launcher_atualizador.exe")
     shutil.copy2(LAUNCHER_VISUALIZADOR, launcher_d / "launcher_visualizador.exe")
     shutil.copy2(LAUNCHER_PROCESSADOR, launcher_d / "launcher_processador.exe")
@@ -134,21 +140,22 @@ def zipar(base: Path, alvo_zip: Path):
 
 
 LEIA_ME = """\
-ENTREGA PRODUCAO - CVC IAM Analytics (v1.0.0)
+ENTREGA PRODUCAO - CVC IAM Analytics (v1.3.1)
 =============================================
 
 Pacote de PRODUCAO com a pasta CVC_IAM_ANALYTICS (programa + estrutura de
 dados VAZIA). Base limpa: nenhum dado, nenhum banco. O banco nasce no primeiro
 processamento.
 
-Caminho de rede assumido: Z:\\CVC\\CVC_IAM_ANALYTICS
+Caminho de rede (config.xml <raiz>):
+  \\\\intra.cvc\\fscvc\\Processos_Antlia\\CVC\\CVC_IAM\\ANALYTICS
+(Nos passos abaixo, "a RAIZ de rede" = esse caminho.)
 
 ------------------------------------------------------------
 1. SUBIR A REDE (uma vez)
 ------------------------------------------------------------
-Extraia o zip e copie a pasta CVC_IAM_ANALYTICS para Z:\\CVC\\
-(fica Z:\\CVC\\CVC_IAM_ANALYTICS\\). O config ja vem com
-<raiz>Z:\\CVC\\CVC_IAM_ANALYTICS</raiz> e <versao>1.0.0</versao>.
+Extraia o zip e copie a pasta CVC_IAM_ANALYTICS para dentro da RAIZ de rede.
+O config ja vem com a <raiz> UNC correta e <versao>1.3.1</versao>.
 
 ------------------------------------------------------------
 2. DEPOSITAR OS ARQUIVOS DE PRODUCAO
@@ -164,15 +171,15 @@ Coloque os arquivos atuais nas pastas de ENTRADA:
 ------------------------------------------------------------
 3. PRIMEIRO PROCESSAMENTO (gera o banco)
 ------------------------------------------------------------
-Rode uma vez (de uma maquina com Z: mapeado):
-    Z:\\CVC\\CVC_IAM_ANALYTICS\\EXECUTAVEIS\\Processador.exe
-Ao fim: Z:\\...\\DADOS\\BANCO\\iam_analytics.db criado; arquivos lidos
+Rode uma vez (de uma maquina que enxergue a RAIZ de rede):
+    <RAIZ>\\EXECUTAVEIS\\Processador.exe
+Ao fim: <RAIZ>\\DADOS\\BANCO\\iam_analytics.db criado; arquivos lidos
 movidos para PROCESSADOS. Log em DADOS\\LOGS\\.
 
 ------------------------------------------------------------
 4. CADA MAQUINA-USUARIO
 ------------------------------------------------------------
-Copie a pasta EXECUTAVEIS (de Z:\\CVC\\CVC_IAM_ANALYTICS\\) para um local
+Copie a pasta EXECUTAVEIS (de dentro da RAIZ de rede) para um local
 (ex.: C:\\CVC\\EXECUTAVEIS) e rode o visualizador.exe DE LA. Ele auto-atualiza
 da rede, copia o banco para um cache local e abre o painel em
 http://127.0.0.1:8800/.

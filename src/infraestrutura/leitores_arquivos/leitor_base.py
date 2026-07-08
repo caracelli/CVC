@@ -54,25 +54,54 @@ class LeitorArquivoBase:
         self._pasta_erros = Path(pasta_erros) if pasta_erros else None
 
     # Subpastas ignoradas na varredura recursiva (saídas do próprio processo)
-    _SUBPASTAS_IGNORADAS = {"processados", "erros"}
+    _SUBPASTAS_IGNORADAS = {"processados", "erros", "invalidos"}
 
     def listar_arquivos(self, pasta: str) -> List[Path]:
-        """Varre a pasta de forma RECURSIVA, ignorando PROCESSADOS/ e ERROS/."""
+        """Varre a pasta RECURSIVAMENTE (ignorando PROCESSADOS/ERROS/INVALIDOS).
+        Devolve só arquivos de tipo suportado (csv/xls/xlsx). Qualquer arquivo de
+        tipo NÃO suportado, ou lock/temporário do Office (~$arquivo.xlsx), é MOVIDO
+        para INVALIDOS/ — assim o Processador não trava tentando lê-los. Arquivos
+        ocultos/estruturais (.gitkeep, .algo) são só ignorados (não movidos)."""
         p = Path(pasta)
         if not p.exists():
             logger.warning(f"Pasta não encontrada: {pasta}")
             return []
-        arquivos = [
-            f for f in p.rglob("*")
-            if f.is_file()
-            and f.suffix.lower() in EXTENSOES_SUPORTADAS
-            and not any(
-                parte.lower() in self._SUBPASTAS_IGNORADAS
-                for parte in f.relative_to(p).parts[:-1]
-            )
-        ]
-        logger.info(f"{len(arquivos)} arquivo(s) encontrado(s) em {p.name} (recursivo)")
-        return sorted(arquivos)
+        validos: List[Path] = []
+        invalidos: List[Path] = []
+        for f in p.rglob("*"):
+            if not f.is_file():
+                continue
+            if any(parte.lower() in self._SUBPASTAS_IGNORADAS
+                   for parte in f.relative_to(p).parts[:-1]):
+                continue
+            nome = f.name
+            if nome.startswith("."):            # .gitkeep e ocultos: estrutural, ignora
+                continue
+            if nome.startswith("~$"):            # lock/temporario do Office -> invalido
+                invalidos.append(f)
+            elif f.suffix.lower() in EXTENSOES_SUPORTADAS:
+                validos.append(f)
+            else:                               # tipo nao suportado -> invalido
+                invalidos.append(f)
+        for f in invalidos:
+            self.mover_para_invalidos(f)
+        logger.info(f"{len(validos)} arquivo(s) encontrado(s) em {p.name} (recursivo)"
+                    + (f"; {len(invalidos)} invalido(s) movido(s)" if invalidos else ""))
+        return sorted(validos)
+
+    def mover_para_invalidos(self, arquivo: Path):
+        """Move arquivo de tipo nao suportado / lock do Office para INVALIDOS/
+        (na propria pasta de origem, igual a PROCESSADOS). Blindado: se o arquivo
+        estiver em uso (lock aberto), apenas avisa e segue — nunca trava o processo."""
+        destino = arquivo.parent / "INVALIDOS"
+        try:
+            destino.mkdir(parents=True, exist_ok=True)
+            sufixo = datetime.now().strftime("%Y%m%d_%H%M%S")
+            novo_nome = f"{arquivo.stem}_{sufixo}{arquivo.suffix}"
+            shutil.move(str(arquivo), str(destino / novo_nome))
+            logger.warning(f"Tipo nao suportado / lock -> INVALIDOS: {arquivo.name}")
+        except Exception as e:
+            logger.warning(f"Nao consegui mover invalido '{arquivo.name}' (em uso?): {e!r}")
 
     def mover_para_processados(self, arquivo: Path):
         # SEMPRE move para uma subpasta PROCESSADOS dentro da pasta do proprio

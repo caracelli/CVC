@@ -1,8 +1,12 @@
+import shutil
+from datetime import datetime
 from pathlib import Path
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from loguru import logger
 from .schema import Base
+
+_MAGIC_SQLITE = b"SQLite format 3\x00"   # cabecalho de todo arquivo SQLite valido
 
 
 class ConexaoBancoDados:
@@ -13,7 +17,45 @@ class ConexaoBancoDados:
         self._engine = create_engine(f"sqlite:///{caminho_db}", echo=False)
         self._SessionFactory = sessionmaker(bind=self._engine)
 
+    def _garantir_banco_valido(self):
+        """Se o arquivo do banco EXISTE mas NAO e' um SQLite valido (corrompido,
+        escrita parcial na rede/SMB, arquivo trocado por texto/pointer), move-o
+        para '.corrompido_<data>' e deixa o create_all recriar um banco novo —
+        em vez de travar com 'file is not a database'. Arquivo de 0 bytes o
+        SQLite ja trata como banco novo, entao nao mexe."""
+        p = Path(self._caminho)
+        try:
+            if not p.exists() or p.stat().st_size == 0:
+                return
+            with open(p, "rb") as f:
+                cabecalho = f.read(16)
+        except OSError:
+            return
+        if cabecalho == _MAGIC_SQLITE:
+            return   # banco valido
+        self._engine.dispose()
+        destino = p.with_name(p.name + f".corrompido_{datetime.now():%Y%m%d_%H%M%S}")
+        try:
+            shutil.move(str(p), str(destino))
+            for ext in ("-wal", "-shm"):     # remove journais orfaos do corrompido
+                orf = Path(str(p) + ext)
+                if orf.exists():
+                    try:
+                        orf.unlink()
+                    except OSError:
+                        pass
+            logger.warning(
+                f"Banco INVALIDO (nao e' SQLite) em '{p}' — movido para "
+                f"'{destino.name}'. Recriando um banco novo (sera repovoado no "
+                f"processamento a partir da ENTRADA e das INTERACOES).")
+        except Exception as e:
+            logger.error(
+                f"Banco em '{p}' nao e' um SQLite valido e nao consegui move-lo "
+                f"({e!r}). Remova/renomeie o arquivo manualmente e rode de novo.")
+            raise
+
     def inicializar(self):
+        self._garantir_banco_valido()
         Base.metadata.create_all(self._engine)
         self._migrar()
         logger.info("Banco de dados inicializado.")
@@ -52,6 +94,7 @@ class ConexaoBancoDados:
             self._migrar_validacao_acessos(conn)
             self._migrar_matriz_cco(conn)
             self._migrar_log_importacoes_hash(conn)
+            self._migrar_log_importacoes_dt_arquivo(conn)
             self._migrar_historico_unificado(conn)
             self._migrar_acessos_sistemas_pk_e_matching(conn)
             self._migrar_rh_ativos_tipo_vinculo(conn)
@@ -174,6 +217,14 @@ class ConexaoBancoDados:
                 "ON log_importacoes (hash_arquivo)"))
             conn.commit()
             logger.info("Migration: log_importacoes.hash_arquivo adicionada.")
+
+    def _migrar_log_importacoes_dt_arquivo(self, conn):
+        if "log_importacoes" not in self._tabelas(conn):
+            return
+        if "dt_arquivo" not in self._cols(conn, "log_importacoes"):
+            conn.execute(text("ALTER TABLE log_importacoes ADD COLUMN dt_arquivo DATETIME"))
+            conn.commit()
+            logger.info("Migration: log_importacoes.dt_arquivo adicionada.")
 
     def _migrar_historico_unificado(self, conn):
         """Unifica historico_rh -> historico com coluna entidade.

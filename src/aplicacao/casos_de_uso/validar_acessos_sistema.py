@@ -40,18 +40,34 @@ def _norm_perfil(p: str) -> str:
 
 class ValidarAcessosSistema:
 
+    # B1 (regra ajustavel — decidida 25/06): so gera INCLUSAO (SEM_ACESSO) quando
+    # a ADESAO do cargo ao sistema for >= este limiar. Cargo onde quase ninguem
+    # tem o acesso => a matriz provavelmente abrange demais => nao inunda
+    # pendencia. Trocar o valor + reprocessar ajusta o rigor (0 desliga a regra).
+    _LIMIAR_INCLUSAO = 0.30
+
     def __init__(self, conexao: ConexaoBancoDados):
         self._conexao = conexao
         # regra temporaria de provavel desligamento (sobrescritos no fluxo real)
         self._aderentes_anteriores: Set[Tuple[str, str]] = set()
         self._prov_deslig = 0
+        # B1 — adesao por (sistema, cargo): preenchido em _calc_adocao_cargo
+        self._tot_cargo: Dict[str, int] = {}
+        self._tem_cargo_sis: Dict[Tuple[str, str], Set[str]] = {}
+        self._inclusao_suprimida = 0
 
     def executar(self):
         ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco = self._carregar_dados()
         self._prov_deslig = 0   # contador da regra temporaria de provavel desligamento
+        self._inclusao_suprimida = 0
+        self._calc_adocao_cargo(ativos, acessos_por_matricula)   # B1
 
         registros: List[Dict] = []
         for func in ativos:
+            # Terceiros NAO usam matriz/CCO nem o espelho do SIG: tem caminho
+            # proprio (_validar_terceiros_espelho), em TODOS os sistemas.
+            if (getattr(func, "tipo_vinculo", "") or "").upper() == "TERCEIRO":
+                continue
             cc = _norm(func.centro_custo_codigo or "")   # normaliza p/ casar com matriz/CCO
             # MATRIZ de perfis casa por (cc, cargo); CCO casa por (cc, GESTOR)
             # — o gestor desambigua qual subconjunto de funcoes do cc se aplica.
@@ -74,6 +90,9 @@ class ValidarAcessosSistema:
             for sistema_str, perfil_esperado in cco.get(chave_cco, []):
                 sistema_enum = sistema_do_texto(sistema_str)
                 sistema_valor = sistema_enum.value if sistema_enum else sistema_str.upper()
+                # SIG NAO usa CCO: e' validado por ESPELHO dinamico (_validar_sig_espelho)
+                if sistema_valor == Sistema.SIG.value:
+                    continue
                 if (sistema_valor, perfil_esperado) not in _vistos_sp:
                     _vistos_sp.add((sistema_valor, perfil_esperado))
                     perfis_sis[sistema_valor].append((perfil_esperado, False, "CCO"))
@@ -96,6 +115,13 @@ class ValidarAcessosSistema:
                 })
 
             registros.extend(regs_func)
+
+        # SIG: validacao por ESPELHO dinamico (so CLT; terceiros vao no proprio)
+        registros.extend(self._validar_sig_espelho(
+            ativos, acessos_por_matricula, sistemas_com_dados))
+        # Terceiros: ESPELHO por (Empresa+Supervisor) em TODOS os sistemas
+        registros.extend(self._validar_terceiros_espelho(
+            ativos, acessos_por_matricula, sistemas_com_dados))
 
         _STATUS_ACAO = {
             StatusValidacao.SEM_ACESSO.value,
@@ -124,6 +150,11 @@ class ValidarAcessosSistema:
             logger.info(
                 f"[regra temporaria] {self._prov_deslig} caso(s) 'foi aderente + 0 "
                 f"acesso' retirado(s) como provavel DESLIGAMENTO (sai na fase de desligados)."
+            )
+        if self._inclusao_suprimida:
+            logger.info(
+                f"[B1] {self._inclusao_suprimida} inclusao(oes) suprimida(s): cargo com "
+                f"adesao < {self._LIMIAR_INCLUSAO:.0%} ao sistema (matriz abrangente demais)."
             )
 
     # ------------------------------------------------------------------
@@ -174,6 +205,37 @@ class ValidarAcessosSistema:
                 cco[chave].append(entry)
 
         return ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco
+
+    # ------------------------------------------------------------------
+    # B1 — adesao de acesso por (sistema, cargo)
+    # ------------------------------------------------------------------
+    def _calc_adocao_cargo(self, ativos, acessos_por_matricula):
+        """Por (sistema, cargo): quantos funcionarios do cargo REALMENTE tem
+        acesso no sistema (numerador) vs total do cargo (denominador). Usado
+        pela B1 para decidir se a Inclusao e' sinal real ou ruido de matriz."""
+        cargo_de = {}
+        self._tot_cargo = defaultdict(int)
+        for f in ativos:
+            if (getattr(f, "tipo_vinculo", "") or "").upper() == "TERCEIRO":
+                continue
+            cg = _norm(f.cargo_descricao or "")
+            cargo_de[f.matricula] = cg
+            self._tot_cargo[cg] += 1
+        self._tem_cargo_sis = defaultdict(set)
+        for mat, lst in acessos_por_matricula.items():
+            cg = cargo_de.get(mat)
+            if cg is None:
+                continue
+            for sis, _perfil in lst:
+                self._tem_cargo_sis[(sis, cg)].add(mat)
+
+    def _adocao(self, sistema: str, cargo_norm: str) -> float:
+        """Fracao do cargo que tem acesso ao sistema. Sem base (cargo de 1
+        pessoa, etc.) -> 1.0 para NAO bloquear (conservador)."""
+        tot = self._tot_cargo.get(cargo_norm, 0)
+        if tot < 2:          # cargo sem pares suficientes: nao da pra inferir ruido
+            return 1.0
+        return len(self._tem_cargo_sis.get((sistema, cargo_norm), ())) / tot
 
     def _registro_base(self, func: RhAtivo) -> Dict:
         return {
@@ -286,6 +348,12 @@ class ValidarAcessosSistema:
         # (sistema sem dados ja retornou SEM_DADOS la em cima)
         perfil_esperado, acesso_manual, origem_p = perfis[0]
         if not acessos_atuais:
+            # B1: so vira INCLUSAO se a adesao do cargo ao sistema for relevante.
+            # Adesao baixa => matriz abrangente demais => suprime (nao inunda).
+            cg = _norm(func.cargo_descricao or "")
+            if self._adocao(sistema_valor, cg) < self._LIMIAR_INCLUSAO:
+                self._inclusao_suprimida += 1
+                return []
             status = StatusValidacao.SEM_ACESSO
             perfil_atual = ""
         else:
@@ -300,3 +368,214 @@ class ValidarAcessosSistema:
             "status": status.value,
             "origem_matriz": origem_p,
         }]
+
+    # ------------------------------------------------------------------
+    # SIG — validacao por ESPELHO dinamico (decidido com a usuaria 24/06/2026)
+    # ------------------------------------------------------------------
+    _SIG_LIMIAR_ESPELHO = 0.70   # perfil "padrao" = presente em >=70% dos colegas que usam SIG
+
+    def _reg_sig(self, func, perfil_esperado: str, perfil_atual: str,
+                 status: StatusValidacao) -> Dict:
+        return self._registro_base(func) | {
+            "sistema": Sistema.SIG.value,
+            "perfil_esperado": perfil_esperado,
+            "perfil_atual": perfil_atual,
+            "acesso_manual": False,
+            "status": status.value,
+            "origem_matriz": "ESPELHO",
+        }
+
+    def _validar_sig_espelho(
+        self,
+        ativos: List["RhAtivo"],
+        acessos_por_matricula: Dict[str, List[Tuple[str, str]]],
+        sistemas_com_dados: Set[str],
+    ) -> List[Dict]:
+        """SIG nao tem matriz por cargo nem usa CCO: o perfil esperado e'
+        INFERIDO do proprio extrato (espelho). Agrupa por (CC+gestor+CARGO) com
+        fallback (CC+gestor); o 'padrao' do grupo = perfis presentes em
+        >=LIMIAR dos colegas que USAM o SIG (>=2 colegas exigidos).
+
+        Por usuario (regra da usuaria 24/06):
+          - tem o padrao, sem sobra            -> OK (Aderente)
+          - nao tem SIG, mas os pares tem      -> SEM_ACESSO (Incluir)
+          - tem perfil mas falta parte do padrao (sem excesso) -> DIVERGENTE (Alterar)
+          - tem acesso ALEM do padrao (excesso) -> EM_ANALISE
+          - grupo sem padrao / sem par         -> EM_ANALISE
+        Excesso => Em Analise (governanca de acesso excessivo).
+        """
+        SIG = Sistema.SIG.value
+        if SIG not in sistemas_com_dados:
+            return []
+
+        # SIG espelho e' so para CLT; terceiros vao no _validar_terceiros_espelho.
+        ativos = [f for f in ativos
+                  if (getattr(f, "tipo_vinculo", "") or "").upper() != "TERCEIRO"]
+
+        # mat -> set(perfis SIG) — so quem tem acesso ao SIG
+        perfis_sig: Dict[str, Set[str]] = defaultdict(set)
+        for mat, lst in acessos_por_matricula.items():
+            for sis, perfil in lst:
+                if sis == SIG and perfil:
+                    perfis_sig[mat].add(perfil)
+
+        def k_full(f):
+            return (_norm(f.centro_custo_codigo or ""), _norm(getattr(f, "gestor", "") or ""),
+                    _norm(f.cargo_descricao or ""))
+
+        def k_wide(f):
+            return (_norm(f.centro_custo_codigo or ""), _norm(getattr(f, "gestor", "") or ""))
+
+        # colegas que USAM SIG por chave (definem o espelho)
+        sig_full: Dict[Tuple, List[str]] = defaultdict(list)
+        sig_wide: Dict[Tuple, List[str]] = defaultdict(list)
+        for f in ativos:
+            if perfis_sig.get(f.matricula):
+                sig_full[k_full(f)].append(f.matricula)
+                sig_wide[k_wide(f)].append(f.matricula)
+
+        def espelho(mats: List[str]) -> Set[str]:
+            n = len(mats)
+            cont: Dict[str, int] = defaultdict(int)
+            for m in mats:
+                for p in perfis_sig.get(m, ()):
+                    cont[p] += 1
+            return {p for p, c in cont.items() if c / n >= self._SIG_LIMIAR_ESPELHO}
+
+        regs: List[Dict] = []
+        for f in ativos:
+            u = perfis_sig.get(f.matricula, set())
+            usa_sig = bool(u)
+            # escolhe o grupo-espelho: >=2 colegas que usam SIG (cargo -> fallback gestor)
+            if len(sig_full[k_full(f)]) >= 2:
+                grupo = sig_full[k_full(f)]
+            elif len(sig_wide[k_wide(f)]) >= 2:
+                grupo = sig_wide[k_wide(f)]
+            else:
+                # sem par: so reporta se a propria pessoa usa SIG (senao SIG nao se aplica a ela)
+                if usa_sig:
+                    regs.append(self._reg_sig(f, "", ", ".join(sorted(u)),
+                                              StatusValidacao.EM_ANALISE))
+                continue
+
+            esp = espelho(grupo)
+            if not esp:
+                if usa_sig:
+                    regs.append(self._reg_sig(f, "", ", ".join(sorted(u)),
+                                              StatusValidacao.EM_ANALISE))
+                continue
+
+            esp_str = ", ".join(sorted(esp))
+            if not u:
+                regs.append(self._reg_sig(f, esp_str, "", StatusValidacao.SEM_ACESSO))   # Incluir
+            elif u - esp:
+                regs.append(self._reg_sig(f, esp_str, ", ".join(sorted(u)),
+                                          StatusValidacao.EM_ANALISE))                    # Excesso
+            elif esp - u:
+                regs.append(self._reg_sig(f, esp_str, ", ".join(sorted(u)),
+                                          StatusValidacao.DIVERGENTE))                    # Alterar
+            else:
+                regs.append(self._reg_sig(f, esp_str, ", ".join(sorted(u)),
+                                          StatusValidacao.OK))                            # Aderente
+        return regs
+
+    # ------------------------------------------------------------------
+    # TERCEIROS — ESPELHO por (Empresa+Supervisor), em TODOS os sistemas
+    # (decidido com a usuaria 24/06/2026). Terceiros nao tem CC/cargo/gestor;
+    # espelham entre TERCEIROS (nao com CLT). Supervisor = coluna `departamento`.
+    # ------------------------------------------------------------------
+    _TERC_LIMIAR_ESPELHO = 0.70
+
+    def _reg_terc(self, func, sistema: str, perfil_esperado: str,
+                  perfil_atual: str, status: StatusValidacao) -> Dict:
+        return self._registro_base(func) | {
+            "sistema": sistema,
+            "perfil_esperado": perfil_esperado,
+            "perfil_atual": perfil_atual,
+            "acesso_manual": False,
+            "status": status.value,
+            "origem_matriz": "ESPELHO_TERC",
+        }
+
+    def _validar_terceiros_espelho(
+        self,
+        ativos: List["RhAtivo"],
+        acessos_por_matricula: Dict[str, List[Tuple[str, str]]],
+        sistemas_com_dados: Set[str],
+    ) -> List[Dict]:
+        """Terceiros ATIVOS, espelho por (Empresa+Supervisor) -> fallback
+        (Supervisor), aplicado a CADA sistema. Mesmas 4 saidas do SIG:
+        Aderente / Inclusao(SEM_ACESSO) / Alteracao(DIVERGENTE) / Em Analise
+        (excesso, grupo sem padrao ou sem par)."""
+        terceiros = [
+            f for f in ativos
+            if (getattr(f, "tipo_vinculo", "") or "").upper() == "TERCEIRO"
+            and _norm(f.situacao or "") in ("", "ATIVO")
+        ]
+        if not terceiros or not sistemas_com_dados:
+            return []
+
+        def k_full(f):
+            return (_norm(getattr(f, "empresa", "") or ""), _norm(f.departamento or ""))
+
+        def k_wide(f):
+            return (_norm(f.departamento or ""),)   # so o supervisor
+
+        regs: List[Dict] = []
+        for sistema in sorted(sistemas_com_dados):
+            # perfis desse sistema por terceiro
+            perfis_s: Dict[str, Set[str]] = defaultdict(set)
+            for f in terceiros:
+                for sis, p in acessos_por_matricula.get(f.matricula, ()):
+                    if sis == sistema and p:
+                        perfis_s[f.matricula].add(p)
+            # grupos de terceiros que USAM esse sistema (definem o espelho)
+            full: Dict[Tuple, List[str]] = defaultdict(list)
+            wide: Dict[Tuple, List[str]] = defaultdict(list)
+            for f in terceiros:
+                if perfis_s.get(f.matricula):
+                    full[k_full(f)].append(f.matricula)
+                    wide[k_wide(f)].append(f.matricula)
+            if not full:
+                continue   # nenhum terceiro usa esse sistema
+
+            def espelho(mats: List[str]) -> Set[str]:
+                n = len(mats)
+                cont: Dict[str, int] = defaultdict(int)
+                for m in mats:
+                    for p in perfis_s.get(m, ()):
+                        cont[p] += 1
+                return {p for p, c in cont.items() if c / n >= self._TERC_LIMIAR_ESPELHO}
+
+            for f in terceiros:
+                u = perfis_s.get(f.matricula, set())
+                usa = bool(u)
+                if len(full[k_full(f)]) >= 2:
+                    grupo = full[k_full(f)]
+                elif len(wide[k_wide(f)]) >= 2:
+                    grupo = wide[k_wide(f)]
+                else:
+                    if usa:
+                        regs.append(self._reg_terc(f, sistema, "", ", ".join(sorted(u)),
+                                                   StatusValidacao.EM_ANALISE))
+                    continue
+                esp = espelho(grupo)
+                if not esp:
+                    if usa:
+                        regs.append(self._reg_terc(f, sistema, "", ", ".join(sorted(u)),
+                                                   StatusValidacao.EM_ANALISE))
+                    continue
+                esp_str = ", ".join(sorted(esp))
+                if not u:
+                    regs.append(self._reg_terc(f, sistema, esp_str, "",
+                                               StatusValidacao.SEM_ACESSO))   # Incluir
+                elif u - esp:
+                    regs.append(self._reg_terc(f, sistema, esp_str, ", ".join(sorted(u)),
+                                               StatusValidacao.EM_ANALISE))    # Excesso
+                elif esp - u:
+                    regs.append(self._reg_terc(f, sistema, esp_str, ", ".join(sorted(u)),
+                                               StatusValidacao.DIVERGENTE))    # Alterar
+                else:
+                    regs.append(self._reg_terc(f, sistema, esp_str, ", ".join(sorted(u)),
+                                               StatusValidacao.OK))            # Aderente
+        return regs

@@ -81,6 +81,30 @@ class TestListarQuarentena(_Base):
         self.assertEqual(ativas, {"U9"})                          # U1 saiu, U9 entrou
         self.assertIn("U1", {h["usuario"] for h in out["historico"]})
 
+    def test_overlay_vivo_entrou_e_saiu_preserva_entrada(self):
+        # ENVIAR + RESOLVER do MESMO usuario, ambos vivos (Processador ainda nao
+        # dobrou). O historico deve carregar os dados de ENTRADA (titulo/dias/
+        # ticket/motivo) e a HORA real de inicio/saida — nao 00:00:00.
+        ri.gravar(self.inter, {"tipo_interacao": "QUARENTENA", "registro_id": "U7",
+                               "acao": "ENVIAR", "nome": "U7", "sistema": IC,
+                               "origem": "Inclusão / Alteração", "dias": 20,
+                               "ticket": "IAM-77", "titulo": "Aguardando gestor",
+                               "motivo": "motivo de entrada",
+                               "data_acao": "2026-06-01T08:30:00"}, "op")
+        ri.gravar(self.inter, {"tipo_interacao": "QUARENTENA", "registro_id": "U7",
+                               "acao": "RESOLVER", "motivo": "resolvido cedo",
+                               "data_acao": "2026-06-03T14:15:00"}, "op")
+        out = vm.listar_quarentena()
+        self.assertNotIn("U7", {a["usuario"] for a in out["ativas"]})
+        h = next(x for x in out["historico"] if x["usuario"] == "U7")
+        self.assertEqual(h["titulo"], "Aguardando gestor")        # entrada preservada
+        self.assertEqual(h["dias"], 20)
+        self.assertEqual(h["ticket"], "IAM-77")
+        self.assertEqual(h["motivo_entrada"], "motivo de entrada")
+        self.assertEqual(h["motivo"], "resolvido cedo")           # motivo de saida
+        self.assertEqual(h["data_inicio"], "2026-06-01 08:30:00")  # com hora
+        self.assertEqual(h["data_saida"], "2026-06-03 14:15:00")   # com hora
+
 
 class TestWritesQuarentena(_Base):
 
@@ -105,16 +129,37 @@ class TestWritesQuarentena(_Base):
         self.assertEqual(self._interacoes(), [])
 
     def test_resolver_pendencia_grava_resolucao(self):
-        n = vm.resolver_pendencia("R1", ticket="IAM-123", descricao="ok")
+        n = vm.resolver_pendencia("R1", ticket="IAM-123", descricao="ok",
+                                  motivo="Acesso incluído conforme solicitação")
         self.assertEqual(n, 1)
         res = [i for i in self._interacoes() if i.get("tipo_interacao") == "RESOLUCAO"]
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]["registro_id"], "R1")
         self.assertEqual(res[0]["ticket"], "IAM-123")
+        # motivo (combobox obrigatorio do XML) viaja na interacao
+        self.assertEqual(res[0]["motivo"], "Acesso incluído conforme solicitação")
 
     def test_resolver_pendencia_sem_ticket_nao_grava(self):
-        self.assertEqual(vm.resolver_pendencia("R1", ticket=""), 0)
+        self.assertEqual(vm.resolver_pendencia("R1", ticket="", motivo="X"), 0)
         self.assertEqual(self._interacoes(), [])
+
+    def test_resolver_pendencia_sem_motivo_nao_grava(self):
+        # motivo e' OBRIGATORIO (combobox do XML)
+        self.assertEqual(vm.resolver_pendencia("R1", ticket="IAM-1", motivo=""), 0)
+        self.assertEqual(self._interacoes(), [])
+
+    def test_quarentena_bloqueia_acima_de_90_dias(self):
+        r = vm.enviar_quarentena(["U1"], dias=120, titulo="teste")
+        self.assertIn("erro", r)
+        self.assertIn("90", r["erro"])
+        # nada foi gravado
+        self.assertEqual([i for i in self._interacoes()
+                          if i.get("acao") == "ENVIAR"], [])
+
+    def test_quarentena_aceita_exatamente_90_dias(self):
+        r = vm.enviar_quarentena(["U1"], dias=90, titulo="teste")
+        self.assertNotIn("erro", r)
+        self.assertEqual(r.get("novos"), 1)
 
 
 if __name__ == "__main__":

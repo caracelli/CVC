@@ -6,7 +6,7 @@ from infraestrutura.leitores_arquivos.configs_sistemas import CONFIGS_SISTEMAS
 from infraestrutura.leitores_arquivos.leitor_sistema import LeitorSistema
 from infraestrutura.repositorios.repositorio_acesso_sqlite import RepositorioAcessoSqlite
 from infraestrutura.repositorios.repositorio_log_importacao import (
-    RepositorioLogImportacao, loga_se_reimportacao,
+    RepositorioLogImportacao, loga_se_reimportacao, data_modificacao,
 )
 
 
@@ -39,6 +39,9 @@ class ImportarSistema:
         for arquivo in arquivos:
             # Hash antes da leitura — assim, mesmo se a leitura falhar, logamos
             # tentativa de processar o arquivo com seu fingerprint.
+            # data do PROPRIO arquivo (disponibilizacao) — capturada com o
+            # arquivo ainda em ENTRADA, antes de mover para PROCESSADOS.
+            dt_arq = data_modificacao(arquivo)
             try:
                 hash_arq = loga_se_reimportacao(self._log, caminho=arquivo, tipo=self._sistema.value)
             except Exception as e:
@@ -52,6 +55,7 @@ class ImportarSistema:
                 self._log.registrar(
                     arquivo=arquivo.name, tipo=self._sistema.value,
                     hash_arquivo=hash_arq, status="ERRO", mensagem_erro=str(e),
+                    dt_arquivo=dt_arq,
                 )
                 self._leitor.mover_para_erros(arquivo, str(e))
                 continue
@@ -61,7 +65,7 @@ class ImportarSistema:
             self._log.registrar(
                 arquivo=arquivo.name, tipo=self._sistema.value,
                 hash_arquivo=hash_arq, total_registros=len(perfis),
-                status="SUCESSO",
+                status="SUCESSO", dt_arquivo=dt_arq,
             )
             self._leitor.mover_para_processados(arquivo)
             logger.success(

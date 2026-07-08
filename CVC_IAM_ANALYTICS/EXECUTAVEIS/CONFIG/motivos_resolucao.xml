@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Motivos de resolução de pendência (combobox obrigatório no formulário de
+     "Resolver pendência" do painel). Esta lista é ATUALIZADA JUNTO COM A VERSÃO
+     do sistema (fica em EXECUTAVEIS/CONFIG, que faz auto-update pela <versao>).
+     Para adicionar/alterar um motivo, edite os <motivo> abaixo. A ordem aqui é a
+     ordem no combobox. -->
+<motivos_resolucao>
+    <motivo>Acesso incluído conforme solicitação</motivo>
+    <motivo>Perfil ajustado ao cargo</motivo>
+    <motivo>Acesso revogado</motivo>
+    <motivo>Justificado pelo gestor</motivo>
+    <motivo>Acesso mantido — exceção aprovada</motivo>
+    <motivo>Falso positivo — regra/matriz a revisar</motivo>
+    <motivo>Usuário desligado</motivo>
+    <motivo>Outro</motivo>
+</motivos_resolucao>

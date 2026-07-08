@@ -18,8 +18,11 @@ Mantem o principal pequeno e estavel — raramente precisa mudar.
 import shutil
 import subprocess
 import sys
+import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+_CREATE_NO_WINDOW = 0x08000000   # taskkill/tasklist sem piscar console
 
 
 def _texto(caminho: Path, tag: str) -> str:
@@ -54,12 +57,64 @@ def _flags_detached() -> int:
     return DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
 
 
+def _contar_instancias(img: str) -> int:
+    """Quantas instancias do processo `img` existem AGORA (via tasklist).
+    Retorna 0 se nenhuma, >0 se ha, -1 se nao deu pra verificar."""
+    try:
+        r = subprocess.run(
+            ["tasklist", "/FI", f"IMAGENAME eq {img}", "/NH"],
+            capture_output=True, text=True, creationflags=_CREATE_NO_WINDOW)
+    except Exception:
+        return -1
+    # com processos: cada linha contem o nome da imagem; sem: "INFO: No tasks..."
+    return (r.stdout or "").lower().count(img.lower())
+
+
+def _matar_processos_anteriores(alvo: str) -> None:
+    """Garante que NAO sobre NENHUMA instancia do core (launcher_<alvo>.exe)
+    antes de subir uma nova — evita visualizador duplicado (porta 8800 presa)
+    ou processador travado/zumbi. Pode haver VARIOS processos abertos.
+
+    Fluxo que de fato VERIFICA o resultado:
+      1. conta instancias com `tasklist`;
+      2. se 0 -> pronto (confirmado);
+      3. se >0 -> `taskkill /F /T /IM` (mata TODAS as instancias do nome + filhos),
+         espera o SO liberar e CONFERE de novo; repete ate zerar (ou avisar).
+
+    Mata so o alvo sendo aberto: abrir o processador NAO derruba o visualizador
+    (e vice-versa). Nao mata a si mesmo (o exe de topo tem outro nome)."""
+    if sys.platform != "win32":
+        return
+    img = f"launcher_{alvo}.exe"
+    for _ in range(8):
+        n = _contar_instancias(img)
+        if n == 0:
+            return                      # VERIFICADO: zero instancias
+        try:
+            subprocess.run(["taskkill", "/F", "/T", "/IM", img],
+                           capture_output=True, creationflags=_CREATE_NO_WINDOW)
+        except Exception as e:
+            print(f"[principal] aviso ao encerrar '{img}': {e!r}")
+            return
+        if n < 0:
+            return                      # tasklist indisponivel: matou best-effort
+        time.sleep(0.3)                 # da tempo do SO encerrar e liberar a porta
+    # se chegou aqui, ainda havia algo apos 8 tentativas — registra
+    if _contar_instancias(img) > 0:
+        print(f"[principal] ATENCAO: ainda ha instancia(s) de '{img}' "
+              f"apos varias tentativas de encerrar.")
+
+
 def main() -> int:
     alvo = _alvo_pelo_nome()
     if not alvo:
         print(f"[principal] nao consegui detectar alvo a partir de "
               f"{sys.executable}")
         return 1
+
+    # Antes de qualquer coisa: derruba instancias antigas do core deste alvo
+    # (evita duplicata / porta presa / processo travado), como pedido.
+    _matar_processos_anteriores(alvo)
 
     base = _base()
     cfg_local = base / "CONFIG" / "config.xml"
