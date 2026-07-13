@@ -688,7 +688,7 @@ def inserir_bi_divergencias(cur, divs, validacoes):
             (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (d["id"], d["tipo"], "SYSTUR", d["usuario"],
              d["nome_usuario"], "", d["perfil_encontrado"], "",
-             d["descricao"], data_id, 0, "Não Mapeado", ""))
+             d["descricao"], data_id, 0, "Usuário Não Encontrado", ""))
 
 
 def gerar_resolucoes(validacoes, n=10):

@@ -6,7 +6,7 @@ IGUALZINHO ao BI, lendo direto do SQLite (sem Parquet), por queries.
 Conceito (validado por numeros == Parquet do BI, 6963 linhas):
   - bi_divergencias  = TABELA ESTATICA (snapshot do cenario do BI)
         Fonte 1: validacao_acessos (tipo = status, acao = label)
-        Fonte 2: divergencias onde tipo = ACESSO_SEM_VINCULO_RH (acao = 'Não Mapeado')
+        Fonte 2: divergencias onde tipo = ACESSO_SEM_VINCULO_RH (acao = 'Usuário Não Encontrado')
         Reproduz src/aplicacao/casos_de_uso/gerar_saidas.py
   - quarentena       = TABELA GRAVAVEL (acao write-back)
   - Le bi_divergencias (+ LEFT JOIN rh_ativos = LOOKUPVALUE do BI)
@@ -434,7 +434,7 @@ SELECT
   COALESCE(d.perfil_esperado,'')  AS perfil_esperado,
   COALESCE(d.descricao,'')        AS descricao,
   COALESCE(d.data_identificacao,'') AS data_identificacao,
-  d.resolvida, 'Não Mapeado' AS acao, '' AS origem
+  d.resolvida, 'Usuário Não Encontrado' AS acao, '' AS origem
 FROM divergencias d
 WHERE d.tipo = 'ACESSO_SEM_VINCULO_RH'
 """

@@ -99,7 +99,7 @@ class TestVisualizadorDataLayer(unittest.TestCase):
         b = self._base("")
         self.assertEqual(b["acao_dist"], {
             "Incluir Acesso": 1, "Alterar Perfil": 1,
-            "Em Análise": 1, "Não Mapeado": 1})
+            "Em Análise": 1, "Usuário Não Encontrado": 1})
 
     # ---- users / JOIN rh_ativos ----
     def test_users_estrutura_e_vinculo(self):

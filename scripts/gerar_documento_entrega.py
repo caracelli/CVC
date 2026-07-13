@@ -208,7 +208,7 @@ def construir():
             ["Incluir Acesso", "O cargo exige um acesso que a pessoa ainda não tem.", "Conceder o acesso."],
             ["Alterar Perfil", "A pessoa tem acesso, mas com o perfil errado.", "Ajustar o perfil."],
             ["Em Análise", "O cargo admite mais de um perfil possível.", "Analisar e decidir."],
-            ["Não Mapeado", "Há um acesso de alguém que não está na base de RH ativa.", "Investigar quem é."]],
+            ["Usuário Não Encontrado", "Há um acesso de alguém que não está na base de RH ativa.", "Investigar quem é."]],
            larguras=[1.5, 3.5, 1.7])
 
     h2(doc, "2.3. O que ainda não entra nesta fase")
@@ -227,7 +227,7 @@ def construir():
     par(doc, "É o motor da análise. Ele faz, de ponta a ponta:")
     bullet(doc, "lê os arquivos colocados na pasta de entrada (RH, matriz e extrato);")
     bullet(doc, "padroniza as informações (acerta maiúsculas, acentos, espaços, códigos) para comparar corretamente;")
-    bullet(doc, "cruza o que cada pessoa acessa com o que o cargo prevê e gera a classificação (Aderente, Incluir, Alterar, Em Análise, Não Mapeado);")
+    bullet(doc, "cruza o que cada pessoa acessa com o que o cargo prevê e gera a classificação (Aderente, Incluir, Alterar, Em Análise, Usuário Não Encontrado);")
     bullet(doc, "grava o resultado na base de dados compartilhada — é essa base que o Visualizador lê;")
     bullet(doc, "arquiva os arquivos já usados e registra um log de cada execução (e separa os que tiveram problema).")
     par(doc, "Quando usar: sob demanda, sempre que chegarem bases novas. Quem usa: a "
@@ -366,7 +366,7 @@ def construir():
          "para enxergar o todo e priorizar.",
          "Mostra:",
          ["quantas pessoas há em cada classificação (Incluir, Alterar, Em Análise, "
-          "Não Mapeado, Aderente);",
+          "Usuário Não Encontrado, Aderente);",
           "a evolução dos atendimentos nos últimos 30 dias: identificados, resolvidos "
           "e regularizados;",
           "o tempo de tratamento do ciclo (Pendência → Resolvido → Aderente);",
@@ -477,7 +477,7 @@ def construir():
            [["Aderente", "Pessoa cujo acesso está correto, conforme o cargo."],
             ["Pendência", "Uma diferença de acesso que precisa ser tratada."],
             ["Em Análise", "Cargo que admite mais de um perfil — precisa de decisão."],
-            ["Não Mapeado", "Acesso de alguém que não está na base de RH ativa."],
+            ["Usuário Não Encontrado", "Acesso de alguém que não está na base de RH ativa."],
             ["Quarentena", "Acesso colocado em observação por um prazo antes da decisão."],
             ["Perfil", "O conjunto de permissões que a pessoa tem dentro de um sistema."],
             ["Matriz de perfil", "Tabela que define qual perfil cada cargo deve ter em cada sistema."],

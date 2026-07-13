@@ -11,7 +11,7 @@ _STATUS_LABEL = {
     "SEM_ACESSO":  "Incluir Acesso",
     "DIVERGENTE":  "Alterar Perfil",
     "EM_ANALISE":  "Em Análise",
-    "NAO_MAPEADO": "Não Mapeado",
+    "NAO_MAPEADO": "Usuário Não Encontrado",
     "OK":          "Aderente",
 }
 
@@ -55,7 +55,7 @@ class GerarSaidas:
             for v in validacoes
         ]
 
-        # ── Fonte 2: acessos sem vínculo RH → "Não Mapeado" ──
+        # ── Fonte 2: acessos sem vínculo RH → "Usuário Não Encontrado" ──
         divergencias_sem_vinculo = [
             d for d in self._repo_div.obter_todas()
             if d.tipo == TipoDivergencia.ACESSO_SEM_VINCULO_RH
@@ -76,7 +76,7 @@ class GerarSaidas:
                     if d.data_identificacao else ""
                 ),
                 "resolvida":         d.resolvida,
-                "acao":              "Não Mapeado",
+                "acao":              "Usuário Não Encontrado",
             }
             for d in divergencias_sem_vinculo
         ]

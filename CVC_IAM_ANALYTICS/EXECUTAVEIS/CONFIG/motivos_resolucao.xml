@@ -5,12 +5,7 @@
      Para adicionar/alterar um motivo, edite os <motivo> abaixo. A ordem aqui é a
      ordem no combobox. -->
 <motivos_resolucao>
-    <motivo>Acesso incluído conforme solicitação</motivo>
-    <motivo>Perfil ajustado ao cargo</motivo>
-    <motivo>Acesso revogado</motivo>
-    <motivo>Justificado pelo gestor</motivo>
-    <motivo>Acesso mantido — exceção aprovada</motivo>
-    <motivo>Falso positivo — regra/matriz a revisar</motivo>
-    <motivo>Usuário desligado</motivo>
-    <motivo>Outro</motivo>
+    <motivo>Exceção</motivo>
+    <motivo>Transferência de Área</motivo>
+    <motivo>Acesso Indevido</motivo>
 </motivos_resolucao>

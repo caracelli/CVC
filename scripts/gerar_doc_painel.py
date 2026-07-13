@@ -110,7 +110,7 @@ def main():
              "(quando a integração existir)."],
             ["Ação",
              "O que precisa ser feito com a pendência: Incluir Acesso, "
-             "Alterar Perfil, Em Análise ou Não Mapeado."],
+             "Alterar Perfil, Em Análise ou Usuário Não Encontrado."],
             ["Status",
              "Pendente (ainda não tratado) ou Resolvido (já passou pela "
              "Resolução)."],
@@ -135,7 +135,7 @@ def main():
             ["Em Análise",
              "O cargo tem mais de um perfil possível na matriz — alguém "
              "precisa decidir."],
-            ["Não Mapeado",
+            ["Usuário Não Encontrado",
              "Acesso no sistema sem funcionário correspondente no RH "
              "ativo (usuário \"órfão\")."],
         ],
@@ -147,7 +147,7 @@ def main():
            "alguma pendência de acesso. Uma linha por pessoa.")
     p(doc, "Regras aplicadas:", bold=True)
     p(doc, "• Mostra somente pendências com Ação (Incluir, Alterar, "
-           "Em Análise ou Não Mapeado).")
+           "Em Análise ou Usuário Não Encontrado).")
     p(doc, "• A coluna Status indica se já houve resolução: "
            "Pendente = não, Resolvido = sim.")
     p(doc, "• A linha agrupa todas as pendências do mesmo funcionário "

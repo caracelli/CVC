@@ -1136,7 +1136,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
       </div>
       <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;--kpi-bar:#7D3C98;">
         <div class="kpi-val" style="color:#7D3C98;">4.957</div>
-        <div class="kpi-lbl" style="color:#7D3C98;">Total Não Mapeados</div>
+        <div class="kpi-lbl" style="color:#7D3C98;">Usuários Não Encontrados</div>
       </div>
       <div class="kpi" style="background:#EAFAF1;border:1px solid #A9DFBF;--kpi-bar:#1E8449;">
         <div class="kpi-val" style="color:#1E8449;">6.358</div>
@@ -1705,7 +1705,7 @@ const DESC_FILTRO = {
   'Alterar Perfil': 'Funcionário com perfil diferente do permitido para o cargo — precisa alterar.',
   'Em Análise':     'O cargo tem mais de um perfil possível na matriz — requer análise manual.',
   'Aderente':       'Funcionário com pelo menos um perfil aderente ao esperado do cargo — conforme (não é pendência).',
-  'Não Mapeado':    'Acesso no sistema sem funcionário correspondente na base de RH ativa.',
+  'Usuário Não Encontrado': 'Acesso no sistema sem funcionário correspondente na base de RH ativa.',
   // Tipo (mesma classificação, rótulo usado na grid)
   'Sem Acesso':     'Funcionário sem o acesso que a matriz do cargo exige — precisa incluir o perfil.',
   'Divergente':     'Funcionário com perfil diferente do permitido para o cargo — precisa alterar.',
@@ -1844,7 +1844,7 @@ async function _reaplicarFiltroAplicado(origem){
 }
 
 /* ── Dados (substituídos ao vivo pelo servidor; amostra genérica = fallback) */
-const DB = {"kpis":{"sem_acesso":562,"divergente":41,"em_analise":798,"nao_mapeado":4957,"total":6358},"acao_dist":{"Não Mapeado":4957,"Em Análise":798,"Incluir Acesso":562,"Alterar Perfil":41},"sis_dist":{"SICA_ESFERA":3,"SICA_RA":52,"SIGOT":549,"SYSTUR":6358},"meta":{"referencia":"—","atualizacao":"—"},"users":[{"u":"00001","n":"USUARIO EXEMPLO A","m":"00001","c":"ANALISTA","d":"TI","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"PERFIL_ATUAL","pp":"PERFIL_ESPERADO","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"Matriz SYSTUR"}]},{"u":"00002","n":"USUARIO EXEMPLO B","m":"00002","c":"GERENTE VENDAS","d":"Comercial","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"READ_GERENTE","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"Matriz SYSTUR"}]},{"u":"00003","n":"USUARIO EXEMPLO C","m":"00003","c":"COORDENADOR CUSTOS","d":"Financeiro","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"CUSTOS","pp":"CUSTOS","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"—"}]},{"u":"EXMP0004","n":"USUARIO EXEMPLO D","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Não Mapeado","pe":"","pp":"","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"—"}]}]};
+const DB = {"kpis":{"sem_acesso":562,"divergente":41,"em_analise":798,"nao_mapeado":4957,"total":6358},"acao_dist":{"Usuário Não Encontrado":4957,"Em Análise":798,"Incluir Acesso":562,"Alterar Perfil":41},"sis_dist":{"SICA_ESFERA":3,"SICA_RA":52,"SIGOT":549,"SYSTUR":6358},"meta":{"referencia":"—","atualizacao":"—"},"users":[{"u":"00001","n":"USUARIO EXEMPLO A","m":"00001","c":"ANALISTA","d":"TI","divs":[{"t":"DIVERGENTE","tl":"Divergente","a":"Alterar Perfil","pe":"PERFIL_ATUAL","pp":"PERFIL_ESPERADO","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"Matriz SYSTUR"}]},{"u":"00002","n":"USUARIO EXEMPLO B","m":"00002","c":"GERENTE VENDAS","d":"Comercial","divs":[{"t":"SEM_ACESSO","tl":"Sem Acesso","a":"Incluir Acesso","pe":"","pp":"READ_GERENTE","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"Matriz SYSTUR"}]},{"u":"00003","n":"USUARIO EXEMPLO C","m":"00003","c":"COORDENADOR CUSTOS","d":"Financeiro","divs":[{"t":"EM_ANALISE","tl":"Em Análise","a":"Em Análise","pe":"CUSTOS","pp":"CUSTOS","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"—"}]},{"u":"EXMP0004","n":"USUARIO EXEMPLO D","m":"","c":"","d":"","divs":[{"t":"ACESSO_SEM_VINCULO_RH","tl":"Sem Vínculo RH","a":"Usuário Não Encontrado","pe":"","pp":"","dt":"2026-05-14","vinc":"Funcionário","s":"Pendente","o":"—"}]}]};
 
 /* ── Helpers ──────────────────────────────────────────────────────────── */
 const TIPO_CSS = {
@@ -4587,11 +4587,11 @@ function _csCorAcao(a){
        : a === 'Em Análise'     ? '#856404'
        : a === 'Incluir Acesso' ? '#2980B9'
        : a === 'Alterar Perfil' ? '#B9770E'
-       : a === 'Não Mapeado'    ? '#7D3C98'
+       : a === 'Usuário Não Encontrado' ? '#7D3C98'
        :                          '#B33A3A';
 }
 /* Bloco de acessos de UM sistema no detalhe da Consulta. Dentro do sistema,
-   agrupa por STATUS/ação (Incluir/Alterar/Em Análise/Não Mapeado/Aderente) com
+   agrupa por STATUS/ação (Incluir/Alterar/Em Análise/Usuário Não Encontrado/Aderente) com
    rótulo colorido + contagem. Sistema com muitos perfis (ex.: SIG) nasce
    RECOLHIDO; poucos perfis já vêm abertos. */
 function _csAccBloco(sis, lista, pfx, comData){
@@ -4602,7 +4602,7 @@ function _csAccBloco(sis, lista, pfx, comData){
   // Agrupa por ação/status, na ordem "acionável primeiro, aderente por último".
   const grupos = {};
   lista.forEach(d => { const k = d.a || d.tl || d.t || '—'; (grupos[k] = grupos[k] || []).push(d); });
-  const ordem = ['Incluir Acesso', 'Alterar Perfil', 'Em Análise', 'Não Mapeado', 'Aderente'];
+  const ordem = ['Incluir Acesso', 'Alterar Perfil', 'Em Análise', 'Usuário Não Encontrado', 'Aderente'];
   const chaves = Object.keys(grupos).sort((a, b) => {
     const ia = ordem.indexOf(a), ib = ordem.indexOf(b);
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
@@ -5050,14 +5050,14 @@ function mkChart(id, labels, data, alpha){
 /* ── KPIs data-driven (lidos do DB injetado pelo servidor) ────────────── */
 const KPI_MAP = {
   'Incluir Acesso':'sem_acesso', 'Alterar Perfil':'divergente',
-  'Em Análise':'em_analise', 'Total Não Mapeados':'nao_mapeado',
+  'Em Análise':'em_analise', 'Usuários Não Encontrados':'nao_mapeado',
   'Aderente':'ok',
   'Total c/ Ação':'total'
 };
 // Mapeia a ACAO da divergencia (campo d.a) para a chave do KPI.
 const ACAO_KPI = {
   'Incluir Acesso':'sem_acesso', 'Alterar Perfil':'divergente',
-  'Em Análise':'em_analise', 'Não Mapeado':'nao_mapeado', 'Aderente':'ok',
+  'Em Análise':'em_analise', 'Usuário Não Encontrado':'nao_mapeado', 'Aderente':'ok',
 };
 // Recalcula os KPIs a partir das divergencias que passam nos filtros laterais
 // (mesma fonte da grid, via divPassa). Sem filtro ativo, bate com os totais da

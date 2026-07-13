@@ -62,7 +62,7 @@ class TestStatusLabel(unittest.TestCase):
         self.assertEqual(_STATUS_LABEL["SEM_ACESSO"], "Incluir Acesso")
         self.assertEqual(_STATUS_LABEL["DIVERGENTE"], "Alterar Perfil")
         self.assertEqual(_STATUS_LABEL["EM_ANALISE"], "Em Análise")
-        self.assertEqual(_STATUS_LABEL["NAO_MAPEADO"], "Não Mapeado")
+        self.assertEqual(_STATUS_LABEL["NAO_MAPEADO"], "Usuário Não Encontrado")
 
 
 # (removido) TestGerarSaidasExcluiPerfilInvalido — o Excel automatico de saidas
