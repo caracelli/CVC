@@ -34,8 +34,16 @@ random.seed(42)  # determinismo: rodar 2x gera o mesmo cenario
 DB_PATH = (Path(__file__).resolve().parent.parent
            / "CVC_IAM_ANALYTICS" / "DADOS" / "BANCO" / "iam_analytics.db")
 
-HOJE = date(2026, 5, 26)
+# Datas relativas ao dia da geracao: os graficos da Visao Geral (Chamados,
+# Aging, Movimentacao RH) usam janela movel de 30 dias terminando HOJE. Com data
+# fixa, o banco "envelhece" e o painel aparece vazio.
+HOJE = date.today()
 EMPRESA = "CVC BRASIL OPERADORA E AGENCIA DE VIAGENS S.A."
+
+# Catalogo de motivos de resolucao (mesma lista de CONFIG/motivos_resolucao.xml).
+# Peso = frequencia relativa no cenario demo.
+MOTIVOS_RESOLUCAO = [("Acesso Indevido", 45), ("Exceção", 30),
+                     ("Transferência de Área", 25)]
 
 PRIMEIROS_NOMES = [
     "ANA", "BRUNO", "CARLA", "DANIEL", "EDUARDA", "FELIPE", "GABRIELA",
@@ -293,9 +301,15 @@ def criar_schema(cur):
 
         CREATE TABLE resolucoes (
             registro_id TEXT PRIMARY KEY, ticket TEXT NOT NULL,
-            ticket_url TEXT, descricao TEXT, pendencias TEXT,
+            ticket_url TEXT, descricao TEXT, motivo TEXT, pendencias TEXT,
             cargo TEXT, centro_custo TEXT, nome TEXT,
             resolvido_por TEXT, resolvido_em TEXT, dobrado_em TEXT);
+
+        CREATE TABLE ciclo_vida_acesso (
+            matricula TEXT, sistema TEXT, perfil TEXT, nome TEXT, login TEXT,
+            cargo TEXT, dt_pendencia TEXT, dt_resolvido TEXT, ticket TEXT,
+            dt_aderente TEXT, dt_atualizacao DATETIME,
+            PRIMARY KEY (matricula, sistema));
 
         CREATE TABLE quarentena (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -349,7 +363,13 @@ def gerar_funcionarios(n: int, matriculas_usadas: set,
         cc_cod, cc_nome, dept = random.choice(CENTROS_CUSTO)
         if is_desligado:
             admissao = data_aleatoria(date(2015, 1, 1), date(2024, 12, 31))
-            desligamento = data_aleatoria(date(2024, 6, 1), HOJE)
+            # Maioria dos desligamentos RECENTE: o card "Ação Imediata — Recém-
+            # desligados ainda com Acesso" lista os mais novos, e desligamento de
+            # ~1 ano atras no topo de "recem-desligados" nao faz sentido.
+            faixa = random.choices([(0, 30), (31, 90), (91, 365)],
+                                   weights=[55, 30, 15])[0]
+            desligamento = data_aleatoria(HOJE - timedelta(days=faixa[1]),
+                                          HOJE - timedelta(days=faixa[0]))
         else:
             admissao = data_aleatoria(date(2010, 1, 1), date(2026, 4, 30))
             desligamento = None
@@ -545,18 +565,22 @@ def gerar_validacoes(ativos, acessos):
             status = "OK"
         else:
             status = "DIVERGENTE"
-        # data_identificacao no PASSADO (30-60 dias atras): garante que
-        # quando essa matricula for resolvida, o resolvido_em fica DEPOIS.
-        di_inicio = HOJE - timedelta(days=60)
-        di_fim = HOJE - timedelta(days=30)
-        data_id = data_aleatoria(di_inicio, di_fim)
+        # Idade da pendencia distribuida pelas 4 faixas do Aging (0-7, 8-30,
+        # 31-90, 90+) — o painel classifica pela dt_processamento. Concentrar
+        # tudo numa faixa deixa o grafico com uma barra so. As faixas recentes
+        # tambem alimentam "Identificados (ultimos 30 dias)".
+        faixa = random.choices([(0, 7), (8, 30), (31, 90), (91, 150)],
+                               weights=[20, 30, 35, 15])[0]
+        data_id = data_aleatoria(HOJE - timedelta(days=faixa[1]),
+                                 HOJE - timedelta(days=faixa[0]))
+        dt_id = fmt_dt(datetime.combine(data_id, datetime.min.time()))
         validacoes.append({
             "f": f, "perfil_esp": "|".join(perfis_esp),
             "perfil_atual": perfil_atual or "",
             "status": status,                       # SEM_ACESSO|DIVERGENTE|EM_ANALISE|OK
             "origem": "MATRIZ",                     # origem_matriz: MATRIZ|CCO
-            "dt": agora,
-            "data_identificacao": fmt_dt(datetime.combine(data_id, datetime.min.time())),
+            "dt": dt_id,                            # dt_processamento = idade da pendencia
+            "data_identificacao": dt_id,
         })
     return validacoes
 
@@ -715,12 +739,12 @@ def gerar_resolucoes(validacoes, n=10):
         ticket_num = 2000 + random.randint(0, 200)
         # data_id da bi_divergencia (formato "YYYY-MM-DD HH:MM:SS")
         data_id = v["data_identificacao"]
-        # parse pra date e seta resolvido_em entre (data_id + 3 dias) e HOJE
+        # resolvido_em: SEMPRE depois da identificacao e DENTRO dos ultimos 30
+        # dias — e' essa janela que alimenta "Resolvidos" e o grafico de Motivos.
         data_id_d = datetime.strptime(data_id, "%Y-%m-%d %H:%M:%S").date()
-        inicio_resolucao = data_id_d + timedelta(days=3)
-        # garante que a janela e' valida (se data_id muito recente, fica >= HOJE)
+        inicio_resolucao = max(data_id_d + timedelta(days=1), HOJE - timedelta(days=30))
         if inicio_resolucao > HOJE:
-            inicio_resolucao = data_id_d + timedelta(days=1)
+            inicio_resolucao = HOJE
         resolvido_em = data_aleatoria(inicio_resolucao, HOJE)
         pendencias = [{
             "tipo": tipo, "acao": tipo,
@@ -730,12 +754,18 @@ def gerar_resolucoes(validacoes, n=10):
             "opcoes": perfis_esp if tipo == "Em Análise" and len(perfis_esp) > 1 else [],
             "dt": data_id,
         }]
+        motivo = random.choices([m for m, _ in MOTIVOS_RESOLUCAO],
+                                weights=[p for _, p in MOTIVOS_RESOLUCAO])[0]
         resolucoes.append({
             "registro_id": str(f["matricula"]),
             "ticket": f"IAM-{ticket_num}",
             "ticket_url": f"https://jira.cvc.com.br/browse/IAM-{ticket_num}",
             "descricao": random.choice(descricoes),
+            "motivo": motivo,
             "pendencias": json.dumps(pendencias, ensure_ascii=False),
+            "perfil": v["perfil_atual"] or (perfis_esp[0] if perfis_esp else ""),
+            "login": f["email"].split("@")[0],
+            "data_identificacao": data_id,
             "cargo": f["cargo_descricao"],
             "centro_custo": f["centro_custo_codigo"],
             "nome": f["nome"],
@@ -750,11 +780,76 @@ def gerar_resolucoes(validacoes, n=10):
 def inserir_resolucoes(cur, resolucoes):
     agora = fmt_dt(datetime.now())
     for r in resolucoes:
-        cur.execute("""INSERT INTO resolucoes VALUES
-            (?,?,?,?,?,?,?,?,?,?,?)""",
+        cur.execute("""INSERT INTO resolucoes
+            (registro_id, ticket, ticket_url, descricao, motivo, pendencias,
+             cargo, centro_custo, nome, resolvido_por, resolvido_em, dobrado_em)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (r["registro_id"], r["ticket"], r["ticket_url"], r["descricao"],
-             r["pendencias"], r["cargo"], r["centro_custo"], r["nome"],
-             r["resolvido_por"], r["resolvido_em"], agora))
+             r["motivo"], r["pendencias"], r["cargo"], r["centro_custo"],
+             r["nome"], r["resolvido_por"], r["resolvido_em"], agora))
+
+
+def gerar_ciclo_vida(resolucoes, validacoes, n_diretos=8):
+    """ciclo_vida_acesso: trilha Pendencia -> Resolvido -> Aderente. Alimenta o
+    'Tempo de Tratamento' e o card 'Aderentes' da Visao Geral.
+
+    Dois caminhos, como na vida real:
+      - P -> R -> A: resolvido por ticket; ~75% ja virou aderente (o resto ainda
+        aguarda a liberacao do acesso, entao dt_aderente fica NULL);
+      - P -> A direto: acesso liberado FORA do sistema, sem ticket. E' o que o
+        painel rotula como "Sem motivo" no grafico de Motivos."""
+    def _dt(d):   # data -> datetime em horario comercial
+        return fmt_dt(datetime.combine(d, datetime.min.time())
+                      + timedelta(hours=random.randint(9, 18),
+                                  minutes=random.randint(0, 59)))
+
+    ciclos, usadas = [], set()
+    for r in resolucoes:
+        usadas.add(r["registro_id"])
+        resolvido_d = datetime.strptime(r["resolvido_em"], "%Y-%m-%d %H:%M:%S").date()
+        aderente = None
+        if random.random() < 0.75:
+            ader_d = min(resolvido_d + timedelta(days=random.randint(1, 7)), HOJE)
+            aderente = _dt(ader_d)
+        ciclos.append({
+            "matricula": r["registro_id"], "sistema": "SYSTUR",
+            "perfil": r["perfil"], "nome": r["nome"], "login": r["login"],
+            "cargo": r["cargo"],
+            "dt_pendencia": r["data_identificacao"],
+            "dt_resolvido": r["resolvido_em"],
+            "ticket": r["ticket"],
+            "dt_aderente": aderente,
+        })
+
+    # P -> A direto (sem ticket): liberado fora do sistema
+    candidatos = [v for v in validacoes
+                  if v["status"] != "OK" and str(v["f"]["matricula"]) not in usadas]
+    for v in random.sample(candidatos, min(n_diretos, len(candidatos))):
+        f = v["f"]
+        pend_d = datetime.strptime(v["data_identificacao"], "%Y-%m-%d %H:%M:%S").date()
+        inicio = max(pend_d + timedelta(days=1), HOJE - timedelta(days=30))
+        ader_d = data_aleatoria(min(inicio, HOJE), HOJE)
+        ciclos.append({
+            "matricula": str(f["matricula"]), "sistema": "SYSTUR",
+            "perfil": v["perfil_atual"] or "", "nome": f["nome"],
+            "login": f["email"].split("@")[0], "cargo": f["cargo_descricao"],
+            "dt_pendencia": v["data_identificacao"],
+            "dt_resolvido": None, "ticket": None,
+            "dt_aderente": _dt(ader_d),
+        })
+    return ciclos
+
+
+def inserir_ciclo_vida(cur, ciclos):
+    agora = fmt_dt(datetime.now())
+    for c in ciclos:
+        cur.execute("""INSERT INTO ciclo_vida_acesso
+            (matricula, sistema, perfil, nome, login, cargo, dt_pendencia,
+             dt_resolvido, ticket, dt_aderente, dt_atualizacao)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (c["matricula"], c["sistema"], c["perfil"], c["nome"], c["login"],
+             c["cargo"], c["dt_pendencia"], c["dt_resolvido"], c["ticket"],
+             c["dt_aderente"], agora))
 
 
 def gerar_quarentena(ativos):
@@ -839,7 +934,9 @@ def gerar_historico_rh(ativos, desligados, n=15):
     novos = sorted(ativos, key=lambda f: f["data_admissao"], reverse=True)[:5]
     for f in novos:
         eventos.append({
-            "data_snapshot": fmt_data(f["data_admissao"]),
+            # data_snapshot = quando o CDC DETECTOU a mudanca (dia da importacao),
+            # nao a data de admissao. O card "Movimentacao RH" olha os ultimos 30 dias.
+            "data_snapshot": fmt_data(data_aleatoria(HOJE - timedelta(days=30), HOJE)),
             "tipo": "ATIVO",
             "matricula": str(f["matricula"]),
             "tipo_mudanca": "NOVO",
@@ -861,7 +958,7 @@ def gerar_historico_rh(ativos, desligados, n=15):
         if ant_cargo_cod == f["cargo_codigo"]:
             continue
         eventos.append({
-            "data_snapshot": fmt_data(data_aleatoria(date(2026, 5, 1), HOJE)),
+            "data_snapshot": fmt_data(data_aleatoria(HOJE - timedelta(days=30), HOJE)),
             "tipo": "ATIVO",
             "matricula": str(f["matricula"]),
             "tipo_mudanca": "ALTERADO",
@@ -881,18 +978,21 @@ def gerar_historico_rh(ativos, desligados, n=15):
                                   key=lambda f: f["data_desligamento"],
                                   reverse=True)[:5]
     for f in recentes_desligados:
+        # O CDC ve o desligado como registro NOVO na base de DESLIGADOS — e' assim
+        # que o painel conta os desligamentos (entidade RH_DESLIGADO + NOVO).
         eventos.append({
-            "data_snapshot": fmt_data(f["data_desligamento"]),
+            "data_snapshot": fmt_data(data_aleatoria(HOJE - timedelta(days=30), HOJE)),
             "tipo": "DESLIGADO",
             "matricula": str(f["matricula"]),
-            "tipo_mudanca": "REMOVIDO",
+            "tipo_mudanca": "NOVO",
             "campos_alterados": None,
-            "dados_anterior": json.dumps({
+            "dados_anterior": None,
+            "dados_novo": json.dumps({
                 "matricula": str(f["matricula"]),
                 "nome": f["nome"],
                 "cargo_descricao": f["cargo_descricao"],
+                "data_desligamento": fmt_data(f["data_desligamento"]),
             }, ensure_ascii=False),
-            "dados_novo": None,
             "dt_registro": fmt_dt(datetime.now()),
         })
     return eventos
@@ -962,9 +1062,14 @@ def main():
     inserir_bi_divergencias(cur, divs, validacoes)
     print(f"  divergencias: {len(divs)}")
 
-    resolucoes = gerar_resolucoes(validacoes, n=10)
+    resolucoes = gerar_resolucoes(validacoes, n=40)
     inserir_resolucoes(cur, resolucoes)
     print(f"  resolucoes: {len(resolucoes)} (resolvido_em > data_identificacao)")
+
+    ciclos = gerar_ciclo_vida(resolucoes, validacoes)
+    inserir_ciclo_vida(cur, ciclos)
+    n_ader = sum(1 for c in ciclos if c["dt_aderente"])
+    print(f"  ciclo_vida_acesso: {len(ciclos)} ({n_ader} ja aderentes)")
 
     ativos_q, hist_q = gerar_quarentena(ativos)
     inserir_quarentena(cur, ativos_q, hist_q)

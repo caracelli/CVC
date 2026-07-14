@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Sobe o Visualizador em thread (banco do cliente) e captura PNG das 6 telas
-via Edge headless. Saida: docs/prints_painel/*.png  (usado pelo gerador do .docx)."""
+"""Sobe o Visualizador em thread e captura PNG das 6 telas via Edge headless.
+Saida: docs/prints_painel/*.png  (usado pelo gerador do .docx).
+
+    python scripts/_capturar_prints.py                 # banco do cliente (real)
+    python scripts/_capturar_prints.py <caminho.db>    # outro banco (ex.: o demo,
+                                                       # gerado por gerar_db_demo.py)
+"""
 import os, sys, time, shutil, tempfile, threading
 from pathlib import Path
 
@@ -8,9 +13,15 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 import visualizador.main as vm
 
+BANCO_PADRAO = RAIZ / "Arquivos_origem" / "DADOS" / "BANCO" / "iam_analytics.db"
+origem = Path(sys.argv[1]) if len(sys.argv) > 1 else BANCO_PADRAO
+if not origem.is_file():
+    sys.exit(f"ERRO: banco nao encontrado: {origem}")
+print(f"banco: {origem}")
+
 tmp = tempfile.mkdtemp(prefix="cvc_print_")
 db = os.path.join(tmp, "iam.db")
-shutil.copy(str(RAIZ / "Arquivos_origem" / "DADOS" / "BANCO" / "iam_analytics.db"), db)
+shutil.copy(str(origem), db)
 vm.DB_PATH = db
 vm.SISTEMA = ""
 vm._BASE = None
