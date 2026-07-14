@@ -12,17 +12,20 @@ EXTENSOES_SUPORTADAS = {".csv", ".xlsx", ".xls"}
 
 def ler_tabela(arquivo, dtype=str, header=0, skiprows=0,
                encoding: str = None, separador: str = None) -> "pd.DataFrame":
-    """Leitura UNICA para todos os leitores: aceita XLSX/XLS (primeira aba) OU
-    CSV, com as MESMAS colunas/dados. No CSV, detecta encoding e separador
-    (',', ';' ou tab) quando nao informados — assim qualquer arquivo, em
-    qualquer formato/separador, e' importado. `encoding`/`separador` explicitos
-    (ex.: configurados por sistema) tem prioridade sobre a deteccao.
+    """Leitura UNICA para todos os leitores: aceita XLSX/XLS (primeira aba),
+    CSV DELIMITADO (',', ';' ou tab) OU CSV de LARGURA FIXA (colunas alinhadas
+    por espacos, sem delimitador — ex.: view_IC do Integrador Contabil), com as
+    MESMAS colunas/dados. Encoding e formato sao auto-detectados quando nao
+    informados — assim o cliente pode mandar QUALQUER um dos formatos e todos
+    sao importados. `encoding`/`separador` explicitos (config por sistema) tem
+    prioridade sobre a deteccao; `separador` explicito nunca cai em largura fixa.
     """
     arquivo = Path(arquivo)
     if arquivo.suffix.lower() in (".xlsx", ".xls"):
         return pd.read_excel(arquivo, sheet_name=0, dtype=dtype,
                              header=header, skiprows=skiprows)
     enc, sep = encoding, separador
+    largura_fixa = False
     if enc is None or sep is None:
         with open(arquivo, "rb") as f:
             bruto = f.read(65536)
@@ -38,7 +41,16 @@ def ler_tabela(arquivo, dtype=str, header=0, skiprows=0,
             idx = skiprows + header
             alvo = linhas[idx] if len(linhas) > idx else (linhas[-1] if linhas else "")
             cont = {",": alvo.count(","), ";": alvo.count(";"), "\t": alvo.count("\t")}
-            sep = max(cont, key=cont.get) if any(cont.values()) else ","
+            if any(cont.values()):
+                sep = max(cont, key=cont.get)
+            else:
+                # nenhum delimitador no cabecalho -> arquivo de LARGURA FIXA.
+                # read_fwf infere as colunas por posicao. So ocorre quando o
+                # separador NAO foi configurado, entao CSV/XLSX seguem intactos.
+                largura_fixa = True
+    if largura_fixa:
+        return pd.read_fwf(arquivo, dtype=dtype, header=header,
+                           skiprows=skiprows, encoding=enc)
     return pd.read_csv(arquivo, sep=sep, dtype=dtype, encoding=enc,
                        header=header, skiprows=skiprows, on_bad_lines="skip")
 
