@@ -65,7 +65,12 @@ DADOS_SUBDIRS = [
 # Pego a versao mais recente de cada base, ja SEM o sufixo _AAAAMMDD_HHMMSS que o
 # Processador adiciona ao mover para PROCESSADOS (o Processador re-adiciona ao rodar).
 ARQUIVOS_ENTRADA = [
-    # RH ativos (fonte atual = QuickReport)
+    # RH ativos — FUNCIONARIOS CLT (base principal p/ vinculacao dos acessos).
+    # PROJETOIAM tem CPF/Matricula/Nome/Email 100%. SEM ela, os acessos dos
+    # sistemas nao acham funcionario e caem em "Usuario Nao Encontrado".
+    ("RH/ATIVOS/PROCESSADOS/PROJETOIAM (8)_20260611_091052.CSV",
+     "RH/ATIVOS/PROJETOIAM (8).CSV"),
+    # RH ativos — TERCEIROS (processar_terceiros=true; validados por espelho).
     ("RH/ATIVOS/PROCESSADOS/QuickReport_1780421571311_20260624_124746.xlsx",
      "RH/ATIVOS/QuickReport_1780421571311.xlsx"),
     # Mapeamento organizacional (CCO/CSC)
