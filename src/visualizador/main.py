@@ -1808,7 +1808,7 @@ def _montar_base():
                 "FROM ciclo_vida_acesso cv "
                 "LEFT JOIN rh_ativos rh ON rh.matricula = cv.matricula "
                 + cond_a.replace("dt_aderente", "cv.dt_aderente").replace("sistema =", "cv.sistema =")
-                + " ORDER BY cv.matricula, cv.dt_aderente DESC", par_a):
+                + " ORDER BY cv.dt_aderente DESC", par_a):
                 aderentes.append({
                     "m": r["matricula"], "n": r["nome"] or "", "login": r["login"] or "",
                     "cargo": r["cargo"] or "", "sis": r["sistema"] or "",
@@ -2087,8 +2087,12 @@ def _calcular_visao_geral(c, sistema=""):
     tempos = {"total": "—", "pend_resolv": "—", "resolv_ader": "—",
               "seg_pr": 0, "seg_ra": 0, "seg_pa": 0, "n": 0, "n_pr": 0, "n_ra": 0}
     try:
-        _tem_ev = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
-                            "AND name='ciclo_eventos_acesso'").fetchone()
+        # Usa o log de eventos SÓ se ele tiver dados (banco antigo/virgem cai no
+        # fallback do ciclo_vida). Blindado contra a tabela nao existir.
+        try:
+            _tem_ev = c.execute("SELECT 1 FROM ciclo_eventos_acesso LIMIT 1").fetchone()
+        except Exception:
+            _tem_ev = None
         if _tem_ev:
             # Tempos por CICLO a partir do LOG DE EVENTOS: pendencia->resolvido->
             # aderente DENTRO de cada (matricula, sistema, ciclo). Reflete
