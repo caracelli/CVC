@@ -100,6 +100,7 @@ class ConexaoBancoDados:
             self._migrar_rh_ativos_tipo_vinculo(conn)
             self._migrar_gestor(conn)
             self._migrar_ciclo_vida(conn)
+            self._migrar_ciclo_eventos_backfill(conn)
 
     def _cols(self, conn, tabela: str) -> set:
         return {row[1] for row in conn.execute(text(f"PRAGMA table_info({tabela})"))}
@@ -197,6 +198,40 @@ class ConexaoBancoDados:
             )"""))
         conn.commit()
         logger.info("Migration: tabela ciclo_vida_acesso criada.")
+
+    def _migrar_ciclo_eventos_backfill(self, conn):
+        """Backfill do CICLO 1 no log de eventos (ciclo_eventos_acesso) a partir
+        do resumo ja existente em ciclo_vida_acesso. Aditivo e idempotente: a
+        tabela ja foi criada pelo create_all; aqui so semeamos o 1o ciclo da base
+        atual do cliente para o Historico aparecer sem reprocesso. O UNIQUE
+        (matricula, sistema, ciclo, tipo_evento) impede duplicar em reprocessos —
+        cada marco entra uma unica vez. Eventos novos (inclusive REABERTURAS) vem
+        depois pelo RegistrarEventosAcesso durante o processamento."""
+        tabelas = self._tabelas(conn)
+        if "ciclo_eventos_acesso" not in tabelas or "ciclo_vida_acesso" not in tabelas:
+            return
+        # PENDENCIA / RESOLVIDO / ADERENTE do 1o ciclo, cada um so quando ha data.
+        marcos = (
+            ("PENDENCIA", "dt_pendencia", "NULL"),
+            ("RESOLVIDO", "dt_resolvido", "ticket"),
+            ("ADERENTE",  "dt_aderente",  "NULL"),
+        )
+        total = 0
+        for tipo, col_data, col_ticket in marcos:
+            res = conn.execute(text(f"""
+                INSERT OR IGNORE INTO ciclo_eventos_acesso
+                    (matricula, sistema, ciclo, tipo_evento, data_evento,
+                     perfil, nome, login, cargo, ticket, detalhe, dt_registro)
+                SELECT matricula, sistema, 1, '{tipo}', {col_data},
+                       perfil, nome, login, cargo, {col_ticket}, NULL, datetime('now')
+                FROM ciclo_vida_acesso
+                WHERE {col_data} IS NOT NULL AND {col_data} <> ''
+            """))
+            total += res.rowcount if res.rowcount and res.rowcount > 0 else 0
+        conn.commit()
+        if total:
+            logger.info(f"Migration: backfill de {total} evento(s) do ciclo 1 "
+                        f"em ciclo_eventos_acesso (a partir de ciclo_vida_acesso).")
 
     def _migrar_matriz_cco(self, conn):
         # matriz_organizacional foi substituida por matriz_cco

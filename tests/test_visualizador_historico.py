@@ -70,6 +70,42 @@ class TestHistoricoCronologia(unittest.TestCase):
         self.assertLessEqual(pend["data"], resol["data"])      # cronologia OK
         self.assertEqual(pend["data"], RESOLVIDO_EM)           # limitada pela resolucao
 
+    def test_eventos_por_sistema_e_reabertura(self):
+        # NOVO caminho: listar_historico_rh le ciclo_eventos_acesso e abre por
+        # (matricula, sistema), com reabertura (ciclo 2). Caso 2084.
+        db = os.path.join(self._tmp, "ev.db")
+        c = sqlite3.connect(db)
+        c.executescript(
+            "CREATE TABLE bi_divergencias (usuario TEXT, nome_usuario TEXT, data_identificacao TEXT);"
+            "CREATE TABLE resolucoes (registro_id TEXT, ticket TEXT, ticket_url TEXT,"
+            " descricao TEXT, pendencias TEXT, cargo TEXT, centro_custo TEXT,"
+            " nome TEXT, resolvido_por TEXT, resolvido_em TEXT);"
+            "CREATE TABLE ciclo_eventos_acesso (id INTEGER PRIMARY KEY, matricula TEXT,"
+            " sistema TEXT, ciclo INTEGER, tipo_evento TEXT, data_evento TEXT,"
+            " perfil TEXT, nome TEXT, login TEXT, cargo TEXT, ticket TEXT, detalhe TEXT,"
+            " dt_registro TEXT);"
+        )
+        c.executemany(
+            "INSERT INTO ciclo_eventos_acesso (matricula,sistema,ciclo,tipo_evento,"
+            "data_evento,nome) VALUES (?,?,?,?,?,?)",
+            [("2084", "SICA_RA", 1, "ADERENTE", "2026-06-10 14:00:00", "Maria"),
+             ("2084", "SYSTUR", 1, "PENDENCIA", "2026-06-01 09:00:00", "Maria"),
+             ("2084", "SYSTUR", 1, "ADERENTE", "2026-06-05 09:00:00", "Maria"),
+             ("2084", "SYSTUR", 2, "PENDENCIA", "2026-07-15 08:00:00", "Maria")])
+        c.commit(); c.close()
+        vm.DB_PATH = db
+        recs = [r for r in vm.listar_historico_rh() if r["matricula"] == "2084"]
+        # SICA_RA aderente e SYSTUR separados, cada um com seu sistema
+        sica = [r for r in recs if r.get("sistema") == "SICA_RA"]
+        systur = [r for r in recs if r.get("sistema") == "SYSTUR"]
+        self.assertEqual([r["tipo"] for r in sica], ["ADERENTE"])
+        self.assertEqual(len(systur), 3)  # pend c1, ader c1, reabertura c2
+        # a reabertura (ciclo 2) vem marcada
+        reab = [r for r in systur if r.get("reaberta")]
+        self.assertEqual(len(reab), 1)
+        self.assertEqual(reab[0]["movimentacao"], "Pendência reaberta")
+        self.assertEqual(reab[0]["ciclo"], 2)
+
     def test_identificada_anterior_e_preservada(self):
         # caso normal: identificada ANTES da resolucao -> mantem a data original
         pend, resol = self._par("2026-05-20 09:00:00")

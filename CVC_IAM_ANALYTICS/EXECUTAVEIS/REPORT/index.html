@@ -266,6 +266,32 @@ body{
 .h-pen{background:#FDE7E9;color:#A4262C;}
 .h-res{background:#E7EEFB;color:#27468C;}
 .h-ader{background:#E3F5E9;color:#1E7F4E;}
+/* Coluna Sistema + reabertura de ciclo (Histórico por sistema) */
+.h-sis{display:inline-block;font:700 10px Arial;color:#1F2D5C;background:#EEF2F9;
+  border:1px solid #DCE3EF;padding:2px 8px;border-radius:5px;white-space:nowrap;
+  letter-spacing:.02em;}
+.h-ciclo{display:inline-block;font:800 9px Arial;color:#7B5E00;background:#FBF2D8;
+  border:1px solid #EAD9A0;padding:1px 5px;border-radius:4px;vertical-align:1px;}
+.h-reab{display:inline-block;font:800 8.5px Arial;letter-spacing:.03em;color:#fff;
+  background:#B33A3A;padding:1px 6px;border-radius:4px;text-transform:uppercase;
+  vertical-align:1px;}
+#hist-tbl tr.sub-sisbreak>td{border-top:1px solid #E7EBF2;}
+/* chips de status clicáveis no cabeçalho do Histórico */
+.h-stchip{cursor:pointer;user-select:none;margin-right:3px;
+  transition:filter .12s, box-shadow .12s;}
+.h-stchip:hover{filter:brightness(.93);}
+.h-stchip::after{content:"▸";font-size:8px;opacity:.55;margin-left:3px;}
+.h-stchip.on{box-shadow:0 0 0 2px rgba(31,45,92,.30);}
+.h-stchip.on::after{content:"▾";opacity:.85;}
+/* perfil expansível no Detalhe (lista longa vira "N perfis" clicável) */
+.perf-exp{cursor:pointer;color:#2D6CDF;font-weight:600;user-select:none;white-space:nowrap;}
+.perf-exp:hover{text-decoration:underline;}
+.perf-lista{margin:5px 0 2px;padding:6px 9px;background:#F7F9FC;border:1px solid #E7EBF2;
+  border-radius:6px;max-height:180px;overflow:auto;font:600 11px Arial;color:#3A4156;}
+.perf-lista>div{padding:1px 0;white-space:nowrap;}
+/* trilha completa do sistema (nível mais fundo do Histórico) */
+#hist-tbl .expand-btn-sm{transform:scale(.8);}
+#hist-tbl tr.sub-trail>td{background:#FBFCFE;color:#5A6377;font-size:11.5px;padding-top:4px;padding-bottom:4px;}
 .filtro-dica{font:600 9px Arial;color:#8A9099;padding:1px 2px 7px;line-height:1.45;}
 .filtro-dica b{color:#3A3F4C;font-weight:800;}
 .hist-tk{color:#2D6CDF;cursor:pointer;font-weight:700;
@@ -1316,10 +1342,11 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
           <colgroup>
             <col style="width:34px">
             <col style="width:112px">
-            <col style="width:300px">
+            <col style="width:240px">
+            <col style="width:132px">
             <col style="width:170px">
             <col style="width:150px">
-            <col style="width:260px">
+            <col style="width:280px">
             <col style="width:96px">
           </colgroup>
           <thead>
@@ -1327,6 +1354,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
               <th data-nf></th>
               <th>Matrícula</th>
               <th>Nome</th>
+              <th>Sistema</th>
               <th>Movimentação</th>
               <th>Data</th>
               <th>Detalhe</th>
@@ -1436,7 +1464,7 @@ function renderConformidade(){
     const total = _durStr(a.dt_pend, a.dt);
     return `<tr><td><strong>${esc(a.m)}</strong></td><td>${esc(a.n)}</td>`
     + `<td><strong style="color:#1F2D5C;">${esc(a.login)}</strong></td>`
-    + `<td>${esc(a.sis)}</td><td>${esc(a.perfil)}</td>`
+    + `<td>${esc(a.sis)}${a.ciclos>1?` <span class="h-ciclo" title="Passou por ${a.ciclos} ciclos (reaberturas) até aderir neste sistema">${a.ciclos} ciclos</span>`:''}</td><td>${esc(a.perfil)}</td>`
     + `<td>${a.dt_pend ? fmtDH(a.dt_pend) : '—'}</td>`
     + `<td>${a.dt_resol ? fmtDH(a.dt_resol) : '—'}</td>`
     + `<td><span class="badge b-ok">${fmtDH(a.dt)}</span></td>`
@@ -2863,7 +2891,7 @@ const _GRID_NOME_COL = Object.fromEntries(
 /* Mapeamento col → nome do header da grid Histórico.
    Ordem (0..5): +(expand), Matrícula, Nome, Movimentação, Data, Detalhe. */
 const _HIST_COL_NOME = {
-  1:'Matrícula', 2:'Nome', 3:'Movimentação', 4:'Data', 5:'Detalhe',
+  1:'Matrícula', 2:'Nome', 3:'Sistema', 4:'Movimentação', 5:'Data', 6:'Detalhe',
 };
 const _HIST_NOME_COL = Object.fromEntries(
   Object.entries(_HIST_COL_NOME).map(([c, n]) => [n, +c]));
@@ -4000,17 +4028,70 @@ let _histData=null;   // filtro de data (col 4) — {tipo,de,ate}
 const _histFilt={};
 const _histExpand=new Set();   // grupos expandidos (persiste no auto-refresh)
 /* colunas: 0=expand 1=Matrícula 2=Nome 3=Movimentação 4=Data 5=Detalhe 6=Vínculo */
+/* colunas: 0=exp 1=Matrícula 2=Nome 3=Sistema 4=Movimentação 5=Data 6=Detalhe 7=Vínculo */
 function _histDisp(c,r){
-  if(c===4) return fmtDate(r.data)||'—';
-  const v=[null,r.matricula,r.nome,r.movimentacao,null,r.campos,r.vinc][c];
+  if(c===5) return fmtDate(r.data)||'—';
+  const v=[null,r.matricula,r.nome,r.sistema,r.movimentacao,null,r.campos,r.vinc][c];
   return (v==null||v==='')?'—':String(v);
 }
 const _HMOV_CSS={'Admitido':'h-adm','Alterado':'h-alt',
   'Pendência identificada':'h-pen','Pendência resolvida':'h-res',
-  'Aderente':'h-ader'};
+  'Pendência reaberta':'h-pen','Aderente':'h-ader'};
 function histMov(r){
+  // "Pendência reaberta" (texto) já é distinto e vermelho — sem pill redundante.
   return `<span class="h-mov ${_HMOV_CSS[r.movimentacao]||''}">`
     + `${esc(r.movimentacao)||'—'}</span>`;
+}
+/* Coluna Sistema: tag do sistema + selo de ciclo quando ciclo>1 (reabertura). */
+function histSis(r){
+  const s=r.sistema||'';
+  if(!s) return '<span style="color:#B4BAC2;">—</span>';
+  const c=(r.ciclo&&r.ciclo>1)
+    ? ` <span class="h-ciclo" title="${r.ciclo}º ciclo — passou por reabertura(s) neste sistema">${r.ciclo}º ciclo</span>` : '';
+  return `<span class="h-sis">${esc(s)}</span>${c}`;
+}
+/* ── Resumo por status na linha recolhida (multi-sistema) ─────────────── */
+const _HST_ORDEM={'Pendência':0,'Resolvido':1,'Aderente':2};
+const _HST_CSS={'Pendência':'h-pen','Resolvido':'h-res','Aderente':'h-ader'};
+function _histLabelStatus(r){
+  if(r.reaberta) return 'Pendência';
+  return ({PENDENCIA:'Pendência',RESOLUCAO:'Resolvido',ADERENTE:'Aderente'})[r.tipo]
+    || r.movimentacao || '—';
+}
+function _histStatusPorSistema(g){
+  // g.recs vem ordenado por _ord desc -> 1º de cada sistema = status ATUAL dele
+  const cur={};
+  g.recs.forEach(r=>{ const s=r.sistema||'—'; if(!(s in cur)) cur[s]=r; });
+  return cur;
+}
+const _histStExp=new Set();  // "chave|status" — grupos de status abertos (persiste no auto-refresh)
+function histStatusResumo(curSis, chave){
+  const cont={};
+  Object.values(curSis).forEach(r=>{ const l=_histLabelStatus(r); cont[l]=(cont[l]||0)+1; });
+  return Object.entries(cont)
+    .sort((a,b)=>(_HST_ORDEM[a[0]]??9)-(_HST_ORDEM[b[0]]??9))
+    .map(([l,n])=>{
+      const on=_histStExp.has(chave+'|'+l);
+      return `<span class="h-mov ${_HST_CSS[l]||''} h-stchip${on?' on':''}" `
+        + `data-hk="${esc(chave)}" data-st="${esc(l)}" onclick="histStToggle(this)" `
+        + `title="Clique para expandir/recolher ${esc(l)}">${esc(l)} (${n})</span>`;
+    }).join(' ');
+}
+function histSisResumo(n){ return `<span class="h-sis">${n} sistemas</span>`; }
+/* Clique num chip de status: expande/recolhe SÓ os sistemas daquele status.
+   Estado por CHAVE (matrícula+nome) -> persiste no auto-refresh (re-render aplica). */
+function histStToggle(el){
+  const key=el.dataset.hk+'|'+el.dataset.st;
+  if(_histStExp.has(key)) _histStExp.delete(key); else _histStExp.add(key);
+  comHandling(pintarHistorico);
+}
+/* Clique no + de um SISTEMA: abre/recolhe a trilha completa dele (todos os
+   marcos). Estado por (chave|sistema) -> persiste no auto-refresh. */
+const _histSysExp=new Set();
+function histSysToggle(el){
+  const key=el.dataset.sk;
+  if(_histSysExp.has(key)) _histSysExp.delete(key); else _histSysExp.add(key);
+  comHandling(pintarHistorico);
 }
 function _resumoPend(ps){
   if(!ps || !ps.length) return '';
@@ -4025,17 +4106,37 @@ function _histLupa(r, txt, fn){
     + `style="vertical-align:-1px;"><circle cx="11" cy="11" r="7"/>`
     + `<path d="M21 21l-4.3-4.3"/></svg></span>`;
 }
+/* Perfil resumido: curto -> mostra o(s) nome(s); longo (ex.: SIG com dezenas de
+   perfis) -> "N perfis" CLICÁVEL que expande a lista. Estado por (matrícula|
+   sistema) -> persiste no auto-refresh. */
+const _histPerfExp=new Set();   // "matricula|sistema" com a lista de perfis aberta
+function _perfResumo(p, r){
+  const arr=String(p||'').split(',').map(s=>s.trim()).filter(Boolean);
+  if(!arr.length) return '';
+  const full=arr.join(', ');
+  if(full.length<=42) return `<span title="${esc(full)}">${esc(full)}</span>`;
+  const key=((r&&r.matricula)||'')+'|'+((r&&r.sistema)||'');
+  const open=_histPerfExp.has(key);
+  const head=`<span class="perf-exp" data-pk="${esc(key)}" onclick="perfToggle(this)" `
+    + `title="Clique para ${open?'recolher':'ver'} os ${arr.length} perfis">`
+    + `<b>${arr.length}</b> ${arr.length>1?'perfis':'perfil'} ${open?'▾':'▸'}</span>`;
+  return open
+    ? head + `<div class="perf-lista">` + arr.map(x=>`<div>• ${esc(x)}</div>`).join('') + `</div>`
+    : head;
+}
+function perfToggle(el){
+  const key=el.dataset.pk;
+  if(_histPerfExp.has(key)) _histPerfExp.delete(key); else _histPerfExp.add(key);
+  comHandling(pintarHistorico);
+}
 function histDet(r){
+  // Sistema virou coluna própria -> Detalhe mostra só o PERFIL (resumido).
   if(r.tipo==='RESOLUCAO')
     return _histLupa(r, r.ticket || 'ticket', 'verResolucaoHist');
-  if(r.tipo==='PENDENCIA'){
-    const t = [r.sistema, r.perfil].filter(Boolean).join(' · ');
-    return _histLupa(r, t || _resumoPend(r.pendencias) || 'ver detalhes', 'verDetalheHist');
-  }
-  if(r.tipo==='ADERENTE'){
-    const t = [r.sistema, r.perfil].filter(Boolean).join(' · ');
-    return t ? esc(t) : (esc(r.campos)||'—');
-  }
+  const perf=_perfResumo(r.perfil, r);
+  if(perf) return perf;
+  if(r.tipo==='PENDENCIA')
+    return _histLupa(r, _resumoPend(r.pendencias) || 'ver detalhes', 'verDetalheHist');
   return esc(r.campos)||'—';
 }
 async function renderHistorico(){
@@ -4046,7 +4147,7 @@ async function renderHistorico(){
 }
 function _histGrupos(){
   let rs=_histRecs.slice();
-  const ff=Object.entries(_histFilt).filter(([c])=>+c!==4);  // col 4 = Data tem filtro próprio
+  const ff=Object.entries(_histFilt).filter(([c])=>+c!==5);  // col 5 = Data tem filtro próprio
   if(ff.length) rs=rs.filter(r=>ff.every(([c,set])=>set.has(_histDisp(+c,r))));
   if(_histData) rs=rs.filter(r=>_dtPass(r.data, _histData));
   const mapa={}, ordem=[];
@@ -4086,31 +4187,73 @@ function pintarHistorico(){
   const body=document.getElementById('hist-body');
   let h='';
   pag.forEach((g,gi)=>{
-    const hdr=g.recs[0], resto=g.recs.slice(1);
+    const hdr=g.recs[0];
+    const curSis=_histStatusPorSistema(g);            // {sistema: status atual}
+    // itens (1 por sistema) ordenados por STATUS (Pendência→Resolvido→Aderente)
+    const itens=Object.values(curSis).sort((a,b)=>
+      (_HST_ORDEM[_histLabelStatus(a)]??9)-(_HST_ORDEM[_histLabelStatus(b)]??9)
+      || String(a.sistema||'').localeCompare(String(b.sistema||'')));
+    const multi=itens.length>1;
+    // status distintos da pessoa + se algum grupo está aberto (p/ o ícone do +)
+    const stats=[...new Set(itens.map(_histLabelStatus))];
+    const anyOpen=stats.some(s=>_histStExp.has(g.chave+'|'+s));
+    // CABEÇALHO (recolhido): CONTAGEM por status — "Pendência (2) · Aderente (3)".
+    // Some com a confusão de mostrar só o mais recente. O detalhe fica no expand.
     h+=`<tr>
-      <td style="text-align:center;">${resto.length
-        ?`<button class="expand-btn" data-row="${gi}" data-hk="${esc(g.chave)}" onclick="histToggle(this)">${_histExpand.has(g.chave)?'-':'+'}</button>`:''}</td>
+      <td style="text-align:center;">${multi
+        ?`<button class="expand-btn" data-hk="${esc(g.chave)}" data-sts="${esc(stats.join('|'))}" onclick="histToggle(this)">${anyOpen?'-':'+'}</button>`:''}</td>
       <td><strong style="color:#1F2D5C;">${esc(g.matricula)||'—'}</strong></td>
       <td>${esc(g.nome)||'—'}</td>
-      <td>${histMov(hdr)}</td>
+      <td>${multi?histSisResumo(itens.length):histSis(hdr)}</td>
+      <td>${multi?histStatusResumo(curSis,g.chave):histMov(hdr)}</td>
       <td>${fmtDate(hdr.data)}</td>
-      <td>${histDet(hdr)}</td>
+      <td>${multi?'<span style="color:#8A9099;">— clique num status ou no + para abrir</span>':histDet(hdr)}</td>
       <td>${esc(hdr.vinc)||'—'}</td>
     </tr>`;
-    resto.forEach(r=>{
-      h+=`<tr class="sub-row" data-hsub="${gi}" style="display:${_histExpand.has(g.chave)?'table-row':'none'};">
-        <td></td>
-        <td style="text-align:center;color:#B4BAC2;">↳</td>
-        <td></td>
-        <td>${histMov(r)}</td>
-        <td>${fmtDate(r.data)}</td>
-        <td>${histDet(r)}</td>
-        <td>${esc(r.vinc)||'—'}</td>
-      </tr>`;
-    });
+    // EXPAND: um item por sistema (status ATUAL), agrupado por status. Cada
+    // sistema tem seu próprio + que abre a TRILHA completa (todos os marcos).
+    if(multi){
+      let _stAnt=null;
+      itens.forEach(r=>{
+        const _st=_histLabelStatus(r);
+        const _troca=_st!==_stAnt; _stAnt=_st;   // separador ao trocar de status
+        const _show=_histStExp.has(g.chave+'|'+_st);
+        const _sk=g.chave+'|'+(r.sistema||'—');
+        // trilha do sistema = todos os marcos daquele sistema, do mais recente ao 1º
+        const _trail=g.recs.filter(x=>(x.sistema||'—')===(r.sistema||'—'))
+          .sort((a,b)=>String(b._ord||'').localeCompare(String(a._ord||'')));
+        const _hasTrail=_trail.length>1;
+        const _sysOpen=_histSysExp.has(_sk);
+        h+=`<tr class="sub-row${_troca?' sub-sisbreak':''}" data-hst="${esc(_st)}" style="display:${_show?'table-row':'none'};">
+          <td style="text-align:center;">${_hasTrail
+            ?`<button class="expand-btn expand-btn-sm" data-sk="${esc(_sk)}" onclick="histSysToggle(this)" title="ver a trilha completa do sistema">${_sysOpen?'-':'+'}</button>`:''}</td>
+          <td style="text-align:center;color:#B4BAC2;">↳</td>
+          <td></td>
+          <td>${histSis(r)}</td>
+          <td>${histMov(r)}</td>
+          <td>${fmtDate(r.data)}</td>
+          <td>${histDet(r)}</td>
+          <td>${esc(r.vinc)||'—'}</td>
+        </tr>`;
+        if(_hasTrail && _sysOpen){
+          _trail.forEach(t=>{
+            h+=`<tr class="sub-row sub-trail" data-hst="${esc(_st)}" style="display:${_show?'table-row':'none'};">
+              <td></td>
+              <td></td>
+              <td style="text-align:right;color:#C9D0DA;padding-right:10px;">↳</td>
+              <td></td>
+              <td>${histMov(t)}</td>
+              <td>${fmtDate(t.data)}${t.ticket?` <span style="color:#8A9099;">· ${esc(t.ticket)}</span>`:''}</td>
+              <td>${histDet(t)}</td>
+              <td></td>
+            </tr>`;
+          });
+        }
+      });
+    }
   });
   if(body) body.innerHTML = h ||
-    `<tr><td colspan="7" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma movimentação registrada.</td></tr>`;
+    `<tr><td colspan="8" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma movimentação registrada.</td></tr>`;
   const cnt=document.getElementById('hist-count');
   if(cnt) cnt.innerHTML=
     `<strong style="color:#1F2D5C;font-size:14px;">`+
@@ -4127,12 +4270,11 @@ function pintarHistorico(){
   equiparHist();
 }
 function histToggle(btn){
-  const row=btn.dataset.row, hk=btn.dataset.hk;
-  const open=btn.textContent==='-';
-  document.querySelectorAll(`#hist-body [data-hsub="${row}"]`).forEach(r=>
-    r.style.display=open?'none':'table-row');
-  btn.textContent=open?'+':'-';
-  if(hk){ if(open) _histExpand.delete(hk); else _histExpand.add(hk); }
+  // + da pessoa: abre/fecha TODOS os grupos de status dela (via _histStExp).
+  const hk=btn.dataset.hk, sts=(btn.dataset.sts||'').split('|').filter(Boolean);
+  const anyOpen=sts.some(s=>_histStExp.has(hk+'|'+s));
+  sts.forEach(s=>{ const k=hk+'|'+s; if(anyOpen) _histStExp.delete(k); else _histStExp.add(k); });
+  comHandling(pintarHistorico);
 }
 function histIr(p){ _histPag=p; comHandling(pintarHistorico); }
 function histPP(v){ _histPP=parseInt(v,10)||100; _histPag=1; comHandling(pintarHistorico); }
@@ -4201,12 +4343,12 @@ function equiparHist(){
     if(!mk){ mk=document.createElement('span'); mk.className='th-mk';
       mk.innerHTML=_SVG_FUNIL;
       mk.onclick=ev=>{ ev.stopPropagation();
-        if(c===4){ _dtMenu(th, _histData, fd=>{ _histData=fd; _histPag=1;
+        if(c===5){ _dtMenu(th, _histData, fd=>{ _histData=fd; _histPag=1;
           comHandling(pintarHistorico);
           if(_tabAtual==='hist'){ renderAtalhosOpcaoC('hist'); _persistirFiltroAplicado('hist'); } }); }
         else _histMenu(c,th); };
       th.appendChild(mk); }
-    mk.classList.toggle('mk-filtrado', c===4 ? !!_histData : !!_histFilt[c]);
+    mk.classList.toggle('mk-filtrado', c===5 ? !!_histData : !!_histFilt[c]);
   });
 }
 
@@ -4630,8 +4772,15 @@ function _csAccBloco(sis, lista, pfx, comData){
     ? `<span class="cs-acc-toggle" data-n="${nProf}" onclick="csAccToggle('${id}',this)">▸ ver ${nProf} perfis</span>`
     : '';
   const body = `<div class="cs-acc-body" id="${id}"${colapsar ? ' style="display:none"' : ''}>${corpo}</div>`;
+  // Selo de reabertura no cabeçalho do sistema: "reaberta" se ha pendencia atual
+  // num ciclo>1; senão o nº de ciclos quando já houve reabertura no passado.
+  const _maxc = lista.reduce((m, d) => Math.max(m, d.ciclos || 1), 1);
+  const _reab = lista.some(d => d.reab);
+  const reabBadge = _reab
+    ? ` <span class="h-reab" title="Pendência reaberta: era aderente e voltou a divergir neste sistema (ciclo ${_maxc})">reaberta</span>`
+    : (_maxc > 1 ? ` <span class="h-ciclo" title="${_maxc} ciclos (reaberturas) neste sistema">${_maxc} ciclos</span>` : '');
   return `<div class="${pfx}">`
-    + `<div class="${pfx}-h"><span>${esc(sis)}</span>`
+    + `<div class="${pfx}-h"><span>${esc(sis)}${reabBadge}</span>`
     + `<span class="${sisBadge}">${nProf} ${nProf > 1 ? 'perfis' : 'perfil'}</span></div>`
     + toggle + body + `</div>`;
 }
@@ -4944,18 +5093,24 @@ function _pendDetalheTexto(ps){
 }
 function exportarHistorico(){
   const grupos = _histGrupos();
-  const cols = ['Matrícula','Nome','Vínculo','Cargo','Centro de Custo','Movimentação','Data',
+  const cols = ['Matrícula','Nome','Vínculo','Sistema','Cargo','Centro de Custo','Movimentação','Data',
                 'Detalhe','Ticket Jira','Link do ticket','Descrição da resolução'];
   const linhas = [], niveis = [];
   grupos.forEach(g => {
-    g.recs.forEach((r, i) => {
+    // export espelha a grid: sub-linhas agrupadas por sistema
+    const recs = g.recs.slice(0,1).concat(g.recs.slice(1).sort((a,b)=>
+      String(a.sistema||'~').localeCompare(String(b.sistema||'~'))
+      || String(b._ord||'').localeCompare(String(a._ord||''))));
+    recs.forEach((r, i) => {
       const det = (r.tipo === 'RH') ? (r.campos || '')
                                     : _pendDetalheTexto(r.pendencias);
       linhas.push([i === 0 ? g.matricula : '',
                    i === 0 ? g.nome : '',
                    r.vinc || '',
+                   r.sistema || '',
                    r.cargo || '', r.centro_custo || '',
-                   r.movimentacao || '', fmtDate(r.data),
+                   (r.movimentacao || '') + (r.reaberta ? ' (reaberta)' : ''),
+                   fmtDate(r.data),
                    det, r.ticket || '', r.ticket_url || '',
                    r.descricao || '']);
       niveis.push(i === 0 ? 0 : 1);

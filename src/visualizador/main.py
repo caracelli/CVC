@@ -1820,6 +1820,31 @@ def _montar_base():
         except Exception as e:
             print(f"  [conf] falha ao montar aderentes: {e!r}")
 
+        # ── Enriquecimento: Nº de ciclos por (matricula, sistema) do log de
+        # eventos (ciclo_eventos_acesso) — habilita o selo "reaberta / Nº ciclos"
+        # nas abas Pendencias e Aderentes. Ciclo > 1 = a pessoa ja passou por
+        # reabertura(s) naquele sistema. Blindado: banco antigo sem a tabela ->
+        # nenhum selo (segue normal).
+        try:
+            ciclo_max = {}
+            for r in c.execute("SELECT matricula, sistema, MAX(ciclo) mc "
+                               "FROM ciclo_eventos_acesso GROUP BY matricula, sistema"):
+                ciclo_max[(r["matricula"], r["sistema"])] = r["mc"] or 1
+            if ciclo_max:
+                for u in users.values():
+                    for d in u["divs"]:
+                        mc = ciclo_max.get((u["m"], d.get("sis")))
+                        if mc and mc > 1:
+                            d["ciclos"] = mc
+                            # pendencia atual num sistema com ciclo>1 = reaberta
+                            d["reab"] = (d.get("s") == "Pendente")
+                for a in aderentes:
+                    mc = ciclo_max.get((a["m"], a["sis"]))
+                    if mc and mc > 1:
+                        a["ciclos"] = mc
+        except Exception as e:
+            print(f"  [ciclos] enriquecimento de selos falhou: {e!r}")
+
         return {"kpis": kpis, "acao_dist": acao_dist, "sis_dist": sis_dist,
                 "users": list(users.values()), "meta": meta, "vg": vg,
                 "aderentes": aderentes}
@@ -2408,55 +2433,88 @@ def listar_historico_rh():
         finally:
             cr.close()
 
-    # Ciclo de vida persistido pelo Processador na tabela `historico`
-    # (entidade ACESSO_SISTEMA): marcos Pendencia -> Resolvido -> Aderente.
-    # Para quem tem resolucao, as linhas ricas (com ticket/pendencias) ja foram
-    # montadas acima em tempo de leitura — entao pulamos as PENDENCIA/RESOLVIDO
-    # persistidas dessas matriculas para nao duplicar; a ADERENTE sempre entra.
-    # Banco antigo sem a tabela `historico` -> bloco blindado, so nao acrescenta.
+    # Ciclo de vida POR (matricula, sistema) — log de eventos append-only
+    # `ciclo_eventos_acesso`: marcos Pendencia -> Resolvido -> Aderente AGRUPADOS
+    # EM CICLOS. Cada evento carrega o proprio sistema e o numero do ciclo, entao
+    # o Historico abre por sistema (sem achatar por pessoa) e mostra REABERTURA
+    # (ciclo >= 2). Para matriculas com resolucao rica (montada acima), pulamos
+    # PENDENCIA/RESOLVIDO do CICLO 1 pra nao duplicar; ADERENTE e reaberturas
+    # sempre entram. Banco antigo sem a tabela -> fallback na projecao `historico`.
     mats_resol = set((resolvidos or {}).keys())
     _MOVS = {"PENDENCIA": ("PENDENCIA", "Pendência identificada"),
              "RESOLVIDO": ("RESOLUCAO", "Pendência resolvida"),
              "ADERENTE":  ("ADERENTE",  "Aderente")}
+    _LBL = {"PENDENCIA": "Pendência", "RESOLVIDO": "Resolvido", "ADERENTE": "Aderente"}
     ch = conn_ro()
     try:
-        for row in ch.execute(
-            "SELECT matricula, tipo_mudanca, data_snapshot, dados_novo FROM historico "
-            "WHERE entidade='ACESSO_SISTEMA' AND tipo_mudanca IN "
-            "('PENDENCIA','RESOLVIDO','ADERENTE')"
-        ):
-            mat, tm = row[0], row[1]
-            if tm in ("PENDENCIA", "RESOLVIDO") and mat in mats_resol:
-                continue  # ja coberto pelas linhas ricas da resolucao
-            tipo, mov = _MOVS.get(tm, (tm, tm))
-            try:
-                d = json.loads(row[3] or "{}")
-            except Exception:
-                d = {}
-            dt = d.get("data") or str(row[2] or "")   # datetime p/ ordem correta
-            _sis = d.get("sistema") or ""
-            _perf = d.get("perfil") or ""
-            # Detalhe do marco: o front so exibe o que vier em 'pendencias'. Monta
-            # um card com o sistema + perfil do proprio marco. Em PENDENCIA o
-            # perfil e' o ESPERADO; em ADERENTE a pessoa TEM = esperado.
-            _lbl = {"PENDENCIA": "Pendência", "RESOLVIDO": "Resolvido",
-                    "ADERENTE": "Aderente"}.get(tm, tm)
-            _pend = ([{"tipo": _lbl, "acao": "", "sistema": _sis, "origem": "—",
-                       "pe": (_perf if tm == "ADERENTE" else ""),
-                       "pp": _perf, "opcoes": []}]
-                     if (_sis or _perf) else [])
-            out.append({
-                "tipo": tipo, "data": dt, "_ord": dt,
-                "matricula": mat, "nome": d.get("nome") or mat,
-                "movimentacao": mov, "campos": d.get("ticket") or "",
-                "sistema": _sis, "perfil": _perf,
-                "cargo": d.get("cargo") or "", "ticket": d.get("ticket") or "",
-                "ticket_url": "", "descricao": "", "por": "", "em": "",
-                "centro_custo": "",
-                "pendencias": _pend,
-            })
+        _tem_ev = ch.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' "
+            "AND name='ciclo_eventos_acesso'").fetchone()
+        if _tem_ev:
+            for row in ch.execute(
+                "SELECT matricula, sistema, ciclo, tipo_evento, data_evento, "
+                "perfil, nome, cargo, ticket FROM ciclo_eventos_acesso"
+            ):
+                mat, _sis, _ciclo, tm = row[0], row[1] or "", row[2] or 1, row[3]
+                if tm in ("PENDENCIA", "RESOLVIDO") and _ciclo == 1 and mat in mats_resol:
+                    continue  # ciclo 1 ja coberto pelas linhas ricas da resolucao
+                tipo, mov = _MOVS.get(tm, (tm, tm))
+                dt = str(row[4] or "")
+                _perf = row[5] or ""
+                _tk = row[8] or ""
+                _reab = (tm == "PENDENCIA" and _ciclo > 1)
+                _mov = "Pendência reaberta" if _reab else mov
+                _lbl = _LBL.get(tm, tm)
+                _pend = ([{"tipo": _lbl, "acao": "", "sistema": _sis, "origem": "—",
+                           "pe": (_perf if tm == "ADERENTE" else ""),
+                           "pp": _perf, "opcoes": []}]
+                         if (_sis or _perf) else [])
+                out.append({
+                    "tipo": tipo, "data": dt, "_ord": dt,
+                    "matricula": mat, "nome": row[6] or mat,
+                    "movimentacao": _mov, "campos": _tk,
+                    "sistema": _sis, "perfil": _perf,
+                    "ciclo": _ciclo, "reaberta": _reab,
+                    "cargo": row[7] or "", "ticket": _tk,
+                    "ticket_url": "", "descricao": "", "por": "", "em": "",
+                    "centro_custo": "",
+                    "pendencias": _pend,
+                })
+        else:
+            # fallback: banco antigo sem o log de eventos -> projecao `historico`
+            for row in ch.execute(
+                "SELECT matricula, tipo_mudanca, data_snapshot, dados_novo FROM historico "
+                "WHERE entidade='ACESSO_SISTEMA' AND tipo_mudanca IN "
+                "('PENDENCIA','RESOLVIDO','ADERENTE')"
+            ):
+                mat, tm = row[0], row[1]
+                if tm in ("PENDENCIA", "RESOLVIDO") and mat in mats_resol:
+                    continue
+                tipo, mov = _MOVS.get(tm, (tm, tm))
+                try:
+                    d = json.loads(row[3] or "{}")
+                except Exception:
+                    d = {}
+                dt = d.get("data") or str(row[2] or "")
+                _sis = d.get("sistema") or ""
+                _perf = d.get("perfil") or ""
+                _lbl = _LBL.get(tm, tm)
+                _pend = ([{"tipo": _lbl, "acao": "", "sistema": _sis, "origem": "—",
+                           "pe": (_perf if tm == "ADERENTE" else ""),
+                           "pp": _perf, "opcoes": []}]
+                         if (_sis or _perf) else [])
+                out.append({
+                    "tipo": tipo, "data": dt, "_ord": dt,
+                    "matricula": mat, "nome": d.get("nome") or mat,
+                    "movimentacao": mov, "campos": d.get("ticket") or "",
+                    "sistema": _sis, "perfil": _perf,
+                    "cargo": d.get("cargo") or "", "ticket": d.get("ticket") or "",
+                    "ticket_url": "", "descricao": "", "por": "", "em": "",
+                    "centro_custo": "",
+                    "pendencias": _pend,
+                })
     except Exception:
-        pass  # tabela historico pode nao existir em banco antigo
+        pass  # tabela historico/eventos pode nao existir em banco antigo
     finally:
         ch.close()
 

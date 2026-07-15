@@ -23,6 +23,7 @@ from aplicacao.casos_de_uso.gerar_saidas import GerarSaidas
 from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
 from aplicacao.casos_de_uso.registrar_ciclo_vida import RegistrarCicloVida
 from aplicacao.casos_de_uso.registrar_ciclo_historico import RegistrarCicloHistorico
+from aplicacao.casos_de_uso.registrar_eventos_acesso import RegistrarEventosAcesso
 from aplicacao.casos_de_uso.dobrar_interacoes import DobrarInteracoes
 from dominio.objetos_valor.sistema import Sistema
 
@@ -308,6 +309,11 @@ def _executar(caminho_config: Path) -> int:
         # Ciclo de vida (Pendencia -> Resolvido -> Aderente) — idempotente/blindado.
         # Depois da validacao (validacao_acessos) e da dobra (resolucoes, acima).
         RegistrarCicloVida(conexao=conexao).executar()
+
+        # Log de eventos por (matricula, sistema) — ciclos + REABERTURA. CDC
+        # aditivo sobre validacao_acessos; alimenta o Historico por sistema.
+        # Depois do ciclo de vida (usa seus dados ricos e a resolucao).
+        RegistrarEventosAcesso(conexao=conexao).executar()
 
         # Projeta os marcos do ciclo (Pendencia/Resolvido/Aderente) na trilha
         # `historico` — uma linha por marco, idempotente, em ordem. Cobre

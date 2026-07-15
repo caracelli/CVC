@@ -1,5 +1,8 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, Float, String, Date, DateTime, Integer, Text
+from sqlalchemy import (
+    Boolean, Column, Float, String, Date, DateTime, Integer, Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -223,6 +226,40 @@ class CicloVidaAcessoModel(Base):
     ticket = Column(String)         # numero do chamado Jira
     dt_aderente = Column(String)    # ISO datetime — 1a vez conforme (acesso OK)
     dt_atualizacao = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class CicloEventosAcessoModel(Base):
+    """Log de eventos (APPEND-ONLY) do ciclo de vida de acesso por
+    (matricula, sistema). Cada transicao e' UMA linha datada:
+
+        PENDENCIA -> RESOLVIDO -> ADERENTE   (um ciclo)
+
+    e suporta REABERTURA: apos ADERENTE, uma nova PENDENCIA abre o ciclo
+    seguinte (ciclo = ciclo anterior + 1). O "status atual" de um
+    (matricula, sistema) e' simplesmente o ULTIMO evento.
+
+    Aditivo e independente: NAO substitui ciclo_vida_acesso (que segue como
+    resumo do 1o ciclo / tempo de tratamento). O UNIQUE garante idempotencia —
+    reprocessar nao duplica o mesmo marco do mesmo ciclo."""
+    __tablename__ = "ciclo_eventos_acesso"
+    __table_args__ = (
+        UniqueConstraint("matricula", "sistema", "ciclo", "tipo_evento",
+                         name="uq_ciclo_eventos_marco"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    matricula = Column(String, nullable=False, index=True)
+    sistema = Column(String, nullable=False, index=True)
+    ciclo = Column(Integer, nullable=False, default=1)
+    tipo_evento = Column(String, nullable=False)  # PENDENCIA / RESOLVIDO / ADERENTE
+    data_evento = Column(String)                  # ISO datetime do marco
+    perfil = Column(String)                        # perfil representativo p/ exibicao
+    nome = Column(String)
+    login = Column(String)
+    cargo = Column(String)
+    ticket = Column(String)                        # numero do chamado (so RESOLVIDO)
+    detalhe = Column(String)                        # texto livre (ex.: motivo da reabertura)
+    dt_registro = Column(DateTime, default=datetime.now)
 
 
 class DivergenciaModel(Base):
