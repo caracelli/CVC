@@ -1999,12 +1999,21 @@ function inclSisToggle(el){
   comHandling(renderMatrix);
 }
 function _pendSisCel(ddivs, u){
-  const s=[...new Set((ddivs||[]).map(d=>d.sis).filter(Boolean))];
+  const divs=ddivs||[];
+  const s=[...new Set(divs.map(d=>d.sis).filter(Boolean))];
   if(!s.length) return '—';
-  if(s.length===1) return `<span class="h-sis">${esc(s[0])}</span>`;
+  // selo de reabertura por sistema (igual Aderentes/Consulta): "reaberta" se ha
+  // pendencia atual num ciclo>1; senao "N ciclos" quando ja houve reabertura.
+  const _selo=(sis)=>{
+    const ds=divs.filter(d=>d.sis===sis);
+    if(ds.some(d=>d.reab)) return ` <span class="h-reab" title="Pendência reaberta: era aderente e voltou a divergir neste sistema">reaberta</span>`;
+    const mc=ds.reduce((m,d)=>Math.max(m,d.ciclos||1),1);
+    return mc>1?` <span class="h-ciclo" title="${mc} ciclos (reaberturas) neste sistema">${mc} ciclos</span>`:'';
+  };
+  if(s.length===1) return `<span class="h-sis">${esc(s[0])}</span>${_selo(s[0])}`;
   const chips=s.slice(0,4).map(sis=>{
     const on=_inclSisExp.has(u.u+'|'+sis);
-    return `<span class="h-sis h-sisclick" data-u="${esc(u.u)}" data-sis="${esc(sis)}" onclick="inclSisToggle(this)" title="Clique para ver ${esc(sis)}">${esc(sis)} ${on?'▾':'▸'}</span>`;
+    return `<span class="h-sis h-sisclick" data-u="${esc(u.u)}" data-sis="${esc(sis)}" onclick="inclSisToggle(this)" title="Clique para ver ${esc(sis)}">${esc(sis)} ${on?'▾':'▸'}</span>${_selo(sis)}`;
   }).join(' ');
   const extra=s.length>4?` <span class="h-sis" style="cursor:default;" title="${esc(s.slice(4).join(', '))}">+${s.length-4}</span>`:'';
   return `<span style="display:inline-flex;flex-wrap:wrap;gap:3px;align-items:center;">${chips}${extra}</span>`;
@@ -4367,20 +4376,30 @@ function pintarHistorico(){
       (_HST_ORDEM[_histLabelStatus(a)]??9)-(_HST_ORDEM[_histLabelStatus(b)]??9)
       || String(a.sistema||'').localeCompare(String(b.sistema||'')));
     const multi=itens.length>1;
+    // trilha (todos os marcos/ciclos) de um sistema, do mais recente ao 1º
+    const _trailDe=(sis)=>g.recs.filter(x=>(x.sistema||'—')===(sis||'—'))
+      .sort((a,b)=>String(b._ord||'').localeCompare(String(a._ord||'')));
+    // pessoa com 1 só sistema PODE ter vários ciclos (reabertura) -> também expande
+    const _hasCiclos=itens.some(r=>_trailDe(r.sistema).length>1);
+    const expandivel=multi||_hasCiclos;
     // status distintos da pessoa + se algum grupo está aberto (p/ o ícone do +)
     const stats=[...new Set(itens.map(_histLabelStatus))];
     const anyOpen=stats.some(s=>_histStExp.has(g.chave+'|'+s));
     // CABEÇALHO (recolhido): CONTAGEM por status — "Pendência (2) · Aderente (3)".
     // Some com a confusão de mostrar só o mais recente. O detalhe fica no expand.
     h+=`<tr>
-      <td style="text-align:center;">${multi
+      <td style="text-align:center;">${expandivel
         ?`<button class="expand-btn" data-hk="${esc(g.chave)}" data-sts="${esc(stats.join('|'))}" onclick="histToggle(this)">${anyOpen?'-':'+'}</button>`:''}</td>
       <td><strong style="color:#1F2D5C;">${esc(g.matricula)||'—'}</strong></td>
       <td>${esc(g.nome)||'—'}</td>
-      <td>${multi?histSisResumo(itens.length,g.chave,stats,anyOpen):histSis(hdr)}</td>
+      <td>${multi?histSisResumo(itens.length,g.chave,stats,anyOpen)
+        :(_hasCiclos
+          ?`<span class="h-sisclick" data-hk="${esc(g.chave)}" data-sts="${esc(stats.join('|'))}" onclick="histToggle(this)" title="ver os ciclos deste sistema">${histSis(hdr)} <span style="font:700 9px Arial;color:#2D6CDF;">${anyOpen?'▾ ciclos':'▸ ver ciclos'}</span></span>`
+          :histSis(hdr))}</td>
       <td>${multi?histStatusResumo(curSis,g.chave):histMov(hdr)}</td>
       <td>${fmtDate(hdr.data)}</td>
-      <td>${multi?'<span style="color:#8A9099;">— clique num status ou no + para abrir</span>':histDet(hdr)}</td>
+      <td>${multi?'<span style="color:#8A9099;">— clique num status ou no + para abrir</span>'
+        :(_hasCiclos?'<span style="color:#8A9099;">— clique no + para ver os ciclos</span>':histDet(hdr))}</td>
       <td>${esc(hdr.vinc)||'—'}</td>
     </tr>`;
     // EXPAND: um item por sistema (status ATUAL), agrupado por status. Cada
@@ -4393,8 +4412,7 @@ function pintarHistorico(){
         const _show=_histStExp.has(g.chave+'|'+_st);
         const _sk=g.chave+'|'+(r.sistema||'—');
         // trilha do sistema = todos os marcos daquele sistema, do mais recente ao 1º
-        const _trail=g.recs.filter(x=>(x.sistema||'—')===(r.sistema||'—'))
-          .sort((a,b)=>String(b._ord||'').localeCompare(String(a._ord||'')));
+        const _trail=_trailDe(r.sistema);
         const _hasTrail=_trail.length>1;
         const _sysOpen=_histSysExp.has(_sk);
         h+=`<tr class="sub-row${_troca?' sub-sisbreak':''}" data-hst="${esc(_st)}" style="display:${_show?'table-row':'none'};">
@@ -4424,6 +4442,24 @@ function pintarHistorico(){
             </tr>`;
           });
         }
+      });
+    } else if(_hasCiclos){
+      // 1 sistema só, mas com reabertura (2+ ciclos): expande a trilha DIRETO,
+      // controlada pelo + do cabeçalho (mesma chave de estado g.chave|status).
+      const r=itens[0];
+      const _st=_histLabelStatus(r);
+      const _show=_histStExp.has(g.chave+'|'+_st);
+      _trailDe(r.sistema).forEach(t=>{
+        h+=`<tr class="sub-row sub-trail" data-hst="${esc(_st)}" style="display:${_show?'table-row':'none'};">
+          <td></td>
+          <td></td>
+          <td style="text-align:right;color:#C9D0DA;padding-right:10px;">↳</td>
+          <td style="text-align:center;">${t.ciclo?`<span class="h-ciclo" title="Ciclo ${t.ciclo}${t.ciclo>1?' — reabertura':''}">ciclo ${t.ciclo}</span>`:''}</td>
+          <td>${histMov(t)}</td>
+          <td>${fmtDate(t.data)}${t.ticket?` <span style="color:#8A9099;">· ${esc(t.ticket)}</span>`:''}</td>
+          <td>${histDet(t)}</td>
+          <td></td>
+        </tr>`;
       });
     }
   });
