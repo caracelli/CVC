@@ -1192,13 +1192,14 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
               <col style="width:230px">   <!-- 5  Nome -->
               <col style="width:96px">    <!-- 6  Matrícula -->
               <col style="width:124px">   <!-- 7  Usuário -->
-              <col style="width:58px">    <!-- 8  Qtd -->
+              <col style="width:120px">   <!-- 8  Sistema -->
+              <col style="width:58px">    <!-- 9  Qtd -->
               <col style="width:150px">   <!-- 9  Departamento -->
               <col style="width:160px">   <!-- 10 Cargo -->
               <col style="width:120px">   <!-- 11 Tipo -->
               <col style="width:150px">   <!-- 12 Perfil Encontrado -->
               <col style="width:150px">   <!-- 13 Perfil Esperado -->
-              <col style="width:96px">    <!-- 14 Origem -->
+              <col style="width:96px">    <!-- 15 Origem -->
             </colgroup>
             <thead>
               <tr>
@@ -1210,6 +1211,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
                 <th>Nome</th>
                 <th>Matrícula</th>
                 <th>Usuário/Acesso</th>
+                <th>Sistema</th>
                 <th style="text-align:center;">Qtd</th>
                 <th>Departamento</th>
                 <th>Cargo</th>
@@ -1488,8 +1490,12 @@ const _CONF_STG={PENDENCIA:0,RESOLVIDO:1,ADERENTE:2};
 function _confCicloTrail(a, visivel){
   const ek=(a.m||'')+'|'+(a.sis||'');
   if(!_confCicloExp.has(ek) || !(a.eventos&&a.eventos.length)) return '';
-  // ciclo DECRESCENTE (mais recente primeiro); dentro do ciclo, ordem cronológica
-  const evs=a.eventos.slice().sort((x,y)=>(y.ciclo-x.ciclo)||(_CONF_STG[x.tipo]-_CONF_STG[y.tipo]));
+  // ciclo DECRESCENTE e, dentro do ciclo, DATA decrescente (aderência/mais recente
+  // no topo) — desempata pelo estágio (Aderente>Resolvido>Pendência)
+  const evs=a.eventos.slice().sort((x,y)=>
+    (y.ciclo-x.ciclo)
+    || String(y.data||'').localeCompare(String(x.data||''))
+    || (_CONF_STG[y.tipo]-_CONF_STG[x.tipo]));
   return evs.map(e=>{
     const mv=_CONF_MOV[e.tipo]||[e.tipo,''];
     return `<tr class="sub-row" style="display:${visivel?'table-row':'none'};">
@@ -1981,8 +1987,45 @@ function _inclAcaoResumo(u){
   const ordem=['Incluir Acesso','Alterar Perfil','Em Análise','Usuário Não Encontrado','Aderente'];
   return ks.sort((x,y)=>{const ix=ordem.indexOf(x),iy=ordem.indexOf(y);return (ix<0?9:ix)-(iy<0?9:iy);})
     .map(a=>{const c=_csCorAcao(a);
-      return `<span class="acao-chip" style="color:${c};border-color:${c}66;background:${c}12;">${esc(a)} (${cont[a]})</span>`;})
+      return `<span class="acao-chip" data-u="${esc(u.u)}" onclick="inclAcaoToggle(this)" style="color:${c};border-color:${c}66;background:${c}12;cursor:pointer;" title="Clique para abrir/recolher esta pessoa">${esc(a)} (${cont[a]}) ${_inclExpand.has(u.u)?'▾':'▸'}</span>`;})
     .join('');
+}
+/* Célula Sistema no cabeçalho da Pendências: 1 sistema = o nome; vários = CHIPS
+   clicáveis (cada um abre só aquele sistema); >4 mostra os 4 primeiros + "+N". */
+const _inclSisExp=new Set();  // "u|sistema" — sistema expandido na Pendências
+function inclSisToggle(el){
+  const k=el.dataset.u+'|'+el.dataset.sis;
+  if(_inclSisExp.has(k)) _inclSisExp.delete(k); else _inclSisExp.add(k);
+  comHandling(renderMatrix);
+}
+function _pendSisCel(ddivs, u){
+  const s=[...new Set((ddivs||[]).map(d=>d.sis).filter(Boolean))];
+  if(!s.length) return '—';
+  if(s.length===1) return `<span class="h-sis">${esc(s[0])}</span>`;
+  const chips=s.slice(0,4).map(sis=>{
+    const on=_inclSisExp.has(u.u+'|'+sis);
+    return `<span class="h-sis h-sisclick" data-u="${esc(u.u)}" data-sis="${esc(sis)}" onclick="inclSisToggle(this)" title="Clique para ver ${esc(sis)}">${esc(sis)} ${on?'▾':'▸'}</span>`;
+  }).join(' ');
+  const extra=s.length>4?` <span class="h-sis" style="cursor:default;" title="${esc(s.slice(4).join(', '))}">+${s.length-4}</span>`:'';
+  return `<span style="display:inline-flex;flex-wrap:wrap;gap:3px;align-items:center;">${chips}${extra}</span>`;
+}
+/* Perfil ESPERADO na Pendências: no "Em Análise" ambíguo (vários perfis
+   candidatos), mostra "N opções" clicável em vez de repetir linhas. Senão, o
+   perfil esperado normal ("N perfis" p/ listas longas). */
+function _pendEsp(d, u){
+  if(d && d.opcoes && d.opcoes.length>1){
+    const key=(u.m||'')+'|'+(d.sis||'')+'|op'+d.opcoes.length;
+    const open=_histPerfExp.has(key);
+    const head=`<span class="perf-exp" data-pk="${esc(key)}" onclick="perfToggle(this)" title="Perfis esperados possíveis para o cargo (Em Análise)"><b>${d.opcoes.length}</b> opções ${open?'▾':'▸'}</span>`;
+    return open ? head+`<div class="perf-lista">`+d.opcoes.map(x=>`<div>• ${esc(x)}</div>`).join('')+`</div>` : head;
+  }
+  return _perfResumo((d&&d.pp)||'',{matricula:u.m,sistema:(d&&d.sis)})||'—';
+}
+/* Clique num chip de ação abre/recolhe a pessoa (igual ao + / aos chips do Histórico). */
+function inclAcaoToggle(el){
+  const uu=el.dataset.u;
+  if(_inclExpand.has(uu)) _inclExpand.delete(uu); else _inclExpand.add(uu);
+  comHandling(renderMatrix);
 }
 /* Padrão único de data: dd/mm/aaaa hh:mm:ss (data sem hora recebe 00:00:00). */
 function fmtDH(iso){
@@ -2140,10 +2183,11 @@ const _PEND_KEY={
   0:u=>u.divs[0].dt,
   2:u=>u.divs[0].vinc,
   4:u=>u.divs[0].s,
-  5:u=>u.n, 6:u=>u.m, 7:u=>u.login, 8:u=>u.divs.length,
-  9:u=>u.d, 10:u=>u.c,
-  11:u=>u.divs[0].tl, 12:u=>u.divs[0].pe, 13:u=>u.divs[0].pp,
-  14:u=>u.divs[0].o};
+  5:u=>u.n, 6:u=>u.m, 7:u=>u.login,
+  8:u=>u.divs[0].sis, 9:u=>u.divs.length,
+  10:u=>u.d, 11:u=>u.c,
+  12:u=>u.divs[0].tl, 13:u=>u.divs[0].pe, 14:u=>u.divs[0].pp,
+  15:u=>u.divs[0].o};
 let _ordPend=null;
 const _filtPend={};
 function _ordenarPend(arr){
@@ -2154,13 +2198,13 @@ function _ordenarPend(arr){
 }
 function _pendDisp(c,u){
   if(c===0) return fmtDH(u.divs[0].dt)||'—';   // Data: formato completo
-  if(c===8) return String(u.divs.length);       // Qtd: numero
+  if(c===9) return String(u.divs.length);       // Qtd: numero (col 9 após mover Sistema p/ 8)
   const v=_PEND_KEY[c](u);
   return (v==null||v==='')?'—':String(v);
 }
-/* Status (4), Vinculo (2), Tipo (11) tem chips no topo — na grid so ORDENAM.
+/* Status (4), Vinculo (2), Tipo (12) tem chips no topo — na grid so ORDENAM.
    Data (0) tem filtro PROPRIO (atalhos + range). Demais usam funil padrao. */
-const _PEND_SO_ORD=new Set([2,4,11]);
+const _PEND_SO_ORD=new Set([2,4,12]);
 
 /* Estado do filtro especial de Data (col 1).
    tipo: "" (sem filtro) | "hoje" | "7d" | "mes" | "ano" | "range"
@@ -2353,7 +2397,25 @@ function renderMatrix(){
 
 // A separação 1-item-por-linha é feita no PROCESSAMENTO (validar_acessos_sistema):
 // cada par esperado×encontrado vira uma linha. Aqui é só passthrough.
-function _divsDisplayA(divs){ return divs; }
+function _divsDisplayA(divs){
+  // "Em Análise" com mesmo (sistema, ENCONTRADO) e vários ESPERADOS = acesso
+  // ambíguo (casa com N perfis do cargo). Consolida em 1 linha com as OPÇÕES,
+  // em vez de N linhas visualmente iguais (que o cliente leria como bug).
+  const out=[], idx={};
+  (divs||[]).forEach(d=>{
+    if(d.a==='Em Análise' && d.pe){
+      const k=d.sis+''+d.pe;
+      if(k in idx){
+        const g=out[idx[k]];
+        if(d.pp && g.opcoes.indexOf(d.pp)<0){ g.opcoes.push(d.pp); g.pp=g.opcoes.join(', '); }
+        return;
+      }
+      idx[k]=out.length;
+      out.push({...d, opcoes:(d.pp?[d.pp]:[])});
+    } else out.push(d);
+  });
+  return out;
+}
 function pintarPagina(){
   const users = _usersFiltrados, total = users.length;
   const totPag = Math.max(1, Math.ceil(total / porPagina));
@@ -2377,6 +2439,7 @@ function pintarPagina(){
       <td>${esc(u.n)}</td>
       <td>${esc(u.m)||'—'}</td>
       <td><strong style="color:#1F2D5C;">${esc(u.login)||'—'}</strong></td>
+      <td>${_pendSisCel(ddivs, u)}</td>
       <td style="text-align:center;font-weight:700;color:#1F2D5C;">${ddivs.length}</td>
       <td>${esc(u.d)||'—'}</td>
       <td>${esc(u.c)||'—'}</td>
@@ -2385,18 +2448,18 @@ function pintarPagina(){
       <td class="perfil-cel">${hasMore
         ? ('<span class="esp-resumo"' + (_inclExpand.has(u.u) ? ' style="display:none"' : '') + '>'
             + (_temEsp
-                ? ((_perfResumo(d0.pp,{matricula:u.m,sistema:d0.sis})||'—') + ' <span class="esp-mais" onclick="expandirDaLinha(this)" title="' + (ddivs.length - 1) + ' outro(s) perfil(is) esperado(s) — clique para expandir">+' + (ddivs.length - 1) + '</span>')
+                ? (_pendEsp(d0, u) + ' <span class="esp-mais" onclick="expandirDaLinha(this)" title="' + (ddivs.length - 1) + ' outro(s) perfil(is) esperado(s) — clique para expandir">+' + (ddivs.length - 1) + '</span>')
                 : '—')
             + '</span>'
           + '<span class="esp-menos"' + (_inclExpand.has(u.u) ? '' : ' style="display:none"') + ' onclick="recolherDaLinha(this)" title="Recolher">− recolher</span>')
-        : (_perfResumo(d0.pp,{matricula:u.m,sistema:d0.sis})||'—')}</td>
+        : _pendEsp(d0, u)}</td>
       <td style="text-align:center;">${esc(d0.o)||'—'}</td>
     </tr>`;
     // Quando ha varios perfis, TODOS (inclusive o 1o) viram sublinha e o
     // "Perfil Esperado" da linha principal fica em branco. Com 1 so perfil,
     // ele segue na propria linha principal (nada a expandir).
     (hasMore ? ddivs : []).forEach(d => {
-      h += `<tr class="sub-row" data-u="${esc(u.u)}" data-n="${esc(u.n)}" data-sub="${rowIdx}" style="display:${_inclExpand.has(u.u)?'table-row':'none'};">
+      h += `<tr class="sub-row" data-u="${esc(u.u)}" data-n="${esc(u.n)}" data-sub="${rowIdx}" data-sis="${esc(d.sis)}" style="display:${(_inclExpand.has(u.u)||_inclSisExp.has(u.u+'|'+d.sis))?'table-row':'none'};">
         <td>${fmtDH(d.dt)}</td>
         <td></td>
         <td></td>
@@ -2405,17 +2468,18 @@ function pintarPagina(){
         <td style="padding-left:14px;color:#7B8085;font-size:10.5px;">↳ ${_perfResumo(d.pe||d.pp,{matricula:u.m,sistema:d.sis})||'—'}</td>
         <td>—</td>
         <td>—</td>
+        <td>${d.sis?`<span class="h-sis">${esc(d.sis)}</span>`:'—'}</td>
         <td style="text-align:center;">1</td>
         <td>—</td><td>—</td>
         <td>${tipoBadge(d.t,d.tl)}</td>
         <td class="perfil-cel">${_perfResumo(d.pe,{matricula:u.m,sistema:d.sis})||'—'}</td>
-        <td class="perfil-cel">${_perfResumo(d.pp,{matricula:u.m,sistema:d.sis})||'—'}</td>
+        <td class="perfil-cel">${_pendEsp(d, u)}</td>
         <td style="text-align:center;">${esc(d.o)||'—'}</td>
       </tr>`;
     });
   });
   document.getElementById('matrix-body').innerHTML = h ||
-    '<tr><td colspan="15" style="text-align:center;padding:28px;color:#8A9099;">Nenhum registro com os filtros atuais.</td></tr>';
+    '<tr><td colspan="16" style="text-align:center;padding:28px;color:#8A9099;">Nenhum registro com os filtros atuais.</td></tr>';
   const tot = document.getElementById('incl-total');
   if(tot) tot.innerHTML =
     `<strong style="color:#1F2D5C;font-size:14px;">${total.toLocaleString('pt-BR')}</strong> usuários filtrados`;
@@ -4338,7 +4402,9 @@ function pintarHistorico(){
             ?`<button class="expand-btn expand-btn-sm" data-sk="${esc(_sk)}" onclick="histSysToggle(this)" title="ver a trilha completa do sistema">${_sysOpen?'-':'+'}</button>`:''}</td>
           <td style="text-align:center;color:#B4BAC2;">↳</td>
           <td></td>
-          <td>${histSis(r)}</td>
+          <td>${_hasTrail
+            ? `<span class="h-sisclick" data-sk="${esc(_sk)}" onclick="histSysToggle(this)" title="ver os marcos/ciclos deste sistema">${histSis(r)} <span style="font:700 9px Arial;color:#2D6CDF;">${_sysOpen?'▾ ciclos':'▸ ver ciclos'}</span></span>`
+            : histSis(r)}</td>
           <td>${histMov(r)}</td>
           <td>${fmtDate(r.data)}</td>
           <td>${histDet(r)}</td>
