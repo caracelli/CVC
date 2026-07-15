@@ -283,6 +283,8 @@ body{
 .h-stchip::after{content:"▸";font-size:8px;opacity:.55;margin-left:3px;}
 .h-stchip.on{box-shadow:0 0 0 2px rgba(31,45,92,.30);}
 .h-stchip.on::after{content:"▾";opacity:.85;}
+.h-sisclick{cursor:pointer;user-select:none;}
+.h-sisclick:hover{background:#E1E8F4;border-color:#C6D2E6;}
 /* perfil expansível no Detalhe (lista longa vira "N perfis" clicável) */
 .perf-exp{cursor:pointer;color:#2D6CDF;font-weight:600;user-select:none;white-space:nowrap;}
 .perf-exp:hover{text-decoration:underline;}
@@ -292,6 +294,9 @@ body{
 /* trilha completa do sistema (nível mais fundo do Histórico) */
 #hist-tbl .expand-btn-sm{transform:scale(.8);}
 #hist-tbl tr.sub-trail>td{background:#FBFCFE;color:#5A6377;font-size:11.5px;padding-top:4px;padding-bottom:4px;}
+/* chips de contagem por ação no cabeçalho da Pendências */
+.acao-chip{display:inline-block;font:700 9.5px Arial;padding:2px 7px;border-radius:20px;
+  border:1px solid;white-space:nowrap;margin:1px 3px 1px 0;line-height:1.5;}
 .filtro-dica{font:600 9px Arial;color:#8A9099;padding:1px 2px 7px;line-height:1.45;}
 .filtro-dica b{color:#3A3F4C;font-weight:800;}
 .hist-tk{color:#2D6CDF;cursor:pointer;font-weight:700;
@@ -1449,33 +1454,115 @@ let _confPag = 1, _confPP = 50;
 function confPP(v){ _confPP = parseInt(v, 10) || 100; _confPag = 1; renderConformidade(); }
 function confIr(p){ _confPag = p; renderConformidade(); }
 function confBuscar(){ _confPag = 1; renderConformidade(); }
-function renderConformidade(){
-  const rows = _confRowsFiltradas();
-  const tot = document.getElementById('conf-total');
-  if (tot) tot.textContent = rows.length.toLocaleString('pt-BR');
-  const totPag = Math.max(1, Math.ceil(rows.length / _confPP));
-  if (_confPag > totPag) _confPag = totPag;
-  if (_confPag < 1) _confPag = 1;
-  const ini = (_confPag - 1) * _confPP;
-  const pag = rows.slice(ini, ini + _confPP);
-  const tb = document.getElementById('conf-tbody');
-  if (!tb) return;
-  tb.innerHTML = pag.map(a => {
-    const total = _durStr(a.dt_pend, a.dt);
-    return `<tr><td><strong>${esc(a.m)}</strong></td><td>${esc(a.n)}</td>`
+/* Aderentes agora vem SEM dedup (todas as linhas matrícula,sistema). Agrupa por
+   pessoa: 1 sistema = linha normal; vários = cabeçalho "N sistemas" (clicável,
+   igual ao Histórico) que abre/fecha as aderências por sistema. */
+const _confExpand = new Set();   // matriculas com os sistemas expandidos
+function _confAgrupar(rows){
+  const map={}, ordem=[];
+  rows.forEach(a=>{
+    const k=(a.m||'')||('L:'+(a.login||''));
+    if(!map[k]){ map[k]={k, m:a.m||'', n:a.n||'', vinc:a.vinc||'', itens:[]}; ordem.push(k); }
+    map[k].itens.push(a);
+  });
+  return ordem.map(k=>map[k]);
+}
+const _confCicloExp = new Set();   // "matricula|sistema" com a trilha de ciclos aberta
+function _confCelSis(a){
+  const ek=(a.m||'')+'|'+(a.sis||'');
+  const open=_confCicloExp.has(ek);
+  const ciclos = a.ciclos>1
+    ? ` <span class="h-ciclo perf-exp" data-ek="${esc(ek)}" onclick="confCicloToggle(this)" title="Clique para ${open?'recolher':'ver'} os ${a.ciclos} ciclos (reaberturas)">${a.ciclos} ciclos ${open?'▾':'▸'}</span>`
+    : '';
+  return `${esc(a.sis)}${ciclos}`;
+}
+function confCicloToggle(el){
+  const k=el.dataset.ek;
+  if(_confCicloExp.has(k)) _confCicloExp.delete(k); else _confCicloExp.add(k);
+  renderConformidade();
+}
+/* Trilha dos ciclos de um aderente (marcos por ciclo) — linhas após a linha do
+   sistema quando o selo "N ciclos" está aberto. 11 colunas da grid Aderentes. */
+const _CONF_MOV={PENDENCIA:['Pendência','h-pen'],RESOLVIDO:['Resolvido','h-res'],ADERENTE:['Aderente','h-ader']};
+const _CONF_STG={PENDENCIA:0,RESOLVIDO:1,ADERENTE:2};
+function _confCicloTrail(a, visivel){
+  const ek=(a.m||'')+'|'+(a.sis||'');
+  if(!_confCicloExp.has(ek) || !(a.eventos&&a.eventos.length)) return '';
+  // ciclo DECRESCENTE (mais recente primeiro); dentro do ciclo, ordem cronológica
+  const evs=a.eventos.slice().sort((x,y)=>(y.ciclo-x.ciclo)||(_CONF_STG[x.tipo]-_CONF_STG[y.tipo]));
+  return evs.map(e=>{
+    const mv=_CONF_MOV[e.tipo]||[e.tipo,''];
+    return `<tr class="sub-row" style="display:${visivel?'table-row':'none'};">
+      <td></td><td></td>
+      <td style="text-align:right;color:#C9D0DA;padding-right:8px;">↳</td>
+      <td style="text-align:center;"><span class="h-ciclo">ciclo ${e.ciclo}</span></td>
+      <td><span class="h-mov ${mv[1]}">${mv[0]}</span></td>
+      <td>${e.data?fmtDH(e.data):'—'}</td>
+      <td></td><td></td>
+      <td>${e.ticket?esc(e.ticket):'—'}</td>
+      <td></td><td></td>
+    </tr>`;
+  }).join('');
+}
+function _confRowSingle(a){
+  return `<tr><td><strong>${esc(a.m)}</strong></td><td>${esc(a.n)}</td>`
     + `<td><strong style="color:#1F2D5C;">${esc(a.login)}</strong></td>`
-    + `<td>${esc(a.sis)}${a.ciclos>1?` <span class="h-ciclo" title="Passou por ${a.ciclos} ciclos (reaberturas) até aderir neste sistema">${a.ciclos} ciclos</span>`:''}</td><td>${esc(a.perfil)}</td>`
+    + `<td>${_confCelSis(a)}</td><td>${_perfResumo(a.perfil,{matricula:a.m,sistema:a.sis})||'—'}</td>`
     + `<td>${a.dt_pend ? fmtDH(a.dt_pend) : '—'}</td>`
     + `<td>${a.dt_resol ? fmtDH(a.dt_resol) : '—'}</td>`
     + `<td><span class="badge b-ok">${fmtDH(a.dt)}</span></td>`
     + `<td>${a.ticket ? esc(a.ticket) : '—'}</td>`
-    + `<td><b style="color:#16A085;white-space:nowrap;">${total}</b></td>`
+    + `<td><b style="color:#16A085;white-space:nowrap;">${_durStr(a.dt_pend, a.dt)}</b></td>`
     + `<td>${esc(a.vinc)||'—'}</td></tr>`;
-  }).join('')
+}
+function confSisToggle(el){
+  const k=el.dataset.ck;
+  if(_confExpand.has(k)) _confExpand.delete(k); else _confExpand.add(k);
+  renderConformidade();
+}
+function renderConformidade(){
+  const grupos = _confAgrupar(_confRowsFiltradas());
+  const tot = document.getElementById('conf-total');
+  if (tot) tot.textContent = grupos.length.toLocaleString('pt-BR');
+  const totPag = Math.max(1, Math.ceil(grupos.length / _confPP));
+  if (_confPag > totPag) _confPag = totPag;
+  if (_confPag < 1) _confPag = 1;
+  const ini = (_confPag - 1) * _confPP;
+  const pag = grupos.slice(ini, ini + _confPP);
+  const tb = document.getElementById('conf-tbody');
+  if (!tb) return;
+  let h='';
+  pag.forEach(g=>{
+    if (g.itens.length <= 1){ const a0=g.itens[0]; h += _confRowSingle(a0) + _confCicloTrail(a0, true); return; }
+    const open=_confExpand.has(g.k);
+    // cabeçalho da pessoa: "N sistemas" clicável (igual ao Histórico)
+    h += `<tr>
+      <td><strong>${esc(g.m)}</strong></td><td>${esc(g.n)}</td><td>—</td>
+      <td><span class="h-sis h-sisclick" data-ck="${esc(g.k)}" onclick="confSisToggle(this)" title="Clique para abrir/fechar os sistemas em que aderiu">${g.itens.length} sistemas ${open?'▾':'▸'}</span></td>
+      <td>—</td><td>—</td><td>—</td>
+      <td><span class="badge b-ok">${g.itens.length} aderências</span></td>
+      <td>—</td><td>—</td><td>${esc(g.vinc)||'—'}</td>
+    </tr>`;
+    g.itens.forEach(a=>{
+      h += `<tr class="sub-row" data-csub="${esc(g.k)}" style="display:${open?'table-row':'none'};">
+        <td></td><td></td>
+        <td><strong style="color:#1F2D5C;">${esc(a.login)}</strong></td>
+        <td style="padding-left:12px;">↳ ${_confCelSis(a)}</td>
+        <td>${_perfResumo(a.perfil,{matricula:a.m,sistema:a.sis})||'—'}</td>
+        <td>${a.dt_pend ? fmtDH(a.dt_pend) : '—'}</td>
+        <td>${a.dt_resol ? fmtDH(a.dt_resol) : '—'}</td>
+        <td><span class="badge b-ok">${fmtDH(a.dt)}</span></td>
+        <td>${a.ticket ? esc(a.ticket) : '—'}</td>
+        <td><b style="color:#16A085;white-space:nowrap;">${_durStr(a.dt_pend, a.dt)}</b></td>
+        <td></td>
+      </tr>` + _confCicloTrail(a, open);
+    });
+  });
+  tb.innerHTML = h
     || '<tr><td colspan="11" style="text-align:center;color:#9AA3B5;padding:22px;">'
        + 'Nenhum acesso aderente ainda.</td></tr>';
   const pg = document.getElementById('conf-pager');
-  if (pg) pg.innerHTML = rows.length === 0 ? '' :
+  if (pg) pg.innerHTML = grupos.length === 0 ? '' :
       `<button class="pg-btn" ${_confPag<=1?'disabled':''} onclick="confIr(1)">«</button>`
     + `<button class="pg-btn" ${_confPag<=1?'disabled':''} onclick="confIr(${_confPag-1})">‹</button>`
     + `<span class="pg-atual">${_confPag} / ${totPag}</span>`
@@ -1883,6 +1970,20 @@ const TIPO_CSS = {
 };
 function tipoBadge(t, tl){ return `<span class="badge ${TIPO_CSS[t]||''}">${tl||t}</span>`; }
 function stBadge(s)      { const cls = s==='Pendente'?'b-pendente':(s==='Aderente'?'b-ok':'b-resolvida'); return `<span class="badge ${cls}">${s}</span>`; }
+/* Resumo das AÇÕES da pessoa no cabeçalho (recolhido): "Incluir (2) · Em Análise
+   (1)" — igual ao Histórico, some com o engano de mostrar só a 1ª. null quando há
+   uma só ação (aí o badge normal serve). */
+function _inclAcaoResumo(u){
+  const cont={};
+  u.divs.filter(divPassa).forEach(d=>{ const a=d.a||'—'; cont[a]=(cont[a]||0)+1; });
+  const ks=Object.keys(cont);
+  if(ks.length<=1) return null;
+  const ordem=['Incluir Acesso','Alterar Perfil','Em Análise','Usuário Não Encontrado','Aderente'];
+  return ks.sort((x,y)=>{const ix=ordem.indexOf(x),iy=ordem.indexOf(y);return (ix<0?9:ix)-(iy<0?9:iy);})
+    .map(a=>{const c=_csCorAcao(a);
+      return `<span class="acao-chip" style="color:${c};border-color:${c}66;background:${c}12;">${esc(a)} (${cont[a]})</span>`;})
+    .join('');
+}
 /* Padrão único de data: dd/mm/aaaa hh:mm:ss (data sem hora recebe 00:00:00). */
 function fmtDH(iso){
   if(!iso) return '';
@@ -2266,6 +2367,7 @@ function pintarPagina(){
     // So resume "+N" quando ha perfil ESPERADO de verdade. "Sem Vínculo RH"
     // (nao mapeado) tem esperado "—" — ausencia de valor, nao um perfil.
     const _temEsp = !!(d0.pp && String(d0.pp).trim() && String(d0.pp).trim() !== '—');
+    const _acaoResumo = hasMore ? _inclAcaoResumo(u) : null;
     h += `<tr data-u="${esc(u.u)}" data-n="${esc(u.n)}">
       <td>${fmtDH(d0.dt)}</td>
       <td style="text-align:center;"><button class="qbtn" title="Enviar para quarentena" aria-label="Enviar para quarentena" onclick="quarentenar('${u.u}')"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V7"/><path d="M6 13l6-6 6 6"/><path d="M5 21h14"/></svg></button></td>
@@ -2278,16 +2380,16 @@ function pintarPagina(){
       <td style="text-align:center;font-weight:700;color:#1F2D5C;">${ddivs.length}</td>
       <td>${esc(u.d)||'—'}</td>
       <td>${esc(u.c)||'—'}</td>
-      <td>${tipoBadge(d0.t,d0.tl)}</td>
-      <td class="perfil-cel">${_perfilBr(d0.pe)}</td>
+      <td>${_acaoResumo || tipoBadge(d0.t,d0.tl)}</td>
+      <td class="perfil-cel">${_perfResumo(d0.pe,{matricula:u.m,sistema:d0.sis})||'—'}</td>
       <td class="perfil-cel">${hasMore
         ? ('<span class="esp-resumo"' + (_inclExpand.has(u.u) ? ' style="display:none"' : '') + '>'
             + (_temEsp
-                ? (_perfilBr(d0.pp) + ' <span class="esp-mais" onclick="expandirDaLinha(this)" title="' + (ddivs.length - 1) + ' outro(s) perfil(is) esperado(s) — clique para expandir">+' + (ddivs.length - 1) + '</span>')
+                ? ((_perfResumo(d0.pp,{matricula:u.m,sistema:d0.sis})||'—') + ' <span class="esp-mais" onclick="expandirDaLinha(this)" title="' + (ddivs.length - 1) + ' outro(s) perfil(is) esperado(s) — clique para expandir">+' + (ddivs.length - 1) + '</span>')
                 : '—')
             + '</span>'
           + '<span class="esp-menos"' + (_inclExpand.has(u.u) ? '' : ' style="display:none"') + ' onclick="recolherDaLinha(this)" title="Recolher">− recolher</span>')
-        : _perfilBr(d0.pp)}</td>
+        : (_perfResumo(d0.pp,{matricula:u.m,sistema:d0.sis})||'—')}</td>
       <td style="text-align:center;">${esc(d0.o)||'—'}</td>
     </tr>`;
     // Quando ha varios perfis, TODOS (inclusive o 1o) viram sublinha e o
@@ -2300,14 +2402,14 @@ function pintarPagina(){
         <td></td>
         <td></td>
         <td>${stBadge(d.s)}</td>
-        <td style="padding-left:14px;color:#7B8085;font-size:10.5px;">↳ ${esc(d.pe||d.pp||'—')}</td>
+        <td style="padding-left:14px;color:#7B8085;font-size:10.5px;">↳ ${_perfResumo(d.pe||d.pp,{matricula:u.m,sistema:d.sis})||'—'}</td>
         <td>—</td>
         <td>—</td>
         <td style="text-align:center;">1</td>
         <td>—</td><td>—</td>
         <td>${tipoBadge(d.t,d.tl)}</td>
-        <td class="perfil-cel">${_perfilBr(d.pe)}</td>
-        <td class="perfil-cel">${_perfilBr(d.pp)}</td>
+        <td class="perfil-cel">${_perfResumo(d.pe,{matricula:u.m,sistema:d.sis})||'—'}</td>
+        <td class="perfil-cel">${_perfResumo(d.pp,{matricula:u.m,sistema:d.sis})||'—'}</td>
         <td style="text-align:center;">${esc(d.o)||'—'}</td>
       </tr>`;
     });
@@ -4077,7 +4179,11 @@ function histStatusResumo(curSis, chave){
         + `title="Clique para expandir/recolher ${esc(l)}">${esc(l)} (${n})</span>`;
     }).join(' ');
 }
-function histSisResumo(n){ return `<span class="h-sis">${n} sistemas</span>`; }
+function histSisResumo(n, chave, sts, open){
+  return `<span class="h-sis h-sisclick" data-hk="${esc(chave)}" data-sts="${esc((sts||[]).join('|'))}" `
+    + `onclick="histToggle(this)" title="Clique para abrir/fechar os sistemas">`
+    + `${n} sistemas ${open?'▾':'▸'}</span>`;
+}
 /* Clique num chip de status: expande/recolhe SÓ os sistemas daquele status.
    Estado por CHAVE (matrícula+nome) -> persiste no auto-refresh (re-render aplica). */
 function histStToggle(el){
@@ -4115,7 +4221,7 @@ function _perfResumo(p, r){
   if(!arr.length) return '';
   const full=arr.join(', ');
   if(full.length<=42) return `<span title="${esc(full)}">${esc(full)}</span>`;
-  const key=((r&&r.matricula)||'')+'|'+((r&&r.sistema)||'');
+  const key=((r&&r.matricula)||'')+'|'+((r&&r.sistema)||'')+'|'+arr.length+'|'+(arr[0]||'').slice(0,24);
   const open=_histPerfExp.has(key);
   const head=`<span class="perf-exp" data-pk="${esc(key)}" onclick="perfToggle(this)" `
     + `title="Clique para ${open?'recolher':'ver'} os ${arr.length} perfis">`
@@ -4127,7 +4233,10 @@ function _perfResumo(p, r){
 function perfToggle(el){
   const key=el.dataset.pk;
   if(_histPerfExp.has(key)) _histPerfExp.delete(key); else _histPerfExp.add(key);
-  comHandling(pintarHistorico);
+  // re-render da aba ATIVA — o perfil "N perfis" expansível é usado em várias grids
+  if(_tabAtual==='conf') renderConformidade();
+  else if(_tabAtual==='incl') comHandling(renderMatrix);
+  else comHandling(pintarHistorico);
 }
 function histDet(r){
   // Sistema virou coluna própria -> Detalhe mostra só o PERFIL (resumido).
@@ -4204,7 +4313,7 @@ function pintarHistorico(){
         ?`<button class="expand-btn" data-hk="${esc(g.chave)}" data-sts="${esc(stats.join('|'))}" onclick="histToggle(this)">${anyOpen?'-':'+'}</button>`:''}</td>
       <td><strong style="color:#1F2D5C;">${esc(g.matricula)||'—'}</strong></td>
       <td>${esc(g.nome)||'—'}</td>
-      <td>${multi?histSisResumo(itens.length):histSis(hdr)}</td>
+      <td>${multi?histSisResumo(itens.length,g.chave,stats,anyOpen):histSis(hdr)}</td>
       <td>${multi?histStatusResumo(curSis,g.chave):histMov(hdr)}</td>
       <td>${fmtDate(hdr.data)}</td>
       <td>${multi?'<span style="color:#8A9099;">— clique num status ou no + para abrir</span>':histDet(hdr)}</td>
@@ -4241,7 +4350,7 @@ function pintarHistorico(){
               <td></td>
               <td></td>
               <td style="text-align:right;color:#C9D0DA;padding-right:10px;">↳</td>
-              <td></td>
+              <td style="text-align:center;">${t.ciclo?`<span class="h-ciclo" title="Ciclo ${t.ciclo}${t.ciclo>1?' — reabertura':''}">ciclo ${t.ciclo}</span>`:''}</td>
               <td>${histMov(t)}</td>
               <td>${fmtDate(t.data)}${t.ticket?` <span style="color:#8A9099;">· ${esc(t.ticket)}</span>`:''}</td>
               <td>${histDet(t)}</td>

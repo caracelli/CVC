@@ -1797,7 +1797,10 @@ def _montar_base():
             if SISTEMA:
                 cond_a += " AND sistema = ?"
                 par_a.append(SISTEMA)
-            _vistos_ader = set()
+            # SEM dedup por matricula: traz TODAS as linhas (matricula, sistema)
+            # aderentes — uma pessoa aderente em 6 sistemas vem em 6 linhas. O
+            # painel agrupa por pessoa (accordion), mostrando todos os sistemas em
+            # que ela aderiu (antes o dedup escondia todos menos o mais recente).
             for r in c.execute(
                 "SELECT cv.matricula,cv.nome,cv.login,cv.cargo,cv.sistema,cv.perfil,"
                 "       cv.dt_aderente,cv.dt_pendencia,cv.dt_resolvido,cv.ticket,"
@@ -1805,10 +1808,7 @@ def _montar_base():
                 "FROM ciclo_vida_acesso cv "
                 "LEFT JOIN rh_ativos rh ON rh.matricula = cv.matricula "
                 + cond_a.replace("dt_aderente", "cv.dt_aderente").replace("sistema =", "cv.sistema =")
-                + " ORDER BY cv.dt_aderente DESC", par_a):
-                if r["matricula"] in _vistos_ader:
-                    continue
-                _vistos_ader.add(r["matricula"])
+                + " ORDER BY cv.matricula, cv.dt_aderente DESC", par_a):
                 aderentes.append({
                     "m": r["matricula"], "n": r["nome"] or "", "login": r["login"] or "",
                     "cargo": r["cargo"] or "", "sis": r["sistema"] or "",
@@ -1838,10 +1838,24 @@ def _montar_base():
                             d["ciclos"] = mc
                             # pendencia atual num sistema com ciclo>1 = reaberta
                             d["reab"] = (d.get("s") == "Pendente")
+                # trilha (marcos por ciclo) SÓ dos (matricula,sistema) multi-ciclo,
+                # para o selo "N ciclos" da aba Aderentes poder expandir os ciclos.
+                # Payload enxuto: ignora quem tem 1 ciclo só.
+                ciclo_ev = {}
+                for r in c.execute(
+                    "SELECT matricula, sistema, ciclo, tipo_evento, data_evento, ticket "
+                    "FROM ciclo_eventos_acesso ORDER BY matricula, sistema, ciclo, "
+                    "CASE tipo_evento WHEN 'PENDENCIA' THEN 0 WHEN 'RESOLVIDO' THEN 1 ELSE 2 END"):
+                    k = (r["matricula"], r["sistema"])
+                    if (ciclo_max.get(k) or 1) > 1:
+                        ciclo_ev.setdefault(k, []).append({
+                            "ciclo": r["ciclo"], "tipo": r["tipo_evento"],
+                            "data": r["data_evento"], "ticket": r["ticket"] or ""})
                 for a in aderentes:
                     mc = ciclo_max.get((a["m"], a["sis"]))
                     if mc and mc > 1:
                         a["ciclos"] = mc
+                        a["eventos"] = ciclo_ev.get((a["m"], a["sis"]), [])
         except Exception as e:
             print(f"  [ciclos] enriquecimento de selos falhou: {e!r}")
 
@@ -2073,27 +2087,54 @@ def _calcular_visao_geral(c, sistema=""):
     tempos = {"total": "—", "pend_resolv": "—", "resolv_ader": "—",
               "seg_pr": 0, "seg_ra": 0, "seg_pa": 0, "n": 0, "n_pr": 0, "n_ra": 0}
     try:
-        # P -> A (total): conta TAMBEM o P->A direto (liberacao feita fora do sistema)
-        rpa = c.execute(
-            "SELECT AVG((julianday(dt_aderente)-julianday(dt_pendencia))*86400.0), COUNT(*) "
-            "FROM ciclo_vida_acesso "
-            "WHERE dt_pendencia IS NOT NULL AND dt_aderente IS NOT NULL "
-            "  AND dt_aderente >= dt_pendencia" + filtro_sis, par_sis).fetchone()
-        seg_pa, n_pa = (rpa[0] or 0), (rpa[1] or 0)
-        # P -> R: qualquer resolvido por ticket, mesmo sem aderencia ainda
-        rpr = c.execute(
-            "SELECT AVG((julianday(dt_resolvido)-julianday(dt_pendencia))*86400.0), COUNT(*) "
-            "FROM ciclo_vida_acesso "
-            "WHERE dt_pendencia IS NOT NULL AND dt_resolvido IS NOT NULL "
-            "  AND dt_resolvido >= dt_pendencia" + filtro_sis, par_sis).fetchone()
-        seg_pr, n_pr = (rpr[0] or 0), (rpr[1] or 0)
-        # R -> A: resolvidos que ja viraram aderente
-        rra = c.execute(
-            "SELECT AVG((julianday(dt_aderente)-julianday(dt_resolvido))*86400.0), COUNT(*) "
-            "FROM ciclo_vida_acesso "
-            "WHERE dt_resolvido IS NOT NULL AND dt_aderente IS NOT NULL "
-            "  AND dt_aderente >= dt_resolvido" + filtro_sis, par_sis).fetchone()
-        seg_ra, n_ra = (rra[0] or 0), (rra[1] or 0)
+        _tem_ev = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                            "AND name='ciclo_eventos_acesso'").fetchone()
+        if _tem_ev:
+            # Tempos por CICLO a partir do LOG DE EVENTOS: pendencia->resolvido->
+            # aderente DENTRO de cada (matricula, sistema, ciclo). Reflete
+            # REABERTURAS (cada ciclo mede o proprio tempo) e nao depende do
+            # first-wins de ciclo_vida (onde, num reprocesso unico, a linha tem so
+            # 1 carimbo — pendencia OU aderente — e nunca fecha um ciclo).
+            wsis = " WHERE sistema = ?" if sistema else ""
+            row = c.execute(
+                "WITH ev AS ("
+                " SELECT matricula, sistema, ciclo,"
+                "  MAX(CASE WHEN tipo_evento='PENDENCIA' THEN data_evento END) dp,"
+                "  MAX(CASE WHEN tipo_evento='RESOLVIDO' THEN data_evento END) dr,"
+                "  MAX(CASE WHEN tipo_evento='ADERENTE'  THEN data_evento END) da"
+                " FROM ciclo_eventos_acesso" + wsis +
+                " GROUP BY matricula, sistema, ciclo)"
+                " SELECT"
+                "  AVG(CASE WHEN dp IS NOT NULL AND da IS NOT NULL AND da>=dp THEN (julianday(da)-julianday(dp))*86400.0 END),"
+                "  SUM(CASE WHEN dp IS NOT NULL AND da IS NOT NULL AND da>=dp THEN 1 ELSE 0 END),"
+                "  AVG(CASE WHEN dp IS NOT NULL AND dr IS NOT NULL AND dr>=dp THEN (julianday(dr)-julianday(dp))*86400.0 END),"
+                "  SUM(CASE WHEN dp IS NOT NULL AND dr IS NOT NULL AND dr>=dp THEN 1 ELSE 0 END),"
+                "  AVG(CASE WHEN dr IS NOT NULL AND da IS NOT NULL AND da>=dr THEN (julianday(da)-julianday(dr))*86400.0 END),"
+                "  SUM(CASE WHEN dr IS NOT NULL AND da IS NOT NULL AND da>=dr THEN 1 ELSE 0 END)"
+                " FROM ev", par_sis).fetchone()
+            seg_pa, n_pa = (row[0] or 0), (row[1] or 0)
+            seg_pr, n_pr = (row[2] or 0), (row[3] or 0)
+            seg_ra, n_ra = (row[4] or 0), (row[5] or 0)
+        else:
+            # fallback (banco antigo sem o log): ciclo_vida_acesso (1 ciclo)
+            rpa = c.execute(
+                "SELECT AVG((julianday(dt_aderente)-julianday(dt_pendencia))*86400.0), COUNT(*) "
+                "FROM ciclo_vida_acesso "
+                "WHERE dt_pendencia IS NOT NULL AND dt_aderente IS NOT NULL "
+                "  AND dt_aderente >= dt_pendencia" + filtro_sis, par_sis).fetchone()
+            seg_pa, n_pa = (rpa[0] or 0), (rpa[1] or 0)
+            rpr = c.execute(
+                "SELECT AVG((julianday(dt_resolvido)-julianday(dt_pendencia))*86400.0), COUNT(*) "
+                "FROM ciclo_vida_acesso "
+                "WHERE dt_pendencia IS NOT NULL AND dt_resolvido IS NOT NULL "
+                "  AND dt_resolvido >= dt_pendencia" + filtro_sis, par_sis).fetchone()
+            seg_pr, n_pr = (rpr[0] or 0), (rpr[1] or 0)
+            rra = c.execute(
+                "SELECT AVG((julianday(dt_aderente)-julianday(dt_resolvido))*86400.0), COUNT(*) "
+                "FROM ciclo_vida_acesso "
+                "WHERE dt_resolvido IS NOT NULL AND dt_aderente IS NOT NULL "
+                "  AND dt_aderente >= dt_resolvido" + filtro_sis, par_sis).fetchone()
+            seg_ra, n_ra = (rra[0] or 0), (rra[1] or 0)
         tempos.update({
             "seg_pr": seg_pr, "seg_ra": seg_ra, "seg_pa": seg_pa,
             "n": n_pa, "n_pr": n_pr, "n_ra": n_ra,
