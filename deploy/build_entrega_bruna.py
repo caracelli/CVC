@@ -218,6 +218,14 @@ COMO USAR
    o banco DADOS\\BANCO\\iam_analytics.db e' criado e os arquivos lidos
    vao para PROCESSADOS.
 
+   >> REAPROVEITAR UMA BASE EXISTENTE (opcional):
+      Se ja tiver um iam_analytics.db de um teste anterior, copie-o para
+      CVC_IAM_ANALYTICS\\DADOS\\BANCO\\ ANTES de rodar o Processador. O
+      Processador novo e' ADITIVO/NAO-DESTRUTIVO: ele apenas CRIA a nova
+      tabela de eventos (ciclo_eventos_acesso) e a preenche a partir do
+      historico ja existente — NAO apaga nem altera os dados anteriores
+      (validacoes, ciclos, resolucoes e quarentenas ficam intactos).
+
 3. Abra o painel: rode
        CVC_IAM_ANALYTICS\\EXECUTAVEIS\\visualizador.exe
    Ele abre http://127.0.0.1:8800/ no navegador, lendo o banco local.
@@ -227,10 +235,19 @@ O QUE VEM DENTRO
 ------------------------------------------------------------
 - Sistemas ativos: SYSTUR, SIGOT, SICA_RA, SICA_ESFERA, IC, SIG, ORACLE_EBS
   + terceiros (mesma configuracao de dev de hoje).
-- Novidades desta versao: status "Usuario Nao Encontrado" (antes "Nao
-  Mapeado") e lista fechada de 3 motivos de resolucao
-  (Excecao / Transferencia de Area / Acesso Indevido).
-- SEM banco pronto: o banco nasce no 1o processamento (passo 2).
+- Novidades desta versao:
+  * HISTORICO POR SISTEMA: o Historico agora abre por pessoa -> sistema
+    -> ciclo. Cada sistema tem seu proprio status (aderente num sistema e
+    pendente noutro deixa de aparecer na mesma linha). Reabertura de acesso
+    vira um novo ciclo (ciclo 2, 3, ...) visivel na trilha.
+  * O mesmo modelo por sistema/ciclo foi aplicado em Aderentes, Pendencias
+    e Consulta (selos "N sistemas" / "N ciclos" clicaveis).
+  * Casos "Em Analise" com varias opcoes de perfil consolidados em UMA
+    linha ("N opcoes"), e listas longas de perfil viram "N perfis" clicavel.
+  * Status "Usuario Nao Encontrado" e lista fechada de 3 motivos de
+    resolucao (Excecao / Transferencia de Area / Acesso Indevido).
+- SEM banco pronto: o banco nasce no 1o processamento (passo 2), ou
+  reaproveite um banco anterior (ver passo 2).
 """
 
 
