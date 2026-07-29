@@ -2577,7 +2577,7 @@ function pintarPagina(){
         <td></td>
         <td></td>
         <td></td>
-        <td>${stBadge(d.s)}</td>
+        <td>${stBadge(d.s)}${_btnResSis(u,d)}</td>
         <td style="padding-left:14px;color:#7B8085;font-size:10.5px;">↳ ${_perfResumo(d.pe||d.pp,{matricula:u.m,sistema:d.sis})||'—'}</td>
         <td>—</td>
         <td>—</td>
@@ -3702,13 +3702,16 @@ function proc(on){
 /* ── Enviar para quarentena (modal → grava interação QUARENTENA) ───────── */
 let _quarAlvo = null;
 
-function quarentenar(uid){
+function quarentenar(uid, sistema){
   // Abre o formulário (prazo/ticket/título/motivo) — espelha abrirResolver.
+  // sistema opcional (retorno Bruna): quarentena SÓ daquele sistema (chave
+  // composta usuario##sistema). Vazio = pessoa inteira.
   const u = DB.users.find(x => String(x.u) === String(uid));
-  _quarAlvo = u ? u.u : uid;
-  const nome = u ? (u.n + ' — ' + u.u) : uid;
+  const sis = sistema || '';
+  _quarAlvo = (u ? u.u : uid) + (sis ? '##' + sis : '');
+  const nome = (u ? (u.n + ' — ' + u.u) : uid) + (sis ? ' · sistema ' + esc(sis) : '');
   _modal(
-    '<div class="modal-hd"><h3>Enviar para quarentena</h3>'
+    '<div class="modal-hd"><h3>Enviar para quarentena' + (sis ? ' — por sistema' : '') + '</h3>'
     + '<p>' + esc(nome) + '</p></div>'
     + '<div class="modal-bd">'
     + '<label>Quantidade de dias <span class="req">*</span> <span style="color:#7B8294;font-weight:400;">(máx. 90)</span></label>'
@@ -3806,15 +3809,37 @@ function fecharModal(){
   agendarAutoRefresh();   // tick foi pausado enquanto o modal estava aberto
 }
 
-function abrirResolver(uid){
+/* Botão "resolver só este sistema" (sub-linha da Pendências) — retorno Bruna:
+   tratar por sistema, não a pessoa inteira. Só aparece em pendência aberta. */
+function _btnResSis(u, d){
+  if(d.s !== 'Pendente' || !d.sis) return '';
+  return `<button class="btn-res ico-res" title="Resolver só o sistema ${esc(d.sis)}" `
+    + `onclick="abrirResolver('${esc(u.u)}','${esc(d.sis)}')" style="margin-left:5px;">`
+    + `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" `
+    + `stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">`
+    + `<circle cx="12" cy="12" r="9"/><path d="M8.4 12.3l2.5 2.5 4.7-5.3"/></svg></button>`
+    + `<button class="qbtn" title="Quarentena só o sistema ${esc(d.sis)}" `
+    + `onclick="quarentenar('${esc(u.u)}','${esc(d.sis)}')" style="margin-left:3px;width:20px;height:20px;">`
+    + `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" `
+    + `stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">`
+    + `<path d="M12 19V7"/><path d="M6 13l6-6 6 6"/><path d="M5 21h14"/></svg></button>`;
+}
+let _resSistema = '';   // sistema alvo da resolução ('' = pessoa inteira)
+function abrirResolver(uid, sistema){
   const u = DB.users.find(x => String(x.u) === String(uid));
   if(!u) return;
   _resAlvo = u;
-  const q = u.divs.length;
+  _resSistema = sistema || '';
+  // pendências alvo: do sistema (se informado) ou todas
+  const alvo = _resSistema
+    ? u.divs.filter(d => d.sis === _resSistema && d.a !== 'Aderente' && d.a !== 'Incluir Acesso')
+    : u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso');
+  const escopo = _resSistema
+    ? ' · sistema <b>' + esc(_resSistema) + '</b> (' + alvo.length + ' pendência(s))'
+    : ' · ' + alvo.length + ' pendência(s) marcada(s) como resolvida(s)';
   _modal(
-    '<div class="modal-hd"><h3>Resolver pendência(s)</h3>'
-    + '<p>' + esc(u.n) + ' — ' + esc(u.u) + ' · ' + q
-    + ' pendência(s) marcada(s) como resolvida(s)</p></div>'
+    '<div class="modal-hd"><h3>Resolver pendência(s)' + (_resSistema ? ' — por sistema' : '') + '</h3>'
+    + '<p>' + esc(u.n) + ' — ' + esc(u.u) + escopo + '</p></div>'
     + '<div class="modal-bd">'
     + '<label>Nº do ticket do Jira <span class="req">*</span></label>'
     + '<input id="res-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
@@ -3867,14 +3892,14 @@ async function confirmarResolucao(){
     document.getElementById('res-motivo').focus();
     return;
   }
-  const uid = _resAlvo.u;
+  const uid = _resAlvo.u, sis = _resSistema;
   fecharModal();
   proc(true);
   let msg;
   try{
     const r = await fetch('/api/resolver', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({id:uid, ticket:ticket, ticket_url:url, descricao:desc, motivo:motivo})
+      body: JSON.stringify({id:uid, ticket:ticket, ticket_url:url, descricao:desc, motivo:motivo, sistema:sis})
     });
     const j = await r.json();
     if(j && j.ok){
@@ -3883,7 +3908,8 @@ async function confirmarResolucao(){
         DB.sis_dist = j.dados.sis_dist; DB.users = j.dados.users;
       } else { await refreshDB(); }
       renderMatrix(); aplicarKPIs();
-      msg = 'Pendência(s) de ' + uid + ' resolvida(s) sob o ticket ' + ticket + '.';
+      msg = (sis ? 'Pendências de ' + uid + ' no sistema ' + sis : 'Pendência(s) de ' + uid)
+          + ' resolvida(s) sob o ticket ' + ticket + '.';
     } else {
       msg = 'Falha ao resolver: ' + ((j && j.erro) || 'desconhecida');
     }

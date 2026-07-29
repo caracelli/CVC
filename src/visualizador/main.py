@@ -1724,20 +1724,46 @@ def construir_db():
     # sobrepoe as resolucoes (banco dobrado + interacoes vivas): o funcionario
     # resolvido ganha u.resolvido + u.resolucao e todas as divs viram Resolvido.
     resolvidos = _resolucoes_mescladas(_interacoes)
+    # quarentena: por PESSOA (chave simples) x por SISTEMA (chave composta
+    # usuario##sistema) — retorno Bruna: quarentenar so um sistema.
+    em_quar_all = {k for k in em_quar if "##" not in k}
+    em_quar_sis = {}
+    for k in em_quar:
+        if "##" in k:
+            _usr, _sis = k.split("##", 1)
+            em_quar_sis.setdefault(_usr, set()).add(_sis)
     users = []
     for u in _BASE["users"]:
-        if u["u"] in em_quar:
-            continue
-        r = resolvidos.get(u["u"])
-        if r:
+        if u["u"] in em_quar_all:
+            continue                            # pessoa inteira em quarentena
+        _qsis = em_quar_sis.get(u["u"])
+        if _qsis:
+            _divs = [d for d in u["divs"] if d.get("sis") not in _qsis]
+            if not _divs:
+                continue                        # todos os sistemas em quarentena
+            u = dict(u, divs=_divs)             # segue sem os sistemas em quarentena
+        r_all = resolvidos.get(u["u"])          # resolucao da PESSOA inteira
+        # resolucoes POR SISTEMA desta pessoa (chave composta "usuario##sistema")
+        r_sis = {k.split("##", 1)[1]: v for k, v in resolvidos.items()
+                 if k.startswith(u["u"] + "##")}
+        if r_all or r_sis:
             uc = dict(u)
-            uc["resolvido"] = True
-            uc["resolucao"] = r
-            # Transicao do ciclo: linha JA Aderente (acesso OK) vence o overlay
-            # de resolucao -> some das pendencias como Aderente; o resto vira
-            # Resolvido. O Historico/lupa mantem a trilha do ticket.
-            uc["divs"] = [dict(d, s=("Aderente" if d.get("t") == "OK" else "Resolvido"))
-                          for d in u["divs"]]
+            # Cada div vira Resolvido se a pessoa foi resolvida inteira OU o SISTEMA
+            # daquela div foi resolvido. Linha JA Aderente (OK) vence -> Aderente.
+            def _st(d):
+                if d.get("t") == "OK":
+                    return "Aderente"
+                if r_all or (d.get("sis") in r_sis):
+                    return "Resolvido"
+                return d.get("s")
+            uc["divs"] = [dict(d, s=_st(d)) for d in u["divs"]]
+            # resolvido (lupa/estado da PESSOA) = resolucao da pessoa inteira. A
+            # resolucao POR SISTEMA nao "resolve a pessoa" — aparece nos divs
+            # (sub-linha do sistema vira Resolvido), e a pessoa segue com o botao
+            # de resolver os demais sistemas.
+            uc["resolvido"] = bool(r_all)
+            uc["resolucao"] = r_all or next(iter(r_sis.values()), None)
+            uc["resolucao_sis"] = r_sis          # {sistema: dados} p/ lupa por sistema
             users.append(uc)
         else:
             users.append(u)
@@ -2290,11 +2316,15 @@ def enviar_quarentena(usuarios, origem="Inclusão / Alteração",
     for u in usuarios:
         if u in ja:
             continue
-        nome, sis, _ = _meta_divergencia(u)
+        # chave composta "usuario##sistema" = quarentena SO daquele sistema
+        # (retorno Bruna). Sem ## = pessoa inteira (compat).
+        usr_real = u.split("##", 1)[0]
+        sis_alvo = u.split("##", 1)[1] if "##" in u else ""
+        nome, sis, _ = _meta_divergencia(usr_real)
         _interacao_gravar({
             "tipo_interacao": "QUARENTENA", "registro_id": u, "acao": "ENVIAR",
             "usuario": USUARIO, "data_acao": agora, "origem": origem,
-            "nome": nome, "sistema": sis,
+            "nome": nome, "sistema": sis_alvo or sis,
             "dias": dias, "ticket": ticket, "titulo": titulo, "motivo": motivo,
         })
         ja.add(u)
@@ -2693,16 +2723,24 @@ def retirar_quarentena(registro_id, motivo=""):
     return 1
 
 
-def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=""):
+def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo="",
+                       sistema=""):
     """Grava uma interacao RESOLUCAO na rede — marca o funcionario como
     resolvido sob um ticket do Jira, com o MOTIVO (obrigatorio, vindo do combobox
-    do XML). Devolve 1 se gravou, 0 se invalido."""
+    do XML). Devolve 1 se gravou, 0 se invalido.
+
+    `sistema` opcional (retorno Bruna): quando informado, resolve SO aquele
+    sistema — a chave vira composta `usuario##sistema` e o snapshot pega so as
+    pendencias daquele sistema. Vazio = resolve a pessoa inteira (compat)."""
     rid = str(registro_id or "").strip()
+    sis_alvo = str(sistema or "").strip()
     tk = str(ticket or "").strip()
     motivo = str(motivo or "").strip()
     if not rid or not tk or not motivo:
         return 0
     nome, _, _ = _meta_divergencia(rid)
+    # chave da resolucao: composta quando por sistema (nao muda schema)
+    chave = f"{rid}##{sis_alvo}" if sis_alvo else rid
     # Snapshot completo para auditoria — cargo, centro de custo e as pendencias
     # como estavam no momento da resolucao, mesmo que a base mude depois.
     # "Em Analise" vem como varias linhas (1 por perfil candidato) em
@@ -2720,10 +2758,11 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=
             cc_nome = (rh["centro_custo_nome"] if rh else "") or ""
             centro_custo = (cc_cod + " - " + cc_nome).strip(" -")
             analise = {}     # sistema -> pendencia "Em Analise" agrupada
-            for r in c.execute(
-                    "SELECT tipo, acao, sistema, perfil_encontrado, "
-                    "perfil_esperado, origem FROM bi_divergencias "
-                    "WHERE usuario=?", [rid]):
+            # snapshot: todas as pendencias da pessoa, ou so as do sistema alvo
+            _sql = ("SELECT tipo, acao, sistema, perfil_encontrado, "
+                    "perfil_esperado, origem FROM bi_divergencias WHERE usuario=?"
+                    + (" AND sistema=?" if sis_alvo else ""))
+            for r in c.execute(_sql, [rid] + ([sis_alvo] if sis_alvo else [])):
                 tp = r["tipo"] or ""
                 sis = r["sistema"] or ""
                 org = r["origem"] or ""
@@ -2753,17 +2792,18 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=
     except Exception as e:
         print(f"  [RESOLUCAO] aviso: snapshot incompleto ({e!r})")
     _interacao_gravar({
-        "tipo_interacao": "RESOLUCAO", "registro_id": rid, "acao": "RESOLVER",
+        "tipo_interacao": "RESOLUCAO", "registro_id": chave, "acao": "RESOLVER",
         "ticket": tk,
         "ticket_url": str(ticket_url or "").strip(),
         "descricao": str(descricao or "").strip(),
         "motivo": motivo,
         "cargo": cargo, "centro_custo": centro_custo,
+        "sistema": sis_alvo,
         "pendencias": pend,
         "nome": nome, "usuario": USUARIO,
         "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
     })
-    print(f"  [RESOLUCAO] {rid} ticket={tk} ({len(pend)} pend.) por {USUARIO}")
+    print(f"  [RESOLUCAO] {chave} ticket={tk} ({len(pend)} pend.) por {USUARIO}")
     return 1
 
 
@@ -3414,7 +3454,8 @@ class H(BaseHTTPRequestHandler):
                                "application/json")
                     return
                 linhas = resolver_pendencia(rid, ticket, payload.get("ticket_url"),
-                                            payload.get("descricao"), motivo)
+                                            payload.get("descricao"), motivo,
+                                            sistema=payload.get("sistema") or "")
                 self._send(200, json.dumps(
                     {"ok": linhas > 0,
                      "erro": None if linhas > 0 else "falha ao resolver",
