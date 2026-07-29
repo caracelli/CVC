@@ -60,10 +60,11 @@ class TestMatrizDuplicada(unittest.TestCase):
         rows = self._run([_pe("P1"), _pe("P1")])
         self.assertEqual(rows, [("SEM_ACESSO", "P1")])
 
-    def test_dois_perfis_distintos_continuam_em_analise(self):
-        # 2 perfis DISTINTOS -> EM_ANALISE (fix nao quebra esse caso)
+    def test_dois_perfis_distintos_sem_acesso_viram_esperado(self):
+        # 2 perfis DISTINTOS, SEM acesso -> SEM_ACESSO (esperado), 1 linha por
+        # perfil (retorno Bruna: sem acesso nao e' Em Análise; dedup nao colapsa).
         rows = self._run([_pe("P1"), _pe("P2")])
-        self.assertEqual({s for s, _ in rows}, {"EM_ANALISE"})
+        self.assertEqual({s for s, _ in rows}, {"SEM_ACESSO"})
         self.assertEqual({p for _, p in rows}, {"P1", "P2"})
 
     def test_mesmo_perfil_manual_diferente_dedup_para_um(self):

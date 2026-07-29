@@ -39,9 +39,9 @@ def _desligado(mat, cpf="222"):
                                 cargo=_cargo(), data_desligamento=date(2026, 1, 1))
 
 
-def _acesso(usuario, perfil="P1", cpf="", vinc=None, sistema=Sistema.SYSTUR):
+def _acesso(usuario, perfil="P1", cpf="", vinc=None, sistema=Sistema.SYSTUR, situacao="ATIVO"):
     return PerfilAcesso(usuario=usuario, nome_usuario="N", sistema=sistema,
-                        perfil=perfil, situacao="ATIVO", cpf=cpf, matricula_vinculada=vinc)
+                        perfil=perfil, situacao=situacao, cpf=cpf, matricula_vinculada=vinc)
 
 
 # ───────────────── RegraAcessoDesligado ─────────────────
@@ -69,6 +69,23 @@ class TestRegraAcessoDesligado(unittest.TestCase):
             [_desligado("20")])
         self.assertEqual(len(divs), 2)
         self.assertTrue(all(d.tipo == TipoDivergencia.ACESSO_DESLIGADO for d in divs))
+
+    def test_conta_bloqueada_de_desligado_nao_gera(self):
+        # Conta BLOQUEADO ja esta revogada — nao e' divergencia (caso SIG).
+        divs = self.regra.verificar(
+            [_acesso("u1", vinc="20", situacao="BLOQUEADO")], [_desligado("20")])
+        self.assertEqual(divs, [])
+
+    def test_conta_inativa_de_desligado_nao_gera(self):
+        divs = self.regra.verificar(
+            [_acesso("u1", vinc="20", situacao="INATIVO")], [_desligado("20")])
+        self.assertEqual(divs, [])
+
+    def test_status_vazio_conta_como_ativo(self):
+        # Alguns extratos deixam status em branco = ativo (ex.: SIGOT/IC).
+        divs = self.regra.verificar(
+            [_acesso("u1", vinc="20", situacao="")], [_desligado("20")])
+        self.assertEqual(len(divs), 1)
 
 
 # ───────────────── RegraAcessoTransferido ─────────────────

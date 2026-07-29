@@ -27,9 +27,14 @@ from dominio.servicos_dominio.servico_padronizacao import ServicoPadronizacao
 # Colunas fixas do extrato SIG (case-insensitive, posicao matters menos)
 _COLS_FIXAS = ("LOGIN", "NM_USER", "STATUS", "CPF", "EMAIL")
 
-# Mapa de situacao do SIG. Hoje so vem 'ATIVO' no export, mas registramos
-# previsao para 'INATIVO' caso futuro.
-_MAPA_SITUACAO = {"ATIVO": "ATIVO", "INATIVO": "INATIVO"}
+# Mapa de situacao do SIG. O export traz ATIVO e BLOQUEADO (conta desativada:
+# ~90% do extrato). Status desconhecido e' PRESERVADO (nao forcado a ATIVO) para
+# nao mascarar contas inativas — o motor de desligados so conta acesso ATIVO.
+_MAPA_SITUACAO = {
+    "ATIVO": "ATIVO", "A": "ATIVO",
+    "INATIVO": "INATIVO", "I": "INATIVO",
+    "BLOQUEADO": "BLOQUEADO", "B": "BLOQUEADO",
+}
 
 
 class LeitorCatalogoSig(LeitorArquivoBase):
@@ -138,7 +143,10 @@ class LeitorSig(LeitorArquivoBase):
             nome = self._pad.normalizar_nome(_cell(idx_nm))
             cpf = self._pad.normalizar_cpf(_cell(idx_cpf))
             email = _cell(idx_email) or None
-            status = _MAPA_SITUACAO.get(_cell(idx_status).upper() or "ATIVO", "ATIVO")
+            # Status cru: vazio (linha 'sistema') -> ATIVO; conhecido -> normaliza;
+            # desconhecido -> preserva o rotulo cru (auditavel, nao vira ATIVO).
+            _st_bruto = _cell(idx_status).upper() or "ATIVO"
+            status = _MAPA_SITUACAO.get(_st_bruto, _st_bruto)
 
             for col in cols_codigo:
                 val = row.get(col)

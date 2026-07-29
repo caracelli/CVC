@@ -157,6 +157,21 @@ class TestLeitorSig(unittest.TestCase):
         finally:
             os.unlink(arq)
 
+    def test_status_bloqueado_preservado(self):
+        # Conta BLOQUEADO nao pode virar ATIVO (bug: ~90% do SIG e' bloqueado).
+        arq = self._extrato_xlsx([
+            ["LOGIN", "NM_USER", "STATUS", "CPF", "EMAIL", "10", "12"],
+            ["ativo1", "A", "ATIVO", "1", "", "X", ""],
+            ["bloq1", "B", "BLOQUEADO", "2", "", "X", "X"],
+        ])
+        try:
+            perfis = self.leitor.ler_um(arq)
+            sit = {p.usuario: p.situacao for p in perfis}
+            self.assertEqual(sit["ativo1"], "ATIVO")
+            self.assertEqual(sit["bloq1"], "BLOQUEADO")
+        finally:
+            os.unlink(arq)
+
     def test_aceita_marcadores_alternativos(self):
         # X, x, 1, SIM tambem marcam
         arq = self._extrato_xlsx([

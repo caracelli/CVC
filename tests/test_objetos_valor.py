@@ -87,9 +87,11 @@ class TestFuncionarioInvariantes(unittest.TestCase):
         with self.assertRaises(ValueError):
             Funcionario(matricula="1", nome="", cpf="111", cargo=_cargo())
 
-    def test_exige_cpf(self):
-        with self.assertRaises(ValueError):
-            Funcionario(matricula="1", nome="ANA", cpf="", cargo=_cargo())
+    def test_aceita_sem_cpf(self):
+        # identidades do diretorio AD (franqueado/prestador) chegam so com
+        # login/email; a cascata de vinculo ignora o nivel CPF quando vazio
+        f = Funcionario(matricula="1", nome="ANA", cpf="", cargo=_cargo())
+        self.assertEqual(f.cpf, "")
 
     def test_ativo_defaults(self):
         f = FuncionarioAtivo(matricula="1", nome="ANA", cpf="111", cargo=_cargo())

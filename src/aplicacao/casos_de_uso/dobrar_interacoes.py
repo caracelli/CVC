@@ -90,6 +90,37 @@ CREATE TABLE IF NOT EXISTS resolucoes (
 )
 """
 
+_SQL_TRAT_DESL = """
+CREATE TABLE IF NOT EXISTS tratamentos_desligado (
+  registro_id TEXT PRIMARY KEY,
+  ticket TEXT NOT NULL,
+  ticket_url TEXT,
+  descricao TEXT,
+  motivo TEXT,
+  acessos TEXT,
+  cargo TEXT,
+  centro_custo TEXT,
+  nome TEXT,
+  tratado_por TEXT,
+  tratado_em TEXT,
+  dobrado_em TEXT
+)
+"""
+
+_SQL_TRAT_TRANSF = """
+CREATE TABLE IF NOT EXISTS tratamentos_transferido (
+  registro_id TEXT PRIMARY KEY,
+  ticket TEXT NOT NULL,
+  ticket_url TEXT,
+  descricao TEXT,
+  motivo TEXT,
+  nome TEXT,
+  tratado_por TEXT,
+  tratado_em TEXT,
+  dobrado_em TEXT
+)
+"""
+
 _SQL_ATALHOS = """
 CREATE TABLE IF NOT EXISTS atalhos (
   id TEXT PRIMARY KEY,
@@ -175,6 +206,33 @@ class DobrarInteracoes:
                     ant.get("data_acao", "")):
                 res_reg[str(rid)] = it
 
+        # TRATAMENTO_DESLIGADO: tratamento do acesso de um desligado sob ticket —
+        # mesmo padrao da RESOLUCAO (vence a interacao de data_acao mais recente).
+        trat_reg: dict = {}
+        for it in interacoes:
+            if it.get("tipo_interacao") != "TRATAMENTO_DESLIGADO":
+                continue
+            rid = it.get("registro_id")
+            if not rid:
+                continue
+            ant = trat_reg.get(str(rid))
+            if ant is None or str(it.get("data_acao", "")) >= str(
+                    ant.get("data_acao", "")):
+                trat_reg[str(rid)] = it
+
+        # TRATAMENTO_TRANSFERIDO: revisao de acesso pos-mudanca sob ticket.
+        transf_reg: dict = {}
+        for it in interacoes:
+            if it.get("tipo_interacao") != "TRATAMENTO_TRANSFERIDO":
+                continue
+            rid = it.get("registro_id")
+            if not rid:
+                continue
+            ant = transf_reg.get(str(rid))
+            if ant is None or str(it.get("data_acao", "")) >= str(
+                    ant.get("data_acao", "")):
+                transf_reg[str(rid)] = it
+
         # ATALHO: para cada id, vence a interacao de data_acao mais recente
         # (acao=CRIAR ou EXCLUIR). Idempotente.
         atalho_reg: dict = {}
@@ -196,6 +254,8 @@ class DobrarInteracoes:
             c.executescript(_SQL_QUAR)
             c.executescript(_SQL_HIST)
             c.executescript(_SQL_RES)
+            c.executescript(_SQL_TRAT_DESL)
+            c.executescript(_SQL_TRAT_TRANSF)
             c.executescript(_SQL_ATALHOS)
             _migrar_colunas_quar(c)
             n_env = n_res = 0
@@ -229,6 +289,33 @@ class DobrarInteracoes:
                      (it.get("data_acao") or "").replace("T", " "), agora])
                 n_resol += 1
 
+            n_trat = 0
+            for rid, it in trat_reg.items():
+                c.execute(
+                    "INSERT OR REPLACE INTO tratamentos_desligado (registro_id,"
+                    "ticket,ticket_url,descricao,motivo,acessos,cargo,centro_custo,"
+                    "nome,tratado_por,tratado_em,dobrado_em) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    [rid, it.get("ticket") or "", it.get("ticket_url") or "",
+                     it.get("descricao") or "", it.get("motivo") or "",
+                     json.dumps(it.get("acessos") or [], ensure_ascii=False),
+                     it.get("cargo") or "", it.get("centro_custo") or "",
+                     it.get("nome") or "", it.get("usuario") or "",
+                     (it.get("data_acao") or "").replace("T", " "), agora])
+                n_trat += 1
+
+            n_transf = 0
+            for rid, it in transf_reg.items():
+                c.execute(
+                    "INSERT OR REPLACE INTO tratamentos_transferido (registro_id,"
+                    "ticket,ticket_url,descricao,motivo,nome,tratado_por,tratado_em,"
+                    "dobrado_em) VALUES (?,?,?,?,?,?,?,?,?)",
+                    [rid, it.get("ticket") or "", it.get("ticket_url") or "",
+                     it.get("descricao") or "", it.get("motivo") or "",
+                     it.get("nome") or "", it.get("usuario") or "",
+                     (it.get("data_acao") or "").replace("T", " "), agora])
+                n_transf += 1
+
             n_atalho_cri = n_atalho_exc = 0
             for rid, it in atalho_reg.items():
                 ex = it.get("extras") or {}
@@ -250,6 +337,8 @@ class DobrarInteracoes:
             logger.info(
                 f"Dobra: {n_env} em quarentena, {n_res} resolvido(s), "
                 f"{n_resol} resolucao(oes) de pendencia, "
+                f"{n_trat} tratamento(s) de desligado, "
+                f"{n_transf} tratamento(s) de transferido, "
                 f"{n_atalho_cri} atalho(s) criado/atualizado, "
                 f"{n_atalho_exc} atalho(s) excluido(s) aplicado(s) na base.")
         finally:

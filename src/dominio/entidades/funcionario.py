@@ -16,5 +16,6 @@ class Funcionario:
             raise ValueError("Matrícula é obrigatória")
         if not self.nome:
             raise ValueError("Nome é obrigatório")
-        if not self.cpf:
-            raise ValueError("CPF é obrigatório")
+        # CPF nao e' obrigatorio: identidades do diretorio AD (franqueado/
+        # prestador) podem ser identificadas so por login/email. A cascata de
+        # vinculo ja trata cpf vazio (nao gera match no nivel CPF).

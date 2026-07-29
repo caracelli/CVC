@@ -98,6 +98,7 @@ class ConexaoBancoDados:
             self._migrar_historico_unificado(conn)
             self._migrar_acessos_sistemas_pk_e_matching(conn)
             self._migrar_rh_ativos_tipo_vinculo(conn)
+            self._migrar_rh_ativos_login(conn)
             self._migrar_gestor(conn)
             self._migrar_ciclo_vida(conn)
             self._migrar_ciclo_eventos_backfill(conn)
@@ -159,6 +160,18 @@ class ConexaoBancoDados:
                 "ALTER TABLE rh_ativos ADD COLUMN tipo_vinculo TEXT DEFAULT 'FUNCIONARIO'"))
             conn.commit()
             logger.info("Migration: rh_ativos.tipo_vinculo adicionada.")
+
+    def _migrar_rh_ativos_login(self, conn):
+        """Coluna 'login' (aditiva) em rh_ativos — chave de vinculo do diretorio
+        AD (franqueado/prestador). Idempotente."""
+        if "rh_ativos" not in self._tabelas(conn):
+            return
+        if "login" not in self._cols(conn, "rh_ativos"):
+            conn.execute(text("ALTER TABLE rh_ativos ADD COLUMN login TEXT"))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_rh_ativos_login ON rh_ativos (login)"))
+            conn.commit()
+            logger.info("Migration: rh_ativos.login adicionada.")
 
     def _migrar_gestor(self, conn):
         """Coluna 'gestor' (aditiva) em rh_ativos e matriz_cco — chave do

@@ -30,7 +30,7 @@ ENTIDADE_ACESSO_SISTEMA = "ACESSO_SISTEMA"
 # Campos comparados por tipo (ordem usada no JSON da trilha)
 _CAMPOS_ATIVO = [
     "nome", "cpf", "cargo_codigo", "cargo_descricao", "centro_custo_codigo",
-    "departamento", "data_admissao", "email", "situacao",
+    "departamento", "gestor", "data_admissao", "email", "situacao",
 ]
 _CAMPOS_DESLIGADO = [
     "nome", "cpf", "cargo_codigo", "cargo_descricao", "centro_custo_codigo",
@@ -180,6 +180,7 @@ class RegistrarHistorico:
             "cargo_codigo": r.cargo_codigo, "cargo_descricao": r.cargo_descricao,
             "centro_custo_codigo": r.centro_custo_codigo,
             "departamento": r.departamento,
+            "gestor": getattr(r, "gestor", None),
             "data_admissao": r.data_admissao,
             "email": r.email,
             "situacao": getattr(r, "situacao", None),
@@ -193,6 +194,7 @@ class RegistrarHistorico:
             "cargo_codigo": f.cargo.codigo, "cargo_descricao": f.cargo.descricao,
             "centro_custo_codigo": f.cargo.centro_custo,
             "departamento": f.cargo.departamento,
+            "gestor": getattr(f, "gestor", None),
             "data_admissao": getattr(f, "data_admissao", None),
             "email": f.email,
             "situacao": getattr(f, "situacao", None),

@@ -35,6 +35,15 @@ def _desligado(mat, cpf="", email=None, nome="F"):
                        data_admissao=date(2018, 1, 1), data_desligamento=date(2026, 1, 1))
 
 
+def _ad(mat, login, cpf="", email=None, nome="F", tipo="PRESTADOR"):
+    """Identidade vinda do diretorio (AD) — mora no rh_ativos com matricula
+    namespaced (FRANQ-/PREST-) e tipo_vinculo proprio."""
+    return RhAtivo(matricula=mat, nome=nome, cpf=cpf, email=email, login=login,
+                   cargo_codigo="", cargo_descricao="", centro_custo_codigo="",
+                   departamento="", data_admissao=None, situacao="ATIVO",
+                   tipo_vinculo=tipo)
+
+
 def _acesso(usuario, cpf=None, email=None, nome="F", perfil="P1"):
     return AcessoSistema(sistema=IC, usuario=usuario, perfil=perfil,
                          nome_usuario=nome, cpf=cpf, email=email, situacao="ATIVO")
@@ -82,6 +91,38 @@ class TestPrecedenciaAtivoDesligado(_Base):
         )
         VincularAcessosRh(self.conexao).executar()
         self.assertEqual(self._acessos()["u1"].matricula_vinculada, "ATV")
+
+
+class TestPrecedenciaCltSobreDiretorioAd(_Base):
+    """O AD e' importado ANTES do RH no pipeline (decisao da area: AD e' a base
+    principal de identidade). A precedencia no matching NAO pode depender dessa
+    ordem de insercao: quem tem vinculo empregaticio (CLT/terceiro) vence, e a
+    identidade de diretorio so responde pelos orfaos."""
+
+    def test_clt_vence_o_ad_no_mesmo_cpf_mesmo_inserido_depois(self):
+        # AD semeado PRIMEIRO (ordem adversa, igual a do pipeline real)
+        self._seed(
+            _ad("PREST-corpp001", login="corpp001", cpf="11111111111", nome="ANA"),
+            _ativo("TERC-11111111111", cpf="11111111111", nome="ANA"),
+            _acesso("corpp001", cpf="11111111111", nome="ANA"),
+        )
+        VincularAcessosRh(self.conexao).executar()
+        a = self._acessos()["corpp001"]
+        self.assertEqual(a.matricula_vinculada, "TERC-11111111111",
+                         "o vinculo do RH deve prevalecer sobre a identidade AD")
+        self.assertEqual(a.metodo_vinculacao, "CPF")
+
+    def test_orfao_so_com_login_liga_ao_ad(self):
+        self._seed(
+            _ad("FRANQ-corpp009", login="corpp009", nome="BIA", tipo="FRANQUEADO"),
+            _ativo("M1", cpf="11111111111", nome="ANA"),
+            _acesso("corpp009", nome=""),   # sem cpf, sem email, sem nome
+        )
+        contagem = VincularAcessosRh(self.conexao).executar()
+        a = self._acessos()["corpp009"]
+        self.assertEqual(a.matricula_vinculada, "FRANQ-corpp009")
+        self.assertEqual(a.metodo_vinculacao, "LOGIN")
+        self.assertEqual(contagem.get("LOGIN", 0), 1)
 
 
 class TestAmbiguidadeCandidatos(_Base):

@@ -29,6 +29,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 # Niveis e scores (constantes vivas — qualquer consumer pode importar)
 METODO_CPF = "CPF"
 METODO_EMAIL = "EMAIL"
+METODO_LOGIN = "LOGIN"
 METODO_CPF_PARCIAL_NOME = "CPF_PARCIAL_NOME"
 METODO_NOME = "NOME"
 METODO_FUZZY = "FUZZY"
@@ -36,6 +37,7 @@ METODO_NAO_VINCULADO = "NAO_VINCULADO"
 
 SCORE_CPF = 1.00
 SCORE_EMAIL = 0.95
+SCORE_LOGIN = 0.93
 SCORE_CPF_PARCIAL_NOME = 0.90
 SCORE_NOME = 0.70
 SCORE_FUZZY = 0.50
@@ -44,9 +46,16 @@ SCORE_NAO_VINCULADO = 0.0
 # Vocabulario fixo de metodos (travado no schema — qualquer valor novo
 # precisa de migration; documentar mudancas em docs/SCHEMA_DECISIONS.md)
 METODOS_VALIDOS = frozenset({
-    METODO_CPF, METODO_EMAIL, METODO_CPF_PARCIAL_NOME,
+    METODO_CPF, METODO_EMAIL, METODO_LOGIN, METODO_CPF_PARCIAL_NOME,
     METODO_NOME, METODO_FUZZY, METODO_NAO_VINCULADO,
 })
+
+# Ordem de aplicacao da cascata (do mais confiavel pro menos). Fonte unica:
+# quem loga/relata por metodo itera daqui, para nao esquecer nivel novo.
+ORDEM_METODOS = (
+    METODO_CPF, METODO_EMAIL, METODO_LOGIN, METODO_CPF_PARCIAL_NOME,
+    METODO_NOME, METODO_FUZZY, METODO_NAO_VINCULADO,
+)
 
 _MIN_DIG_PARCIAL = 5     # minimo de digitos contiguos pra considerar CPF parcial
 _FUZZY_THRESHOLD = 0.92  # similaridade minima do difflib pra entrar como candidato
@@ -59,6 +68,7 @@ class FuncionarioRef:
     cpf: str = ""        # ja normalizado: 11 digitos zfill
     email: str = ""      # ja normalizado: lower + trim
     nome: str = ""       # ja normalizado: upper, sem acento, espacos colapsados
+    login: str = ""      # ja normalizado: upper, sem espacos (so franq/prest/AD)
 
 
 @dataclass
@@ -104,6 +114,14 @@ def normalizar_email(v) -> str:
     return str(v).strip().lower()
 
 
+def normalizar_login(v) -> str:
+    """Login canonico p/ matching: upper, sem espacos. O `usuario`/CD_LOGIN do
+    extrato de acesso == este login no diretorio (AD)."""
+    if not v:
+        return ""
+    return re.sub(r"\s", "", str(v).strip().upper())
+
+
 def normalizar_nome(v) -> str:
     """Upper, sem acentos, espacos colapsados."""
     if not v:
@@ -122,6 +140,7 @@ class ServicoVinculacaoMultiChave:
     def __init__(self, funcionarios: Iterable[FuncionarioRef]):
         self._por_cpf: Dict[str, List[str]] = defaultdict(list)
         self._por_email: Dict[str, List[str]] = defaultdict(list)
+        self._por_login: Dict[str, List[str]] = defaultdict(list)
         self._por_nome: Dict[str, List[str]] = defaultdict(list)
         # (cpf_parcial, nome) -> matriculas
         self._por_parcial_nome: Dict[Tuple[str, str], List[str]] = defaultdict(list)
@@ -137,6 +156,8 @@ class ServicoVinculacaoMultiChave:
                 self._por_cpf[f.cpf].append(f.matricula)
             if f.email:
                 self._por_email[f.email].append(f.matricula)
+            if getattr(f, "login", ""):
+                self._por_login[f.login].append(f.matricula)
             if f.nome:
                 self._por_nome[f.nome].append(f.matricula)
                 token = f.nome.split(" ", 1)[0] if f.nome else ""
@@ -147,12 +168,13 @@ class ServicoVinculacaoMultiChave:
                     parcial = f.cpf[:_MIN_DIG_PARCIAL]
                     self._por_parcial_nome[(parcial, f.nome)].append(f.matricula)
 
-    def vincular(self, *, cpf="", email="", nome="", cpf_mascarado="") -> ResultadoVinculacao:
+    def vincular(self, *, cpf="", email="", nome="", cpf_mascarado="", login="") -> ResultadoVinculacao:
         """Aplica a cascata pra um unico acesso. Inputs ja em formato bruto
         (a normalizacao acontece aqui)."""
         cpf_n = normalizar_cpf(cpf)
         email_n = normalizar_email(email)
         nome_n = normalizar_nome(nome)
+        login_n = normalizar_login(login)
         parcial = extrair_cpf_parcial(cpf_mascarado or cpf)
 
         # 1) CPF exato (so se tem 11 digitos completos)
@@ -171,6 +193,16 @@ class ServicoVinculacaoMultiChave:
                 return ResultadoVinculacao(METODO_EMAIL, SCORE_EMAIL, cand[0])
             if len(cand) > 1:
                 return ResultadoVinculacao(METODO_EMAIL, SCORE_EMAIL, cand[0], candidatos=cand)
+
+        # 2.5) Login exato (diretorio AD: usuario/CD_LOGIN == login). So franq/
+        # prest/AD tem login no universo, entao este nivel NUNCA muda o CLT
+        # (login vazio no RH). Resolve os orfaos que nao tem CPF/email no extrato.
+        if login_n:
+            cand = self._por_login.get(login_n, [])
+            if len(cand) == 1:
+                return ResultadoVinculacao(METODO_LOGIN, SCORE_LOGIN, cand[0])
+            if len(cand) > 1:
+                return ResultadoVinculacao(METODO_LOGIN, SCORE_LOGIN, cand[0], candidatos=cand)
 
         # 3) CPF parcial + nome exato
         if parcial and nome_n:
@@ -245,5 +277,6 @@ def construir_universo(funcionarios: Iterable) -> List[FuncionarioRef]:
             cpf=normalizar_cpf(getattr(f, "cpf", "")),
             email=normalizar_email(getattr(f, "email", "")),
             nome=normalizar_nome(nome),
+            login=normalizar_login(getattr(f, "login", "")),
         ))
     return out

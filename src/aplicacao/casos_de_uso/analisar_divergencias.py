@@ -1,5 +1,6 @@
 from loguru import logger
 
+from aplicacao.casos_de_uso.detectar_transferidos import DetectarTransferidos
 from dominio.servicos_dominio.servico_analise_divergencias import ServicoAnaliseDivergencias
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.repositorios.repositorio_acesso_sqlite import RepositorioAcessoSqlite
@@ -15,6 +16,7 @@ class AnalisarDivergencias:
         self._repo_acesso = RepositorioAcessoSqlite(conexao)
         self._repo_matriz = RepositorioMatrizSqlite(conexao)
         self._repo_div = RepositorioDivergenciaSqlite(conexao)
+        self._detectar_transferidos = DetectarTransferidos(conexao)
 
     def executar(self) -> int:
         logger.info("=== Analise de Divergencias iniciada ===")
@@ -23,13 +25,15 @@ class AnalisarDivergencias:
         desligados = self._repo_func.obter_desligados()
         perfis_esperados = self._repo_matriz.obter_perfis_esperados()
         acessos = self._repo_acesso.obter_todos()
+        # Transferidos: inferidos do historico do RH (mudanca cargo/CC/dep/gestor).
+        transferidos = self._detectar_transferidos.executar()
 
         servico = ServicoAnaliseDivergencias(perfis_esperados)
         divergencias = servico.analisar(
             acessos=acessos,
             ativos=ativos,
             desligados=desligados,
-            transferidos=[],
+            transferidos=transferidos,
         )
 
         self._repo_div.salvar_lote(divergencias)

@@ -43,6 +43,9 @@ class Configuracao:
     # terceiros ficam fora. Default True preserva o comportamento legado.
     rh_processar_desligados: bool
     rh_processar_terceiros: bool
+    # Diretorio AD (franqueados/prestadores) — identidades p/ dar dono aos orfaos.
+    rh_diretorio_ad_caminho: str
+    rh_processar_diretorio_ad: bool
     processados: str
     erros: str
     matrizes_perfis_caminho: str
@@ -113,6 +116,8 @@ class LeitorConfig:
             rh_desligados_caminho=root.findtext("rh/desligados/caminho", ""),
             rh_processar_desligados=_bool("rh/desligados/processar"),
             rh_processar_terceiros=_bool("rh/ativos/processar_terceiros"),
+            rh_diretorio_ad_caminho=root.findtext("rh/diretorio_ad/caminho", "ENTRADA/RH/AD"),
+            rh_processar_diretorio_ad=_bool("rh/diretorio_ad/processar"),
             processados=root.findtext("rede/processados", "DADOS/PROCESSADOS"),
             erros=root.findtext("rede/erros", "DADOS/ERROS"),
             matrizes_perfis_caminho=root.findtext("matrizes/perfis_sistemas/caminho", ""),

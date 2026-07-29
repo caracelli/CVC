@@ -37,10 +37,11 @@ class TestConfigProducao(unittest.TestCase):
         # OPERA_OPERACIONAL nao esta no cronograma -> fora de escopo (inativo).
         self.assertFalse(self.cfg.sistemas["OPERA_OPERACIONAL"].ativo)
 
-    def test_terceiros_em_escopo_desligados_fora(self):
-        # Terceiros ENTRARAM na Fase 1 (espelho); desligados sao Card 19 (fora).
+    def test_terceiros_e_desligados_em_escopo(self):
+        # Terceiros ENTRARAM na Fase 1 (espelho). Desligados: motor ATIVADO
+        # (Card 19) — processa a pasta e gera as divergencias ACESSO_DESLIGADO.
         self.assertTrue(self.cfg.rh_processar_terceiros)
-        self.assertFalse(self.cfg.rh_processar_desligados)
+        self.assertTrue(self.cfg.rh_processar_desligados)
 
     def test_painel_multi_sistema(self):
         # visualizador/sistema vazio = todos os sistemas ativos (SYSTUR + IC)

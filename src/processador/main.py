@@ -12,6 +12,7 @@ from infraestrutura.configuracao.leitor_config import LeitorConfig
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.ui_web import janela_processador as ui
 from aplicacao.casos_de_uso.importar_rh import ImportarRh
+from aplicacao.casos_de_uso.importar_diretorio_ad import ImportarDiretorioAd
 from aplicacao.casos_de_uso.padronizar_rh import PadronizarRh
 from aplicacao.casos_de_uso.importar_sistema import ImportarSistema
 from aplicacao.casos_de_uso.importar_sig import ImportarSig
@@ -234,6 +235,20 @@ def _executar(caminho_config: Path) -> int:
             caminho_banco=str(app_raiz / cfg.banco_dados),
             pasta_interacoes=str(app_raiz / cfg.rede_interacoes),
             quarentena_dias=cfg.visualizador_quarentena_dias,
+        ).executar()
+
+        # Diretorio AD (franqueados/prestadores) — base PRINCIPAL de identidade
+        # (decisao da area, 22/07): entra ANTES do RH. Da dono aos acessos
+        # orfaos via login. Nao sobrepoe o CLT: a matricula e' namespaced
+        # (FRANQ-/PREST-<login>), entao o merge do RH opera em chaves disjuntas;
+        # e a precedencia no matching e' explicita em VincularAcessosRh (CLT
+        # primeiro), nao decorre desta ordem de importacao.
+        ImportarDiretorioAd(
+            conexao=conexao,
+            pasta=str(app_raiz / cfg.rh_diretorio_ad_caminho),
+            pasta_processados=pasta_proc,
+            pasta_erros=pasta_err,
+            processar=cfg.rh_processar_diretorio_ad,
         ).executar()
 
         # Card 3 — Importação RH

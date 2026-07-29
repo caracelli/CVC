@@ -25,8 +25,11 @@ class RhAtivo(Base):
     email = Column(String)
     situacao = Column(String)
     gestor = Column(String)   # "Nome Gestor" do RH — chave do casamento CCO
-    # FUNCIONARIO (CLT proprio) | TERCEIRO (prestador de fornecedor)
+    # FUNCIONARIO (CLT proprio) | TERCEIRO | FRANQUEADO | PRESTADOR
     tipo_vinculo = Column(String, default="FUNCIONARIO")
+    # Login do diretorio (AD) — chave de vinculo p/ franqueado/prestador, cujo
+    # `usuario` do extrato de acesso == este login. Vazio p/ CLT (RH nao tem login).
+    login = Column(String, index=True)
     empresa = Column(String)
     local_trabalho = Column(String)
     arquivo_origem = Column(String)

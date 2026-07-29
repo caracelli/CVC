@@ -123,28 +123,31 @@ class ValidarAcessosSistema:
         registros.extend(self._validar_terceiros_espelho(
             ativos, acessos_por_matricula, sistemas_com_dados))
 
+        # PENDENCIAS (acao): so DIVERGENTE e EM_ANALISE. SEM_ACESSO ("esperado")
+        # deixou de ser pendencia (retorno Bruna): e' informativo, so na Consulta.
         _STATUS_ACAO = {
-            StatusValidacao.SEM_ACESSO.value,
             StatusValidacao.DIVERGENTE.value,
             StatusValidacao.EM_ANALISE.value,
         }
-        # Gravamos as pendencias (acao) E os OK (conforme). O OK aparece na grid
-        # mas com situacao_acao='OK' — fora da contagem de pendencias.
-        _STATUS_SALVOS = _STATUS_ACAO | {StatusValidacao.OK.value}
+        # Informativos (salvos, aparecem na Consulta, NAO contam pendencia):
+        # OK (encontrados/aderentes) e SEM_ACESSO (esperados).
+        _STATUS_INFO = {StatusValidacao.OK.value, StatusValidacao.SEM_ACESSO.value}
+        _STATUS_SALVOS = _STATUS_ACAO | _STATUS_INFO
         registros_salvos = [r for r in registros if r["status"] in _STATUS_SALVOS]
         for r in registros_salvos:
-            # Fase 1: pendencia nasce PENDENTE (ciclo PENDENTE→RESOLVIDO); OK nao
-            # e' pendencia (nao entra no fluxo de resolucao).
-            r["situacao_acao"] = ("OK" if r["status"] == StatusValidacao.OK.value
-                                  else "PENDENTE")
+            # Fase 1: pendencia nasce PENDENTE (ciclo PENDENTE→RESOLVIDO). OK e
+            # SEM_ACESSO (esperado) nao sao pendencia (nao entram na resolucao).
+            r["situacao_acao"] = ("PENDENTE" if r["status"] in _STATUS_ACAO
+                                  else "OK")
 
         repo = RepositorioMatrizSqlite(self._conexao)
         repo.salvar_validacoes(registros_salvos)
 
-        _n_ok = sum(1 for r in registros_salvos if r["status"] == StatusValidacao.OK.value)
+        _n_pend = sum(1 for r in registros_salvos if r["status"] in _STATUS_ACAO)
         logger.success(
             f"Validação de acessos concluída: {len(registros)} avaliados, "
-            f"{len(registros_salvos) - _n_ok} pendência(s) + {_n_ok} OK gravados."
+            f"{_n_pend} pendência(s) + {len(registros_salvos) - _n_pend} "
+            f"informativo(s) (OK/esperado) gravados."
         )
         if self._prov_deslig:
             logger.info(
@@ -328,11 +331,37 @@ class ValidarAcessosSistema:
             return []
 
         # Daqui pra baixo: NENHUM perfil esperado e' aderente.
-        # REGRA: vai pra Em Análise quando o cargo tem 2+ perfis ESPERADOS
-        # (ambiguo) OU quando a pessoa TEM 2+ perfis no sistema e nenhum e'
-        # aderente (perfil excessivo sem aderencia -> precisa analise humana).
+
+        # SEM ACESSO no sistema: e' INFORMATIVO ("esperado"), NAO pendencia
+        # (retorno da Bruna, Fase 1). A pessoa nao tem o acesso, mas o cargo
+        # preve — isso NAO vai para Em Análise nem conta como pendencia; aparece
+        # so na Consulta (bloco "Acessos esperados"). Lista TODOS os perfis
+        # esperados para a Consulta mostrar o que ela poderia ter.
+        if not acessos_atuais:
+            # B1: cargo com adesao baixa ao sistema => matriz abrangente demais
+            # => suprime (nao inunda a Consulta com esperados irrelevantes).
+            cg = _norm(func.cargo_descricao or "")
+            if self._adocao(sistema_valor, cg) < self._LIMIAR_INCLUSAO:
+                self._inclusao_suprimida += 1
+                return []
+            return [
+                base | {
+                    "sistema": sistema_valor,
+                    "perfil_esperado": perfil,
+                    "perfil_atual": "",
+                    "acesso_manual": bool(manual),
+                    "status": StatusValidacao.SEM_ACESSO.value,
+                    "origem_matriz": origem,
+                }
+                for perfil, manual, origem in {(p, m, o) for p, m, o in perfis}
+            ]
+
+        # TEM acesso, mas nenhum aderente:
+        #  - 2+ acessos OU 2+ perfis esperados => Em Análise (excesso/ambiguidade,
+        #    "pode ter um perfil a mais" — precisa analise humana);
+        #  - 1 acesso e 1 esperado que nao casam => Divergente (perfil errado).
         if len(perfis) > 1 or len(acessos_atuais) > 1:
-            perfil_atual = ", ".join(sorted(acessos_atuais)) if acessos_atuais else ""
+            perfil_atual = ", ".join(sorted(acessos_atuais))
             return [
                 base | {
                     "sistema": sistema_valor,
@@ -342,30 +371,16 @@ class ValidarAcessosSistema:
                     "status": StatusValidacao.EM_ANALISE.value,
                     "origem_matriz": origem,
                 }
-                for perfil, manual, origem in {(p, m, o) for p, m, o in perfis}  # pares distintos
+                for perfil, manual, origem in {(p, m, o) for p, m, o in perfis}
             ]
 
-        # (sistema sem dados ja retornou SEM_DADOS la em cima)
         perfil_esperado, acesso_manual, origem_p = perfis[0]
-        if not acessos_atuais:
-            # B1: so vira INCLUSAO se a adesao do cargo ao sistema for relevante.
-            # Adesao baixa => matriz abrangente demais => suprime (nao inunda).
-            cg = _norm(func.cargo_descricao or "")
-            if self._adocao(sistema_valor, cg) < self._LIMIAR_INCLUSAO:
-                self._inclusao_suprimida += 1
-                return []
-            status = StatusValidacao.SEM_ACESSO
-            perfil_atual = ""
-        else:
-            status = StatusValidacao.DIVERGENTE
-            perfil_atual = ", ".join(sorted(acessos_atuais))
-
         return [base | {
             "sistema": sistema_valor,
             "perfil_esperado": perfil_esperado,
-            "perfil_atual": perfil_atual,
+            "perfil_atual": ", ".join(sorted(acessos_atuais)),
             "acesso_manual": acesso_manual,
-            "status": status.value,
+            "status": StatusValidacao.DIVERGENTE.value,
             "origem_matriz": origem_p,
         }]
 

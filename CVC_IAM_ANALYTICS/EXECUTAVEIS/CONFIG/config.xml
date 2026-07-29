@@ -40,11 +40,12 @@
             </colunas>
         </ativos>
         <desligados>
-            <!-- Escopo Fase 1 (SYSTUR inclusao/alteracao): desligados ficam
-                 FORA (revogacao de acesso de desligado e' fluxo separado). Com
-                 processar=false o Processador NAO le esta pasta, mesmo que haja
-                 arquivo. Trocar para true quando o fluxo de desligados entrar. -->
-            <processar>false</processar>
+            <!-- Motor de desligados ATIVO: o Processador le a pasta de desligados,
+                 popula rh_desligados e a RegraAcessoDesligado gera as divergencias
+                 ACESSO_DESLIGADO (desligado com acesso ainda ativo/nao-bloqueado).
+                 OBS: sem corte temporal (A3 pendente com a area) — sinaliza TODO
+                 desligado com acesso ativo, independente da data de desligamento. -->
+            <processar>true</processar>
             <caminho>ENTRADA/RH/DESLIGADOS</caminho>
             <colunas>
                 <matricula>MATRICULA</matricula>
@@ -54,6 +55,14 @@
                 <motivo>MOTIVO</motivo>
             </colunas>
         </desligados>
+        <!-- Diretorio AD (Active Directory) por OU: franqueados e prestadores.
+             Da dono aos acessos orfaos (sem vinculo RH/terceiro) pela chave LOGIN
+             (usuario/CD_LOGIN do extrato == Login do AD). Arquivos OU_Franq* e
+             OU_Prest* na pasta. OU_Desligados* ainda fora (decisao pendente). -->
+        <diretorio_ad>
+            <processar>true</processar>
+            <caminho>ENTRADA/RH/AD</caminho>
+        </diretorio_ad>
     </rh>
 
     <sistemas>
@@ -241,6 +250,13 @@
         <auditoria>DADOS/SAIDAS/AUDITORIA</auditoria>
         <logs>DADOS/LOGS</logs>
     </saidas>
+
+    <!-- Metas / thresholds do painel (KRI). Opcionais: ausente/vazio = KPI sem
+         selo. acessos_desligado_meta = limite tolerado de desligados com acesso
+         ativo (risco). 0 = ideal (nenhum); qualquer valor acima acende o alerta. -->
+    <metas>
+        <acessos_desligado_meta>0</acessos_desligado_meta>
+    </metas>
 
     <!-- Visualizador: escopo (sistema) e prazo da quarentena.
          O banco e lido de rede/banco_dados acima. -->

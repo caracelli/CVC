@@ -140,11 +140,13 @@ class TestPipelineInvariantes(unittest.TestCase):
     def test_inv_status_gravados_sao_de_acao_ou_ok(self):
         vs = self._validacoes()
         self.assertTrue(vs)
-        # gravamos pendencias (acao) E os OK/Aderente
+        # gravamos pendencias (acao) E os informativos (OK/Aderente, SEM_ACESSO)
         self.assertTrue(all(v.status in (_ACAO | {"OK"}) for v in vs))
-        # pendencia -> PENDENTE; OK -> situacao_acao OK
+        # PENDENTE so p/ pendencia real (DIVERGENTE/EM_ANALISE). SEM_ACESSO
+        # ("esperado") e OK sao informativos -> situacao_acao OK (retorno Bruna).
+        _INFO = {"OK", "SEM_ACESSO"}
         for v in vs:
-            self.assertEqual(v.situacao_acao, "OK" if v.status == "OK" else "PENDENTE")
+            self.assertEqual(v.situacao_acao, "OK" if v.status in _INFO else "PENDENTE")
 
     def test_inv_em_analise_so_quando_multiplos_perfis(self):
         # EM_ANALISE so para (cc, cargo) com >1 perfil esperado = cc 200/GERENTE

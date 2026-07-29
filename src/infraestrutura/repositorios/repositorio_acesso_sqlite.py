@@ -139,6 +139,7 @@ class RepositorioAcessoSqlite(IRepositorioAcesso):
                     email=row.email or "",
                     nome=row.nome_usuario or "",
                     cpf_mascarado=row.cpf or "",
+                    login=row.usuario or "",   # usuario/CD_LOGIN == login do AD
                 )
                 row.matricula_vinculada = resultado.matricula
                 row.metodo_vinculacao = resultado.metodo

@@ -139,10 +139,12 @@ class TestVisualizadorDataLayer(unittest.TestCase):
     # ---- filtro por sistema ----
     def test_filtro_sistema_ic(self):
         b = self._base(IC)
-        # EM_ANALISE era do SYSTUR -> some; restam SEM_ACESSO/DIVERGENTE/nao_mapeado do IC
+        # EM_ANALISE era do SYSTUR -> some; restam SEM_ACESSO/DIVERGENTE/nao_mapeado do IC.
+        # total = pendencias: DIVERGENTE(1) + nao_mapeado(1) = 2. SEM_ACESSO deixou
+        # de ser pendencia (retorno Bruna: informativo) -> fora do total.
         self.assertEqual(b["kpis"], {
             "sem_acesso": 1, "divergente": 1, "em_analise": 0,
-            "nao_mapeado": 1, "ok": 0, "total": 3})
+            "nao_mapeado": 1, "ok": 0, "total": 2})
         # sis_dist NAO e' filtrado (sempre mostra a distribuicao completa)
         self.assertEqual(b["sis_dist"], {IC: 3, SYSTUR: 1})
 

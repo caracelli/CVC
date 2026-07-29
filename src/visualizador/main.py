@@ -101,6 +101,24 @@ TIPO_LABEL = {
     "OK": "Aderente",
 }
 
+# tipo_vinculo (rh_ativos) -> rótulo da coluna "Categoria" no painel.
+# FUNCIONARIO = CLT; TERCEIRO = prestador de fornecedor (base de terceiros do
+# RH); FRANQUEADO/PRESTADOR = identidades do diretório (AD), que existem para
+# dar dono aos acessos órfãos. Default FUNCIONARIO cobre banco antigo (coluna
+# ausente) — por isso o mapa tem fallback em vez de KeyError.
+VINCULO_LABEL = {
+    "FUNCIONARIO": "Funcionário", "TERCEIRO": "Terceiro",
+    "FRANQUEADO": "Franqueado", "PRESTADOR": "Prestador",
+}
+VINCULO_PADRAO = "Funcionário"
+
+
+def rotulo_vinculo(tv) -> str:
+    """Rótulo de categoria a partir do tipo_vinculo cru. Valor desconhecido cai
+    no padrão (nunca quebra a grid por causa de um vínculo novo no RH)."""
+    return VINCULO_LABEL.get((tv or "").strip().upper(), VINCULO_PADRAO)
+
+
 # origem_matriz -> rótulo da coluna "Origem"
 # MATRIZ = matrizes de perfis dos sistemas; CCO = matriz CCO; vazio = nenhuma
 ORIGEM_LABEL = {"MATRIZ": "Sistema", "CCO": "Base CCO"}
@@ -178,6 +196,7 @@ def carregar_config():
     banco_sub = os.path.join("DADOS", "BANCO", "iam_analytics.db")
     sistema = "SYSTUR"
     duracao = 90
+    meta_desl = None   # meta (KRI) de desligados com acesso; None = sem selo
     origem = "padrao"
     if os.path.exists(CONFIG_PATH):
         try:
@@ -194,13 +213,21 @@ def carregar_config():
             q = (root.findtext("visualizador/quarentena_dias") or "").strip()
             if q:
                 duracao = int(q)
+            # Meta de risco (opcional): limite tolerado de desligados com acesso
+            # ativo. Ausente/vazio/invalido = None (KPI sem selo de meta).
+            md = (root.findtext("metas/acessos_desligado_meta") or "").strip()
+            if md != "":
+                try:
+                    meta_desl = int(md)
+                except ValueError:
+                    meta_desl = None
             origem = "config.xml"
         except Exception as e:
             origem = f"config.xml invalido ({e!r}) -> padrao"
-    return rede_raiz, banco_sub, sistema, duracao, origem
+    return rede_raiz, banco_sub, sistema, duracao, meta_desl, origem
 
 
-REDE_RAIZ, BANCO_SUB, SISTEMA, QUAR_DIAS, CONFIG_SRC = carregar_config()
+REDE_RAIZ, BANCO_SUB, SISTEMA, QUAR_DIAS, META_ACESSOS_DESLIG, CONFIG_SRC = carregar_config()
 
 # Limite maximo de dias que uma quarentena pode receber no formulario (regra de
 # negocio; o front tambem bloqueia). Acima disso, enviar_quarentena rejeita.
@@ -394,6 +421,69 @@ def _resolucao_viva(interacoes=None):
         if ant is None or str(it.get("data_acao", "")) >= str(ant.get("data_acao", "")):
             atual[rid] = it
     return atual
+
+
+def _tratamento_desligado_vivo(interacoes=None):
+    """Estado vivo {registro_id: interacao} do tipo TRATAMENTO_DESLIGADO da rede.
+    Mesmo padrao da RESOLUCAO: a interacao de data_acao mais recente vence."""
+    atual = {}
+    for it in (interacoes if interacoes is not None else _interacoes_ler()):
+        if it.get("tipo_interacao") != "TRATAMENTO_DESLIGADO":
+            continue
+        rid = it.get("registro_id")
+        if not rid:
+            continue
+        ant = atual.get(rid)
+        if ant is None or str(it.get("data_acao", "")) >= str(ant.get("data_acao", "")):
+            atual[rid] = it
+    return atual
+
+
+def _tratamentos_desligado_db():
+    """Tratamentos de desligado ja dobrados no banco {registro_id: dados}."""
+    c = conn_ro()
+    try:
+        tem = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                        "AND name='tratamentos_desligado'").fetchone()
+        if not tem:
+            return {}
+        out = {}
+        for r in c.execute(
+                "SELECT registro_id,ticket,ticket_url,descricao,motivo,acessos,"
+                "cargo,centro_custo,nome,tratado_por,tratado_em "
+                "FROM tratamentos_desligado"):
+            try:
+                acessos = json.loads(r["acessos"]) if r["acessos"] else []
+            except Exception:
+                acessos = []
+            out[r["registro_id"]] = {
+                "ticket": r["ticket"] or "", "ticket_url": r["ticket_url"] or "",
+                "descricao": r["descricao"] or "", "motivo": r["motivo"] or "",
+                "cargo": r["cargo"] or "", "centro_custo": r["centro_custo"] or "",
+                "nome": r["nome"] or "",
+                "por": r["tratado_por"] or "", "em": r["tratado_em"] or "",
+                "acessos": acessos}
+        return out
+    except Exception:
+        return {}
+    finally:
+        c.close()
+
+
+def _tratamentos_desligado_mesclados(interacoes=None):
+    """{registro_id: dados do tratamento} — banco dobrado + interacoes vivas da
+    rede (a viva, mais recente, sobrepoe a dobrada)."""
+    out = dict(_tratamentos_desligado_db())
+    for rid, it in _tratamento_desligado_vivo(interacoes).items():
+        out[str(rid)] = {
+            "ticket": it.get("ticket") or "", "ticket_url": it.get("ticket_url") or "",
+            "descricao": it.get("descricao") or "", "motivo": it.get("motivo") or "",
+            "cargo": it.get("cargo") or "", "centro_custo": it.get("centro_custo") or "",
+            "nome": it.get("nome") or "",
+            "por": it.get("usuario") or "",
+            "em": (it.get("data_acao") or "").replace("T", " "),
+            "acessos": it.get("acessos") or []}
+    return out
 
 
 def _resolucoes_db():
@@ -1697,13 +1787,14 @@ def _montar_base():
             "nao_mapeado": cont("ACESSO_SEM_VINCULO_RH"),
             "ok": cont("OK"),                       # conforme — nao e' pendencia
         }
-        # total de PENDENCIAS = PESSOAS distintas a tratar (resolvida=0, exclui OK).
-        # NAO e' a soma dos cards: no multi-sistema uma pessoa pode ter pendencia
-        # em mais de um sistema/tipo e contaria 2x na soma — aqui conta 1x (mesma
-        # base do "Pendencias Abertas" da Visao Geral). Em 1 sistema soma==distinto.
+        # total de PENDENCIAS = PESSOAS distintas a tratar (resolvida=0). Exclui OK
+        # (aderente) E SEM_ACESSO — este ultimo deixou de ser pendencia (retorno
+        # Bruna): "sem acesso" e' informativo (so na Consulta), nao entra na
+        # contagem de pendencias. NAO e' a soma dos cards (multi-sistema conta 1x).
         kpis["total"] = c.execute(
             f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias {whereS} "
-            f"{'AND' if whereS else 'WHERE'} resolvida=0 AND tipo<>'OK'",
+            f"{'AND' if whereS else 'WHERE'} resolvida=0 AND tipo<>'OK' "
+            f"AND tipo<>'SEM_ACESSO'",
             argS).fetchone()[0]
         acao_dist = {r["acao"]: r["n"] for r in c.execute(
             f"SELECT acao, COUNT(DISTINCT usuario) n FROM bi_divergencias {whereS} "
@@ -1726,6 +1817,7 @@ def _montar_base():
                        COALESCE(r.centro_custo_nome,'')   cc_nome,
                        COALESCE(r.cpf,'')   cpf,
                        COALESCE(r.email,'') email,
+                       COALESCE(r.gestor,'') gestor,
                        COALESCE(r.tipo_vinculo,'FUNCIONARIO') tipo_vinc
                 FROM bi_divergencias b
                 LEFT JOIN rh_ativos r ON r.matricula = b.matricula
@@ -1740,8 +1832,10 @@ def _montar_base():
                      "m": r["matricula"] or "", "c": r["cargo"], "d": r["depto"],
                      "cc": (r["cc_cod"] + " - " + r["cc_nome"]).strip(" -"),
                      "cpf": r["cpf"] or "", "email": r["email"] or "",
-                     # vinculo (Funcionario/Terceiro) — mesmo p/ toda a pessoa
-                     "vinc": "Terceiro" if r["tipo_vinc"] == "TERCEIRO" else "Funcionário",
+                     "gestor": r["gestor"] or "",
+                     # categoria (Funcionário/Terceiro/Franqueado/Prestador) —
+                     # mesma p/ toda a pessoa
+                     "vinc": rotulo_vinculo(r["tipo_vinc"]),
                      "divs": []}
                 users[r["usuario"]] = u
             tp = r["tipo"]
@@ -1753,9 +1847,9 @@ def _montar_base():
                 "dt": r["data_identificacao"] or "",
                 "s": ("Aderente" if tp == "OK"
                       else "Resolvido" if r["resolvida"] else "Pendente"),
-                # vinculo lido do rh_ativos (tipo_vinculo): Funcionário (CLT)
-                # ou Terceiro (prestador de fornecedor).
-                "vinc": "Terceiro" if r["tipo_vinc"] == "TERCEIRO" else "Funcionário",
+                # categoria lida do rh_ativos (tipo_vinculo): Funcionário (CLT),
+                # Terceiro (fornecedor) ou Franqueado/Prestador (diretório AD).
+                "vinc": rotulo_vinculo(r["tipo_vinc"]),
                 "o": ("Matriz " + (r["sistema"] or "")) if r["origem"] == "MATRIZ"
                      else ("Matriz CCO" if r["origem"] == "CCO" else "—"),
             })
@@ -1804,6 +1898,7 @@ def _montar_base():
             for r in c.execute(
                 "SELECT cv.matricula,cv.nome,cv.login,cv.cargo,cv.sistema,cv.perfil,"
                 "       cv.dt_aderente,cv.dt_pendencia,cv.dt_resolvido,cv.ticket,"
+                "       COALESCE(rh.gestor,'') gestor,"
                 "       COALESCE(rh.tipo_vinculo,'FUNCIONARIO') tipo_vinc "
                 "FROM ciclo_vida_acesso cv "
                 "LEFT JOIN rh_ativos rh ON rh.matricula = cv.matricula "
@@ -1815,7 +1910,8 @@ def _montar_base():
                     "perfil": r["perfil"] or "", "dt": r["dt_aderente"] or "",
                     "dt_pend": r["dt_pendencia"] or "", "dt_resol": r["dt_resolvido"] or "",
                     "ticket": r["ticket"] or "",
-                    "vinc": "Terceiro" if r["tipo_vinc"] == "TERCEIRO" else "Funcionário",
+                    "gestor": r["gestor"] or "",
+                    "vinc": rotulo_vinculo(r["tipo_vinc"]),
                 })
         except Exception as e:
             print(f"  [conf] falha ao montar aderentes: {e!r}")
@@ -1918,12 +2014,16 @@ def _calcular_visao_geral(c, sistema=""):
         out["pendentes"] = c.execute(
             "SELECT COUNT(DISTINCT matricula) FROM validacao_acessos "
             "WHERE situacao_acao='PENDENTE'").fetchone()[0]
-    # Acessos de desligado: limita ao sistema do escopo
-    wsis = "WHERE a.sistema = ?" if sistema else ""
+    # Acessos de desligado: le da SAIDA do motor (divergencias ACESSO_DESLIGADO),
+    # que ja aplica uniao matricula/CPF + filtro de status (so conta ativa). Conta
+    # PESSOAS distintas (nao linhas — o SIG e' matricial e inflaria a contagem).
+    # Limita ao sistema do escopo. Coerente com RegraAcessoDesligado.
     out["acessos_deslig"] = c.execute(
-        f"SELECT COUNT(*) FROM acessos_sistemas a "
-        f"JOIN rh_desligados d ON a.matricula_vinculada = d.matricula {wsis}",
+        f"SELECT COUNT(DISTINCT matricula) FROM divergencias "
+        f"WHERE tipo='ACESSO_DESLIGADO'" + (" AND sistema = ?" if sistema else ""),
         argS).fetchone()[0]
+    # Meta (KRI) do config — habilita o selo de risco no KPI. None = sem selo.
+    out["acessos_desligado_meta"] = META_ACESSOS_DESLIG
     # Cobertura RH: também só do sistema do escopo. Defensivo: um banco de
     # schema antigo (pre-freeze, sem metodo_vinculacao) NAO pode zerar a Visao
     # Geral inteira — degrada so este bloco e loga (visivel no visualizador.log).
@@ -1975,15 +2075,17 @@ def _calcular_visao_geral(c, sistema=""):
     except Exception:
         out["div_sistemas"] = {}
 
-    # Top 10 desligados recentes ainda com acesso ativo NO SISTEMA do escopo
+    # Top 10 desligados recentes ainda com acesso ativo NO SISTEMA do escopo.
+    # Fonte = saida do motor (divergencias ACESSO_DESLIGADO): ja e' uniao
+    # matricula/CPF + so conta ativa. 'perfis' = nº de acessos ativos flagados.
     hoje = datetime.date.today()
     top = []
-    wsis_top = "AND a.sistema = ?" if sistema else ""
+    wsis_top = "AND x.sistema = ?" if sistema else ""
     for r in c.execute(f"""
         SELECT d.nome, d.data_desligamento, d.cargo_descricao,
-               COUNT(DISTINCT a.sistema) AS sistemas, COUNT(*) AS perfis
+               COUNT(DISTINCT x.sistema) AS sistemas, COUNT(*) AS perfis
         FROM rh_desligados d
-        JOIN acessos_sistemas a ON a.matricula_vinculada = d.matricula
+        JOIN divergencias x ON x.matricula = d.matricula AND x.tipo='ACESSO_DESLIGADO'
         WHERE d.data_desligamento IS NOT NULL {wsis_top}
         GROUP BY d.matricula
         ORDER BY d.data_desligamento DESC LIMIT 10
@@ -2202,6 +2304,254 @@ def enviar_quarentena(usuarios, origem="Inclusão / Alteração",
     return {"novos": novos, "total": len(ja), "data_fim": fim}
 
 
+def listar_desligados():
+    """Aba Desligados: uma linha por PESSOA desligada, com o veredito de acesso.
+
+    Duas situacoes (pedido da area):
+      - "Tratar" — ainda tem acesso ativo em algum sistema (precisa revogar);
+      - "OK"     — nenhum acesso ativo (situacao correta pos-desligamento).
+
+    Fonte do acesso = SAIDA do motor (`divergencias` tipo ACESSO_DESLIGADO), a
+    mesma da Visao Geral. NAO recalcula a regra aqui: o motor ja aplica a uniao
+    matricula/CPF e o filtro de status (so conta conta ATIVA). Duas leituras da
+    mesma pergunta divergiriam com o tempo.
+
+    Respeita o SISTEMA do escopo (config), como as demais grids.
+    """
+    c = conn_ro()
+    try:
+        arg = [SISTEMA] if SISTEMA else []
+        # Acessos vivos por matricula desligada (pode haver varios sistemas).
+        por_mat = {}
+        try:
+            for r in c.execute(
+                    "SELECT matricula, sistema, usuario, perfil_encontrado, "
+                    "       data_identificacao, resolvida "
+                    "FROM divergencias WHERE tipo='ACESSO_DESLIGADO'"
+                    + (" AND sistema = ?" if SISTEMA else ""), arg):
+                por_mat.setdefault(r["matricula"] or "", []).append({
+                    "sis": r["sistema"] or "",
+                    "login": r["usuario"] or "",
+                    "perfil": r["perfil_encontrado"] or "",
+                    # data crua (ISO): quem formata é o fmtDH do painel
+                    "dt": r["data_identificacao"] or "",
+                    "resolvida": bool(r["resolvida"]),
+                })
+        except Exception as e:
+            print(f"  [deslig] divergencias indisponivel: {e!r}")
+
+        out = []
+        try:
+            for r in c.execute(
+                    "SELECT matricula, nome, cpf, cargo_descricao, departamento, "
+                    "       COALESCE(centro_custo_codigo,'') cc_cod, "
+                    "       COALESCE(centro_custo_nome,'')   cc_nome, "
+                    "       data_desligamento, email, empresa "
+                    "FROM rh_desligados ORDER BY data_desligamento DESC"):
+                mat = r["matricula"] or ""
+                acessos = por_mat.pop(mat, [])
+                out.append({
+                    "m": mat, "n": r["nome"] or "", "cpf": r["cpf"] or "",
+                    "cargo": r["cargo_descricao"] or "", "depto": r["departamento"] or "",
+                    "cc": (r["cc_cod"] + " - " + r["cc_nome"]).strip(" -"),
+                    "dt_deslig": r["data_desligamento"] or "",
+                    "email": r["email"] or "", "empresa": r["empresa"] or "",
+                    "acessos": acessos,
+                    "sit": "Tratar" if acessos else "OK",
+                })
+        except Exception as e:
+            print(f"  [deslig] rh_desligados indisponivel: {e!r}")
+
+        # Sobra do motor: acesso marcado como de desligado cuja matricula nao
+        # esta (mais) no rh_desligados — a pessoa sumiu da base de RH mas o
+        # acesso segue vivo. Nao pode ser engolido: e' justamente o caso de
+        # risco. Entra como "Tratar" com os campos de RH vazios.
+        for mat, acessos in por_mat.items():
+            out.append({
+                "m": mat, "n": (acessos[0].get("login") or ""), "cpf": "",
+                "cargo": "", "depto": "", "cc": "", "dt_deslig": "",
+                "email": "", "empresa": "", "acessos": acessos,
+                "sit": "Tratar", "sem_rh": True,
+            })
+    finally:
+        c.close()
+
+    # Tratamentos sob ticket (mesmo padrao da resolucao de pendencia): quem foi
+    # tratado ganha `tratado`+`tratamento` e some do "Tratar" pendente. O acesso
+    # segue existindo ate o proximo reprocesso revogar — mas ja foi encaminhado.
+    tratamentos = _tratamentos_desligado_mesclados()
+    for d in out:
+        t = tratamentos.get(str(d["m"]))
+        if t and d["sit"] == "Tratar":
+            d["tratado"] = True
+            d["tratamento"] = {"ticket": t["ticket"], "ticket_url": t["ticket_url"],
+                               "descricao": t["descricao"], "motivo": t["motivo"],
+                               "por": t["por"], "em": t["em"]}
+
+    # KPIs: "Tratar" = com acesso e AINDA nao tratado; "tratado" e' categoria a
+    # parte (encaminhado). "OK" segue = sem acesso.
+    tratar = sum(1 for d in out if d["sit"] == "Tratar" and not d.get("tratado"))
+    tratados = sum(1 for d in out if d.get("tratado"))
+    ok = sum(1 for d in out if d["sit"] == "OK")
+    return {"lista": out, "kpis": {"tratar": tratar, "tratados": tratados,
+                                   "ok": ok, "total": len(out)}}
+
+
+import re as _re_transf
+_RE_CAMPOS = _re_transf.compile(r"Mudança de (.+?) —")
+
+
+def listar_transferidos():
+    """Aba Transferidos: pessoas que MUDARAM cargo/CC/departamento/gestor (detectado
+    do historico do RH) e cujos acessos precisam de REVISÃO. Fonte = saida do motor
+    (`divergencias` tipo ACESSO_TRANSFERIDO), a mesma da regra — NÃO recalcula aqui.
+
+    Situações: "Revisar" (acesso pendente de revisão) × "Tratado" (revisado sob
+    ticket). Sem janela: fica em Revisar até tratar. Respeita o SISTEMA do escopo.
+    """
+    c = conn_ro()
+    try:
+        arg = [SISTEMA] if SISTEMA else []
+        por_mat = {}
+        campos_por_mat = {}
+        try:
+            for r in c.execute(
+                    "SELECT matricula, sistema, usuario, perfil_encontrado, "
+                    "       data_identificacao, descricao "
+                    "FROM divergencias WHERE tipo='ACESSO_TRANSFERIDO'"
+                    + (" AND sistema = ?" if SISTEMA else ""), arg):
+                mat = r["matricula"] or ""
+                por_mat.setdefault(mat, []).append({
+                    "sis": r["sistema"] or "", "login": r["usuario"] or "",
+                    "perfil": r["perfil_encontrado"] or "",
+                    "dt": r["data_identificacao"] or "",
+                })
+                # "Mudança de cargo, gestor — ..." -> extrai os campos que mudaram
+                if mat not in campos_por_mat:
+                    m = _RE_CAMPOS.search(r["descricao"] or "")
+                    campos_por_mat[mat] = m.group(1) if m else ""
+        except Exception as e:
+            print(f"  [transf] divergencias indisponivel: {e!r}")
+
+        out = []
+        # dados de RH (ativos) por matricula p/ enriquecer nome/cargo/CC/gestor
+        rh = {}
+        if por_mat:
+            try:
+                qm = ",".join("?" * len(por_mat))
+                for r in c.execute(
+                        "SELECT matricula, nome, cargo_descricao, departamento, "
+                        "COALESCE(centro_custo_codigo,'') cc, COALESCE(gestor,'') gestor "
+                        f"FROM rh_ativos WHERE matricula IN ({qm})", list(por_mat)):
+                    rh[r["matricula"]] = r
+            except Exception:
+                pass
+        for mat, acessos in por_mat.items():
+            info = rh.get(mat)
+            out.append({
+                "m": mat,
+                "n": (info["nome"] if info else "") or (acessos[0].get("login") or ""),
+                "cargo": (info["cargo_descricao"] if info else "") or "",
+                "depto": (info["departamento"] if info else "") or "",
+                "cc": (info["cc"] if info else "") or "",
+                "gestor": (info["gestor"] if info else "") or "",
+                "campos": campos_por_mat.get(mat, ""),
+                "acessos": acessos,
+                "sit": "Revisar",
+            })
+    finally:
+        c.close()
+
+    tratamentos = _tratamentos_transferido_mesclados()
+    for d in out:
+        t = tratamentos.get(str(d["m"]))
+        if t:
+            d["tratado"] = True
+            d["tratamento"] = {"ticket": t["ticket"], "ticket_url": t["ticket_url"],
+                               "descricao": t["descricao"], "motivo": t["motivo"],
+                               "por": t["por"], "em": t["em"]}
+    revisar = sum(1 for d in out if not d.get("tratado"))
+    tratados = sum(1 for d in out if d.get("tratado"))
+    return {"lista": out, "kpis": {"revisar": revisar, "tratados": tratados,
+                                   "total": len(out)}}
+
+
+def _tratamento_transferido_vivo(interacoes=None):
+    atual = {}
+    for it in (interacoes if interacoes is not None else _interacoes_ler()):
+        if it.get("tipo_interacao") != "TRATAMENTO_TRANSFERIDO":
+            continue
+        rid = it.get("registro_id")
+        if not rid:
+            continue
+        ant = atual.get(rid)
+        if ant is None or str(it.get("data_acao", "")) >= str(ant.get("data_acao", "")):
+            atual[rid] = it
+    return atual
+
+
+def _tratamentos_transferido_db():
+    c = conn_ro()
+    try:
+        tem = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                        "AND name='tratamentos_transferido'").fetchone()
+        if not tem:
+            return {}
+        out = {}
+        for r in c.execute(
+                "SELECT registro_id,ticket,ticket_url,descricao,motivo,"
+                "tratado_por,tratado_em FROM tratamentos_transferido"):
+            out[r["registro_id"]] = {
+                "ticket": r["ticket"] or "", "ticket_url": r["ticket_url"] or "",
+                "descricao": r["descricao"] or "", "motivo": r["motivo"] or "",
+                "por": r["tratado_por"] or "", "em": r["tratado_em"] or ""}
+        return out
+    except Exception:
+        return {}
+    finally:
+        c.close()
+
+
+def _tratamentos_transferido_mesclados(interacoes=None):
+    out = dict(_tratamentos_transferido_db())
+    for rid, it in _tratamento_transferido_vivo(interacoes).items():
+        out[str(rid)] = {
+            "ticket": it.get("ticket") or "", "ticket_url": it.get("ticket_url") or "",
+            "descricao": it.get("descricao") or "", "motivo": it.get("motivo") or "",
+            "por": it.get("usuario") or "",
+            "em": (it.get("data_acao") or "").replace("T", " ")}
+    return out
+
+
+def tratar_transferido(registro_id, ticket, ticket_url="", descricao="", motivo=""):
+    """Grava interacao TRATAMENTO_TRANSFERIDO (mesmo padrao do desligado): registra
+    a revisao de acesso pos-mudanca sob um ticket. registro_id = matricula."""
+    rid = str(registro_id or "").strip()
+    tk = str(ticket or "").strip()
+    motivo = str(motivo or "").strip()
+    if not rid or not tk or not motivo:
+        return 0
+    nome = ""
+    try:
+        c = conn_ro()
+        try:
+            r = c.execute("SELECT nome FROM rh_ativos WHERE matricula=?", [rid]).fetchone()
+            nome = (r["nome"] if r else "") or ""
+        finally:
+            c.close()
+    except Exception:
+        pass
+    _interacao_gravar({
+        "tipo_interacao": "TRATAMENTO_TRANSFERIDO", "registro_id": rid, "acao": "TRATAR",
+        "ticket": tk, "ticket_url": str(ticket_url or "").strip(),
+        "descricao": str(descricao or "").strip(), "motivo": motivo,
+        "nome": nome, "usuario": USUARIO,
+        "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+    })
+    print(f"  [TRAT_TRANSF] {rid} ticket={tk} por {USUARIO}")
+    return 1
+
+
 def listar_quarentena():
     """{ativas, historico}: snapshot do DB local sobreposto pelas interacoes
     vivas da rede (ENVIAR entra em ativas, RESOLVER move para historico)."""
@@ -2260,16 +2610,15 @@ def listar_quarentena():
             for row in cv.execute(
                 "SELECT matricula, COALESCE(tipo_vinculo,'FUNCIONARIO') tv "
                 f"FROM rh_ativos WHERE matricula IN ({qm})", list(_mats)):
-                _vinc[row["matricula"]] = ("Terceiro" if row["tv"] == "TERCEIRO"
-                                           else "Funcionário")
+                _vinc[row["matricula"]] = rotulo_vinculo(row["tv"])
         except Exception:
             pass
         finally:
             cv.close()
     for r in lista:
-        r["vinc"] = _vinc.get(r["usuario"], "Funcionário")
+        r["vinc"] = _vinc.get(r["usuario"], VINCULO_PADRAO)
     for r in historico:
-        r["vinc"] = _vinc.get(r["usuario"], "Funcionário")
+        r["vinc"] = _vinc.get(r["usuario"], VINCULO_PADRAO)
     return {"ativas": lista, "historico": historico}
 
 
@@ -2415,6 +2764,55 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=
         "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
     })
     print(f"  [RESOLUCAO] {rid} ticket={tk} ({len(pend)} pend.) por {USUARIO}")
+    return 1
+
+
+def tratar_desligado(registro_id, ticket, ticket_url="", descricao="", motivo=""):
+    """Grava uma interacao TRATAMENTO_DESLIGADO na rede — registra o tratamento do
+    acesso de um desligado sob um ticket do Jira (mesmo padrao da resolucao de
+    pendencia). `registro_id` = matricula do desligado. Devolve 1 se gravou."""
+    rid = str(registro_id or "").strip()
+    tk = str(ticket or "").strip()
+    motivo = str(motivo or "").strip()
+    if not rid or not tk or not motivo:
+        return 0
+    # Snapshot p/ auditoria: dados do desligado + acessos ainda ativos no momento.
+    nome = cargo = centro_custo = ""
+    acessos = []
+    try:
+        c = conn_ro()
+        try:
+            rh = c.execute(
+                "SELECT nome, cargo_descricao, centro_custo_codigo, centro_custo_nome "
+                "FROM rh_desligados WHERE matricula=?", [rid]).fetchone()
+            if rh:
+                nome = rh["nome"] or ""
+                cargo = rh["cargo_descricao"] or ""
+                centro_custo = ((rh["centro_custo_codigo"] or "") + " - "
+                                + (rh["centro_custo_nome"] or "")).strip(" -")
+            for r in c.execute(
+                    "SELECT sistema, usuario, perfil_encontrado "
+                    "FROM divergencias WHERE tipo='ACESSO_DESLIGADO' AND matricula=?",
+                    [rid]):
+                acessos.append({"sistema": r["sistema"] or "",
+                                "login": r["usuario"] or "",
+                                "perfil": r["perfil_encontrado"] or ""})
+        finally:
+            c.close()
+    except Exception as e:
+        print(f"  [TRAT_DESLIG] aviso: snapshot incompleto ({e!r})")
+    _interacao_gravar({
+        "tipo_interacao": "TRATAMENTO_DESLIGADO", "registro_id": rid, "acao": "TRATAR",
+        "ticket": tk,
+        "ticket_url": str(ticket_url or "").strip(),
+        "descricao": str(descricao or "").strip(),
+        "motivo": motivo,
+        "cargo": cargo, "centro_custo": centro_custo,
+        "acessos": acessos,
+        "nome": nome, "usuario": USUARIO,
+        "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+    })
+    print(f"  [TRAT_DESLIG] {rid} ticket={tk} ({len(acessos)} acesso(s)) por {USUARIO}")
     return 1
 
 
@@ -2567,21 +2965,24 @@ def listar_historico_rh():
     _mats = {e.get("matricula") for e in out if e.get("matricula")}
     if _mats:
         cvh = conn_ro()
-        _vm, _ccm = {}, {}
+        _vm, _ccm, _gm = {}, {}, {}
         try:
             qm = ",".join("?" * len(_mats))
             for r in cvh.execute(
                     "SELECT matricula, COALESCE(tipo_vinculo,'FUNCIONARIO'), "
-                    "COALESCE(centro_custo_codigo,''), COALESCE(centro_custo_nome,'') "
+                    "COALESCE(centro_custo_codigo,''), COALESCE(centro_custo_nome,''), "
+                    "COALESCE(gestor,'') "
                     f"FROM rh_ativos WHERE matricula IN ({qm})", list(_mats)):
-                _vm[r[0]] = ("Terceiro" if r[1] == "TERCEIRO" else "Funcionário")
+                _vm[r[0]] = rotulo_vinculo(r[1])
                 _ccm[r[0]] = (str(r[2]) + " - " + str(r[3])).strip(" -")
+                _gm[r[0]] = r[4] or ""
         except Exception:
             pass
         finally:
             cvh.close()
         for e in out:
-            e["vinc"] = _vm.get(e.get("matricula"), "Funcionário")
+            e["vinc"] = _vm.get(e.get("matricula"), VINCULO_PADRAO)
+            e["gestor"] = _gm.get(e.get("matricula"), "")
             if not e.get("centro_custo"):
                 e["centro_custo"] = _ccm.get(e.get("matricula"), "")
 
@@ -2876,6 +3277,12 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/api/historico":
                 self._send(200, json.dumps(listar_historico_rh(), ensure_ascii=False),
                            "application/json; charset=utf-8")
+            elif self.path == "/api/desligados":
+                self._send(200, json.dumps(listar_desligados(), ensure_ascii=False),
+                           "application/json; charset=utf-8")
+            elif self.path == "/api/transferidos":
+                self._send(200, json.dumps(listar_transferidos(), ensure_ascii=False),
+                           "application/json; charset=utf-8")
             elif self.path == "/api/bases":
                 self._send(200, json.dumps(listar_bases(), ensure_ascii=False),
                            "application/json; charset=utf-8")
@@ -3012,6 +3419,42 @@ class H(BaseHTTPRequestHandler):
                     {"ok": linhas > 0,
                      "erro": None if linhas > 0 else "falha ao resolver",
                      "dados": construir_db()}, ensure_ascii=False),
+                    "application/json; charset=utf-8")
+                return
+            if self.path == "/api/tratar-desligado":
+                n = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+                rid = str(payload.get("id") or "").strip()
+                ticket = str(payload.get("ticket") or "").strip()
+                motivo = str(payload.get("motivo") or "").strip()
+                if not rid or not ticket or not motivo:
+                    self._send(400, '{"ok":false,"erro":"id, ticket e motivo obrigatorios"}',
+                               "application/json")
+                    return
+                linhas = tratar_desligado(rid, ticket, payload.get("ticket_url"),
+                                          payload.get("descricao"), motivo)
+                self._send(200, json.dumps(
+                    {"ok": linhas > 0,
+                     "erro": None if linhas > 0 else "falha ao tratar",
+                     "desligados": listar_desligados()}, ensure_ascii=False),
+                    "application/json; charset=utf-8")
+                return
+            if self.path == "/api/tratar-transferido":
+                n = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+                rid = str(payload.get("id") or "").strip()
+                ticket = str(payload.get("ticket") or "").strip()
+                motivo = str(payload.get("motivo") or "").strip()
+                if not rid or not ticket or not motivo:
+                    self._send(400, '{"ok":false,"erro":"id, ticket e motivo obrigatorios"}',
+                               "application/json")
+                    return
+                linhas = tratar_transferido(rid, ticket, payload.get("ticket_url"),
+                                            payload.get("descricao"), motivo)
+                self._send(200, json.dumps(
+                    {"ok": linhas > 0,
+                     "erro": None if linhas > 0 else "falha ao tratar",
+                     "transferidos": listar_transferidos()}, ensure_ascii=False),
                     "application/json; charset=utf-8")
                 return
             if self.path == "/api/atalho":

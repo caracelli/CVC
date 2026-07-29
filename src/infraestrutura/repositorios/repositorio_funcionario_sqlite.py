@@ -36,6 +36,7 @@ class RepositorioFuncionarioSqlite(IRepositorioFuncionario):
                     email=f.email,
                     situacao=f.situacao,
                     tipo_vinculo=getattr(f, "tipo_vinculo", "FUNCIONARIO"),
+                    login=getattr(f, "login", None),
                     empresa=getattr(f, "empresa", None),
                     gestor=getattr(f, "gestor", None),
                     arquivo_origem=arquivo_origem,
@@ -97,6 +98,7 @@ class RepositorioFuncionarioSqlite(IRepositorioFuncionario):
             data_admissao=r.data_admissao,
             situacao=r.situacao or "ATIVO",
             tipo_vinculo=getattr(r, "tipo_vinculo", None) or "FUNCIONARIO",
+            login=getattr(r, "login", None),
             empresa=r.empresa,
             gestor=getattr(r, "gestor", None),
         )

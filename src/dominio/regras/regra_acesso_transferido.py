@@ -13,15 +13,17 @@ class RegraAcessoTransferido:
         acessos: List[PerfilAcesso],
         transferidos: List[Transferido],
     ) -> List[Divergencia]:
-        matriculas_para_revisao = {
-            t.funcionario.matricula
+        # matricula -> descricao dos campos que mudaram (cargo/CC/dep/gestor)
+        revisao = {
+            t.funcionario.matricula: t.campos_mudados
             for t in transferidos
             if t.precisa_revisao_acessos
         }
 
         divergencias = []
         for acesso in acessos:
-            if acesso.matricula_vinculada in matriculas_para_revisao:
+            campos = revisao.get(acesso.matricula_vinculada)
+            if campos is not None:
                 divergencias.append(
                     Divergencia(
                         id=str(uuid.uuid4()),
@@ -32,8 +34,8 @@ class RegraAcessoTransferido:
                         matricula=acesso.matricula_vinculada,
                         perfil_encontrado=acesso.perfil,
                         descricao=(
-                            f"Funcionário transferido de departamento com acesso "
-                            f"pendente de revisão no sistema {acesso.sistema.value}"
+                            f"Mudança de {campos or 'cadastro'} — acesso pendente de "
+                            f"revisão no sistema {acesso.sistema.value}"
                         ),
                     )
                 )

@@ -173,9 +173,22 @@ class TestValidacaoStatus(unittest.TestCase):
         regs = self._gerar([("P1", False)], acessos_atuais=[], sistemas_com_dados=())
         self.assertEqual(regs[0]["status"], "SEM_DADOS")
 
-    def test_dois_perfis_em_analise_uma_linha_por_perfil(self):
+    def test_dois_perfis_sem_acesso_viram_esperado(self):
+        # Retorno Bruna: SEM acesso NAO e' Em Análise — e' informativo (esperado),
+        # lista todos os perfis esperados p/ a Consulta.
         regs = self._gerar([("P1", False), ("P2", False)], acessos_atuais=[])
         self.assertEqual(len(regs), 2)
+        self.assertTrue(all(r["status"] == "SEM_ACESSO" for r in regs))
+
+    def test_dois_perfis_com_acesso_nao_aderente_em_analise(self):
+        # TEM acesso (nao casa) + 2 esperados => Em Análise (excesso/ambiguidade)
+        regs = self._gerar([("P1", False), ("P2", False)], acessos_atuais=["OUTRO"])
+        self.assertEqual(len(regs), 2)
+        self.assertTrue(all(r["status"] == "EM_ANALISE" for r in regs))
+
+    def test_dois_acessos_um_esperado_em_analise(self):
+        # 2 acessos, nenhum aderente => Em Análise (perfil excessivo, precisa analise)
+        regs = self._gerar([("P1", False)], acessos_atuais=["A", "B"])
         self.assertTrue(all(r["status"] == "EM_ANALISE" for r in regs))
 
 

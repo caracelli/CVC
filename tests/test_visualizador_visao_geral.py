@@ -69,6 +69,19 @@ class TestVisaoGeral(unittest.TestCase):
             "('d1','ACESSO_SEM_VINCULO_RH','%s','u3','U3','x',0),"
             "('d2','PERFIL_INVALIDO','%s','u4','U4','x',0);" % (IC, IC)
         )
+        # ACESSO_DESLIGADO: saida do motor (RegraAcessoDesligado, ja com uniao
+        # matricula/CPF + filtro de status). A Visao Geral (KPI + Top 10) le DAQUI,
+        # nao mais do join acessos x rh_desligados. matricula='D1' (CARLOS).
+        c.execute(
+            "INSERT INTO divergencias (id,tipo,sistema,usuario,nome_usuario,matricula,"
+            "descricao,resolvida) VALUES ('d3','ACESSO_DESLIGADO',?,'u4','CARLOS','D1','x',0)",
+            [IC])
+        # 2a linha do MESMO desligado (simula SIG matricial: N perfis/pessoa). O KPI
+        # deve continuar contando PESSOAS distintas (1), nao linhas (2).
+        c.execute(
+            "INSERT INTO divergencias (id,tipo,sistema,usuario,nome_usuario,matricula,"
+            "descricao,resolvida) VALUES ('d4','ACESSO_DESLIGADO',?,'u4','CARLOS','D1','x',0)",
+            [IC])
         # historico (mov_rh ultimos 30d): 2 admissoes + 1 alteracao + 1 desligamento recentes; 1 antigo ignorado
         c.executescript(
             "INSERT INTO historico (data_snapshot,entidade,chave_entidade,tipo_mudanca) VALUES "
@@ -117,7 +130,28 @@ class TestVisaoGeral(unittest.TestCase):
         self.assertEqual(self.vg["cobertura_pct"], 75.0)
 
     def test_acessos_de_desligado(self):
-        self.assertEqual(self.vg["acessos_deslig"], 1)   # u4 -> D1
+        # D1 tem 2 linhas ACESSO_DESLIGADO (d3,d4); o KPI conta PESSOAS = 1.
+        self.assertEqual(self.vg["acessos_deslig"], 1)
+
+    def test_meta_desligado_exposta(self):
+        # a meta (KRI) do config e' propagada p/ a VG (habilita o selo no front)
+        orig = vm.META_ACESSOS_DESLIG
+        try:
+            vm.META_ACESSOS_DESLIG = 0
+            vg2 = vm._calcular_visao_geral(self.conn, sistema="")
+            self.assertEqual(vg2["acessos_desligado_meta"], 0)
+            self.assertEqual(vg2["acessos_deslig"], 1)   # 1 > meta 0 -> risco
+        finally:
+            vm.META_ACESSOS_DESLIG = orig
+
+    def test_meta_ausente_none(self):
+        orig = vm.META_ACESSOS_DESLIG
+        try:
+            vm.META_ACESSOS_DESLIG = None
+            vg2 = vm._calcular_visao_geral(self.conn, sistema="")
+            self.assertIsNone(vg2["acessos_desligado_meta"])
+        finally:
+            vm.META_ACESSOS_DESLIG = orig
 
     def test_universo_rh(self):
         self.assertEqual(self.vg["rh_ativos"], 2)
@@ -136,6 +170,8 @@ class TestVisaoGeral(unittest.TestCase):
         top = self.vg["top_urgentes"]
         self.assertEqual(len(top), 1)
         self.assertEqual(top[0]["nome"], "CARLOS")
+        # 2 linhas ACESSO_DESLIGADO da mesma pessoa -> 1 sistema (IC), 2 perfis.
+        self.assertEqual(top[0]["perfis"], 2)
         self.assertEqual(top[0]["dias"], 10)
 
 

@@ -128,10 +128,13 @@ class TestValidacaoProfunda(unittest.TestCase):
         self.assertEqual(por_sis.get(SYSTUR), "SEM_ACESSO")
 
     def test_situacao_acao_pendente_ou_ok(self):
+        # PENDENTE so p/ pendencia (DIVERGENTE/EM_ANALISE); OK e SEM_ACESSO
+        # (esperado, informativo) nao sao pendencia (retorno Bruna).
+        _INFO = {"OK", "SEM_ACESSO"}
         todos = [x for lst in self._by_mat.values() for x in lst]
         self.assertTrue(todos)
         for x in todos:
-            self.assertEqual(x.situacao_acao, "OK" if x.status == "OK" else "PENDENTE")
+            self.assertEqual(x.situacao_acao, "OK" if x.status in _INFO else "PENDENTE")
 
 
 if __name__ == "__main__":

@@ -785,6 +785,10 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   color:#0E6B47;border-color:#9FD6B8;}
 .cs-aba-btn.a:hover{filter:brightness(1.04);
   box-shadow:0 2px 6px rgba(14,107,71,.25);}
+.cs-aba-btn.d{background:linear-gradient(180deg,#ECE7F6,#D8CDEC);
+  color:#5C2D91;border-color:#C3B3E0;}
+.cs-aba-btn.d:hover{filter:brightness(1.04);
+  box-shadow:0 2px 6px rgba(92,45,145,.25);}
 .cs-aba-btn:active{transform:translateY(1px);}
 .cs-aba-btn[disabled]{opacity:.42;cursor:not-allowed;pointer-events:none;}
 .cs-vazio{text-align:center;padding:38px 18px;color:#7B8294;
@@ -795,6 +799,9 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .cs-pill.pend{background:#FBE5E5;color:#B33A3A;}
 .cs-pill.ok{background:#E5F3E5;color:#1E7B43;}
 .cs-pill.deslig{background:#FFF4DD;color:#A07000;}
+.kpi-meta{font-size:11px;margin-top:3px;font-weight:600;line-height:1.2;}
+.kpi-meta.risco{color:#B33A3A;}
+.kpi-meta.ok{color:#2E7D32;}
 .cs-pill.incluir{background:#EBF5FB;color:#2980B9;}
 
 /* Popup flutuante da Consulta (não bloqueia a grid) */
@@ -988,6 +995,8 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
   <div class="tab"        data-tab="consulta">Consulta</div>
   <div class="tab"        data-tab="incl">Pendências</div>
   <div class="tab"        data-tab="conf">Aderentes</div>
+  <div class="tab"        data-tab="deslig">Desligados</div>
+  <div class="tab"        data-tab="transf">Transferidos</div>
   <div class="tab"        data-tab="hist">Histórico</div>
   <div class="tab"        data-tab="quar">Quarentena</div>
 </nav>
@@ -1010,7 +1019,8 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
       </div>
       <div class="kpi vg-kpi" style="background:#FBEAEA;border:1px solid #ECC2C2;--kpi-bar:#B33A3A;">
         <div class="kpi-val" style="color:#B33A3A;" id="vg-k-desl">—</div>
-        <div class="kpi-lbl" style="color:#B33A3A;">Acessos de Desligado</div>
+        <div class="kpi-lbl" style="color:#B33A3A;">Desligados com Acesso</div>
+        <div class="kpi-meta" id="vg-k-desl-meta"></div>
       </div>
       <div class="kpi vg-kpi" style="background:#E8EEF7;border:1px solid #C5D2EA;--kpi-bar:#1F2D5C;">
         <div class="kpi-val" style="color:#1F2D5C;" id="vg-k-cob">—</div>
@@ -1186,7 +1196,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
             <colgroup>
               <col style="width:148px">   <!-- 0  Data (dd/mm/aaaa hh:mm:ss) -->
               <col style="width:84px">    <!-- 1  Quarentena -->
-              <col style="width:104px">   <!-- 2  Vínculo -->
+              <col style="width:104px">   <!-- 2  Categoria -->
               <col style="width:30px">    <!-- 3  expand (+) -->
               <col style="width:150px">   <!-- 4  Status -->
               <col style="width:230px">   <!-- 5  Nome -->
@@ -1194,9 +1204,10 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
               <col style="width:124px">   <!-- 7  Usuário -->
               <col style="width:120px">   <!-- 8  Sistema -->
               <col style="width:58px">    <!-- 9  Qtd -->
-              <col style="width:150px">   <!-- 9  Departamento -->
-              <col style="width:160px">   <!-- 10 Cargo -->
-              <col style="width:120px">   <!-- 11 Tipo -->
+              <col style="width:150px">   <!-- 10 Departamento -->
+              <col style="width:170px">   <!-- 11 Gestor -->
+              <col style="width:160px">   <!-- 12 Cargo -->
+              <col style="width:120px">   <!-- 13 Tipo -->
               <col style="width:150px">   <!-- 12 Perfil Encontrado -->
               <col style="width:150px">   <!-- 13 Perfil Esperado -->
               <col style="width:96px">    <!-- 15 Origem -->
@@ -1205,7 +1216,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
               <tr>
                 <th>Data</th>
                 <th style="text-align:center;">Quarentena</th>
-                <th>Vínculo</th>
+                <th>Categoria</th>
                 <th></th>
                 <th>Status</th>
                 <th>Nome</th>
@@ -1214,6 +1225,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
                 <th>Sistema</th>
                 <th style="text-align:center;">Qtd</th>
                 <th>Departamento</th>
+                <th>Gestor</th>
                 <th>Cargo</th>
                 <th>Tipo</th>
                 <th>Perfil Encontrado</th>
@@ -1260,6 +1272,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
             <col style="width:220px"><!-- Nome -->
             <col style="width:108px"><!-- Login -->
             <col style="width:108px"><!-- CPF -->
+            <col style="width:170px"><!-- Gestor -->
             <col style="width:180px"><!-- Cargo -->
             <col style="width:140px"><!-- Departamento -->
             <col style="width:130px"><!-- Centro de Custo -->
@@ -1279,7 +1292,8 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
               <th>Nome</th>
               <th>Login</th>
               <th>CPF</th>
-              <th>Vínculo</th>
+              <th>Categoria</th>
+              <th>Gestor</th>
               <th>Cargo</th>
               <th>Departamento</th>
               <th>Centro de Custo</th>
@@ -1332,9 +1346,84 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
             <th>Matrícula</th><th>Nome</th><th>Login</th>
             <th>Sistema</th><th>Perfil aderente</th>
             <th>🔴 Pendência</th><th>🟡 Resolvido</th><th>🟢 Aderente</th>
-            <th>Ticket</th><th>⏱️ Tempo total</th><th>Vínculo</th>
+            <th>Ticket</th><th>⏱️ Tempo total</th><th>Categoria</th><th>Gestor</th>
           </tr></thead>
           <tbody id="conf-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DESLIGADOS ═══ -->
+  <div class="page" id="pg-deslig">
+    <div class="quar-toolbar">
+      <button class="seg active" data-view="tratar" onclick="deslView(this)">Com Acesso / Tratar</button>
+      <button class="seg"        data-view="ok"     onclick="deslView(this)">Aderente / OK</button>
+      <button class="seg"        data-view="todos"  onclick="deslView(this)">Todos</button>
+      <span class="quar-count" id="desl-count"></span>
+      <input id="desl-busca" class="conf-busca" placeholder="Buscar matrícula, nome, cargo, sistema…"
+             oninput="deslBuscar()">
+      <button class="btn-exp" style="margin-left:auto;" onclick="exportarDesligados()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button>
+    </div>
+    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="desl-pp" onchange="deslPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="desl-pager"></span><span class="lista-total" id="desl-total"></span></div>
+    <div class="content-panel">
+      <div class="tbl-wrap">
+        <table id="desl-tbl">
+          <colgroup>
+            <col style="width:34px">
+            <col style="width:112px">
+            <col style="width:240px">
+            <col style="width:180px">
+            <col style="width:150px">
+            <col style="width:130px">
+            <col style="width:140px">
+            <col style="width:110px">
+          </colgroup>
+          <thead><tr>
+            <th data-nf></th>
+            <th>Matrícula</th><th>Nome</th><th>Cargo</th>
+            <th>Centro de Custo</th><th>Desligamento</th>
+            <th>Acessos</th><th>Situação</th>
+          </tr></thead>
+          <tbody id="desl-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TRANSFERIDOS ═══ -->
+  <div class="page" id="pg-transf">
+    <div class="quar-toolbar">
+      <button class="seg active" data-view="revisar" onclick="transfView(this)">A Revisar</button>
+      <button class="seg"        data-view="tratados" onclick="transfView(this)">Tratados</button>
+      <button class="seg"        data-view="todos"   onclick="transfView(this)">Todos</button>
+      <span class="quar-count" id="transf-count"></span>
+      <input id="transf-busca" class="conf-busca" placeholder="Buscar matrícula, nome, cargo, gestor, mudança…"
+             oninput="transfBuscar()">
+      <button class="btn-exp" style="margin-left:auto;" onclick="exportarTransferidos()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button>
+    </div>
+    <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="transf-pp" onchange="transfPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="transf-pager"></span><span class="lista-total" id="transf-total"></span></div>
+    <div class="content-panel">
+      <div class="tbl-wrap">
+        <table id="transf-tbl">
+          <colgroup>
+            <col style="width:34px">
+            <col style="width:112px">
+            <col style="width:230px">
+            <col style="width:170px">
+            <col style="width:120px">
+            <col style="width:170px">
+            <col style="width:150px">
+            <col style="width:120px">
+            <col style="width:110px">
+          </colgroup>
+          <thead><tr>
+            <th data-nf></th>
+            <th>Matrícula</th><th>Nome</th><th>Cargo</th>
+            <th>Centro de Custo</th><th>Gestor</th><th>Mudança</th>
+            <th>Acessos</th><th>Situação</th>
+          </tr></thead>
+          <tbody id="transf-body"></tbody>
         </table>
       </div>
     </div>
@@ -1350,6 +1439,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
             <col style="width:34px">
             <col style="width:112px">
             <col style="width:240px">
+            <col style="width:170px">
             <col style="width:132px">
             <col style="width:170px">
             <col style="width:150px">
@@ -1361,11 +1451,12 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
               <th data-nf></th>
               <th>Matrícula</th>
               <th>Nome</th>
+              <th>Gestor</th>
               <th>Sistema</th>
               <th>Movimentação</th>
               <th>Data</th>
               <th>Detalhe</th>
-              <th>Vínculo</th>
+              <th>Categoria</th>
             </tr>
           </thead>
           <tbody id="hist-body"></tbody>
@@ -1429,6 +1520,8 @@ function showPage(tab){
     else if (tab === 'hist') { await renderHistorico(); carregarAtalhos('hist', true); }
     else if (tab === 'vg')   { renderVisaoGeral(); }
     else if (tab === 'conf') { renderConformidade(); carregarAtalhos('conf', true); }
+    else if (tab === 'deslig') { await renderDesligados(); }
+    else if (tab === 'transf') { await renderTransferidos(); }
     else if (tab === 'incl') { renderMatrix(); aplicarKPIs(); carregarAtalhos('incl', true); }
     else if (tab === 'consulta') { await _carregarHistMats(); renderConsulta(); carregarAtalhos('consulta', true); }
     if (tab === 'incl' || tab === 'hist' || tab === 'conf') _renderBadgeVindoConsulta();
@@ -1464,7 +1557,7 @@ function _confAgrupar(rows){
   const map={}, ordem=[];
   rows.forEach(a=>{
     const k=(a.m||'')||('L:'+(a.login||''));
-    if(!map[k]){ map[k]={k, m:a.m||'', n:a.n||'', vinc:a.vinc||'', itens:[]}; ordem.push(k); }
+    if(!map[k]){ map[k]={k, m:a.m||'', n:a.n||'', vinc:a.vinc||'', gestor:a.gestor||'', itens:[]}; ordem.push(k); }
     map[k].itens.push(a);
   });
   return ordem.map(k=>map[k]);
@@ -1484,7 +1577,7 @@ function confCicloToggle(el){
   renderConformidade();
 }
 /* Trilha dos ciclos de um aderente (marcos por ciclo) — linhas após a linha do
-   sistema quando o selo "N ciclos" está aberto. 11 colunas da grid Aderentes. */
+   sistema quando o selo "N ciclos" está aberto. 12 colunas da grid Aderentes. */
 const _CONF_MOV={PENDENCIA:['Pendência','h-pen'],RESOLVIDO:['Resolvido','h-res'],ADERENTE:['Aderente','h-ader']};
 const _CONF_STG={PENDENCIA:0,RESOLVIDO:1,ADERENTE:2};
 function _confCicloTrail(a, visivel){
@@ -1506,7 +1599,7 @@ function _confCicloTrail(a, visivel){
       <td>${e.data?fmtDH(e.data):'—'}</td>
       <td></td><td></td>
       <td>${e.ticket?esc(e.ticket):'—'}</td>
-      <td></td><td></td>
+      <td></td><td></td><td></td>
     </tr>`;
   }).join('');
 }
@@ -1519,7 +1612,7 @@ function _confRowSingle(a){
     + `<td><span class="badge b-ok">${fmtDH(a.dt)}</span></td>`
     + `<td>${a.ticket ? esc(a.ticket) : '—'}</td>`
     + `<td><b style="color:#16A085;white-space:nowrap;">${_durStr(a.dt_pend, a.dt)}</b></td>`
-    + `<td>${esc(a.vinc)||'—'}</td></tr>`;
+    + `<td>${esc(a.vinc)||'—'}</td><td>${esc(a.gestor)||'—'}</td></tr>`;
 }
 function confSisToggle(el){
   const k=el.dataset.ck;
@@ -1547,7 +1640,7 @@ function renderConformidade(){
       <td><span class="h-sis h-sisclick" data-ck="${esc(g.k)}" onclick="confSisToggle(this)" title="Clique para abrir/fechar os sistemas em que aderiu">${g.itens.length} sistemas ${open?'▾':'▸'}</span></td>
       <td>—</td><td>—</td><td>—</td>
       <td><span class="badge b-ok">${g.itens.length} aderências</span></td>
-      <td>—</td><td>—</td><td>${esc(g.vinc)||'—'}</td>
+      <td>—</td><td>—</td><td>${esc(g.vinc)||'—'}</td><td>${esc(g.gestor)||'—'}</td>
     </tr>`;
     g.itens.forEach(a=>{
       h += `<tr class="sub-row" data-csub="${esc(g.k)}" style="display:${open?'table-row':'none'};">
@@ -1560,12 +1653,12 @@ function renderConformidade(){
         <td><span class="badge b-ok">${fmtDH(a.dt)}</span></td>
         <td>${a.ticket ? esc(a.ticket) : '—'}</td>
         <td><b style="color:#16A085;white-space:nowrap;">${_durStr(a.dt_pend, a.dt)}</b></td>
-        <td></td>
+        <td></td><td></td>
       </tr>` + _confCicloTrail(a, open);
     });
   });
   tb.innerHTML = h
-    || '<tr><td colspan="11" style="text-align:center;color:#9AA3B5;padding:22px;">'
+    || '<tr><td colspan="12" style="text-align:center;color:#9AA3B5;padding:22px;">'
        + 'Nenhum acesso aderente ainda.</td></tr>';
   const pg = document.getElementById('conf-pager');
   if (pg) pg.innerHTML = grupos.length === 0 ? '' :
@@ -1582,8 +1675,8 @@ const _confFilt = {};              // col idx -> Set de valores permitidos
 let _confData = {};                // col idx -> {tipo, de, ate}
 let _confDataCol = null;           // coluna do popover de data aberto
 const _CONF_DATECOL  = {5:'dt_pend', 6:'dt_resol', 7:'dt'};
-const _CONF_FUNILCOL = {3:'Sistema', 4:'Perfil aderente', 8:'Ticket', 10:'Vínculo'};
-const _CONF_NOME_COL = {'Sistema':3, 'Perfil aderente':4, 'Ticket':8, 'Vínculo':10};
+const _CONF_FUNILCOL = {3:'Sistema', 4:'Perfil aderente', 8:'Ticket', 10:'Categoria', 11:'Gestor'};
+const _CONF_NOME_COL = {'Sistema':3, 'Perfil aderente':4, 'Ticket':8, 'Categoria':10, 'Gestor':11};
 const _CONF_DATENOME = {5:'Pendência', 6:'Resolvido', 7:'Aderente'};
 const _CONF_DATENOME_COL = {'Pendência':5, 'Resolvido':6, 'Aderente':7};
 
@@ -1592,6 +1685,7 @@ function _confDisp(c, a){
   if (c === 4) return a.perfil || '—';
   if (c === 8) return a.ticket || '(sem ticket)';
   if (c === 10) return a.vinc || '—';
+  if (c === 11) return a.gestor || '—';
   return '—';
 }
 function _confResolveData(fd){
@@ -1632,12 +1726,12 @@ function _confRowsFiltradas(){
 function exportarAderentes(){
   const rows = _confRowsFiltradas();
   const cols = ['Matrícula','Nome','Login','Cargo','Sistema','Perfil aderente',
-                'Pendência','Resolvido','Aderente','Ticket','Tempo total','Vínculo'];
+                'Pendência','Resolvido','Aderente','Ticket','Tempo total','Categoria','Gestor'];
   // datas formatadas (dd/mm/aaaa hh:mm:ss) igual a grid — nao crua/ISO
   const linhas = rows.map(a => [a.m, a.n, a.login, a.cargo, a.sis, a.perfil,
                 a.dt_pend ? fmtDH(a.dt_pend) : '', a.dt_resol ? fmtDH(a.dt_resol) : '',
                 a.dt ? fmtDH(a.dt) : '', a.ticket || '',
-                _durStr(a.dt_pend, a.dt), a.vinc || '']);
+                _durStr(a.dt_pend, a.dt), a.vinc || '', a.gestor || '']);
   baixarExcel('Aderentes', cols, linhas, linhas.map(() => 0));
 }
 function _confMenu(c, th){
@@ -1811,7 +1905,7 @@ function equiparConf(){
 
 /* ── Filtros laterais (gerados da base, multi-seleção) ────────────────── */
 const FILTROS = [
-  {id:'vinculo', campo:'vinc', rotulo:'Vínculo'},
+  {id:'vinculo', campo:'vinc', rotulo:'Categoria'},
   {id:'acao',    campo:'a',   rotulo:'Ação'},
   {id:'status',  campo:'s',   rotulo:'Status'},
   {id:'tipo',    campo:'tl',  rotulo:'Tipo'},
@@ -1834,6 +1928,11 @@ const DESC_FILTRO = {
   // Status
   'Pendente':  'Pendência ainda não tratada.',
   'Resolvido': 'Pendência já tratada e resolvida.',
+  // Categoria (tipo de vínculo da pessoa dona do acesso)
+  'Funcionário': 'Colaborador CLT da base de RH.',
+  'Terceiro':    'Prestador de fornecedor, da base de terceiros do RH.',
+  'Franqueado':  'Identidade do diretório (AD), OU de franqueados — sem vínculo de RH.',
+  'Prestador':   'Identidade do diretório (AD), OU de prestadores — sem vínculo de RH.',
 };
 
 function valoresFiltro(campo){
@@ -1913,7 +2012,7 @@ function filtroTodos(fid, btn){
 function divPassa(d){
   // Aderente e Incluir Acesso (SEM_ACESSO) NÃO são pendências: não aparecem na
   // aba Pendências nem são filtráveis por Ação/Status/Tipo; na Consulta devem
-  // sempre passar. Filtram só por Vínculo e Sistema.
+  // sempre passar. Filtram só por Categoria e Sistema.
   const ad = d.a === 'Aderente' || d.a === 'Incluir Acesso';
   return (!filtroSel.vinculo || filtroSel.vinculo.has(d.vinc)) &&
          (ad || !filtroSel.acao    || filtroSel.acao.has(d.a))    &&
@@ -2183,10 +2282,10 @@ function _gxMenu(tableId,c,th){
 
 /* Pendências (grid agrupada): ordenação por coluna no clique do cabeçalho */
 /* Indices das colunas APOS reordenacao
-   Ordem (0..14):
-     0=Data, 1=Quarentena, 2=Vinculo, 3=+(expand), 4=Status, 5=Nome,
-     6=Matricula, 7=Usuario, 8=Qtd, 9=Departamento, 10=Cargo, 11=Tipo,
-     12=PerfilEnc, 13=PerfilEsp, 14=Origem
+   Ordem REAL (0..16) — este mapa é a fonte da verdade (o header segue esta ordem):
+     0=Data, 1=Quarentena, 2=Categoria, 3=+(expand), 4=Status, 5=Nome,
+     6=Matricula, 7=Usuario, 8=Sistema, 9=Qtd, 10=Departamento, 11=Gestor,
+     12=Cargo, 13=Tipo, 14=PerfilEnc, 15=PerfilEsp, 16=Origem
    Colunas SEM extracao de dado (Quarentena=1, +=3) ficam fora do _PEND_KEY. */
 const _PEND_KEY={
   0:u=>u.divs[0].dt,
@@ -2194,9 +2293,9 @@ const _PEND_KEY={
   4:u=>u.divs[0].s,
   5:u=>u.n, 6:u=>u.m, 7:u=>u.login,
   8:u=>u.divs[0].sis, 9:u=>u.divs.length,
-  10:u=>u.d, 11:u=>u.c,
-  12:u=>u.divs[0].tl, 13:u=>u.divs[0].pe, 14:u=>u.divs[0].pp,
-  15:u=>u.divs[0].o};
+  10:u=>u.d, 11:u=>u.gestor, 12:u=>u.c,
+  13:u=>u.divs[0].tl, 14:u=>u.divs[0].pe, 15:u=>u.divs[0].pp,
+  16:u=>u.divs[0].o};
 let _ordPend=null;
 const _filtPend={};
 function _ordenarPend(arr){
@@ -2211,9 +2310,9 @@ function _pendDisp(c,u){
   const v=_PEND_KEY[c](u);
   return (v==null||v==='')?'—':String(v);
 }
-/* Status (4), Vinculo (2), Tipo (12) tem chips no topo — na grid so ORDENAM.
+/* Categoria (2), Status (4), Tipo (13) tem chips no topo — na grid so ORDENAM.
    Data (0) tem filtro PROPRIO (atalhos + range). Demais usam funil padrao. */
-const _PEND_SO_ORD=new Set([2,4,12]);
+const _PEND_SO_ORD=new Set([2,4,13]);
 
 /* Estado do filtro especial de Data (col 1).
    tipo: "" (sem filtro) | "hoje" | "7d" | "mes" | "ano" | "range"
@@ -2385,9 +2484,13 @@ function equiparPend(){
 function renderMatrix(){
   // Pendências = só pendências. Aderente (conforme) NÃO entra aqui — tem a aba
   // própria (Aderentes). Remove as linhas Aderente e quem só tem Aderente.
+  // Filtra os divs EXIBIDOS por divPassa (que respeita o filtro de Sistema): ao
+  // filtrar por um sistema, a linha mostra SÓ aquele sistema (retorno Bruna —
+  // "filtro por sistema deve isolar o sistema, não mostrar todos").
   _usersFiltrados = DB.users
-    .map(u => ({...u, divs: u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso')}))
-    .filter(u => u.divs.length > 0 && u.divs.some(divPassa));
+    .map(u => ({...u, divs: u.divs.filter(d =>
+        d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && divPassa(d))}))
+    .filter(u => u.divs.length > 0);
   const fp = Object.entries(_filtPend);
   if(fp.length) _usersFiltrados = _usersFiltrados.filter(u =>
     fp.every(([c,set]) => set.has(_pendDisp(+c,u))));
@@ -2451,6 +2554,7 @@ function pintarPagina(){
       <td>${_pendSisCel(ddivs, u)}</td>
       <td style="text-align:center;font-weight:700;color:#1F2D5C;">${ddivs.length}</td>
       <td>${esc(u.d)||'—'}</td>
+      <td>${esc(u.gestor)||'—'}</td>
       <td>${esc(u.c)||'—'}</td>
       <td>${_acaoResumo || tipoBadge(d0.t,d0.tl)}</td>
       <td class="perfil-cel">${_perfResumo(d0.pe,{matricula:u.m,sistema:d0.sis})||'—'}</td>
@@ -2479,7 +2583,7 @@ function pintarPagina(){
         <td>—</td>
         <td>${d.sis?`<span class="h-sis">${esc(d.sis)}</span>`:'—'}</td>
         <td style="text-align:center;">1</td>
-        <td>—</td><td>—</td>
+        <td>—</td><td>—</td><td>—</td>
         <td>${tipoBadge(d.t,d.tl)}</td>
         <td class="perfil-cel">${_perfResumo(d.pe,{matricula:u.m,sistema:d.sis})||'—'}</td>
         <td class="perfil-cel">${_pendEsp(d, u)}</td>
@@ -2488,7 +2592,7 @@ function pintarPagina(){
     });
   });
   document.getElementById('matrix-body').innerHTML = h ||
-    '<tr><td colspan="16" style="text-align:center;padding:28px;color:#8A9099;">Nenhum registro com os filtros atuais.</td></tr>';
+    '<tr><td colspan="17" style="text-align:center;padding:28px;color:#8A9099;">Nenhum registro com os filtros atuais.</td></tr>';
   const tot = document.getElementById('incl-total');
   if(tot) tot.innerHTML =
     `<strong style="color:#1F2D5C;font-size:14px;">${total.toLocaleString('pt-BR')}</strong> usuários filtrados`;
@@ -2597,6 +2701,20 @@ function _vgFmt(n){
 function _vgKpi(id, val){
   const el = document.getElementById(id);
   if (el) el.textContent = _vgFmt(val);
+}
+function _vgDeslMeta(val, meta){
+  // Selo de risco do KPI "Desligados com Acesso" vs meta do config.
+  // meta null/ausente => sem selo (comportamento legado).
+  const el = document.getElementById('vg-k-desl-meta');
+  if (!el) return;
+  if (meta == null || val == null){ el.textContent = ''; el.className = 'kpi-meta'; return; }
+  if (val > meta){
+    el.textContent = '🔴 Crítico — meta: ' + meta;
+    el.className = 'kpi-meta risco';
+  } else {
+    el.textContent = '✓ dentro da meta (' + meta + ')';
+    el.className = 'kpi-meta ok';
+  }
 }
 function _vgDonut(div_tipos){
   /* Paleta semântica + colorblind-safe (vermelho=risco, âmbar=atenção,
@@ -2892,7 +3010,7 @@ function _descDataVal(v){
 function _descreverCriterios(filtros){
   if (!Array.isArray(filtros) || !filtros.length) return 'Sem critérios';
   const rotulos = {
-    vinculo:'Vínculo', acao:'Ação', status:'Status', tipo:'Tipo', sistema:'Sistema',
+    vinculo:'Categoria', acao:'Ação', status:'Status', tipo:'Tipo', sistema:'Sistema',
   };
   const grupos = {};
   filtros.forEach(([fid, v]) => {
@@ -3052,34 +3170,38 @@ function _atlDropFora(ev){
 
 /* Mapeamento col → nome do header da grid Inclusão/Alteração.
    Usado para serializar filtros do funil da grid de forma legível no atalho.
-   Ordem atual (0..14): Data, Quarentena, Vínculo, +, Status, Nome, Matrícula,
-   Usuário, Qtd, Departamento, Cargo, Tipo, Perfil Encontrado, Perfil Esperado, Origem.
-   Colunas SO_ORD (2=Vínculo, 4=Status, 11=Tipo) ficam fora — sao chips no topo. */
+   Ordem REAL (0..16), igual ao _PEND_KEY: Data, Quarentena, Categoria, +, Status,
+   Nome, Matrícula, Usuário, Sistema, Qtd, Departamento, Gestor, Cargo, Tipo,
+   Perfil Encontrado, Perfil Esperado, Origem.
+   Colunas SO_ORD (2=Categoria, 4=Status, 13=Tipo) ficam fora — sao chips no topo. */
 const _GRID_COL_NOME = {
-  0:'Data', 5:'Nome', 6:'Matrícula', 7:'Usuário', 8:'Qtd',
-  9:'Departamento', 10:'Cargo', 12:'Perfil Encontrado',
-  13:'Perfil Esperado', 14:'Origem',
+  0:'Data', 5:'Nome', 6:'Matrícula', 7:'Usuário', 8:'Sistema', 9:'Qtd',
+  10:'Departamento', 11:'Gestor', 12:'Cargo', 14:'Perfil Encontrado',
+  15:'Perfil Esperado', 16:'Origem',
 };
 const _GRID_NOME_COL = Object.fromEntries(
   Object.entries(_GRID_COL_NOME).map(([c, n]) => [n, +c]));
 
 /* Mapeamento col → nome do header da grid Histórico.
-   Ordem (0..5): +(expand), Matrícula, Nome, Movimentação, Data, Detalhe. */
+   Ordem (0..8): +(expand), Matrícula, Nome, Gestor, Sistema, Movimentação, Data,
+   Detalhe, Categoria. (Categoria=8 fica fora — é chip/append como nas outras.) */
 const _HIST_COL_NOME = {
-  1:'Matrícula', 2:'Nome', 3:'Sistema', 4:'Movimentação', 5:'Data', 6:'Detalhe',
+  1:'Matrícula', 2:'Nome', 3:'Gestor', 4:'Sistema', 5:'Movimentação', 6:'Data', 7:'Detalhe',
 };
 const _HIST_NOME_COL = Object.fromEntries(
   Object.entries(_HIST_COL_NOME).map(([c, n]) => [n, +c]));
 
 /* Mapeamento col → nome do header da grid Consulta.
-   Ordem (0..12): +, Abas, Matrícula, Nome, Login, CPF, Cargo, Departamento,
-                  Centro de Custo, Sistemas, Pendências, Última divergência, Status.
+   Ordem (0..16): +, Abas, Matrícula, Nome, Login, CPF, Categoria, Gestor, Cargo,
+                  Departamento, Centro de Custo, Sistemas, Pendências,
+                  Última divergência, Status, Perfil Enc., Perfil Esp., E-mail.
    Colunas únicas (Matrícula/Nome/Login/CPF) ficam fora — uso da busca livre.
-   Cols filtraveis: 6 Cargo, 7 Departamento, 8 Centro de Custo, 9 Sistemas,
-                    10 Pendências, 11 Última divergência, 12 Status. */
+   Cols filtraveis: 6 Categoria, 7 Gestor, 8 Cargo, 9 Departamento,
+                    10 Centro de Custo, 11 Sistemas, 12 Pendências,
+                    13 Última divergência, 14 Status. */
 const _CS_COL_NOME = {
-  6:'Vínculo', 7:'Cargo', 8:'Departamento', 9:'Centro de Custo',
-  10:'Sistemas', 11:'Pendências', 12:'Última divergência', 13:'Status',
+  6:'Categoria', 7:'Gestor', 8:'Cargo', 9:'Departamento', 10:'Centro de Custo',
+  11:'Sistemas', 12:'Pendências', 13:'Última divergência', 14:'Status',
 };
 const _CS_NOME_COL = Object.fromEntries(
   Object.entries(_CS_COL_NOME).map(([c, n]) => [n, +c]));
@@ -3098,7 +3220,7 @@ function _filtrosAtivosAtuais(){
   if (t === 'hist') {
     if (typeof _histFilt === 'object' && _histFilt) {
       Object.entries(_histFilt).forEach(([col, sel]) => {
-        if (+col === 4) return;            // Data -> filtro de data (abaixo)
+        if (+col === 6) return;            // Data (col 6) -> filtro de data próprio
         const nome = _HIST_COL_NOME[+col];
         if (!nome || !sel) return;
         for (const v of sel) out.push(['hist:' + nome, v]);
@@ -3110,7 +3232,7 @@ function _filtrosAtivosAtuais(){
   if (t === 'consulta') {
     if (typeof _csFilt === 'object' && _csFilt) {
       Object.entries(_csFilt).forEach(([col, sel]) => {
-        if (+col === 12) return;            // Última div -> filtro de data
+        if (+col === 13) return;            // Última div -> filtro de data
         const nome = _CS_COL_NOME[+col];
         if (!nome || !sel) return;
         for (const v of sel) out.push(['cs:' + nome, v]);
@@ -3172,7 +3294,7 @@ function abrirModalSalvarAtalho(origem){
   // Agrupa pra exibir
   const porGrupo = {};
   filtros.forEach(([fid, v]) => (porGrupo[fid] = porGrupo[fid] || []).push(v));
-  const rotuloFid = {vinculo:'Vínculo', acao:'Ação', status:'Status',
+  const rotuloFid = {vinculo:'Categoria', acao:'Ação', status:'Status',
                      tipo:'Tipo', sistema:'Sistema'};
   let preview;
   if (semFiltro) {
@@ -3443,6 +3565,7 @@ function renderVisaoGeral(){
   // KPIs
   _vgKpi('vg-k-pend', vg.pendentes);
   _vgKpi('vg-k-desl', vg.acessos_deslig);
+  _vgDeslMeta(vg.acessos_deslig, vg.acessos_desligado_meta);
   const k = document.getElementById('vg-k-cob');
   if (k) k.textContent = (vg.cobertura_pct != null) ? Math.round(vg.cobertura_pct) + '%' : '—';
   _vgKpi('vg-k-quar', vg.quarentena_ativa);
@@ -4052,7 +4175,7 @@ function pintarQuarentena(){
       + `<col style="width:92px"><col style="width:92px"><col style="width:132px">`
       + `<col style="width:132px"><col style="width:96px"><col style="width:112px">`;
     head.innerHTML = `<tr>
-      <th>Usuário</th><th>Nome</th><th>Sistema</th><th>Vínculo</th>
+      <th>Usuário</th><th>Nome</th><th>Sistema</th><th>Categoria</th>
       <th>Data início</th><th>Data fim</th>
       <th style="text-align:center;">Dias restantes</th>
       <th style="text-align:center;" data-nf>Ação</th></tr>`;
@@ -4080,7 +4203,7 @@ function pintarQuarentena(){
       + `<col style="width:112px"><col style="width:112px"><col style="width:96px">`
       + `<col style="width:130px">`;
     head.innerHTML = `<tr>
-      <th></th><th>Usuário</th><th>Nome</th><th>Sistema</th><th>Vínculo</th>
+      <th></th><th>Usuário</th><th>Nome</th><th>Sistema</th><th>Categoria</th>
       <th>Início</th><th>Saída</th>
       <th style="text-align:center;">Período</th><th>Motivo</th></tr>`;
     let h = '';
@@ -4177,6 +4300,462 @@ async function confirmarRetirada(){
   if(msg) alert(msg);
 }
 
+/* ── Desligados ───────────────────────────────────────────────────────────
+   Uma linha por PESSOA desligada, em duas situações (pedido da área):
+     "Com Acesso / Tratar" — ainda tem acesso ativo em algum sistema;
+     "Aderente / OK"       — nenhum acesso (situação correta pós-desligamento).
+   Os acessos ficam em sub-linhas expansíveis (a mesma pessoa pode ter acesso
+   em vários sistemas; o SIG é matricial e traz várias linhas).
+   Fonte: /api/desligados, que lê a SAÍDA do motor (divergências
+   ACESSO_DESLIGADO) — a aba não recalcula a regra de desligados. */
+let _deslRecs = [], _deslView = 'tratar', _deslPag = 1, _deslPP = 50;
+const _deslExp = new Set();   // matrículas com os acessos abertos
+
+function deslPP(v){ _deslPP = parseInt(v,10) || 50; _deslPag = 1; pintarDesligados(); }
+function deslIr(p){ _deslPag = p; pintarDesligados(); }
+function deslBuscar(){ _deslPag = 1; pintarDesligados(); }
+function deslView(btn){
+  document.querySelectorAll('#pg-deslig .seg').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _deslView = btn.dataset.view; _deslPag = 1;
+  pintarDesligados();
+}
+function deslToggle(el){
+  const m = el.dataset.m;
+  if(_deslExp.has(m)) _deslExp.delete(m); else _deslExp.add(m);
+  pintarDesligados();
+}
+
+async function renderDesligados(){
+  try{
+    const r = await fetch('/api/desligados');
+    const d = await r.json();
+    _deslRecs = d.lista || [];
+    const k = d.kpis || {};
+    const el = document.getElementById('desl-count');
+    if(el) el.textContent = `${k.tratar||0} a tratar · ${k.tratados||0} tratado(s) · ${k.ok||0} OK · ${k.total||0} desligados`;
+  }catch(e){ _deslRecs = []; }
+  pintarDesligados();
+}
+
+function _deslFiltrados(){
+  const q = (document.getElementById('desl-busca')?.value || '').trim().toLowerCase();
+  return _deslRecs.filter(d => {
+    if(_deslView === 'tratar' && d.sit !== 'Tratar') return false;
+    if(_deslView === 'ok'     && d.sit !== 'OK')     return false;
+    if(!q) return true;
+    const alvo = [d.m, d.n, d.cargo, d.depto, d.cc,
+                  (d.acessos||[]).map(a => a.sis + ' ' + a.login + ' ' + a.perfil).join(' ')
+                 ].join(' ').toLowerCase();
+    return alvo.includes(q);
+  });
+}
+
+function pintarDesligados(){
+  const body = document.getElementById('desl-body');
+  if(!body) return;
+  const recs = _deslFiltrados();
+  const totPag = Math.max(1, Math.ceil(recs.length / _deslPP));
+  if(_deslPag > totPag) _deslPag = totPag;
+  const pag = recs.slice((_deslPag-1)*_deslPP, _deslPag*_deslPP);
+
+  let h = '';
+  if(!pag.length){
+    h = `<tr><td colspan="8" style="text-align:center;padding:22px;color:#6B7280;">`
+      + (_deslRecs.length ? 'Nenhum desligado nesta visão.'
+                          : 'Sem desligados na base — a importação de desligados pode estar fora de escopo no config.')
+      + `</td></tr>`;
+  }
+  pag.forEach(d => {
+    const acessos = d.acessos || [];
+    const aberto = _deslExp.has(d.m);
+    // "N acessos" clicável só quando há o que abrir
+    const cel = !acessos.length ? '—'
+      : `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="deslToggle(this)"
+           title="Clique para ver os acessos ainda ativos">${acessos.length} ${acessos.length===1?'acesso':'acessos'} ${aberto?'▾':'▸'}</span>`;
+    // Situação + ação (mesmo padrão da Pendências: botão p/ tratar, lupa p/ ver).
+    let sit;
+    if(d.sit === 'OK'){
+      sit = `<span class="badge b-ok">OK</span>`;
+    } else if(d.tratado){
+      const tk = (d.tratamento && d.tratamento.ticket) ? ' ('+esc(d.tratamento.ticket)+')' : '';
+      sit = `<span class="badge b-resolvida">Tratado</span>`
+        + `<button class="btn-res lupa" title="Ver dados do tratamento${tk}" `
+        + `onclick="verTratamentoDesligado('${esc(d.m)}')">`
+        + `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#1F2D5C" `
+        + `stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/>`
+        + `<path d="M21 21l-4.3-4.3"/></svg></button>`;
+    } else {
+      sit = `<span class="badge b-pendente">Tratar</span>`
+        + `<button class="btn-res ico-res" title="Tratar — abrir chamado" `
+        + `onclick="abrirTratarDesligado('${esc(d.m)}')">`
+        + `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" `
+        + `stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">`
+        + `<circle cx="12" cy="12" r="9"/><path d="M8.4 12.3l2.5 2.5 4.7-5.3"/></svg></button>`;
+    }
+    // sem_rh: acesso vivo cuja matrícula sumiu do RH — sinaliza para não passar
+    // por um desligado comum
+    const nome = esc(d.n) + (d.sem_rh
+      ? ` <span class="h-reab" title="Matrícula não encontrada na base de desligados">sem RH</span>` : '');
+    h += `<tr>
+      <td>${acessos.length ? `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="deslToggle(this)">${aberto?'−':'+'}</span>` : ''}</td>
+      <td>${esc(d.m)}</td><td>${nome}</td><td>${esc(d.cargo)||'—'}</td>
+      <td>${esc(d.cc)||'—'}</td><td>${fmtDate(d.dt_deslig)}</td>
+      <td>${cel}</td><td>${sit}</td></tr>`;
+    if(aberto){
+      acessos.forEach(a => {
+        h += `<tr class="sub">
+          <td></td><td></td>
+          <td colspan="2">${a.sis?`<span class="h-sis">${esc(a.sis)}</span>`:'—'}
+              ${a.login?`<small style="color:#4B5563;"> login: ${esc(a.login)}</small>`:''}</td>
+          <td colspan="2">${esc(a.perfil)||'—'}</td>
+          <td>${fmtDate(a.dt)}</td>
+          <td>${a.resolvida?`<span class="badge b-resolvida">Resolvido</span>`:''}</td>
+        </tr>`;
+      });
+    }
+  });
+  body.innerHTML = h;
+
+  const tot = document.getElementById('desl-total');
+  if(tot) tot.textContent = `${recs.length} ${recs.length===1?'pessoa':'pessoas'}`;
+  const pg = document.getElementById('desl-pager');
+  if(pg) pg.innerHTML =
+      `<button class="pg-btn" ${_deslPag<=1?'disabled':''} onclick="deslIr(1)">«</button>`
+    + `<button class="pg-btn" ${_deslPag<=1?'disabled':''} onclick="deslIr(${_deslPag-1})">‹</button>`
+    + `<span class="pg-atual">${_deslPag} / ${totPag}</span>`
+    + `<button class="pg-btn" ${_deslPag>=totPag?'disabled':''} onclick="deslIr(${_deslPag+1})">›</button>`
+    + `<button class="pg-btn" ${_deslPag>=totPag?'disabled':''} onclick="deslIr(${totPag})">»</button>`;
+}
+
+/* Export espelha a grid: pessoa no nível 0, acessos no nível 1 (+/−), e a
+   Situação com a mesma semântica de cor da tela. */
+function exportarDesligados(){
+  const cols = ['Matrícula','Nome','Cargo','Departamento','Centro de Custo',
+                'Desligamento','Sistema','Login','Perfil','Identificado em',
+                'Situação','Ticket','Motivo'];
+  const linhas = [], niveis = [];
+  _deslFiltrados().forEach(d => {
+    const t = d.tratamento || {};
+    // situação reflete o tratamento (mesmo padrão da grid): Tratado > Tratar/OK
+    const situacao = d.tratado ? 'Tratado' : d.sit;
+    linhas.push([d.m, d.n, d.cargo, d.depto, d.cc, fmtDate(d.dt_deslig),
+                 '', '', '', '', situacao, t.ticket || '', t.motivo || '']);
+    niveis.push(0);
+    (d.acessos||[]).forEach(a => {
+      linhas.push(['', '', '', '', '', '', a.sis, a.login, a.perfil,
+                   fmtDate(a.dt), a.resolvida ? 'Resolvido' : '', '', '']);
+      niveis.push(1);
+    });
+  });
+  // col 10 (0-based) = Situação
+  const formatos = [{col:10, regras:[
+    {quando:'Tratar',  fundo:'FDE7E9', texto:'A4262C'},
+    {quando:'Tratado', fundo:'DFF6DD', texto:'107C10'},
+    {quando:'OK',      fundo:'D5F5E3', texto:'0E6B47'}
+  ]}];
+  baixarExcel('Desligados', cols, linhas, niveis, formatos);
+}
+
+/* ── Tratar acesso de desligado (mesmo padrão da resolução de pendência) ── */
+let _deslTratAlvo = null;
+function abrirTratarDesligado(m){
+  const d = _deslRecs.find(x => String(x.m) === String(m));
+  if(!d) return;
+  _deslTratAlvo = d;
+  const n = (d.acessos||[]).length;
+  _modal(
+    '<div class="modal-hd"><h3>Tratar acesso de desligado</h3>'
+    + '<p>' + esc(d.n||d.m) + ' — ' + esc(d.m) + ' · ' + n
+    + ' acesso(s) ativo(s) a revogar</p></div>'
+    + '<div class="modal-bd">'
+    + '<label>Nº do ticket do Jira <span class="req">*</span></label>'
+    + '<input id="tr-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
+    + '<label>Motivo <span class="req">*</span></label>'
+    + '<select id="tr-motivo"><option value="" disabled selected>Carregando motivos…</option></select>'
+    + '<label>Link do ticket</label>'
+    + '<input id="tr-url" placeholder="https://..." autocomplete="off">'
+    + '<label>Descrição</label>'
+    + '<textarea id="tr-desc" placeholder="Observações sobre o tratamento (opcional)" '
+    + 'maxlength="600"></textarea>'
+    + '<div class="modal-err" id="tr-err"></div></div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
+    + '<button class="mf-ok" onclick="confirmarTratamentoDesligado()">Confirmar tratamento</button>'
+    + '</div>');
+  // reutiliza o mesmo combobox de motivos da resolução de pendência
+  const fill = (lista) => {
+    const sel = document.getElementById('tr-motivo');
+    if(!sel) return;
+    sel.innerHTML = '<option value="" disabled selected>Selecione o motivo…</option>'
+      + (lista||[]).map(x => '<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+  };
+  if(_MOTIVOS_RES){ fill(_MOTIVOS_RES); }
+  else fetch('/api/motivos-resolucao').then(r=>r.json())
+    .then(mm => { _MOTIVOS_RES = Array.isArray(mm)?mm:[]; fill(_MOTIVOS_RES); })
+    .catch(() => fill([]));
+  setTimeout(() => { const i = document.getElementById('tr-ticket'); if(i) i.focus(); }, 60);
+}
+
+async function confirmarTratamentoDesligado(){
+  if(!_deslTratAlvo) return;
+  const ticket = document.getElementById('tr-ticket').value.trim();
+  const url    = document.getElementById('tr-url').value.trim();
+  const desc   = document.getElementById('tr-desc').value.trim();
+  const motivo = document.getElementById('tr-motivo').value;
+  if(!ticket){
+    document.getElementById('tr-err').textContent = 'O número do ticket do Jira é obrigatório.';
+    document.getElementById('tr-ticket').focus(); return;
+  }
+  if(!motivo){
+    document.getElementById('tr-err').textContent = 'Selecione o motivo do tratamento.';
+    document.getElementById('tr-motivo').focus(); return;
+  }
+  const mid = _deslTratAlvo.m;
+  fecharModal();
+  proc(true);
+  let msg;
+  try{
+    const r = await fetch('/api/tratar-desligado', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id:mid, ticket:ticket, ticket_url:url, descricao:desc, motivo:motivo})
+    });
+    const j = await r.json();
+    if(j && j.ok){
+      if(j.desligados){
+        _deslRecs = j.desligados.lista || [];
+        const k = j.desligados.kpis || {};
+        const el = document.getElementById('desl-count');
+        if(el) el.textContent = `${k.tratar||0} a tratar · ${k.tratados||0} tratado(s) · ${k.ok||0} OK · ${k.total||0} desligados`;
+      }
+      pintarDesligados();
+      msg = 'Acesso de ' + mid + ' encaminhado para tratamento sob o ticket ' + ticket + '.';
+    } else { msg = 'Falha ao tratar: ' + ((j && j.erro) || 'desconhecida'); }
+  }catch(e){ msg = 'Sem conexão com o visualizador — ele pode ter sido encerrado. Feche esta aba e abra o visualizador.exe novamente.'; }
+  finally{ await proc(false); }
+  if(msg) alert(msg);
+}
+
+function verTratamentoDesligado(m){
+  const d = _deslRecs.find(x => String(x.m) === String(m));
+  if(!d || !d.tratamento) return;
+  _modalResolucao((d.n||d.m) + ' — ' + d.m, d.tratamento);
+}
+
+/* ── Transferidos (mudança de cargo/CC/depto/gestor → revisar acesso) ─────
+   Espelha a aba Desligados. Fonte: /api/transferidos (saída da regra
+   ACESSO_TRANSFERIDO). Situação: "Revisar" × "Tratado" (sob ticket). */
+let _transfRecs = [], _transfView = 'revisar', _transfPag = 1, _transfPP = 50;
+const _transfExp = new Set();
+
+function transfPP(v){ _transfPP = parseInt(v,10)||50; _transfPag = 1; pintarTransferidos(); }
+function transfIr(p){ _transfPag = p; pintarTransferidos(); }
+function transfBuscar(){ _transfPag = 1; pintarTransferidos(); }
+function transfView(btn){
+  document.querySelectorAll('#pg-transf .seg').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _transfView = btn.dataset.view; _transfPag = 1;
+  pintarTransferidos();
+}
+function transfToggle(el){
+  const m = el.dataset.m;
+  if(_transfExp.has(m)) _transfExp.delete(m); else _transfExp.add(m);
+  pintarTransferidos();
+}
+
+async function renderTransferidos(){
+  try{
+    const r = await fetch('/api/transferidos');
+    const d = await r.json();
+    _transfRecs = d.lista || [];
+    const k = d.kpis || {};
+    const el = document.getElementById('transf-count');
+    if(el) el.textContent = `${k.revisar||0} a revisar · ${k.tratados||0} tratado(s) · ${k.total||0} transferidos`;
+  }catch(e){ _transfRecs = []; }
+  pintarTransferidos();
+}
+
+function _transfFiltrados(){
+  const q = (document.getElementById('transf-busca')?.value || '').trim().toLowerCase();
+  return _transfRecs.filter(d => {
+    const tratado = !!d.tratado;
+    if(_transfView === 'revisar' && tratado) return false;
+    if(_transfView === 'tratados' && !tratado) return false;
+    if(!q) return true;
+    const alvo = [d.m, d.n, d.cargo, d.cc, d.gestor, d.campos,
+                  (d.acessos||[]).map(a => a.sis+' '+a.login+' '+a.perfil).join(' ')
+                 ].join(' ').toLowerCase();
+    return alvo.includes(q);
+  });
+}
+
+function pintarTransferidos(){
+  const body = document.getElementById('transf-body');
+  if(!body) return;
+  const recs = _transfFiltrados();
+  const totPag = Math.max(1, Math.ceil(recs.length / _transfPP));
+  if(_transfPag > totPag) _transfPag = totPag;
+  const pag = recs.slice((_transfPag-1)*_transfPP, _transfPag*_transfPP);
+
+  let h = '';
+  if(!pag.length){
+    h = `<tr><td colspan="9" style="text-align:center;padding:22px;color:#6B7280;">`
+      + (_transfRecs.length ? 'Nenhum transferido nesta visão.'
+                            : 'Nenhuma transferência detectada — depende de duas cargas de RH (antes × depois) com mudança de cargo/CC/departamento/gestor.')
+      + `</td></tr>`;
+  }
+  pag.forEach(d => {
+    const acessos = d.acessos || [];
+    const aberto = _transfExp.has(d.m);
+    const cel = !acessos.length ? '—'
+      : `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="transfToggle(this)"
+           title="Clique para ver os acessos a revisar">${acessos.length} ${acessos.length===1?'acesso':'acessos'} ${aberto?'▾':'▸'}</span>`;
+    let sit;
+    if(d.tratado){
+      const tk = (d.tratamento && d.tratamento.ticket) ? ' ('+esc(d.tratamento.ticket)+')' : '';
+      sit = `<span class="badge b-resolvida">Tratado</span>`
+        + `<button class="btn-res lupa" title="Ver dados do tratamento${tk}" `
+        + `onclick="verTratamentoTransferido('${esc(d.m)}')">`
+        + `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#1F2D5C" `
+        + `stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/>`
+        + `<path d="M21 21l-4.3-4.3"/></svg></button>`;
+    } else {
+      sit = `<span class="badge b-em-analise">Revisar</span>`
+        + `<button class="btn-res ico-res" title="Tratar — revisar acesso e abrir chamado" `
+        + `onclick="abrirTratarTransferido('${esc(d.m)}')">`
+        + `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" `
+        + `stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">`
+        + `<circle cx="12" cy="12" r="9"/><path d="M8.4 12.3l2.5 2.5 4.7-5.3"/></svg></button>`;
+    }
+    const campos = d.campos
+      ? `<span class="h-reab" title="Campos que mudaram no RH" style="background:#5C2D91;">${esc(d.campos)}</span>` : '—';
+    h += `<tr>
+      <td>${acessos.length ? `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="transfToggle(this)">${aberto?'−':'+'}</span>` : ''}</td>
+      <td>${esc(d.m)}</td><td>${esc(d.n)||'—'}</td><td>${esc(d.cargo)||'—'}</td>
+      <td>${esc(d.cc)||'—'}</td><td>${esc(d.gestor)||'—'}</td><td>${campos}</td>
+      <td>${cel}</td><td>${sit}</td></tr>`;
+    if(aberto){
+      acessos.forEach(a => {
+        h += `<tr class="sub">
+          <td></td><td></td>
+          <td colspan="2">${a.sis?`<span class="h-sis">${esc(a.sis)}</span>`:'—'}
+              ${a.login?`<small style="color:#4B5563;"> login: ${esc(a.login)}</small>`:''}</td>
+          <td colspan="3">${esc(a.perfil)||'—'}</td>
+          <td colspan="2">${fmtDate(a.dt)}</td>
+        </tr>`;
+      });
+    }
+  });
+  body.innerHTML = h;
+
+  const tot = document.getElementById('transf-total');
+  if(tot) tot.textContent = `${recs.length} ${recs.length===1?'pessoa':'pessoas'}`;
+  const pg = document.getElementById('transf-pager');
+  if(pg) pg.innerHTML =
+      `<button class="pg-btn" ${_transfPag<=1?'disabled':''} onclick="transfIr(1)">«</button>`
+    + `<button class="pg-btn" ${_transfPag<=1?'disabled':''} onclick="transfIr(${_transfPag-1})">‹</button>`
+    + `<span class="pg-atual">${_transfPag} / ${totPag}</span>`
+    + `<button class="pg-btn" ${_transfPag>=totPag?'disabled':''} onclick="transfIr(${_transfPag+1})">›</button>`
+    + `<button class="pg-btn" ${_transfPag>=totPag?'disabled':''} onclick="transfIr(${totPag})">»</button>`;
+}
+
+function exportarTransferidos(){
+  const cols = ['Matrícula','Nome','Cargo','Centro de Custo','Gestor','Mudança',
+                'Sistema','Login','Perfil','Identificado em','Situação','Ticket','Motivo'];
+  const linhas = [], niveis = [];
+  _transfFiltrados().forEach(d => {
+    const t = d.tratamento || {};
+    linhas.push([d.m, d.n, d.cargo, d.cc, d.gestor, d.campos, '', '', '', '',
+                 d.tratado ? 'Tratado' : 'Revisar', t.ticket||'', t.motivo||'']);
+    niveis.push(0);
+    (d.acessos||[]).forEach(a => {
+      linhas.push(['','','','','','', a.sis, a.login, a.perfil, fmtDate(a.dt), '', '', '']);
+      niveis.push(1);
+    });
+  });
+  const formatos = [{col:10, regras:[
+    {quando:'Revisar', fundo:'FFF3CD', texto:'856404'},
+    {quando:'Tratado', fundo:'DFF6DD', texto:'107C10'}
+  ]}];
+  baixarExcel('Transferidos', cols, linhas, niveis, formatos);
+}
+
+/* Tratar transferido — mesmo padrão do desligado (ticket, motivo, url, desc). */
+let _transfTratAlvo = null;
+function abrirTratarTransferido(m){
+  const d = _transfRecs.find(x => String(x.m) === String(m));
+  if(!d) return;
+  _transfTratAlvo = d;
+  _modal(
+    '<div class="modal-hd"><h3>Revisar acesso de transferido</h3>'
+    + '<p>' + esc(d.n||d.m) + ' — ' + esc(d.m) + ' · mudança de ' + (esc(d.campos)||'cadastro')
+    + '</p></div>'
+    + '<div class="modal-bd">'
+    + '<label>Nº do ticket do Jira <span class="req">*</span></label>'
+    + '<input id="tt-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
+    + '<label>Motivo <span class="req">*</span></label>'
+    + '<select id="tt-motivo"><option value="" disabled selected>Carregando motivos…</option></select>'
+    + '<label>Link do ticket</label>'
+    + '<input id="tt-url" placeholder="https://..." autocomplete="off">'
+    + '<label>Descrição</label>'
+    + '<textarea id="tt-desc" placeholder="Observações sobre a revisão (opcional)" maxlength="600"></textarea>'
+    + '<div class="modal-err" id="tt-err"></div></div>'
+    + '<div class="modal-ft">'
+    + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
+    + '<button class="mf-ok" onclick="confirmarTratamentoTransferido()">Confirmar revisão</button>'
+    + '</div>');
+  const fill = (lista) => {
+    const sel = document.getElementById('tt-motivo');
+    if(!sel) return;
+    sel.innerHTML = '<option value="" disabled selected>Selecione o motivo…</option>'
+      + (lista||[]).map(x => '<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+  };
+  if(_MOTIVOS_RES){ fill(_MOTIVOS_RES); }
+  else fetch('/api/motivos-resolucao').then(r=>r.json())
+    .then(mm => { _MOTIVOS_RES = Array.isArray(mm)?mm:[]; fill(_MOTIVOS_RES); }).catch(()=>fill([]));
+  setTimeout(() => { const i = document.getElementById('tt-ticket'); if(i) i.focus(); }, 60);
+}
+
+async function confirmarTratamentoTransferido(){
+  if(!_transfTratAlvo) return;
+  const ticket = document.getElementById('tt-ticket').value.trim();
+  const url    = document.getElementById('tt-url').value.trim();
+  const desc   = document.getElementById('tt-desc').value.trim();
+  const motivo = document.getElementById('tt-motivo').value;
+  if(!ticket){ document.getElementById('tt-err').textContent = 'O número do ticket do Jira é obrigatório.';
+    document.getElementById('tt-ticket').focus(); return; }
+  if(!motivo){ document.getElementById('tt-err').textContent = 'Selecione o motivo.';
+    document.getElementById('tt-motivo').focus(); return; }
+  const mid = _transfTratAlvo.m;
+  fecharModal(); proc(true);
+  let msg;
+  try{
+    const r = await fetch('/api/tratar-transferido', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id:mid, ticket:ticket, ticket_url:url, descricao:desc, motivo:motivo})
+    });
+    const j = await r.json();
+    if(j && j.ok){
+      if(j.transferidos){
+        _transfRecs = j.transferidos.lista || [];
+        const k = j.transferidos.kpis || {};
+        const el = document.getElementById('transf-count');
+        if(el) el.textContent = `${k.revisar||0} a revisar · ${k.tratados||0} tratado(s) · ${k.total||0} transferidos`;
+      }
+      pintarTransferidos();
+      msg = 'Revisão de ' + mid + ' registrada sob o ticket ' + ticket + '.';
+    } else { msg = 'Falha ao tratar: ' + ((j && j.erro) || 'desconhecida'); }
+  }catch(e){ msg = 'Sem conexão com o visualizador — ele pode ter sido encerrado.'; }
+  finally{ await proc(false); }
+  if(msg) alert(msg);
+}
+
+function verTratamentoTransferido(m){
+  const d = _transfRecs.find(x => String(x.m) === String(m));
+  if(!d || !d.tratamento) return;
+  _modalResolucao((d.n||d.m) + ' — ' + d.m, d.tratamento);
+}
+
 /* ── Render Sem Vínculo RH ────────────────────────────────────────────── */
 function renderSV(){
   const svBody = document.getElementById('sv-body');
@@ -4199,14 +4778,14 @@ function renderSV(){
 
 
 let _histRecs=[], _histOrd=null, _histPag=1, _histPP=50;
-let _histData=null;   // filtro de data (col 4) — {tipo,de,ate}
+let _histData=null;   // filtro de data (col 6) — {tipo,de,ate}
 const _histFilt={};
 const _histExpand=new Set();   // grupos expandidos (persiste no auto-refresh)
-/* colunas: 0=expand 1=Matrícula 2=Nome 3=Movimentação 4=Data 5=Detalhe 6=Vínculo */
-/* colunas: 0=exp 1=Matrícula 2=Nome 3=Sistema 4=Movimentação 5=Data 6=Detalhe 7=Vínculo */
+/* colunas: 0=expand 1=Matrícula 2=Nome 3=Movimentação 4=Data 5=Detalhe 6=Categoria */
+/* colunas: 0=exp 1=Matrícula 2=Nome 3=Sistema 4=Movimentação 5=Data 6=Detalhe 7=Categoria */
 function _histDisp(c,r){
-  if(c===5) return fmtDate(r.data)||'—';
-  const v=[null,r.matricula,r.nome,r.sistema,r.movimentacao,null,r.campos,r.vinc][c];
+  if(c===6) return fmtDate(r.data)||'—';
+  const v=[null,r.matricula,r.nome,r.gestor,r.sistema,r.movimentacao,null,r.campos,r.vinc][c];
   return (v==null||v==='')?'—':String(v);
 }
 const _HMOV_CSS={'Admitido':'h-adm','Alterado':'h-alt',
@@ -4329,7 +4908,7 @@ async function renderHistorico(){
 }
 function _histGrupos(){
   let rs=_histRecs.slice();
-  const ff=Object.entries(_histFilt).filter(([c])=>+c!==5);  // col 5 = Data tem filtro próprio
+  const ff=Object.entries(_histFilt).filter(([c])=>+c!==6);  // col 6 = Data tem filtro próprio
   if(ff.length) rs=rs.filter(r=>ff.every(([c,set])=>set.has(_histDisp(+c,r))));
   if(_histData) rs=rs.filter(r=>_dtPass(r.data, _histData));
   const mapa={}, ordem=[];
@@ -4392,6 +4971,7 @@ function pintarHistorico(){
         ?`<button class="expand-btn" data-hk="${esc(g.chave)}" data-sts="${esc(stats.join('|'))}" onclick="histToggle(this)">${anyOpen?'-':'+'}</button>`:''}</td>
       <td><strong style="color:#1F2D5C;">${esc(g.matricula)||'—'}</strong></td>
       <td>${esc(g.nome)||'—'}</td>
+      <td>${esc(hdr.gestor)||'—'}</td>
       <td>${multi?histSisResumo(itens.length,g.chave,stats,anyOpen)
         :(_hasCiclos
           ?`<span class="h-sisclick" data-hk="${esc(g.chave)}" data-sts="${esc(stats.join('|'))}" onclick="histToggle(this)" title="ver os ciclos deste sistema">${histSis(hdr)} <span style="font:700 9px Arial;color:#2D6CDF;">${anyOpen?'▾ ciclos':'▸ ver ciclos'}</span></span>`
@@ -4420,6 +5000,7 @@ function pintarHistorico(){
             ?`<button class="expand-btn expand-btn-sm" data-sk="${esc(_sk)}" onclick="histSysToggle(this)" title="ver a trilha completa do sistema">${_sysOpen?'-':'+'}</button>`:''}</td>
           <td style="text-align:center;color:#B4BAC2;">↳</td>
           <td></td>
+          <td>${esc(r.gestor)||'—'}</td>
           <td>${_hasTrail
             ? `<span class="h-sisclick" data-sk="${esc(_sk)}" onclick="histSysToggle(this)" title="ver os marcos/ciclos deste sistema">${histSis(r)} <span style="font:700 9px Arial;color:#2D6CDF;">${_sysOpen?'▾ ciclos':'▸ ver ciclos'}</span></span>`
             : histSis(r)}</td>
@@ -4454,6 +5035,7 @@ function pintarHistorico(){
           <td></td>
           <td></td>
           <td style="text-align:right;color:#C9D0DA;padding-right:10px;">↳</td>
+          <td></td>
           <td style="text-align:center;">${t.ciclo?`<span class="h-ciclo" title="Ciclo ${t.ciclo}${t.ciclo>1?' — reabertura':''}">ciclo ${t.ciclo}</span>`:''}</td>
           <td>${histMov(t)}</td>
           <td>${fmtDate(t.data)}${t.ticket?` <span style="color:#8A9099;">· ${esc(t.ticket)}</span>`:''}</td>
@@ -4464,7 +5046,7 @@ function pintarHistorico(){
     }
   });
   if(body) body.innerHTML = h ||
-    `<tr><td colspan="8" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma movimentação registrada.</td></tr>`;
+    `<tr><td colspan="9" style="text-align:center;padding:26px;color:#8A9099;">Nenhuma movimentação registrada.</td></tr>`;
   const cnt=document.getElementById('hist-count');
   if(cnt) cnt.innerHTML=
     `<strong style="color:#1F2D5C;font-size:14px;">`+
@@ -4554,12 +5136,12 @@ function equiparHist(){
     if(!mk){ mk=document.createElement('span'); mk.className='th-mk';
       mk.innerHTML=_SVG_FUNIL;
       mk.onclick=ev=>{ ev.stopPropagation();
-        if(c===5){ _dtMenu(th, _histData, fd=>{ _histData=fd; _histPag=1;
+        if(c===6){ _dtMenu(th, _histData, fd=>{ _histData=fd; _histPag=1;
           comHandling(pintarHistorico);
           if(_tabAtual==='hist'){ renderAtalhosOpcaoC('hist'); _persistirFiltroAplicado('hist'); } }); }
         else _histMenu(c,th); };
       th.appendChild(mk); }
-    mk.classList.toggle('mk-filtrado', c===5 ? !!_histData : !!_histFilt[c]);
+    mk.classList.toggle('mk-filtrado', c===6 ? !!_histData : !!_histFilt[c]);
   });
 }
 
@@ -4588,15 +5170,21 @@ let _csBusca = '';
 let _csCatFiltro = null;   // filtro de categoria vindo de card (ex.: 'incluir')
 let _csUserAtivo = null;   // user object aberto no drawer
 let _csTab = 'ident';
-let _csData = null;        // filtro de data (col 11 = Última div) — {tipo,de,ate}
+let _csData = null;        // filtro de data (col 13 = Última div) — {tipo,de,ate}
 let _csPP = 50, _csPag = 1;   // paginação
 let _histMats = new Set();    // matrículas que têm histórico (p/ botão H condicional)
-let _csAbasFilt = null;       // funil da coluna Abas: Set de {Pendência,Aderente,Histórico}
+let _deslMats = new Set();     // matrículas de desligados (p/ botão D condicional)
+let _csAbasFilt = null;       // funil da coluna Abas: Set de {Pendência,Aderente,Histórico,Desligado}
 async function _carregarHistMats(){
   try {
     const r = await fetch('/api/historico');
     const recs = await r.json();
     _histMats = new Set((recs || []).map(x => x.matricula).filter(Boolean));
+  } catch(e) { /* mantém o cache atual */ }
+  try {
+    const rd = await fetch('/api/desligados');
+    const d = await rd.json();
+    _deslMats = new Set((d.lista || []).map(x => x.m).filter(Boolean));
   } catch(e) { /* mantém o cache atual */ }
 }
 
@@ -4613,8 +5201,10 @@ function _csFiltrarUsers(){
   // Filtro de categoria vindo de card (ex.: card "Incluir Acesso" -> so quem tem)
   if (_csCatFiltro === 'incluir')
     users = users.filter(u => u.divs.some(d => d.a === 'Incluir Acesso'));
-  // Funil por coluna (Cargo, Departamento, CC, Sistemas, Pendências, Status) — col 11 (Última div) tem filtro de data
-  const cf = Object.entries(_csFilt).filter(([c]) => +c !== 11);
+  // Funil por coluna (Gestor, Cargo, Departamento, CC, Sistemas, Status). A col
+  // 13 (Última div) tem filtro de data próprio; col 12 (Pendências) é numérica
+  // e já era pulada aqui (mantido o comportamento anterior ao inserir Gestor).
+  const cf = Object.entries(_csFilt).filter(([c]) => +c !== 12);
   if (cf.length) users = users.filter(u =>
     cf.every(([c, set]) => set.has(_csDisp(+c, u))));
   if (_csData) users = users.filter(u => {
@@ -4711,17 +5301,20 @@ function renderConsulta(){
     const temPend = u.divs.some(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso');
     const temAder = !!u.m && u.divs.some(d => d.a === 'Aderente');
     const temHist = !!u.m && _histMats.has(u.m);
+    const temDesl = !!u.m && _deslMats.has(u.m);
     const btnP = temPend ? `<span class="cs-aba-btn p" onclick="csIrParaPend('${matEsc}','${uidEsc}','${nomeEsc}')" title="Ir para Pendências filtrando por ${nomeEsc}">P</span>` : '';
     const btnH = temHist ? `<span class="cs-aba-btn h" onclick="csIrParaHist('${matEsc}','${nomeEsc}')" title="Ir para Histórico filtrando por ${nomeEsc}">H</span>` : '';
     const btnA = temAder ? `<span class="cs-aba-btn a" onclick="csIrParaAderente('${matEsc}','${nomeEsc}')" title="Ir para Aderentes filtrando por ${nomeEsc}">A</span>` : '';
+    const btnD = temDesl ? `<span class="cs-aba-btn d" onclick="csIrParaDesligado('${matEsc}','${nomeEsc}')" title="Ir para Desligados filtrando por ${nomeEsc}">D</span>` : '';
     return `<tr data-uid="${uidEsc}">
       <td class="cs-expand-btn" onclick="toggleCsExpand('${uidEsc}')" title="Expandir/recolher detalhes">+</td>
-      <td style="text-align:center;"><span class="cs-aba-btns">${btnP}${btnH}${btnA}</span></td>
+      <td style="text-align:center;"><span class="cs-aba-btns">${btnP}${btnH}${btnA}${btnD}</span></td>
       <td><strong style="color:var(--navy)">${esc(u.m)||'—'}</strong></td>
       <td><span class="cs-nome-link" onclick="csAbrirDrawer('${uidEsc}')" title="Abrir detalhes laterais">${esc(u.n)}</span></td>
       <td>${esc(u.login)||'—'}</td>
       <td>${esc(u.cpf)||'—'}</td>
       <td>${esc(u.vinc)||'—'}</td>
+      <td>${esc(u.gestor)||'—'}</td>
       <td>${esc(u.c)||'—'}</td>
       <td>${esc(u.d)||'—'}</td>
       <td>${esc(u.cc)||'—'}</td>
@@ -4754,22 +5347,23 @@ function csIr(p){ _csPag = p; renderConsulta(); }
 /* ── Funil por coluna na grid Consulta ───────────────────────────────── */
 function _csDisp(c, u){
   if (c === 6) return u.vinc || '—';
-  if (c === 7) return u.c || '—';
-  if (c === 8) return u.d || '—';
-  if (c === 9) return u.cc || '—';
-  if (c === 10) {
+  if (c === 7) return u.gestor || '—';
+  if (c === 8) return u.c || '—';
+  if (c === 9) return u.d || '—';
+  if (c === 10) return u.cc || '—';
+  if (c === 11) {
     const n = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
     return String(n);
   }
-  if (c === 11) {
+  if (c === 12) {
     return String(u.divs.filter(d => d.s === 'Pendente').length);
   }
-  if (c === 12) {
+  if (c === 13) {
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     if (!datas.length) return '—';
     return fmtDate(datas[datas.length-1]) || '—';   // só data (dia)
   }
-  if (c === 13) {
+  if (c === 14) {
     return u.divs.some(d => d.s === 'Pendente') ? 'Pendente' : 'Aderente';
   }
   return '—';
@@ -4843,12 +5437,12 @@ function equiparCs(){
       mk.innerHTML = _SVG_FUNIL;
       mk.onclick = ev => { ev.stopPropagation();
         if (ehAbas) _csAbasMenu(th);
-        else if (c === 12) _dtMenu(th, _csData, fd => { _csData = fd; renderConsulta();
+        else if (c === 13) _dtMenu(th, _csData, fd => { _csData = fd; renderConsulta();
           if (_tabAtual === 'consulta') { renderAtalhosOpcaoC('consulta'); _persistirFiltroAplicado('consulta'); } });
         else _csMenu(c, th); };
       th.appendChild(mk);
     }
-    mk.classList.toggle('mk-filtrado', ehAbas ? !!_csAbasFilt : (c === 12 ? !!_csData : !!_csFilt[c]));
+    mk.classList.toggle('mk-filtrado', ehAbas ? !!_csAbasFilt : (c === 13 ? !!_csData : !!_csFilt[c]));
   });
 }
 // Atributos (botões) que o usuário tem na coluna Abas
@@ -4857,11 +5451,12 @@ function _csAbasOf(u){
   if (u.divs.some(d => d.a !== 'Aderente')) a.push('Pendência');
   if (u.m && u.divs.some(d => d.a === 'Aderente')) a.push('Aderente');
   if (u.m && _histMats.has(u.m)) a.push('Histórico');
+  if (u.m && _deslMats.has(u.m)) a.push('Desligado');
   return a;
 }
 function _csAbasMenu(th){
   _gxFechar();
-  const opcoes = ['Pendência', 'Aderente', 'Histórico'], sel = _csAbasFilt;
+  const opcoes = ['Pendência', 'Aderente', 'Histórico', 'Desligado'], sel = _csAbasFilt;
   const m = document.createElement('div');
   m.className = 'gx-menu'; m.id = 'gx-menu';
   m.innerHTML =
@@ -5027,21 +5622,58 @@ function csExpandDaLinha(ev, el){
   if (tr) toggleCsExpand(tr.dataset.uid);
 }
 
+/* Consulta em 4 BLOCOS (retorno Bruna): Encontrados / Esperados / Necessário
+   análise / Não localizados. Cada bloco lista os acessos por sistema. É a
+   organização que ela desenhou para a visão Consulta ficar menos confusa. */
+const _CS_CATS = [
+  {k:'enc', lbl:'Acessos encontrados',    hint:'o que ele já tem (aderente)',
+   acoes:['Aderente'], cor:'#16A085'},
+  {k:'esp', lbl:'Acessos esperados',      hint:'não tem, mas o cargo prevê',
+   acoes:['Incluir Acesso'], cor:'#2980B9'},
+  {k:'ana', lbl:'Necessário análise',     hint:'pode ter um perfil a mais / perfil divergente',
+   acoes:['Em Análise','Alterar Perfil'], cor:'#E67E22'},
+  {k:'nl',  lbl:'Acessos não localizados', hint:'sistema fora da matriz / sem vínculo',
+   acoes:['Usuário Não Encontrado'], cor:'#8E44AD'},
+];
+function _csCatDe(d){
+  const a = d.a || d.tl || '';
+  for (const c of _CS_CATS) if (c.acoes.includes(a)) return c.k;
+  return 'ana';   // desconhecido -> cai em análise (nunca some da tela)
+}
+function _csDetalheCategorias(divs, pfx, comData){
+  const buckets = {};
+  divs.forEach(d => {
+    const ck = _csCatDe(d), sis = d.sis || '—';
+    (buckets[ck] = buckets[ck] || {});
+    (buckets[ck][sis] = buckets[ck][sis] || []).push(d);
+  });
+  let h = '';
+  _CS_CATS.forEach(cat => {
+    const porSis = buckets[cat.k];
+    if (!porSis) return;
+    const n = Object.values(porSis).reduce((s, l) => s + l.length, 0);
+    let linhas = '';
+    Object.entries(porSis).forEach(([sis, lista]) => {
+      const perfis = lista.map(d => _csPerfilTxt(d)).join(', ');
+      const dt = (comData && lista[0].dt)
+        ? ` <span style="color:#8A9099">· ${fmtDH(lista[0].dt)}</span>` : '';
+      linhas += `<div class="${pfx}-p"><span class="h-sis">${esc(sis)}</span> ${perfis}${dt}</div>`;
+    });
+    h += `<div style="margin:9px 0 4px;">`
+       + `<div style="color:${cat.cor};font-weight:700;font-size:12px;">● ${cat.lbl} (${n})`
+       + ` <span style="color:#9AA3B5;font-weight:500;font-size:11px;">— ${cat.hint}</span></div>`
+       + linhas + `</div>`;
+  });
+  return h || '<div style="color:#7B8294;font-style:italic;">Sem registros de acesso.</div>';
+}
+
 function _csMontarSub(u){
   if (!u.divs || !u.divs.length) {
     return '<div class="cs-sub-titulo">Acessos</div>'
       + '<div style="color:#7B8294;font-style:italic;">Sem registros de acesso.</div>';
   }
-  const porSis = {};
-  u.divs.forEach(d => {
-    const sis = d.sis || '—';
-    (porSis[sis] = porSis[sis] || []).push(d);
-  });
-  let h = '<div class="cs-sub-titulo">Acessos / divergências</div>';
-  Object.entries(porSis).forEach(([sis, lista]) => {
-    h += _csAccBloco(sis, lista, 'cs-sub-acc', true);
-  });
-  return h;
+  return '<div class="cs-sub-titulo">Acessos / divergências</div>'
+    + _csDetalheCategorias(u.divs, 'cs-sub-acc', true);
 }
 
 function csLimparBusca(){
@@ -5095,6 +5727,20 @@ function csIrParaAderente(matricula, nome){
   showPage('conf');
 }
 
+function csIrParaDesligado(matricula, nome){
+  if (!matricula) return;
+  // A grid de Desligados filtra por texto livre (desl-busca). Vai para a visão
+  // "Todos" (a pessoa pode estar em OK ou Tratar) e busca pela matrícula.
+  _deslView = 'todos';
+  document.querySelectorAll('#pg-deslig .seg').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === 'todos'));
+  const inp = document.getElementById('desl-busca');
+  if (inp) inp.value = matricula;
+  _deslPag = 1;
+  _filtroVindoConsulta = {tab:'deslig', matricula, uid:matricula, nome};
+  showPage('deslig');
+}
+
 function _renderBadgeVindoConsulta(){
   const inclHost = document.getElementById('cs-vinculo-incl');
   const histHost = document.getElementById('cs-vinculo-hist');
@@ -5103,8 +5749,11 @@ function _renderBadgeVindoConsulta(){
   if (histHost) histHost.innerHTML = '';
   if (confHost) confHost.innerHTML = '';
   if (!_filtroVindoConsulta) return;
+  // Só as grids incl/hist/conf têm host de selo. A Desligados (e outras) mostram
+  // o alvo no próprio campo de busca — sem selo, e sem cair no histHost por engano.
   const host = _filtroVindoConsulta.tab === 'incl' ? inclHost
-             : _filtroVindoConsulta.tab === 'conf' ? confHost : histHost;
+             : _filtroVindoConsulta.tab === 'conf' ? confHost
+             : _filtroVindoConsulta.tab === 'hist' ? histHost : null;
   if (!host) return;
   const detalhe = _filtroVindoConsulta.tab === 'incl'
     ? (_filtroVindoConsulta.matricula
@@ -5191,6 +5840,7 @@ function csRenderDrawerBody(){
       + _csLinha('Usuário (login)', u.u || '—')
       + _csLinha('Nome',            u.n || '—')
       + '<div class="cs-sec">Organização</div>'
+      + _csLinha('Gestor',          u.gestor || '—')
       + _csLinha('Cargo',           u.c || '—')
       + _csLinha('Departamento',    u.d || '—')
       + _csLinha('Centro de Custo', u.cc || '—');
@@ -5200,17 +5850,9 @@ function csRenderDrawerBody(){
       body.innerHTML = '<div class="cs-empty">Sem registros de acesso.</div>';
       return;
     }
-    // Agrupa por sistema
-    const porSis = {};
-    u.divs.forEach(d => {
-      const sis = d.sis || '—';
-      (porSis[sis] = porSis[sis] || []).push(d);
-    });
-    let h = '<div class="cs-sec">Acessos por sistema</div>';
-    Object.entries(porSis).forEach(([sis, lista]) => {
-      h += _csAccBloco(sis, lista, 'cs-acc', false);
-    });
-    body.innerHTML = h;
+    // 4 blocos (retorno Bruna): Encontrados / Esperados / Análise / Não localizados
+    body.innerHTML = '<div class="cs-sec">Acessos</div>'
+      + _csDetalheCategorias(u.divs, 'cs-acc', false);
   }
   else if (_csTab === 'hist') {
     body.innerHTML = '<div class="cs-empty">📜 Histórico de movimentações '
@@ -5230,7 +5872,7 @@ function _csLinha(k, v){
 
 function csExportar(){
   const users = _csFiltrarUsers();
-  const cols = ['Matrícula','Nome','Login','CPF','Vínculo','Cargo','Departamento',
+  const cols = ['Matrícula','Nome','Login','CPF','Categoria','Gestor','Cargo','Departamento',
                 'Centro de Custo','Sistemas','Pendências','Última divergência','Status',
                 'Perfil Encontrado','Perfil Esperado','E-mail'];
   const rows = users.map(u => {
@@ -5243,7 +5885,7 @@ function csExportar(){
       String(d.pp || '').split(',').forEach(p => { p = p.trim(); if (p) esp.add(p); });
       String(d.pe || '').split(',').forEach(p => { p = p.trim(); if (p) enc.add(p); });
     });
-    return [u.m||'', u.n, u.login||'', u.cpf||'', u.vinc||'', u.c||'', u.d||'', u.cc||'',
+    return [u.m||'', u.n, u.login||'', u.cpf||'', u.vinc||'', u.gestor||'', u.c||'', u.d||'', u.cc||'',
             sis, u.divs.length, ultDt,
             pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'Aderente',
             [...enc].sort().join(', '), [...esp].sort().join(', '), u.email||''];
@@ -5260,7 +5902,7 @@ function csExportar(){
 }
 
 function exportarInclusao(){
-  const cols = ['Vínculo','Usuário','Nome','Matrícula','Departamento',
+  const cols = ['Categoria','Usuário','Nome','Matrícula','Departamento','Gestor',
                 'Centro de Custo','Cargo','Tipo','Perfil Encontrado',
                 'Perfil Esperado','Data','Status','Origem','Ticket Jira',
                 'Link do ticket','Descrição da resolução','Resolvido em'];
@@ -5268,7 +5910,7 @@ function exportarInclusao(){
   _usersFiltrados.forEach(u => {
     const rc = u.resolucao || {};
     u.divs.filter(divPassa).forEach((d, i) => {
-      linhas.push([d.vinc||'', u.login||'', u.n, u.m||'', u.d||'', u.cc||'', u.c||'', d.tl,
+      linhas.push([d.vinc||'', u.login||'', u.n, u.m||'', u.d||'', u.gestor||'', u.cc||'', u.c||'', d.tl,
                    d.pe||'', d.pp||'', fmtDate(d.dt), d.s, d.o||'',
                    rc.ticket||'', rc.ticket_url||'', rc.descricao||'',
                    rc.em ? fmtDate(rc.em) : '']);
@@ -5276,13 +5918,13 @@ function exportarInclusao(){
     });
   });
   const formatos = [
-    {col:7, regras:[
+    {col:8, regras:[
       {quando:'Sem Acesso',     fundo:'DEECF9', texto:'004578'},
       {quando:'Divergente',     fundo:'FEF3E2', texto:'833C00'},
       {quando:'Em Análise',     fundo:'FFF3CD', texto:'856404'},
       {quando:'Sem Vínculo RH', fundo:'F0E6F6', texto:'5C2D91'}
     ]},
-    {col:11, regras:[
+    {col:12, regras:[
       {quando:'Pendente',  fundo:'FDE7E9', texto:'A4262C'},
       {quando:'Resolvido', fundo:'DFF6DD', texto:'107C10'}
     ]}
@@ -5304,7 +5946,7 @@ function _pendDetalheTexto(ps){
 }
 function exportarHistorico(){
   const grupos = _histGrupos();
-  const cols = ['Matrícula','Nome','Vínculo','Sistema','Cargo','Centro de Custo','Movimentação','Data',
+  const cols = ['Matrícula','Nome','Gestor','Categoria','Sistema','Cargo','Centro de Custo','Movimentação','Data',
                 'Detalhe','Ticket Jira','Link do ticket','Descrição da resolução'];
   const linhas = [], niveis = [];
   grupos.forEach(g => {
@@ -5317,6 +5959,7 @@ function exportarHistorico(){
                                     : _pendDetalheTexto(r.pendencias);
       linhas.push([i === 0 ? g.matricula : '',
                    i === 0 ? g.nome : '',
+                   r.gestor || '',
                    r.vinc || '',
                    r.sistema || '',
                    r.cargo || '', r.centro_custo || '',
@@ -5358,7 +6001,7 @@ function exportarQuarentena(){
     return r;
   };
   if(quarVista === 'ativas'){
-    const cols = ['Usuário','Nome','Sistema','Vínculo','Data início',
+    const cols = ['Usuário','Nome','Sistema','Categoria','Data início',
                   'Data fim','Dias restantes'];
     const disp = (c,q) => [q.usuario, q.nome_usuario, q.sistema, q.vinc,
       fmtDT(q.data_inicio), fmtDT(q.data_fim), String(q.dias_restantes)][c] || '';
@@ -5367,7 +6010,7 @@ function exportarQuarentena(){
        fmtDT(q.data_inicio), fmtDT(q.data_fim), q.dias_restantes]);
     baixarExcel('Quarentena_Ativas', cols, linhas);
   } else {
-    const cols = ['Usuário','Nome','Sistema','Vínculo','Início','Saída',
+    const cols = ['Usuário','Nome','Sistema','Categoria','Início','Saída',
                   'Período (dias)','Motivo'];
     const disp = (c,q) => ['', q.usuario, q.nome_usuario, q.sistema, q.vinc,
       fmtDT(q.data_inicio), fmtDT(q.data_saida),
