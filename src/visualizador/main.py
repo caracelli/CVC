@@ -550,6 +550,21 @@ def _dias_quar(it):
         return QUAR_DIAS
 
 
+def _partes_chave(rid):
+    """Quebra a chave da interacao nos 3 niveis: (matricula, sistema, perfil).
+    "M1" -> pessoa inteira; "M1##SYSTUR" -> sistema; "M1##SYSTUR##P_A" -> acesso."""
+    p = str(rid or "").split("##")
+    return (p[0] if p else "", p[1] if len(p) > 1 else "",
+            p[2] if len(p) > 2 else "")
+
+
+def _escopo_chave(rid):
+    """Rotulo do alvo da quarentena/resolucao, para a tela nao mostrar a chave
+    crua ("M1##SYSTUR##P_A") na coluna de usuario."""
+    _, sis, perf = _partes_chave(rid)
+    return "Acesso" if perf else "Sistema" if sis else "Pessoa"
+
+
 def _sintetizar_ativa(rid, it):
     """Linha de quarentena ativa a partir de uma interacao ENVIAR viva.
     nome/sistema/prazo/ticket/titulo/motivo vem da propria interacao (gravados no envio).
@@ -561,9 +576,12 @@ def _sintetizar_ativa(rid, it):
               + timedelta(days=dias)).strftime("%Y-%m-%d")
     except Exception:
         df = inicio[:10]
+    _mat, _sis, _perf = _partes_chave(rid)
     return {"id": rid, "usuario": rid,
-            "nome_usuario": it.get("nome") or rid,
-            "sistema": it.get("sistema") or "",
+            "nome_usuario": it.get("nome") or _mat,
+            "sistema": it.get("sistema") or _sis,
+            "perfil": it.get("perfil") or _perf,
+            "escopo": _escopo_chave(rid),
             "origem": it.get("origem") or "Inclusão / Alteração",
             "data_inicio": inicio, "data_fim": df,
             "dias": dias, "ticket": it.get("ticket") or "",
@@ -579,9 +597,12 @@ def _sintetizar_historico(rid, it, anterior):
     if anterior:
         base = dict(anterior)
     else:
-        nome, sis, _ = _meta_divergencia(rid)
-        base = {"nome_usuario": nome, "sistema": sis, "origem": "",
-                "data_inicio": ds, "data_fim": ds[:10]}
+        # a chave pode ser composta: o lookup do nome e' pela MATRICULA, e o
+        # sistema/perfil vem da propria chave (mais especifico que o do banco)
+        _mat, _sis, _perf = _partes_chave(rid)
+        nome, sis, _ = _meta_divergencia(_mat)
+        base = {"nome_usuario": nome, "sistema": _sis or sis, "perfil": _perf,
+                "origem": "", "data_inicio": ds, "data_fim": ds[:10]}
     base.update({"id": rid, "usuario": rid, "data_saida": ds,
                  "motivo": (it.get("motivo") or "").strip() or "Retirado da quarentena",
                  "movido_em": (it.get("data_acao") or "").replace("T", " ") or ds,
@@ -680,7 +701,11 @@ def conn_ro():
 
 def garantir_estrutura(force=False):
     """bi_divergencias = snapshot fixo (so cria se faltar, ou force).
-    quarentena = sempre garante. Indices sempre garantidos."""
+    quarentena = sempre garante. Indices sempre garantidos.
+
+    Recriar a bi_divergencias INVALIDA o cache `_BASE` — senao o painel (e os
+    testes) continuariam servindo o snapshot anterior, de outro cenario."""
+    global _BASE
     c = conn_rw()
     try:
         existe = c.execute(
@@ -693,6 +718,7 @@ def garantir_estrutura(force=False):
         if force or not existe:
             c.execute("DROP TABLE IF EXISTS bi_divergencias")
             c.executescript(_SQL_BI)
+            _BASE = None          # snapshot mudou: o cache tem de morrer junto
             print("  bi_divergencias (re)criada do cenario atual")
         for ix in _IDX_BI:
             c.execute(ix)
@@ -2665,6 +2691,17 @@ def listar_quarentena():
         r["dias_restantes"] = max(0, _dias(hoje, r.get("data_fim", "")))
     for r in historico:
         r["periodo_dias"] = _dias(r.get("data_inicio", ""), r.get("data_saida", ""))
+
+    # A chave pode ser composta (usuario##sistema##perfil): a tela mostra a
+    # MATRICULA na coluna de usuario + o escopo/perfil do que foi quarentenado.
+    # Sem isso a coluna sairia com a chave crua e o vinculo nao casaria no RH.
+    for r in lista + historico:
+        _mat, _sis, _perf = _partes_chave(r.get("usuario") or r.get("id") or "")
+        r["id"] = r.get("id") or r.get("usuario")
+        r["usuario"] = _mat
+        r["sistema"] = r.get("sistema") or _sis
+        r["perfil"] = r.get("perfil") or _perf
+        r["escopo"] = _escopo_chave(r["id"])
 
     # Vinculo (Funcionario/Terceiro) por usuario (matricula) — lookup em rh_ativos
     _mats = {r["usuario"] for r in lista} | {r["usuario"] for r in historico}

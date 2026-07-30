@@ -413,6 +413,11 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .sub-acao:hover{background:#E1EBFF;border-color:#9FBAF0;}
 .sub-acao.sa-quar{color:#1F2D5C;background:#F5F6FA;border-color:#D8DDEA;}
 .sub-acao.sa-quar:hover{background:#E9EEF9;border-color:#BCC6DC;}
+/* Escopo do que foi quarentenado (pessoa / sistema / acesso) */
+.q-escopo{display:inline-block;font:700 9px Arial;letter-spacing:.02em;color:#5A6377;
+  background:#F2F4F8;border:1px solid #DDE2EC;border-radius:9px;padding:1px 6px;
+  vertical-align:1px;white-space:nowrap;}
+.q-escopo.q-esc-acesso{color:#0E6B47;background:#E8F8F0;border-color:#B8E5CD;}
 /* "todo o <SISTEMA>" — escopo maior que o da linha, cor distinta p/ não confundir */
 .sub-acao.sa-sis{color:#5C2D91;background:#F7F3FC;border-color:#DCCcEE;}
 .sub-acao.sa-sis:hover{background:#EFE6FA;border-color:#C4A8E4;}
@@ -4065,6 +4070,16 @@ function verResolucao(uid){
 const QUAR_LUPA = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" '
   + 'stroke="#1F2D5C" stroke-width="2.4" stroke-linecap="round">'
   + '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+/* O que foi quarentenado: a pessoa inteira, um sistema ou um acesso (perfil).
+   Vem do backend em `escopo`/`perfil` (a chave pode ser usuario##sistema##perfil). */
+function _quarEscopoCel(q){
+  const sis = q.sistema ? `<span class="h-sis">${esc(q.sistema)}</span>` : '';
+  if(q.escopo === 'Acesso')
+    return sis + ` <span class="q-escopo q-esc-acesso" title="Só este acesso está em quarentena">acesso: ${esc(q.perfil)}</span>`;
+  if(q.escopo === 'Sistema')
+    return sis + ` <span class="q-escopo">sistema inteiro</span>`;
+  return (sis || '—') + ` <span class="q-escopo">todos os acessos</span>`;
+}
 function _modalQuarentena(rec){
   rec = rec || {};
   const saida = rec.data_saida
@@ -4079,7 +4094,9 @@ function _modalQuarentena(rec){
     '<div class="modal-hd"><h3>Dados da quarentena</h3>'
     + '<p>' + esc((rec.nome_usuario || '') + ' — ' + (rec.usuario || '')) + '</p></div>'
     + '<div class="modal-bd modal-vw">'
-    + '<div class="vw-grid2">'
+    + '<div class="vw-grid3">'
+    + '<div><div class="vw-lbl">O que está em quarentena</div><div class="vw-val">'
+    + _quarEscopoCel(rec) + '</div></div>'
     + '<div><div class="vw-lbl">Título / descrição</div><div class="vw-val" style="font-size:14px;">'
     + (esc(rec.titulo) || '—') + '</div></div>'
     + '<div><div class="vw-lbl">Ticket</div><div class="vw-val">' + (esc(rec.ticket) || '—') + '</div></div></div>'
@@ -4266,7 +4283,7 @@ function pintarQuarentena(){
     body.innerHTML = rows.length ? rows.map(q => `<tr>
       <td><strong style="color:#1F2D5C;">${esc(q.usuario)}</strong></td>
       <td>${esc(q.nome_usuario)}</td>
-      <td>${esc(q.sistema)}</td>
+      <td>${_quarEscopoCel(q)}</td>
       <td>${esc(q.vinc)||'—'}</td>
       <td>${fmtDT(q.data_inicio)}</td>
       <td>${fmtDT(q.data_fim)}</td>
@@ -4297,7 +4314,7 @@ function pintarQuarentena(){
         <td style="text-align:center;">${mais ? `<button class="expand-btn" data-row="${idx}" data-hk="${esc(u)}" onclick="toggleHist(this)">${_quarHistExpand.has(u)?'-':'+'}</button>` : ''}</td>
         <td><strong style="color:#1F2D5C;">${esc(e0.usuario)}</strong>${mais ? ` <span style="color:#9099A6;font-weight:700;">${eps.length}×</span>` : ''}</td>
         <td>${esc(e0.nome_usuario)}</td>
-        <td>${esc(e0.sistema)}</td>
+        <td>${_quarEscopoCel(e0)}</td>
         <td>${esc(e0.vinc)||'—'}</td>
         <td>${fmtDT(e0.data_inicio)}</td>
         <td>${fmtDT(e0.data_saida)}</td>
