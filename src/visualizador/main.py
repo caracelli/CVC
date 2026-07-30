@@ -1700,6 +1700,14 @@ def gerar_xlsx_painel(dash_secoes, analiticos, titulo="Visão Geral"):
     return buf.getvalue()
 
 
+def _perfil_div(d):
+    """Identidade do ACESSO dentro do (usuario, sistema): o perfil que a grid
+    mostra na sub-linha — o ENCONTRADO quando existe, senao o ESPERADO. As
+    varias linhas de "Em Analise" (1 por perfil candidato) compartilham o mesmo
+    perfil encontrado, entao caem na MESMA chave — igual ao que a tela agrupa."""
+    return (d.get("pe") or d.get("pp") or "").strip()
+
+
 def construir_db():
     """DB para o index.html. A parte cara (bi_divergencias + JOIN rh_ativos) e
     calculada 1x e cacheada; so o filtro de quarentena re-roda a cada request
@@ -1719,42 +1727,63 @@ def construir_db():
     # sobrepoe as interacoes vivas da rede (ENVIAR entra, RESOLVER sai)
     for rid, it in _quarentena_viva(_interacoes).items():
         if it.get("acao") == "ENVIAR":
-            em_quar.add(rid)
+            em_quar.add(rid)  # noqa: E501  (chave pode ser composta — ver abaixo)
         elif it.get("acao") == "RESOLVER":
             em_quar.discard(rid)
     # sobrepoe as resolucoes (banco dobrado + interacoes vivas): o funcionario
     # resolvido ganha u.resolvido + u.resolucao e todas as divs viram Resolvido.
     resolvidos = _resolucoes_mescladas(_interacoes)
-    # quarentena: por PESSOA (chave simples) x por SISTEMA (chave composta
-    # usuario##sistema) — retorno Bruna: quarentenar so um sistema.
+    # Granularidade da acao (retorno Bruna, 3 niveis) — a chave da interacao
+    # carrega o alvo, sem mudar schema:
+    #   "usuario"                    -> a PESSOA inteira
+    #   "usuario##sistema"           -> so aquele SISTEMA
+    #   "usuario##sistema##perfil"   -> so aquele ACESSO (perfil)
     em_quar_all = {k for k in em_quar if "##" not in k}
-    em_quar_sis = {}
+    em_quar_sis = {}      # usuario -> {sistema}
+    em_quar_perf = {}     # usuario -> {(sistema, perfil)}
     for k in em_quar:
-        if "##" in k:
-            _usr, _sis = k.split("##", 1)
-            em_quar_sis.setdefault(_usr, set()).add(_sis)
+        if "##" not in k:
+            continue
+        partes = k.split("##")
+        if len(partes) >= 3 and partes[2]:
+            em_quar_perf.setdefault(partes[0], set()).add((partes[1], partes[2]))
+        else:
+            em_quar_sis.setdefault(partes[0], set()).add(partes[1])
     users = []
     for u in _BASE["users"]:
         if u["u"] in em_quar_all:
             continue                            # pessoa inteira em quarentena
         _qsis = em_quar_sis.get(u["u"])
-        if _qsis:
-            _divs = [d for d in u["divs"] if d.get("sis") not in _qsis]
+        _qperf = em_quar_perf.get(u["u"])
+        if _qsis or _qperf:
+            _divs = [d for d in u["divs"]
+                     if d.get("sis") not in (_qsis or ())
+                     and (d.get("sis"), _perfil_div(d)) not in (_qperf or ())]
             if not _divs:
-                continue                        # todos os sistemas em quarentena
-            u = dict(u, divs=_divs)             # segue sem os sistemas em quarentena
+                continue                        # tudo em quarentena
+            u = dict(u, divs=_divs)             # segue sem o que foi quarentenado
         r_all = resolvidos.get(u["u"])          # resolucao da PESSOA inteira
-        # resolucoes POR SISTEMA desta pessoa (chave composta "usuario##sistema")
-        r_sis = {k.split("##", 1)[1]: v for k, v in resolvidos.items()
-                 if k.startswith(u["u"] + "##")}
-        if r_all or r_sis:
+        # resolucoes por SISTEMA e por ACESSO (perfil) desta pessoa
+        r_sis, r_perf = {}, {}
+        _pre = u["u"] + "##"
+        for k, v in resolvidos.items():
+            if not k.startswith(_pre):
+                continue
+            partes = k.split("##")
+            if len(partes) >= 3 and partes[2]:
+                r_perf[(partes[1], partes[2])] = v
+            else:
+                r_sis[partes[1]] = v
+        if r_all or r_sis or r_perf:
             uc = dict(u)
-            # Cada div vira Resolvido se a pessoa foi resolvida inteira OU o SISTEMA
-            # daquela div foi resolvido. Linha JA Aderente (OK) vence -> Aderente.
+            # Cada div vira Resolvido se a pessoa foi resolvida inteira, OU o
+            # SISTEMA da div foi resolvido, OU aquele ACESSO (perfil) foi
+            # resolvido. Linha JA Aderente (OK) vence -> Aderente.
             def _st(d):
                 if d.get("t") == "OK":
                     return "Aderente"
-                if r_all or (d.get("sis") in r_sis):
+                if r_all or (d.get("sis") in r_sis) \
+                        or ((d.get("sis"), _perfil_div(d)) in r_perf):
                     return "Resolvido"
                 return d.get("s")
             uc["divs"] = [dict(d, s=_st(d)) for d in u["divs"]]
@@ -1763,8 +1792,12 @@ def construir_db():
             # (sub-linha do sistema vira Resolvido), e a pessoa segue com o botao
             # de resolver os demais sistemas.
             uc["resolvido"] = bool(r_all)
-            uc["resolucao"] = r_all or next(iter(r_sis.values()), None)
+            uc["resolucao"] = (r_all or next(iter(r_sis.values()), None)
+                               or next(iter(r_perf.values()), None))
             uc["resolucao_sis"] = r_sis          # {sistema: dados} p/ lupa por sistema
+            # {"sistema||perfil": dados} — lupa do acesso individual (o JSON nao
+            # aceita tupla como chave)
+            uc["resolucao_perfil"] = {f"{s}||{p}": v for (s, p), v in r_perf.items()}
             users.append(uc)
         else:
             users.append(u)
@@ -2317,15 +2350,17 @@ def enviar_quarentena(usuarios, origem="Inclusão / Alteração",
     for u in usuarios:
         if u in ja:
             continue
-        # chave composta "usuario##sistema" = quarentena SO daquele sistema
-        # (retorno Bruna). Sem ## = pessoa inteira (compat).
-        usr_real = u.split("##", 1)[0]
-        sis_alvo = u.split("##", 1)[1] if "##" in u else ""
+        # chave composta (retorno Bruna): "usuario##sistema" = so aquele sistema;
+        # "usuario##sistema##perfil" = so aquele ACESSO. Sem ## = pessoa inteira.
+        _p = u.split("##")
+        usr_real = _p[0]
+        sis_alvo = _p[1] if len(_p) > 1 else ""
+        perf_alvo = _p[2] if len(_p) > 2 else ""
         nome, sis, _ = _meta_divergencia(usr_real)
         _interacao_gravar({
             "tipo_interacao": "QUARENTENA", "registro_id": u, "acao": "ENVIAR",
             "usuario": USUARIO, "data_acao": agora, "origem": origem,
-            "nome": nome, "sistema": sis_alvo or sis,
+            "nome": nome, "sistema": sis_alvo or sis, "perfil": perf_alvo,
             "dias": dias, "ticket": ticket, "titulo": titulo, "motivo": motivo,
         })
         ja.add(u)
@@ -2725,23 +2760,28 @@ def retirar_quarentena(registro_id, motivo=""):
 
 
 def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo="",
-                       sistema=""):
+                       sistema="", perfil=""):
     """Grava uma interacao RESOLUCAO na rede — marca o funcionario como
     resolvido sob um ticket do Jira, com o MOTIVO (obrigatorio, vindo do combobox
     do XML). Devolve 1 se gravou, 0 se invalido.
 
-    `sistema` opcional (retorno Bruna): quando informado, resolve SO aquele
-    sistema — a chave vira composta `usuario##sistema` e o snapshot pega so as
-    pendencias daquele sistema. Vazio = resolve a pessoa inteira (compat)."""
+    Alvo (retorno Bruna, 3 niveis):
+      - so `registro_id`            -> a PESSOA inteira (compat);
+      - + `sistema`                 -> so aquele SISTEMA  (`usuario##sistema`);
+      - + `sistema` e `perfil`      -> so aquele ACESSO   (`usuario##sistema##perfil`).
+    O snapshot de auditoria segue o mesmo recorte do alvo."""
     rid = str(registro_id or "").strip()
     sis_alvo = str(sistema or "").strip()
+    perf_alvo = str(perfil or "").strip() if sis_alvo else ""
     tk = str(ticket or "").strip()
     motivo = str(motivo or "").strip()
     if not rid or not tk or not motivo:
         return 0
     nome, _, _ = _meta_divergencia(rid)
-    # chave da resolucao: composta quando por sistema (nao muda schema)
-    chave = f"{rid}##{sis_alvo}" if sis_alvo else rid
+    # chave da resolucao: composta quando por sistema/acesso (nao muda schema)
+    chave = rid
+    if sis_alvo:
+        chave += f"##{sis_alvo}" + (f"##{perf_alvo}" if perf_alvo else "")
     # Snapshot completo para auditoria — cargo, centro de custo e as pendencias
     # como estavam no momento da resolucao, mesmo que a base mude depois.
     # "Em Analise" vem como varias linhas (1 por perfil candidato) em
@@ -2762,8 +2802,15 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=
             # snapshot: todas as pendencias da pessoa, ou so as do sistema alvo
             _sql = ("SELECT tipo, acao, sistema, perfil_encontrado, "
                     "perfil_esperado, origem FROM bi_divergencias WHERE usuario=?"
-                    + (" AND sistema=?" if sis_alvo else ""))
-            for r in c.execute(_sql, [rid] + ([sis_alvo] if sis_alvo else [])):
+                    + (" AND sistema=?" if sis_alvo else "")
+                    # acesso individual: a linha e' identificada pelo perfil
+                    # ENCONTRADO (ou pelo ESPERADO quando nao ha encontrado),
+                    # o mesmo criterio de _perfil_div/da grid
+                    + (" AND COALESCE(NULLIF(TRIM(COALESCE(perfil_encontrado,'')),''),"
+                       "TRIM(COALESCE(perfil_esperado,'')))=?" if perf_alvo else ""))
+            _args = [rid] + ([sis_alvo] if sis_alvo else []) \
+                + ([perf_alvo] if perf_alvo else [])
+            for r in c.execute(_sql, _args):
                 tp = r["tipo"] or ""
                 sis = r["sistema"] or ""
                 org = r["origem"] or ""
@@ -2799,7 +2846,7 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=
         "descricao": str(descricao or "").strip(),
         "motivo": motivo,
         "cargo": cargo, "centro_custo": centro_custo,
-        "sistema": sis_alvo,
+        "sistema": sis_alvo, "perfil": perf_alvo,
         "pendencias": pend,
         "nome": nome, "usuario": USUARIO,
         "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
@@ -3456,7 +3503,8 @@ class H(BaseHTTPRequestHandler):
                     return
                 linhas = resolver_pendencia(rid, ticket, payload.get("ticket_url"),
                                             payload.get("descricao"), motivo,
-                                            sistema=payload.get("sistema") or "")
+                                            sistema=payload.get("sistema") or "",
+                                            perfil=payload.get("perfil") or "")
                 self._send(200, json.dumps(
                     {"ok": linhas > 0,
                      "erro": None if linhas > 0 else "falha ao resolver",

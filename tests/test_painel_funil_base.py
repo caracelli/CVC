@@ -48,10 +48,11 @@ class TestFunilPendenciasUsaBaseDaGrid(unittest.TestCase):
         # o '-' na celula e' ausencia de valor; no filtro vira "(vazio)"
         self.assertIn("(vazio)</i>", self.html)
 
-    def test_acoes_por_sistema_sao_rotuladas(self):
-        corpo = re.search(r"function _btnResSis\(u, d\)\{[\s\S]*?\n\}", self.html).group(0)
-        self.assertIn("tratar", corpo, "acao de resolver por sistema precisa de rotulo")
-        self.assertIn("quarentena", corpo, "acao de quarentena por sistema precisa de rotulo")
+    def test_acoes_da_sublinha_sao_rotuladas(self):
+        corpo = re.search(r"function _btnResSis\([^)]*\)\{[\s\S]*?\n\}", self.html).group(0)
+        self.assertIn("tratar acesso", corpo, "acao por ACESSO precisa de rotulo")
+        self.assertIn("quarentena", corpo, "acao de quarentena precisa de rotulo")
+        self.assertIn("todo o ", corpo, "acao do SISTEMA inteiro (quando ha 2+ acessos)")
         self.assertIn("abrirResolver(", corpo)
         self.assertIn("quarentenar(", corpo)
 

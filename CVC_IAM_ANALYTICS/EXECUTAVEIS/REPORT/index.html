@@ -413,6 +413,9 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .sub-acao:hover{background:#E1EBFF;border-color:#9FBAF0;}
 .sub-acao.sa-quar{color:#1F2D5C;background:#F5F6FA;border-color:#D8DDEA;}
 .sub-acao.sa-quar:hover{background:#E9EEF9;border-color:#BCC6DC;}
+/* "todo o <SISTEMA>" — escopo maior que o da linha, cor distinta p/ não confundir */
+.sub-acao.sa-sis{color:#5C2D91;background:#F7F3FC;border-color:#DCCcEE;}
+.sub-acao.sa-sis:hover{background:#EFE6FA;border-color:#C4A8E4;}
 .qbtn:hover{background:#E9EEF9;color:#0A1F52;transform:scale(1.16);}
 .qbtn:active{transform:scale(1);}
 .qbtn svg{display:block;}
@@ -2597,13 +2600,20 @@ function pintarPagina(){
     // Quando ha varios perfis, TODOS (inclusive o 1o) viram sublinha e o
     // "Perfil Esperado" da linha principal fica em branco. Com 1 so perfil,
     // ele segue na propria linha principal (nada a expandir).
+    // quantos acessos PENDENTES cada sistema tem (habilita o "todo o <SIS>")
+    const _nPorSis = {}, _vistoSis = {};
     (hasMore ? ddivs : []).forEach(d => {
+      if(d.s === 'Pendente' && d.sis) _nPorSis[d.sis] = (_nPorSis[d.sis]||0) + 1;
+    });
+    (hasMore ? ddivs : []).forEach(d => {
+      const _1o = d.s === 'Pendente' && d.sis && !_vistoSis[d.sis];
+      if(_1o) _vistoSis[d.sis] = 1;
       h += `<tr class="sub-row" data-u="${esc(u.u)}" data-n="${esc(u.n)}" data-sub="${rowIdx}" data-sis="${esc(d.sis)}" style="display:${(_inclExpand.has(u.u)||_inclSisExp.has(u.u+'|'+d.sis))?'table-row':'none'};">
         <td>${fmtDH(d.dt)}</td>
         <td></td>
         <td></td>
         <td></td>
-        <td>${stBadge(d.s)}${_btnResSis(u,d)}</td>
+        <td>${stBadge(d.s)}${_btnResSis(u,d,_nPorSis[d.sis]||0,_1o)}</td>
         <td style="padding-left:14px;color:#7B8085;font-size:10.5px;">↳ ${_perfResumo(d.pe||d.pp,{matricula:u.m,sistema:d.sis})||'—'}</td>
         <td>—</td>
         <td>—</td>
@@ -3728,16 +3738,19 @@ function proc(on){
 /* ── Enviar para quarentena (modal → grava interação QUARENTENA) ───────── */
 let _quarAlvo = null;
 
-function quarentenar(uid, sistema){
+function quarentenar(uid, sistema, perfil){
   // Abre o formulário (prazo/ticket/título/motivo) — espelha abrirResolver.
-  // sistema opcional (retorno Bruna): quarentena SÓ daquele sistema (chave
-  // composta usuario##sistema). Vazio = pessoa inteira.
+  // 3 níveis (retorno Bruna): pessoa inteira, SÓ um sistema (usuario##sistema)
+  // ou SÓ um acesso (usuario##sistema##perfil).
   const u = DB.users.find(x => String(x.u) === String(uid));
-  const sis = sistema || '';
-  _quarAlvo = (u ? u.u : uid) + (sis ? '##' + sis : '');
-  const nome = (u ? (u.n + ' — ' + u.u) : uid) + (sis ? ' · sistema ' + esc(sis) : '');
+  const sis = sistema || '', pf = (sistema && perfil) ? perfil : '';
+  _quarAlvo = (u ? u.u : uid) + (sis ? '##' + sis : '') + (pf ? '##' + pf : '');
+  const nome = (u ? (u.n + ' — ' + u.u) : uid)
+    + (sis ? ' · sistema ' + esc(sis) : '')
+    + (pf ? ' · acesso ' + esc(pf) : '');
   _modal(
-    '<div class="modal-hd"><h3>Enviar para quarentena' + (sis ? ' — por sistema' : '') + '</h3>'
+    '<div class="modal-hd"><h3>Enviar para quarentena'
+    + (pf ? ' — este acesso' : sis ? ' — por sistema' : '') + '</h3>'
     + '<p>' + esc(nome) + '</p></div>'
     + '<div class="modal-bd">'
     + '<label>Quantidade de dias <span class="req">*</span> <span style="color:#7B8294;font-weight:400;">(máx. 90)</span></label>'
@@ -3837,31 +3850,50 @@ function fecharModal(){
 
 /* Botão "resolver só este sistema" (sub-linha da Pendências) — retorno Bruna:
    tratar por sistema, não a pessoa inteira. Só aparece em pendência aberta. */
-function _btnResSis(u, d){
+function _btnResSis(u, d, nSis, primeiroDoSis){
   if(d.s !== 'Pendente' || !d.sis) return '';
-  // Ícone sozinho passava batido ("não encontrei" no teste da usuária): as ações
-  // por sistema saem ROTULADAS, com o nome do sistema no tooltip.
-  const sis = esc(d.sis);
-  return ` <span class="sub-acao" title="Resolver só o sistema ${sis} (abre ticket)" `
-    + `onclick="abrirResolver('${esc(u.u)}','${sis}')">✓ tratar ${sis}</span>`
-    + ` <span class="sub-acao sa-quar" title="Enviar só o sistema ${sis} para a quarentena" `
-    + `onclick="quarentenar('${esc(u.u)}','${sis}')">⇧ quarentena</span>`;
+  // Três níveis (retorno Bruna). A sub-linha É um acesso, então as ações dela
+  // agem NO ACESSO; "tratar o sistema inteiro" só aparece quando aquele sistema
+  // tem mais de um acesso — e uma vez só, na primeira linha dele.
+  // Ícone sozinho passava batido ("não encontrei" no teste): tudo ROTULADO.
+  const sis = esc(d.sis), pf = esc(_perfChave(d));
+  const arg = `'${esc(u.u)}','${sis}','${pf.replace(/'/g, "\\'")}'`;
+  let h = ` <span class="sub-acao" title="Resolver só este acesso (${pf}) no ${sis}" `
+    + `onclick="abrirResolver(${arg})">✓ tratar acesso</span>`
+    + ` <span class="sub-acao sa-quar" title="Enviar só este acesso (${pf}) para a quarentena" `
+    + `onclick="quarentenar(${arg})">⇧ quarentena</span>`;
+  if(nSis > 1 && primeiroDoSis){
+    h += ` <span class="sub-acao sa-sis" title="Resolver os ${nSis} acessos pendentes do ${sis}" `
+      + `onclick="abrirResolver('${esc(u.u)}','${sis}')">✓ todo o ${sis} (${nSis})</span>`;
+  }
+  return h;
 }
 let _resSistema = '';   // sistema alvo da resolução ('' = pessoa inteira)
-function abrirResolver(uid, sistema){
+let _resPerfil  = '';   // acesso (perfil) alvo ('' = o sistema inteiro)
+/* Identidade do acesso na grid: o perfil ENCONTRADO, ou o ESPERADO quando não
+   há encontrado. Mesmo critério do backend (_perfil_div). */
+function _perfChave(d){ return String(d.pe || d.pp || '').trim(); }
+function abrirResolver(uid, sistema, perfil){
   const u = DB.users.find(x => String(x.u) === String(uid));
   if(!u) return;
   _resAlvo = u;
   _resSistema = sistema || '';
-  // pendências alvo: do sistema (se informado) ou todas
-  const alvo = _resSistema
-    ? u.divs.filter(d => d.sis === _resSistema && d.a !== 'Aderente' && d.a !== 'Incluir Acesso')
-    : u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso');
-  const escopo = _resSistema
-    ? ' · sistema <b>' + esc(_resSistema) + '</b> (' + alvo.length + ' pendência(s))'
-    : ' · ' + alvo.length + ' pendência(s) marcada(s) como resolvida(s)';
+  _resPerfil  = (_resSistema && perfil) ? perfil : '';
+  // pendências alvo: o acesso (perfil), o sistema, ou todas
+  const abertas = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso';
+  const alvo = _resPerfil
+    ? u.divs.filter(d => d.sis === _resSistema && _perfChave(d) === _resPerfil && abertas(d))
+    : _resSistema
+      ? u.divs.filter(d => d.sis === _resSistema && abertas(d))
+      : u.divs.filter(abertas);
+  const escopo = _resPerfil
+    ? ' · acesso <b>' + esc(_resPerfil) + '</b> no <b>' + esc(_resSistema) + '</b>'
+    : _resSistema
+      ? ' · sistema <b>' + esc(_resSistema) + '</b> (' + alvo.length + ' pendência(s))'
+      : ' · ' + alvo.length + ' pendência(s) marcada(s) como resolvida(s)';
   _modal(
-    '<div class="modal-hd"><h3>Resolver pendência(s)' + (_resSistema ? ' — por sistema' : '') + '</h3>'
+    '<div class="modal-hd"><h3>Resolver pendência(s)'
+    + (_resPerfil ? ' — este acesso' : _resSistema ? ' — por sistema' : '') + '</h3>'
     + '<p>' + esc(u.n) + ' — ' + esc(u.u) + escopo + '</p></div>'
     + '<div class="modal-bd">'
     + '<label>Nº do ticket do Jira <span class="req">*</span></label>'
@@ -3915,14 +3947,15 @@ async function confirmarResolucao(){
     document.getElementById('res-motivo').focus();
     return;
   }
-  const uid = _resAlvo.u, sis = _resSistema;
+  const uid = _resAlvo.u, sis = _resSistema, pf = _resPerfil;
   fecharModal();
   proc(true);
   let msg;
   try{
     const r = await fetch('/api/resolver', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({id:uid, ticket:ticket, ticket_url:url, descricao:desc, motivo:motivo, sistema:sis})
+      body: JSON.stringify({id:uid, ticket:ticket, ticket_url:url, descricao:desc,
+                            motivo:motivo, sistema:sis, perfil:pf})
     });
     const j = await r.json();
     if(j && j.ok){
@@ -3931,7 +3964,9 @@ async function confirmarResolucao(){
         DB.sis_dist = j.dados.sis_dist; DB.users = j.dados.users;
       } else { await refreshDB(); }
       renderMatrix(); aplicarKPIs();
-      msg = (sis ? 'Pendências de ' + uid + ' no sistema ' + sis : 'Pendência(s) de ' + uid)
+      msg = (pf ? 'Acesso ' + pf + ' (' + sis + ') de ' + uid
+                : sis ? 'Pendências de ' + uid + ' no sistema ' + sis
+                      : 'Pendência(s) de ' + uid)
           + ' resolvida(s) sob o ticket ' + ticket + '.';
     } else {
       msg = 'Falha ao resolver: ' + ((j && j.erro) || 'desconhecida');
