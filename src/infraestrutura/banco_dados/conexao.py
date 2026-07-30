@@ -99,6 +99,7 @@ class ConexaoBancoDados:
             self._migrar_acessos_sistemas_pk_e_matching(conn)
             self._migrar_rh_ativos_tipo_vinculo(conn)
             self._migrar_rh_ativos_login(conn)
+            self._migrar_rh_desligados_login(conn)
             self._migrar_gestor(conn)
             self._migrar_ciclo_vida(conn)
             self._migrar_ciclo_eventos_backfill(conn)
@@ -172,6 +173,18 @@ class ConexaoBancoDados:
                 "CREATE INDEX IF NOT EXISTS ix_rh_ativos_login ON rh_ativos (login)"))
             conn.commit()
             logger.info("Migration: rh_ativos.login adicionada.")
+
+    def _migrar_rh_desligados_login(self, conn):
+        """Coluna 'login' (aditiva) em rh_desligados — chave do OU_Desligados do
+        diretorio AD, que so tem login (sem matricula de RH). Idempotente."""
+        if "rh_desligados" not in self._tabelas(conn):
+            return
+        if "login" not in self._cols(conn, "rh_desligados"):
+            conn.execute(text("ALTER TABLE rh_desligados ADD COLUMN login TEXT"))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_rh_desligados_login ON rh_desligados (login)"))
+            conn.commit()
+            logger.info("Migration: rh_desligados.login adicionada.")
 
     def _migrar_gestor(self, conn):
         """Coluna 'gestor' (aditiva) em rh_ativos e matriz_cco — chave do

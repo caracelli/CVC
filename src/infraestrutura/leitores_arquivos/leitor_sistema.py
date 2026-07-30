@@ -78,11 +78,18 @@ class LeitorSistema(LeitorArquivoBase):
         return df
 
     def _valor(self, row: pd.Series, chave: str) -> str:
+        # O config aceita UM nome de coluna ou VARIOS (tupla/lista de aliases):
+        # o mesmo extrato muda de layout entre exports (o IC ja veio com a coluna
+        # de status como 'ST_HABILITACAO' no XLSX e como 'S' no texto de largura
+        # fixa). Usa o primeiro alias presente na linha.
         col = self._cfg.colunas.get(chave)
-        if not col or col not in row.index:
+        if not col:
             return ""
-        val = row[col]
-        return "" if pd.isna(val) else str(val).strip()
+        for nome in ((col,) if isinstance(col, str) else tuple(col)):
+            if nome in row.index:
+                val = row[nome]
+                return "" if pd.isna(val) else str(val).strip()
+        return ""
 
     def _normalizar_situacao(self, valor: str) -> str:
         chave = valor.strip().upper()

@@ -18,6 +18,7 @@ from loguru import logger
 
 from .leitor_base import LeitorArquivoBase, ler_tabela
 from dominio.entidades.funcionario_ativo import FuncionarioAtivo
+from dominio.entidades.funcionario_desligado import FuncionarioDesligado
 from dominio.objetos_valor.cargo import Cargo
 
 
@@ -94,4 +95,48 @@ class LeitorDiretorioAd(LeitorArquivoBase):
         if descartados:
             logger.warning(f"Diretorio AD [{tipo_vinculo}]: {descartados} sem login/cpf ignorado(s).")
         logger.success(f"Diretorio AD [{tipo_vinculo}]: {len(out)} identidades de '{arquivo.name}'.")
+        return out
+
+    def ler_desligados(self, arquivo: Path) -> List["FuncionarioDesligado"]:
+        """OU_Desligados: identidades de quem SAIU (B2 = sim, 29/07). Nao sao
+        identidades ativas — viram DESLIGADOS, com `login` como chave (o export
+        do AD nao tem matricula de RH). A matricula fica namespaced ADESL-<login>
+        para nao colidir com matricula de RH."""
+        enc = self.detectar_encoding(arquivo) if arquivo.suffix.lower() == ".csv" else "utf-8"
+        df = ler_tabela(arquivo, dtype=str, encoding=enc, separador=";")
+        df.columns = [str(c).strip() for c in df.columns]
+
+        prefixo = _PREFIXO["DESLIGADO_AD"]
+        out: List[FuncionarioDesligado] = []
+        vistos = set()
+        descartados = 0
+        for _, row in df.iterrows():
+            login = _v(row, "Login")
+            cpf = _v(row, "CPF")
+            if not login and not cpf:
+                descartados += 1
+                continue
+            chave = (login or cpf).upper()
+            if chave in vistos:
+                continue
+            vistos.add(chave)
+            out.append(FuncionarioDesligado(
+                matricula=f"{prefixo}-{(login or cpf)}",
+                # contas de servico/genericas do OU vem SEM nome; a entidade
+                # exige nome, entao cai para o login (e depois o CPF) — melhor
+                # que descartar a identidade e perder o acesso vivo dela.
+                nome=_v(row, "Nome") or login or cpf,
+                cpf=cpf,
+                cargo=Cargo(codigo="", descricao=_v(row, "Cargo"),
+                            departamento=_v(row, "Departamento"), centro_custo=""),
+                email=_v(row, "Email") or None,
+                data_admissao=None,
+                # o export nao traz data de desligamento (so a OU); fica vazia —
+                # o corte temporal esta fora de escopo (decisao da usuaria).
+                data_desligamento=None,
+                login=login or None,
+            ))
+        if descartados:
+            logger.warning(f"Diretorio AD [DESLIGADOS]: {descartados} sem login/cpf ignorado(s).")
+        logger.success(f"Diretorio AD [DESLIGADOS]: {len(out)} identidades de '{arquivo.name}'.")
         return out

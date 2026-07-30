@@ -38,9 +38,9 @@ class TestMatrizDuplicada(unittest.TestCase):
         for pe in perfis:
             s.add(pe)
         # garante SYSTUR com dados
-        s.add(AcessoSistema(sistema=SYS, usuario="z", perfil="ZZ", matricula_vinculada="ZZ"))
+        s.add(AcessoSistema(situacao="ATIVO", sistema=SYS, usuario="z", perfil="ZZ", matricula_vinculada="ZZ"))
         if acesso_perfil:
-            s.add(AcessoSistema(sistema=SYS, usuario="u", perfil=acesso_perfil, matricula_vinculada=mat))
+            s.add(AcessoSistema(situacao="ATIVO", sistema=SYS, usuario="u", perfil=acesso_perfil, matricula_vinculada=mat))
         s.commit()
         s.close()
         ValidarAcessosSistema(cx).executar()

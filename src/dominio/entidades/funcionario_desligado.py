@@ -9,3 +9,6 @@ class FuncionarioDesligado(Funcionario):
     data_admissao: Optional[date] = None
     data_desligamento: Optional[date] = None
     motivo_desligamento: Optional[str] = None
+    # login do diretorio (AD). O OU_Desligados nao tem matricula de RH: o login
+    # e' a unica chave para achar o acesso que ficou vivo.
+    login: Optional[str] = None

@@ -1,12 +1,15 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, Optional, Sequence, Union
 from dominio.objetos_valor.sistema import Sistema
 
 
 @dataclass
 class ConfigLeitorSistema:
     sistema: Sistema
-    colunas: Dict[str, str]  # chave generica -> nome real da coluna no arquivo
+    # chave generica -> nome real da coluna no arquivo. Aceita uma tupla de
+    # ALIASES quando o mesmo extrato muda de layout entre exports (o leitor usa
+    # o primeiro alias presente).
+    colunas: Dict[str, Union[str, Sequence[str]]]
     skiprows: int = 0
     separador: str = ";"
     # Forca o encoding do CSV (ignora a deteccao automatica). Use quando o
@@ -16,9 +19,12 @@ class ConfigLeitorSistema:
     # ...;Grupo;... varias vezes -> pandas gera Grupo, Grupo.1, Grupo.2...).
     # Com despivot=True cada grupo preenchido vira um acesso.
     despivot: bool = False
-    # Mapeamento de valores de situacao para padrao interno
+    # Mapeamento de valores de situacao para padrao interno. Letras soltas sao
+    # o padrao dos extratos (SYSTUR/IC): A=Ativo, I=Inativo, D=Desligado,
+    # P=Pendente. A semantica de cada valor vive em dominio/situacao_conta.py.
     mapa_situacao: Dict[str, str] = field(default_factory=lambda: {
         "A": "ATIVO", "ATIVO": "ATIVO", "I": "INATIVO", "INATIVO": "INATIVO",
+        "D": "DESLIGADO", "P": "PENDENTE",
     })
 
 
@@ -84,8 +90,16 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
             "cpf":      "CPF",
             "email":    "CD_EMAIL",
             "perfil":   "NM_GRUPO",
-            "situacao": "ST_HABILITACAO",
+            # O layout de largura fixa (view_IC_*) chama a coluna de status de
+            # 'S'; o XLSX antigo chamava 'ST_HABILITACAO'. Aceita os dois — sem
+            # isso o status vinha VAZIO e a conta era assumida como ativa.
+            "situacao": ("ST_HABILITACAO", "S"),
         },
+        # Significado provado no cruzamento com o RH (29/07/2026, extrato de
+        # 29/07): D = 100% na base de DESLIGADOS; P e I = 100% em RH ATIVOS
+        # (conta pendente/inativa de gente da casa); A = ativo.
+        mapa_situacao={"A": "ATIVO", "I": "INATIVO",
+                       "D": "DESLIGADO", "P": "PENDENTE"},
     ),
 
     Sistema.SICA_ESFERA: ConfigLeitorSistema(

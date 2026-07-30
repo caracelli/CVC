@@ -31,8 +31,8 @@ class TestPerfilCaseInsensitive(unittest.TestCase):
         s.add(PerfilEsperadoModel(cargo_codigo="100", cargo_descricao="ANALISTA",
                                   sistema=SYS, perfil=esperado))
         # garante SYSTUR com dados + o acesso do funcionario
-        s.add(AcessoSistema(sistema=SYS, usuario="z", perfil="ZZ", matricula_vinculada="ZZ"))
-        s.add(AcessoSistema(sistema=SYS, usuario="u1", perfil=atual, matricula_vinculada="M1"))
+        s.add(AcessoSistema(situacao="ATIVO", sistema=SYS, usuario="z", perfil="ZZ", matricula_vinculada="ZZ"))
+        s.add(AcessoSistema(situacao="ATIVO", sistema=SYS, usuario="u1", perfil=atual, matricula_vinculada="M1"))
         s.commit(); s.close()
         ValidarAcessosSistema(cx).executar()
         s = cx.sessao()

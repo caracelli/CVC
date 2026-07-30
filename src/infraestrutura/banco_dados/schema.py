@@ -51,6 +51,9 @@ class RhDesligado(Base):
     data_desligamento = Column(Date)
     email = Column(String)
     empresa = Column(String)
+    # login do diretorio (AD): chave forte para achar acesso de desligado que
+    # nao casa por matricula/CPF (OU_Desligados do AD)
+    login = Column(String, index=True)
     arquivo_origem = Column(String)
     dt_importacao = Column(DateTime, default=datetime.now)
 

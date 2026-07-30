@@ -3,10 +3,10 @@
 orfaos via login. NAO passa pela trilha CDC do RH (nao e' movimentacao de RH).
 
 Roteia a populacao pelo NOME do arquivo:
-  OU_Franq*      -> FRANQUEADO
-  OU_Prest*      -> PRESTADOR
-  OU_Desligados* -> (fora de escopo por ora; decisao pendente de alimentar o
-                     motor de desligados). Ignorado.
+  OU_Franq*      -> FRANQUEADO (identidade ativa)
+  OU_Prest*      -> PRESTADOR  (identidade ativa)
+  OU_Desligados* -> DESLIGADOS (B2 = sim, 29/07): grava em rh_desligados com o
+                    LOGIN como chave, alimentando o motor de acesso de desligado.
 """
 from pathlib import Path
 
@@ -24,7 +24,7 @@ def _populacao(nome_arquivo: str):
     if "prest" in n:
         return "PRESTADOR"
     if "deslig" in n:
-        return None   # decisao pendente (B2) — nao importa como identidade ativa
+        return "DESLIGADOS"   # B2 = sim: alimenta o motor de desligados
     return None
 
 
@@ -56,10 +56,16 @@ class ImportarDiretorioAd:
                 logger.info(f"Diretorio AD: '{arquivo.name}' sem populacao mapeada — ignorado.")
                 continue
             try:
-                identidades = self._leitor.ler(arquivo, tipo_vinculo=pop)
-                if identidades:
-                    self._repo.salvar_ativos(identidades, arquivo.name)
-                    total += len(identidades)
+                if pop == "DESLIGADOS":
+                    identidades = self._leitor.ler_desligados(arquivo)
+                    if identidades:
+                        self._repo.salvar_desligados(identidades, arquivo.name)
+                        total += len(identidades)
+                else:
+                    identidades = self._leitor.ler(arquivo, tipo_vinculo=pop)
+                    if identidades:
+                        self._repo.salvar_ativos(identidades, arquivo.name)
+                        total += len(identidades)
                 self._leitor.mover_para_processados(arquivo)
             except Exception as e:
                 logger.error(f"Diretorio AD: erro em '{arquivo.name}': {e!r}")

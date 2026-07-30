@@ -37,7 +37,7 @@ class _Base(unittest.TestCase):
         for pe in perfis:
             s.add(PerfilEsperadoModel(**pe))
         for a in acessos:
-            s.add(AcessoSistema(**a))
+            s.add(AcessoSistema(situacao="ATIVO", **a))
         for r in cco:
             s.add(MatrizCcoModel(**r))
         s.commit(); s.close()

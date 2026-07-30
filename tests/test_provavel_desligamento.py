@@ -36,9 +36,9 @@ class TestProvavelDesligamento(unittest.TestCase):
             s.add(PerfilEsperadoModel(cargo_codigo="100", cargo_descricao="ANALISTA",
                                       sistema=SYS, perfil=f"P{i+1}"))
         # SYSTUR precisa ter dados (senao vira SEM_DADOS)
-        s.add(AcessoSistema(sistema=SYS, usuario="z", perfil="ZZ", matricula_vinculada="ZZ"))
+        s.add(AcessoSistema(situacao="ATIVO", sistema=SYS, usuario="z", perfil="ZZ", matricula_vinculada="ZZ"))
         if tem_acesso:
-            s.add(AcessoSistema(sistema=SYS, usuario="u1", perfil="OUTRO", matricula_vinculada="M1"))
+            s.add(AcessoSistema(situacao="ATIVO", sistema=SYS, usuario="u1", perfil="OUTRO", matricula_vinculada="M1"))
         if foi_aderente:
             s.execute(text("INSERT INTO ciclo_vida_acesso (matricula,sistema,dt_aderente) "
                            "VALUES ('M1',:sis,'2026-06-10 10:00:00')"), {"sis": SYS})

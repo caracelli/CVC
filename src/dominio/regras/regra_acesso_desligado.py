@@ -5,21 +5,10 @@ from ..entidades.perfil_acesso import PerfilAcesso
 from ..entidades.funcionario_desligado import FuncionarioDesligado
 from ..entidades.divergencia import Divergencia
 from ..objetos_valor.tipo_divergencia import TipoDivergencia
-
-
-# Status que indicam conta SEM acesso efetivo (revogada/desativada, mas ainda
-# listada no extrato). Uma conta bloqueada de um desligado NAO e' irregularidade
-# de acesso — ja esta revogada. Ex.: o SIG traz ~90% das contas como BLOQUEADO.
-_STATUS_SEM_ACESSO = {
-    "INATIVO", "INACTIVE", "BLOQUEADO", "BLOCKED",
-    "SUSPENSO", "DESATIVADO", "CANCELADO", "I", "B",
-}
-
-
-def _conta_ativa(situacao: Optional[str]) -> bool:
-    """True se a conta tem acesso efetivo. Vazio/None conta como ativo (alguns
-    extratos deixam status em branco = ativo)."""
-    return (situacao or "").strip().upper() not in _STATUS_SEM_ACESSO
+# Semantica do status e' UNICA no dominio (situacao_conta): uma conta bloqueada
+# de um desligado NAO e' irregularidade de acesso — ja esta revogada. Ex.: o SIG
+# traz ~58% das contas como BLOQUEADO.
+from ..objetos_valor.situacao_conta import conta_ativa as _conta_ativa
 
 
 def _norm_cpf(valor: Optional[str]) -> str:
@@ -40,11 +29,13 @@ class RegraAcessoDesligado:
     """Detecta acesso ATIVO de funcionario desligado.
 
     Matching por UNIAO de chaves (mesma filosofia da cascata multi-chave da
-    Fase 1): o acesso e' de um desligado se a MATRICULA vinculada OU o CPF do
-    extrato baterem com um desligado. Casar so por matricula subconta (o passo
-    de vinculo cruza contra ATIVOS, entao o acesso de um desligado costuma ficar
-    sem matricula anexada); o CPF do extrato fecha essa lacuna. Uma linha que
-    bate pelas duas chaves gera UMA divergencia (sem dobra).
+    Fase 1): o acesso e' de um desligado se a MATRICULA vinculada, o CPF do
+    extrato OU o LOGIN baterem com um desligado. Casar so por matricula subconta
+    (o passo de vinculo cruza contra ATIVOS, entao o acesso de um desligado
+    costuma ficar sem matricula anexada); o CPF do extrato fecha parte da lacuna
+    e o LOGIN fecha o resto — e' a unica chave do OU_Desligados do diretorio AD,
+    que nao tem matricula de RH. Uma linha que bate por varias chaves gera UMA
+    divergencia (sem dobra).
     """
 
     def verificar(
@@ -60,6 +51,12 @@ class RegraAcessoDesligado:
             c = _norm_cpf(d.cpf)
             if c and c not in cpf_para_matricula:
                 cpf_para_matricula[c] = d.matricula
+        # LOGIN (minusculo) -> matricula do desligado. Chave do AD.
+        login_para_matricula = {}
+        for d in desligados:
+            lg = (getattr(d, "login", "") or "").strip().lower()
+            if lg and lg not in login_para_matricula:
+                login_para_matricula[lg] = d.matricula
 
         divergencias = []
         for acesso in acessos:
@@ -74,12 +71,18 @@ class RegraAcessoDesligado:
             cpf_acesso = _norm_cpf(acesso.cpf)
             matricula_por_cpf = cpf_para_matricula.get(cpf_acesso) if cpf_acesso else None
 
-            if not casou_matricula and matricula_por_cpf is None:
+            login_acesso = (acesso.usuario or "").strip().lower()
+            matricula_por_login = (login_para_matricula.get(login_acesso)
+                                   if login_acesso else None)
+
+            if not casou_matricula and matricula_por_cpf is None \
+                    and matricula_por_login is None:
                 continue
 
-            # Matricula da divergencia: a vinculada (quando bateu) ou a resolvida
-            # pelo CPF do desligado.
-            matricula = mat_vinc if casou_matricula else matricula_por_cpf
+            # Matricula da divergencia: a vinculada (quando bateu), senao a
+            # resolvida pelo CPF e por fim a do login (AD).
+            matricula = (mat_vinc if casou_matricula
+                         else matricula_por_cpf or matricula_por_login)
             divergencias.append(
                 Divergencia(
                     id=str(uuid.uuid4()),

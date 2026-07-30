@@ -5,6 +5,7 @@ from typing import Dict, List, Set, Tuple
 from loguru import logger
 from sqlalchemy import text
 
+from dominio.objetos_valor import situacao_conta as sit_conta
 from dominio.objetos_valor.sistema import Sistema, sistema_do_texto
 from dominio.objetos_valor.status_validacao import StatusValidacao
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
@@ -29,6 +30,21 @@ def _norm(s: str) -> str:
 # os dois. NAO aplicar ao SYSTUR (perfil = CD_GRUPO_SIGLA, ja bate exato e e'
 # homologado). Solucao temporaria — rever quando o cliente padronizar a matriz.
 _SISTEMAS_PERFIL_APROXIMADO = {Sistema.IC_INTEGRADOR_CONTABIL.value}
+
+# Populacoes que NAO tem matriz de cargo e sao validadas por ESPELHO (cada uma
+# com os SEUS pares): terceiros (base de RH) e as identidades do diretorio AD
+# (franqueado/prestador). Decidido com a usuaria em 24/06 (terceiros) e
+# 29/07/2026 (franqueado/prestador).
+_VINCULOS_ESPELHO = {"TERCEIRO", "FRANQUEADO", "PRESTADOR"}
+
+# Chave do espelho por populacao: (chave cheia, chave ampla de fallback).
+# Terceiro: Empresa + Supervisor (o supervisor vem na coluna `departamento`).
+# Franqueado/Prestador (AD): Empresa + Gestor (o "Manager" do diretorio).
+_CHAVES_ESPELHO = {
+    "TERCEIRO":   (("empresa", "departamento"), ("departamento",)),
+    "FRANQUEADO": (("empresa", "gestor"), ("gestor",)),
+    "PRESTADOR":  (("empresa", "gestor"), ("gestor",)),
+}
 
 
 def _norm_perfil(p: str) -> str:
@@ -55,18 +71,25 @@ class ValidarAcessosSistema:
         self._tot_cargo: Dict[str, int] = {}
         self._tem_cargo_sis: Dict[Tuple[str, str], Set[str]] = {}
         self._inclusao_suprimida = 0
+        # status da conta (preenchidos em _carregar_dados / executar)
+        self._status_indefinido: Set[Tuple[str, str]] = set()
+        self._acessos_revogados = 0
+        self._forcado_analise = 0
+        self._espelho_sem_padrao = 0
 
     def executar(self):
         ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco = self._carregar_dados()
         self._prov_deslig = 0   # contador da regra temporaria de provavel desligamento
         self._inclusao_suprimida = 0
+        self._espelho_sem_padrao = 0
         self._calc_adocao_cargo(ativos, acessos_por_matricula)   # B1
 
         registros: List[Dict] = []
         for func in ativos:
-            # Terceiros NAO usam matriz/CCO nem o espelho do SIG: tem caminho
-            # proprio (_validar_terceiros_espelho), em TODOS os sistemas.
-            if (getattr(func, "tipo_vinculo", "") or "").upper() == "TERCEIRO":
+            # Terceiro/Franqueado/Prestador NAO usam matriz/CCO nem o espelho do
+            # SIG: tem caminho proprio (_validar_espelho_vinculo) em TODOS os
+            # sistemas — nao tem cargo/CC na matriz para casar.
+            if (getattr(func, "tipo_vinculo", "") or "").upper() in _VINCULOS_ESPELHO:
                 continue
             cc = _norm(func.centro_custo_codigo or "")   # normaliza p/ casar com matriz/CCO
             # MATRIZ de perfis casa por (cc, cargo); CCO casa por (cc, GESTOR)
@@ -119,9 +142,22 @@ class ValidarAcessosSistema:
         # SIG: validacao por ESPELHO dinamico (so CLT; terceiros vao no proprio)
         registros.extend(self._validar_sig_espelho(
             ativos, acessos_por_matricula, sistemas_com_dados))
-        # Terceiros: ESPELHO por (Empresa+Supervisor) em TODOS os sistemas
-        registros.extend(self._validar_terceiros_espelho(
-            ativos, acessos_por_matricula, sistemas_com_dados))
+        # Populacoes SEM matriz de cargo (terceiro/franqueado/prestador):
+        # ESPELHO em TODOS os sistemas, cada uma espelhando com os SEUS pares.
+        for _vinculo in sorted(_VINCULOS_ESPELHO):
+            registros.extend(self._validar_espelho_vinculo(
+                ativos, acessos_por_matricula, sistemas_com_dados, _vinculo))
+
+        # STATUS INDEFINIDO (extrato nao diz se a conta esta ativa: vazio ou
+        # 'P'/pendente): NAO se assume ativo — o resultado daquele (matricula,
+        # sistema) vira "Em Analise" para revisao humana. Vale para todos os
+        # caminhos (matriz, CCO, espelho do SIG e espelho de terceiros).
+        self._forcado_analise = 0
+        for r in registros:
+            if r["status"] in (StatusValidacao.OK.value, StatusValidacao.DIVERGENTE.value) \
+                    and (r["matricula"], r["sistema"]) in self._status_indefinido:
+                r["status"] = StatusValidacao.EM_ANALISE.value
+                self._forcado_analise += 1
 
         # PENDENCIAS (acao): so DIVERGENTE e EM_ANALISE. SEM_ACESSO ("esperado")
         # deixou de ser pendencia (retorno Bruna): e' informativo, so na Consulta.
@@ -154,6 +190,18 @@ class ValidarAcessosSistema:
                 f"[regra temporaria] {self._prov_deslig} caso(s) 'foi aderente + 0 "
                 f"acesso' retirado(s) como provavel DESLIGAMENTO (sai na fase de desligados)."
             )
+        if self._acessos_revogados or self._forcado_analise:
+            logger.info(
+                f"[status] {self._acessos_revogados} acesso(s) ignorado(s) por conta "
+                f"BLOQUEADA/INATIVA (ja revogada) e {self._forcado_analise} resultado(s) "
+                f"levado(s) a 'Em Análise' por status INDEFINIDO no extrato."
+            )
+        if self._espelho_sem_padrao:
+            logger.info(
+                f"[espelho] {self._espelho_sem_padrao} acesso(s) de "
+                f"terceiro/franqueado/prestador sem grupo-espelho com padrao — "
+                f"NAO viraram pendencia (sem par comparavel para dizer o esperado)."
+            )
         if self._inclusao_suprimida:
             logger.info(
                 f"[B1] {self._inclusao_suprimida} inclusao(oes) suprimida(s): cargo com "
@@ -180,11 +228,24 @@ class ValidarAcessosSistema:
             except Exception:
                 pass
 
-        # matricula → lista de (sistema_valor, perfil)
+        # matricula → lista de (sistema_valor, perfil). O STATUS da conta manda:
+        # conta BLOQUEADA/INATIVA ja esta revogada, entao NAO e' acesso (regra da
+        # area, 22/07) — antes disso a validacao ignorava o status e tratava uma
+        # conta bloqueada como acesso vivo. Status INDEFINIDO (vazio, 'P') nao
+        # assume ativo: o acesso conta, mas a validacao daquele (matricula,
+        # sistema) sai como "Em Analise" para revisao humana.
         acessos_por_matricula: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
+        self._status_indefinido: Set[Tuple[str, str]] = set()
+        self._acessos_revogados = 0
         for a in acessos_db:
-            if a.matricula_vinculada:
-                acessos_por_matricula[a.matricula_vinculada].append((a.sistema, a.perfil or ""))
+            if not a.matricula_vinculada:
+                continue
+            if sit_conta.sem_acesso_efetivo(a.situacao):
+                self._acessos_revogados += 1
+                continue
+            acessos_por_matricula[a.matricula_vinculada].append((a.sistema, a.perfil or ""))
+            if sit_conta.indefinida(a.situacao):
+                self._status_indefinido.add((a.matricula_vinculada, a.sistema))
 
         # sistemas que têm registros de acesso no banco
         sistemas_com_dados: Set[str] = {a.sistema for a in acessos_db}
@@ -423,9 +484,11 @@ class ValidarAcessosSistema:
         if SIG not in sistemas_com_dados:
             return []
 
-        # SIG espelho e' so para CLT; terceiros vao no _validar_terceiros_espelho.
+        # SIG espelho e' so para CLT; terceiro/franqueado/prestador tem espelho
+        # proprio (_validar_espelho_vinculo), que ja cobre o SIG — sem isso a
+        # mesma pessoa sairia duas vezes no SIG.
         ativos = [f for f in ativos
-                  if (getattr(f, "tipo_vinculo", "") or "").upper() != "TERCEIRO"]
+                  if (getattr(f, "tipo_vinculo", "") or "").upper() not in _VINCULOS_ESPELHO]
 
         # mat -> set(perfis SIG) — so quem tem acesso ao SIG
         perfis_sig: Dict[str, Set[str]] = defaultdict(set)
@@ -501,40 +564,61 @@ class ValidarAcessosSistema:
     # ------------------------------------------------------------------
     _TERC_LIMIAR_ESPELHO = 0.70
 
+    # Grupo do espelho SEM padrao (sem par comparavel, ou os pares nao convergem
+    # em >=LIMIAR): nao da' para afirmar o que era esperado. Medido em 30/07 na
+    # base real: 4.187 dos 4.221 "Em Analise" de FRANQUEADO eram exatamente isso
+    # (franqueado do SYSTUR nao tem par) — ruido que inunda a pendencia. Fica
+    # como INFORMACAO (contador no log), nao como pendencia. Trocar para True
+    # devolve o comportamento antigo.
+    _ESPELHO_SEM_PADRAO_GERA_PENDENCIA = False
+
     def _reg_terc(self, func, sistema: str, perfil_esperado: str,
-                  perfil_atual: str, status: StatusValidacao) -> Dict:
+                  perfil_atual: str, status: StatusValidacao,
+                  origem: str = "ESPELHO_TERC") -> Dict:
         return self._registro_base(func) | {
             "sistema": sistema,
             "perfil_esperado": perfil_esperado,
             "perfil_atual": perfil_atual,
             "acesso_manual": False,
             "status": status.value,
-            "origem_matriz": "ESPELHO_TERC",
+            "origem_matriz": origem,
         }
 
-    def _validar_terceiros_espelho(
+    def _validar_espelho_vinculo(
         self,
         ativos: List["RhAtivo"],
         acessos_por_matricula: Dict[str, List[Tuple[str, str]]],
         sistemas_com_dados: Set[str],
+        vinculo: str,
     ) -> List[Dict]:
-        """Terceiros ATIVOS, espelho por (Empresa+Supervisor) -> fallback
-        (Supervisor), aplicado a CADA sistema. Mesmas 4 saidas do SIG:
-        Aderente / Inclusao(SEM_ACESSO) / Alteracao(DIVERGENTE) / Em Analise
-        (excesso, grupo sem padrao ou sem par)."""
-        terceiros = [
+        """Populacao SEM matriz de cargo (terceiro/franqueado/prestador) validada
+        por ESPELHO, aplicado a CADA sistema: agrupa pelos pares da MESMA
+        populacao (chave cheia -> fallback ampla) e o 'padrao' do grupo sao os
+        perfis presentes em >=LIMIAR dos colegas que USAM o sistema.
+
+        Mesmas 4 saidas do SIG: Aderente / Inclusao(SEM_ACESSO) /
+        Alteracao(DIVERGENTE) / Em Analise (excesso, grupo sem padrao ou sem par).
+        """
+        pop = [
             f for f in ativos
-            if (getattr(f, "tipo_vinculo", "") or "").upper() == "TERCEIRO"
+            if (getattr(f, "tipo_vinculo", "") or "").upper() == vinculo
             and _norm(f.situacao or "") in ("", "ATIVO")
         ]
-        if not terceiros or not sistemas_com_dados:
+        if not pop or not sistemas_com_dados:
             return []
+        terceiros = pop     # nome curto usado no corpo abaixo
+        campos_full, campos_wide = _CHAVES_ESPELHO.get(
+            vinculo, (("empresa", "departamento"), ("departamento",)))
+        origem = "ESPELHO_TERC" if vinculo == "TERCEIRO" else f"ESPELHO_{vinculo}"
+
+        def _campo(f, nome):
+            return _norm(getattr(f, nome, "") or "")
 
         def k_full(f):
-            return (_norm(getattr(f, "empresa", "") or ""), _norm(f.departamento or ""))
+            return tuple(_campo(f, c) for c in campos_full)
 
         def k_wide(f):
-            return (_norm(f.departamento or ""),)   # so o supervisor
+            return tuple(_campo(f, c) for c in campos_wide)
 
         regs: List[Dict] = []
         for sistema in sorted(sistemas_com_dados):
@@ -570,27 +654,35 @@ class ValidarAcessosSistema:
                 elif len(wide[k_wide(f)]) >= 2:
                     grupo = wide[k_wide(f)]
                 else:
+                    # SEM PAR comparavel: nao da' para dizer o que era esperado.
+                    # Isso NAO e' pendencia (retorno da area: nao inflar
+                    # pendencia com ruido) — so conta no log.
                     if usa:
-                        regs.append(self._reg_terc(f, sistema, "", ", ".join(sorted(u)),
-                                                   StatusValidacao.EM_ANALISE))
+                        self._espelho_sem_padrao += 1
+                        if self._ESPELHO_SEM_PADRAO_GERA_PENDENCIA:
+                            regs.append(self._reg_terc(f, sistema, "", ", ".join(sorted(u)),
+                                                       StatusValidacao.EM_ANALISE, origem))
                     continue
                 esp = espelho(grupo)
                 if not esp:
+                    # grupo existe mas nao converge num padrao (>=LIMIAR): idem.
                     if usa:
-                        regs.append(self._reg_terc(f, sistema, "", ", ".join(sorted(u)),
-                                                   StatusValidacao.EM_ANALISE))
+                        self._espelho_sem_padrao += 1
+                        if self._ESPELHO_SEM_PADRAO_GERA_PENDENCIA:
+                            regs.append(self._reg_terc(f, sistema, "", ", ".join(sorted(u)),
+                                                       StatusValidacao.EM_ANALISE, origem))
                     continue
                 esp_str = ", ".join(sorted(esp))
                 if not u:
                     regs.append(self._reg_terc(f, sistema, esp_str, "",
-                                               StatusValidacao.SEM_ACESSO))   # Incluir
+                                               StatusValidacao.SEM_ACESSO, origem))  # Incluir
                 elif u - esp:
                     regs.append(self._reg_terc(f, sistema, esp_str, ", ".join(sorted(u)),
-                                               StatusValidacao.EM_ANALISE))    # Excesso
+                                               StatusValidacao.EM_ANALISE, origem))    # Excesso
                 elif esp - u:
                     regs.append(self._reg_terc(f, sistema, esp_str, ", ".join(sorted(u)),
-                                               StatusValidacao.DIVERGENTE))    # Alterar
+                                               StatusValidacao.DIVERGENTE, origem))    # Alterar
                 else:
                     regs.append(self._reg_terc(f, sistema, esp_str, ", ".join(sorted(u)),
-                                               StatusValidacao.OK))            # Aderente
+                                               StatusValidacao.OK, origem))            # Aderente
         return regs

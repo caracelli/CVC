@@ -50,13 +50,13 @@ class TestDedupCCO(unittest.TestCase):
             _rh("M4", "400", "DIRETOR"),
             PerfilEsperadoModel(cargo_codigo="400", cargo_descricao="DIRETOR", sistema=SYSTUR, perfil="PD"),
             MatrizCcoModel(cc="400", funcao="DIRETOR", sistema="Systur", perfil="PE"),
-            AcessoSistema(sistema=SYSTUR, usuario="m4", perfil="PD", matricula_vinculada="M4"),
+            AcessoSistema(situacao="ATIVO", sistema=SYSTUR, usuario="m4", perfil="PD", matricula_vinculada="M4"),
             # M5 (simetrico): matriz espera PF; CCO espera PG; a pessoa TEM PG
             # (aderente pela CCO). Antes: DIVERGENTE (matriz) + OK (cco). Agora: SO OK.
             _rh("M5", "500", "SUPERVISOR"),
             PerfilEsperadoModel(cargo_codigo="500", cargo_descricao="SUPERVISOR", sistema=SYSTUR, perfil="PF"),
             MatrizCcoModel(cc="500", funcao="SUPERVISOR", sistema="Systur", perfil="PG"),
-            AcessoSistema(sistema=SYSTUR, usuario="m5", perfil="PG", matricula_vinculada="M5"),
+            AcessoSistema(situacao="ATIVO", sistema=SYSTUR, usuario="m5", perfil="PG", matricula_vinculada="M5"),
             # M6: aderencia VENCE o EM_ANALISE da CCO. Matriz espera PH (a pessoa
             # TEM PH); CCO oferece PI e PJ (2 opcoes -> sozinha seria EM_ANALISE).
             # No conjunto unico: tem PH aderente -> SO OK.
@@ -64,14 +64,14 @@ class TestDedupCCO(unittest.TestCase):
             PerfilEsperadoModel(cargo_codigo="600", cargo_descricao="COORD", sistema=SYSTUR, perfil="PH"),
             MatrizCcoModel(cc="600", funcao="COORD", sistema="Systur", perfil="PI"),
             MatrizCcoModel(cc="600", funcao="COORD", sistema="Systur", perfil="PJ"),
-            AcessoSistema(sistema=SYSTUR, usuario="m6", perfil="PH", matricula_vinculada="M6"),
+            AcessoSistema(situacao="ATIVO", sistema=SYSTUR, usuario="m6", perfil="PH", matricula_vinculada="M6"),
             # M7: matriz(PK) + cco(PL,PM) = 3 esperados; a pessoa tem PZ (nenhum
             # aderente) -> EM_ANALISE nos 3, perfil_atual = o que ela tem (PZ).
             _rh("M7", "700", "ASSIST"),
             PerfilEsperadoModel(cargo_codigo="700", cargo_descricao="ASSIST", sistema=SYSTUR, perfil="PK"),
             MatrizCcoModel(cc="700", funcao="ASSIST", sistema="Systur", perfil="PL"),
             MatrizCcoModel(cc="700", funcao="ASSIST", sistema="Systur", perfil="PM"),
-            AcessoSistema(sistema=SYSTUR, usuario="m7", perfil="PZ", matricula_vinculada="M7"),
+            AcessoSistema(situacao="ATIVO", sistema=SYSTUR, usuario="m7", perfil="PZ", matricula_vinculada="M7"),
             # M8: CCO aponta perfis para um sistema SEM dados de acesso (SIGOT,
             # fora de escopo). Tem que virar SEM_DADOS (NAO salvo) — e NAO uma
             # enxurrada de EM_ANALISE falso. Regressao da "explosao de EM_ANALISE".
@@ -79,7 +79,7 @@ class TestDedupCCO(unittest.TestCase):
             MatrizCcoModel(cc="800", funcao="EXTERNO", sistema="Sigot", perfil="PQ"),
             MatrizCcoModel(cc="800", funcao="EXTERNO", sistema="Sigot", perfil="PR"),
             # garante SYSTUR com dados (status SEM_ACESSO, nao SEM_DADOS)
-            AcessoSistema(sistema=SYSTUR, usuario="x", perfil="ZZ", matricula_vinculada="ZZ"),
+            AcessoSistema(situacao="ATIVO", sistema=SYSTUR, usuario="x", perfil="ZZ", matricula_vinculada="ZZ"),
         ])
         s.commit()
         s.close()

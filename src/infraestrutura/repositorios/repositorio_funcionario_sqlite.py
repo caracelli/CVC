@@ -59,6 +59,7 @@ class RepositorioFuncionarioSqlite(IRepositorioFuncionario):
                     data_admissao=f.data_admissao,
                     data_desligamento=f.data_desligamento,
                     email=f.email,
+                    login=getattr(f, "login", None),
                     arquivo_origem=arquivo_origem,
                     dt_importacao=datetime.now(),
                 ))
@@ -112,4 +113,5 @@ class RepositorioFuncionarioSqlite(IRepositorioFuncionario):
             email=r.email,
             data_admissao=r.data_admissao,
             data_desligamento=r.data_desligamento,
+            login=getattr(r, "login", None),
         )

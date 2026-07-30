@@ -46,9 +46,12 @@ class TestRoteamentoPopulacao(unittest.TestCase):
     def test_prestador(self):
         self.assertEqual(_populacao("OU_Prest_Bruna.csv"), "PRESTADOR")
 
-    def test_desligados_fora_de_escopo(self):
-        # decisao B2 pendente com a area: nao entra como identidade ATIVA
-        self.assertIsNone(_populacao("OU_Desligados_Bruna.csv"))
+    def test_desligados_alimenta_o_motor_de_desligados(self):
+        # B2 respondido pela usuaria (29/07): SIM. O OU_Desligados NAO vira
+        # identidade ativa — vai para rh_desligados (chave = login).
+        self.assertEqual(_populacao("OU_Desligados_Bruna.csv"), "DESLIGADOS")
+        self.assertNotIn(_populacao("OU_Desligados_Bruna.csv"),
+                         ("FRANQUEADO", "PRESTADOR"))
 
     def test_arquivo_desconhecido_nao_importa(self):
         self.assertIsNone(_populacao("qualquer_outra_coisa.csv"))
