@@ -404,6 +404,15 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   line-height:0;display:inline-flex;align-items:center;justify-content:center;
   border-radius:6px;transition:background .14s,color .14s,transform .14s;
 }
+/* Ações POR SISTEMA na sub-linha da Pendências — rotuladas (o ícone sozinho
+   passava batido no teste do cliente: "não encontrei"). */
+.sub-acao{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:9px;
+  font:700 9.5px Arial;letter-spacing:.02em;color:#2D6CDF;background:#F2F7FF;
+  border:1px solid #C7D6F5;cursor:pointer;user-select:none;white-space:nowrap;
+  vertical-align:1px;}
+.sub-acao:hover{background:#E1EBFF;border-color:#9FBAF0;}
+.sub-acao.sa-quar{color:#1F2D5C;background:#F5F6FA;border-color:#D8DDEA;}
+.sub-acao.sa-quar:hover{background:#E9EEF9;border-color:#BCC6DC;}
 .qbtn:hover{background:#E9EEF9;color:#0A1F52;transform:scale(1.16);}
 .qbtn:active{transform:scale(1);}
 .qbtn svg{display:block;}
@@ -2009,6 +2018,18 @@ function filtroTodos(fid, btn){
   aplicarFiltro();
 }
 
+/* Pessoas da aba Pendências com os divs JÁ reduzidos ao que a grid mostra
+   (fora Aderente/Incluir Acesso + filtros laterais). FONTE ÚNICA: a grid
+   (renderMatrix) e o funil de coluna (_pendMenu) leem daqui, senão o funil
+   oferece valores de acessos que não estão na tela (era a causa do "—" e de
+   "Aderente" continuarem no filtro depois da regra "sem acesso"). */
+function _usersPendBase(){
+  return DB.users
+    .map(u => ({...u, divs: u.divs.filter(d =>
+        d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && divPassa(d))}))
+    .filter(u => u.divs.length > 0);
+}
+
 function divPassa(d){
   // Aderente e Incluir Acesso (SEM_ACESSO) NÃO são pendências: não aparecem na
   // aba Pendências nem são filtráveis por Ação/Status/Tipo; na Consulta devem
@@ -2253,7 +2274,10 @@ function _gxMenu(tableId,c,th){
     '<label class="gx-v gx-todos"><input type="checkbox" checked> (Todos)</label>'+
     '<div class="gx-vals">'+lista.map((v,i)=>
       '<label class="gx-v"><input type="checkbox" value="'+i+'" '+
-      ((!sel||sel.has(v))?'checked':'')+'> '+(esc(v)||'(vazio)')+'</label>').join('')+
+      ((!sel||sel.has(v))?'checked':'')+'> '
+      // "—" na célula = campo sem valor (ex.: órfão sem perfil). No filtro o
+      // traço confunde ("por que aparece '-'?"), então rotula como (vazio).
+      +((v==='—'||v==='')?'<i style="color:#6B7280;">(vazio)</i>':esc(v))+'</label>').join('')+
     '</div><div class="gx-acoes"><button class="gx-ok">Aplicar</button>'+
     '<button class="gx-limpar">Limpar</button></div>';
   document.body.appendChild(m);
@@ -2421,7 +2445,9 @@ function _pendMenu(c,th){
   // Coluna 0 (Data) tem popover proprio (atalhos + range)
   if (c === 0) { _pendMenuData(th); return; }
   _gxFechar();
-  const base=DB.users.filter(u=>u.divs.some(divPassa));
+  // Mesma base da grid: divs reduzidos ao que está na tela (senão o funil lista
+  // "Aderente"/"Sem Acesso"/sistema de um acesso que não é a pendência).
+  const base=_usersPendBase();
   const sv=new Set(); base.forEach(u=>sv.add(_pendDisp(c,u)));
   const lista=[...sv].sort(_gxCmp), sel=_filtPend[c];
   const m=document.createElement('div'); m.className='gx-menu'; m.id='gx-menu';
@@ -2430,7 +2456,10 @@ function _pendMenu(c,th){
     '<label class="gx-v gx-todos"><input type="checkbox" checked> (Todos)</label>'+
     '<div class="gx-vals">'+lista.map((v,i)=>
       '<label class="gx-v"><input type="checkbox" value="'+i+'" '+
-      ((!sel||sel.has(v))?'checked':'')+'> '+(esc(v)||'(vazio)')+'</label>').join('')+
+      ((!sel||sel.has(v))?'checked':'')+'> '
+      // "—" na célula = campo sem valor (ex.: órfão sem perfil). No filtro o
+      // traço confunde ("por que aparece '-'?"), então rotula como (vazio).
+      +((v==='—'||v==='')?'<i style="color:#6B7280;">(vazio)</i>':esc(v))+'</label>').join('')+
     '</div><div class="gx-acoes"><button class="gx-ok">Aplicar</button>'+
     '<button class="gx-limpar">Limpar</button></div>';
   document.body.appendChild(m);
@@ -2487,10 +2516,7 @@ function renderMatrix(){
   // Filtra os divs EXIBIDOS por divPassa (que respeita o filtro de Sistema): ao
   // filtrar por um sistema, a linha mostra SÓ aquele sistema (retorno Bruna —
   // "filtro por sistema deve isolar o sistema, não mostrar todos").
-  _usersFiltrados = DB.users
-    .map(u => ({...u, divs: u.divs.filter(d =>
-        d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && divPassa(d))}))
-    .filter(u => u.divs.length > 0);
+  _usersFiltrados = _usersPendBase();
   const fp = Object.entries(_filtPend);
   if(fp.length) _usersFiltrados = _usersFiltrados.filter(u =>
     fp.every(([c,set]) => set.has(_pendDisp(+c,u))));
@@ -3813,16 +3839,13 @@ function fecharModal(){
    tratar por sistema, não a pessoa inteira. Só aparece em pendência aberta. */
 function _btnResSis(u, d){
   if(d.s !== 'Pendente' || !d.sis) return '';
-  return `<button class="btn-res ico-res" title="Resolver só o sistema ${esc(d.sis)}" `
-    + `onclick="abrirResolver('${esc(u.u)}','${esc(d.sis)}')" style="margin-left:5px;">`
-    + `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" `
-    + `stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">`
-    + `<circle cx="12" cy="12" r="9"/><path d="M8.4 12.3l2.5 2.5 4.7-5.3"/></svg></button>`
-    + `<button class="qbtn" title="Quarentena só o sistema ${esc(d.sis)}" `
-    + `onclick="quarentenar('${esc(u.u)}','${esc(d.sis)}')" style="margin-left:3px;width:20px;height:20px;">`
-    + `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" `
-    + `stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">`
-    + `<path d="M12 19V7"/><path d="M6 13l6-6 6 6"/><path d="M5 21h14"/></svg></button>`;
+  // Ícone sozinho passava batido ("não encontrei" no teste da usuária): as ações
+  // por sistema saem ROTULADAS, com o nome do sistema no tooltip.
+  const sis = esc(d.sis);
+  return ` <span class="sub-acao" title="Resolver só o sistema ${sis} (abre ticket)" `
+    + `onclick="abrirResolver('${esc(u.u)}','${sis}')">✓ tratar ${sis}</span>`
+    + ` <span class="sub-acao sa-quar" title="Enviar só o sistema ${sis} para a quarentena" `
+    + `onclick="quarentenar('${esc(u.u)}','${sis}')">⇧ quarentena</span>`;
 }
 let _resSistema = '';   // sistema alvo da resolução ('' = pessoa inteira)
 function abrirResolver(uid, sistema){
@@ -4334,6 +4357,35 @@ async function confirmarRetirada(){
    em vários sistemas; o SIG é matricial e traz várias linhas).
    Fonte: /api/desligados, que lê a SAÍDA do motor (divergências
    ACESSO_DESLIGADO) — a aba não recalcula a regra de desligados. */
+/* Agrupa os acessos por SISTEMA e colapsa os perfis (retorno Bruna: "abrir por
+   sistema" nas abas Desligados/Transferidos — não uma lista corrida de 122). */
+let _grpSeq = 0;
+function _grpToggle(id, el){
+  const b = document.getElementById(id); if(!b) return;
+  const open = b.style.display !== 'none';
+  b.style.display = open ? 'none' : '';
+  el.textContent = open ? el.dataset.lbl : '▾ recolher';
+}
+function _perfisCel(perfis){
+  perfis = (perfis || []).filter(Boolean);
+  if(!perfis.length) return '—';
+  if(perfis.length <= 4) return perfis.map(esc).join(', ');
+  const id = 'grp' + (++_grpSeq);
+  return `<span>${perfis.slice(0,3).map(esc).join(', ')}`
+    + `<span id="${id}" style="display:none">, ${perfis.slice(3).map(esc).join(', ')}</span> `
+    + `<span class="cs-acc-toggle" data-lbl="▸ +${perfis.length-3} perfis" `
+    + `onclick="_grpToggle('${id}',this)">▸ +${perfis.length-3} perfis</span></span>`;
+}
+function _acessosPorSistema(acessos){
+  const porSis = {};
+  (acessos||[]).forEach(a => { const s = a.sis || '—'; (porSis[s] = porSis[s] || []).push(a); });
+  return Object.entries(porSis).map(([sis, lista]) => ({
+    sis, lista,
+    login: (lista.find(x => x.login) || {}).login || '',
+    perfis: lista.map(x => x.perfil).filter(Boolean),
+    dt: (lista.find(x => x.dt) || {}).dt || '',
+  }));
+}
 let _deslRecs = [], _deslView = 'tratar', _deslPag = 1, _deslPP = 50;
 const _deslExp = new Set();   // matrículas com os acessos abertos
 
@@ -4429,14 +4481,18 @@ function pintarDesligados(){
       <td>${esc(d.cc)||'—'}</td><td>${fmtDate(d.dt_deslig)}</td>
       <td>${cel}</td><td>${sit}</td></tr>`;
     if(aberto){
-      acessos.forEach(a => {
+      _acessosPorSistema(acessos).forEach(g => {
+        const res = g.lista.filter(x => x.resolvida).length;
+        const selo = !res ? ''
+          : `<span class="badge b-resolvida">Resolvido${res < g.lista.length ? ` (${res}/${g.lista.length})` : ''}</span>`;
         h += `<tr class="sub">
           <td></td><td></td>
-          <td colspan="2">${a.sis?`<span class="h-sis">${esc(a.sis)}</span>`:'—'}
-              ${a.login?`<small style="color:#4B5563;"> login: ${esc(a.login)}</small>`:''}</td>
-          <td colspan="2">${esc(a.perfil)||'—'}</td>
-          <td>${fmtDate(a.dt)}</td>
-          <td>${a.resolvida?`<span class="badge b-resolvida">Resolvido</span>`:''}</td>
+          <td colspan="2"><span class="h-sis">${esc(g.sis)}</span>
+              ${g.lista.length > 1 ? `<small style="color:#6B7280;"> ${g.lista.length} acessos</small>` : ''}
+              ${g.login?`<small style="color:#4B5563;"> login: ${esc(g.login)}</small>`:''}</td>
+          <td colspan="2">${_perfisCel(g.perfis)}</td>
+          <td>${fmtDate(g.dt)}</td>
+          <td>${selo}</td>
         </tr>`;
       });
     }
@@ -4454,8 +4510,9 @@ function pintarDesligados(){
     + `<button class="pg-btn" ${_deslPag>=totPag?'disabled':''} onclick="deslIr(${totPag})">»</button>`;
 }
 
-/* Export espelha a grid: pessoa no nível 0, acessos no nível 1 (+/−), e a
-   Situação com a mesma semântica de cor da tela. */
+/* Export espelha a grid: pessoa no nível 0, SISTEMA no nível 1 e cada perfil no
+   nível 2 (+/− do Excel = o "+N perfis" da tela), e a Situação com a mesma
+   semântica de cor. */
 function exportarDesligados(){
   const cols = ['Matrícula','Nome','Cargo','Departamento','Centro de Custo',
                 'Desligamento','Sistema','Login','Perfil','Identificado em',
@@ -4468,10 +4525,19 @@ function exportarDesligados(){
     linhas.push([d.m, d.n, d.cargo, d.depto, d.cc, fmtDate(d.dt_deslig),
                  '', '', '', '', situacao, t.ticket || '', t.motivo || '']);
     niveis.push(0);
-    (d.acessos||[]).forEach(a => {
-      linhas.push(['', '', '', '', '', '', a.sis, a.login, a.perfil,
-                   fmtDate(a.dt), a.resolvida ? 'Resolvido' : '', '', '']);
+    _acessosPorSistema(d.acessos).forEach(g => {
+      const res = g.lista.filter(x => x.resolvida).length;
+      const selo = !res ? ''
+        : (res < g.lista.length ? `Resolvido (${res}/${g.lista.length})` : 'Resolvido');
+      linhas.push(['', '', '', '', '', '', g.sis, g.login,
+                   g.perfis.length > 1 ? g.perfis.length + ' perfis' : (g.perfis[0] || ''),
+                   fmtDate(g.dt), selo, '', '']);
       niveis.push(1);
+      if(g.lista.length > 1) g.lista.forEach(a => {
+        linhas.push(['', '', '', '', '', '', '', a.login, a.perfil,
+                     fmtDate(a.dt), a.resolvida ? 'Resolvido' : '', '', '']);
+        niveis.push(2);
+      });
     });
   });
   // col 10 (0-based) = Situação
@@ -4661,13 +4727,14 @@ function pintarTransferidos(){
       <td>${esc(d.cc)||'—'}</td><td>${esc(d.gestor)||'—'}</td><td>${campos}</td>
       <td>${cel}</td><td>${sit}</td></tr>`;
     if(aberto){
-      acessos.forEach(a => {
+      _acessosPorSistema(acessos).forEach(g => {
         h += `<tr class="sub">
           <td></td><td></td>
-          <td colspan="2">${a.sis?`<span class="h-sis">${esc(a.sis)}</span>`:'—'}
-              ${a.login?`<small style="color:#4B5563;"> login: ${esc(a.login)}</small>`:''}</td>
-          <td colspan="3">${esc(a.perfil)||'—'}</td>
-          <td colspan="2">${fmtDate(a.dt)}</td>
+          <td colspan="2"><span class="h-sis">${esc(g.sis)}</span>
+              ${g.lista.length > 1 ? `<small style="color:#6B7280;"> ${g.lista.length} acessos</small>` : ''}
+              ${g.login?`<small style="color:#4B5563;"> login: ${esc(g.login)}</small>`:''}</td>
+          <td colspan="3">${_perfisCel(g.perfis)}</td>
+          <td colspan="2">${fmtDate(g.dt)}</td>
         </tr>`;
       });
     }
@@ -4694,9 +4761,15 @@ function exportarTransferidos(){
     linhas.push([d.m, d.n, d.cargo, d.cc, d.gestor, d.campos, '', '', '', '',
                  d.tratado ? 'Tratado' : 'Revisar', t.ticket||'', t.motivo||'']);
     niveis.push(0);
-    (d.acessos||[]).forEach(a => {
-      linhas.push(['','','','','','', a.sis, a.login, a.perfil, fmtDate(a.dt), '', '', '']);
+    _acessosPorSistema(d.acessos).forEach(g => {
+      linhas.push(['','','','','','', g.sis, g.login,
+                   g.perfis.length > 1 ? g.perfis.length + ' perfis' : (g.perfis[0] || ''),
+                   fmtDate(g.dt), '', '', '']);
       niveis.push(1);
+      if(g.lista.length > 1) g.lista.forEach(a => {
+        linhas.push(['','','','','','', '', a.login, a.perfil, fmtDate(a.dt), '', '', '']);
+        niveis.push(2);
+      });
     });
   });
   const formatos = [{col:10, regras:[
@@ -5119,7 +5192,10 @@ function _histMenu(c,th){
     '<label class="gx-v gx-todos"><input type="checkbox" checked> (Todos)</label>'+
     '<div class="gx-vals">'+lista.map((v,i)=>
       '<label class="gx-v"><input type="checkbox" value="'+i+'" '+
-      ((!sel||sel.has(v))?'checked':'')+'> '+(esc(v)||'(vazio)')+'</label>').join('')+
+      ((!sel||sel.has(v))?'checked':'')+'> '
+      // "—" na célula = campo sem valor (ex.: órfão sem perfil). No filtro o
+      // traço confunde ("por que aparece '-'?"), então rotula como (vazio).
+      +((v==='—'||v==='')?'<i style="color:#6B7280;">(vazio)</i>':esc(v))+'</label>').join('')+
     '</div><div class="gx-acoes"><button class="gx-ok">Aplicar</button>'+
     '<button class="gx-limpar">Limpar</button></div>';
   document.body.appendChild(m);

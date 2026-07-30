@@ -838,12 +838,11 @@ def gerar_xlsx(colunas, linhas, niveis=None, formatos=None):
     for ri, linha in enumerate(linhas, start=1):
         nv = niveis[ri - 1] if niveis and ri - 1 < len(niveis) else 0
         prox = niveis[ri] if niveis and ri < len(niveis) else 0
-        if nv:
-            ol = ' outlineLevel="1" hidden="1"'   # detalhe: recolhido por padrao
-        elif prox:
-            ol = ' collapsed="1"'                  # linha-pai de um grupo recolhido
-        else:
-            ol = ""
+        # Outline de profundidade livre (pessoa 0 > sistema 1 > perfil 2...): o
+        # nivel vira outlineLevel e toda linha que abre um grupo sai recolhida.
+        ol = f' outlineLevel="{nv}" hidden="1"' if nv else ""
+        if prox > nv:
+            ol += ' collapsed="1"'                 # linha-pai de um grupo recolhido
         rows_xml.append(f'<row r="{ri + 1}"{ol}>' +
                         "".join(cel(ci, ri, v) for ci, v in enumerate(linha)) +
                         '</row>')
@@ -883,8 +882,10 @@ def gerar_xlsx(colunas, linhas, niveis=None, formatos=None):
     dxfs_xml = f'<dxfs count="{len(dxfs)}">' + "".join(dxfs) + '</dxfs>'
 
     agrupado = bool(niveis) and any(niveis)
+    prof = max(niveis) if agrupado else 0
     sheet_pr = '<sheetPr><outlinePr summaryBelow="0"/></sheetPr>' if agrupado else ''
-    fmt_pr = '<sheetFormatPr defaultRowHeight="15" outlineLevelRow="1"/>' if agrupado else ''
+    fmt_pr = (f'<sheetFormatPr defaultRowHeight="15" outlineLevelRow="{prof}"/>'
+              if agrupado else '')
     sheet = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
