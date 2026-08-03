@@ -268,6 +268,43 @@ class CicloEventosAcessoModel(Base):
     dt_registro = Column(DateTime, default=datetime.now)
 
 
+class TransferidoModel(Base):
+    """O "de -> para" de quem MUDOU de cargo/CC/departamento/gestor (Card 22).
+
+    Por que existe: o detector (DetectarTransferidos) ja calculava o estado
+    ANTERIOR da pessoa a partir do CDC, mas so o ROTULO dos campos sobrevivia,
+    dentro da descricao da divergencia ("Mudanca de gestor — ..."). Quem revisa
+    o acesso via o valor ATUAL e o nome do campo, nunca DE ONDE a pessoa veio —
+    que e' justamente o que diz se o acesso antigo ainda faz sentido. Sem isso,
+    uma transferencia de time inteiro (varias pessoas do mesmo gestor para o
+    mesmo gestor) ficava invisivel.
+
+    Uma linha por PESSOA (nao por acesso — a KARINE tem 132 acessos e um unico
+    movimento). Snapshot: reescrito a cada analise, como `divergencias`."""
+    __tablename__ = "transferidos"
+
+    matricula = Column(String, primary_key=True)
+    nome = Column(String)
+    campos_mudados = Column(String)        # "cargo, gestor" — o rotulo legivel
+    data_transferencia = Column(String)    # ISO date do snapshot que acusou
+
+    cargo_codigo_anterior = Column(String)
+    cargo_anterior = Column(String)
+    departamento_anterior = Column(String)
+    centro_custo_anterior = Column(String)
+    gestor_anterior = Column(String)
+
+    # estado ATUAL congelado junto: a aba nao depende de um JOIN com rh_ativos
+    # (que muda na proxima carga) para mostrar o par de/para daquele movimento.
+    cargo_codigo_atual = Column(String)
+    cargo_atual = Column(String)
+    departamento_atual = Column(String)
+    centro_custo_atual = Column(String)
+    gestor_atual = Column(String)
+
+    dt_importacao = Column(DateTime, default=datetime.now)
+
+
 class DivergenciaModel(Base):
     __tablename__ = "divergencias"
 

@@ -2493,6 +2493,49 @@ import re as _re_transf
 _RE_CAMPOS = _re_transf.compile(r"Mudança de (.+?) —")
 
 
+def _transferidos_depara(c, matriculas):
+    """Le a tabela `transferidos` (de/para do movimento) para as matriculas dadas.
+
+    Devolve {matricula: {"campos": str, "dt": str, "pares": [{"campo","de","para"}]}}.
+    So entram os campos que REALMENTE mudaram — o motor congela o par inteiro, mas
+    mostrar "cargo: X -> X" seria ruido. Banco sem a tabela (Processador anterior
+    a esta versao) devolve {} e a aba segue funcionando sem o par."""
+    if not matriculas:
+        return {}
+    try:
+        tem = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                        "AND name='transferidos'").fetchone()
+        if not tem:
+            return {}
+    except Exception:
+        return {}
+    campos = (("cargo", "cargo_anterior", "cargo_atual"),
+              ("departamento", "departamento_anterior", "departamento_atual"),
+              ("centro de custo", "centro_custo_anterior", "centro_custo_atual"),
+              ("gestor", "gestor_anterior", "gestor_atual"))
+    out = {}
+    try:
+        qm = ",".join("?" * len(matriculas))
+        for r in c.execute(
+                "SELECT matricula, campos_mudados, data_transferencia, "
+                "cargo_anterior, cargo_atual, departamento_anterior, departamento_atual, "
+                "centro_custo_anterior, centro_custo_atual, gestor_anterior, gestor_atual "
+                f"FROM transferidos WHERE matricula IN ({qm})", list(matriculas)):
+            pares = []
+            for rotulo, col_ant, col_atu in campos:
+                de, para = (r[col_ant] or ""), (r[col_atu] or "")
+                if de != para:
+                    pares.append({"campo": rotulo, "de": de, "para": para})
+            out[r["matricula"]] = {
+                "campos": r["campos_mudados"] or "",
+                "dt": r["data_transferencia"] or "",
+                "pares": pares,
+            }
+    except Exception as e:
+        print(f"  [transf] de/para indisponivel: {e!r}")
+    return out
+
+
 def listar_transferidos():
     """Aba Transferidos: pessoas que MUDARAM cargo/CC/departamento/gestor (detectado
     do historico do RH) e cujos acessos precisam de REVISÃO. Fonte = saida do motor
@@ -2538,8 +2581,13 @@ def listar_transferidos():
                     rh[r["matricula"]] = r
             except Exception:
                 pass
+        # de -> para do movimento (tabela `transferidos`, gravada pelo motor).
+        # Banco de Processador antigo nao tem a tabela: o painel so nao mostra o
+        # par, o resto da aba segue igual.
+        depara = _transferidos_depara(c, list(por_mat))
         for mat, acessos in por_mat.items():
             info = rh.get(mat)
+            dp = depara.get(mat) or {}
             out.append({
                 "m": mat,
                 "n": (info["nome"] if info else "") or (acessos[0].get("login") or ""),
@@ -2547,7 +2595,9 @@ def listar_transferidos():
                 "depto": (info["departamento"] if info else "") or "",
                 "cc": (info["cc"] if info else "") or "",
                 "gestor": (info["gestor"] if info else "") or "",
-                "campos": campos_por_mat.get(mat, ""),
+                "campos": campos_por_mat.get(mat, "") or dp.get("campos", ""),
+                "de_para": dp.get("pares", []),
+                "dt_mov": dp.get("dt", ""),
                 "acessos": acessos,
                 "sit": "Revisar",
             })

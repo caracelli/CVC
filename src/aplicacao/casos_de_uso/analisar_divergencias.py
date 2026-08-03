@@ -7,6 +7,7 @@ from infraestrutura.repositorios.repositorio_acesso_sqlite import RepositorioAce
 from infraestrutura.repositorios.repositorio_divergencia_sqlite import RepositorioDivergenciaSqlite
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
 from infraestrutura.repositorios.repositorio_matriz_sqlite import RepositorioMatrizSqlite
+from infraestrutura.repositorios.repositorio_transferido_sqlite import RepositorioTransferidoSqlite
 
 
 class AnalisarDivergencias:
@@ -16,6 +17,7 @@ class AnalisarDivergencias:
         self._repo_acesso = RepositorioAcessoSqlite(conexao)
         self._repo_matriz = RepositorioMatrizSqlite(conexao)
         self._repo_div = RepositorioDivergenciaSqlite(conexao)
+        self._repo_transf = RepositorioTransferidoSqlite(conexao)
         self._detectar_transferidos = DetectarTransferidos(conexao)
 
     def executar(self) -> int:
@@ -27,6 +29,10 @@ class AnalisarDivergencias:
         acessos = self._repo_acesso.obter_todos()
         # Transferidos: inferidos do historico do RH (mudanca cargo/CC/dep/gestor).
         transferidos = self._detectar_transferidos.executar()
+        # Persiste o de/para ANTES de analisar: quem mudou mas NAO tem acesso
+        # nenhum nao gera divergencia, e sumiria do painel se dependessemos so
+        # da saida da regra. A tabela guarda o movimento; a regra guarda o acesso.
+        self._repo_transf.salvar_lote(transferidos)
 
         servico = ServicoAnaliseDivergencias(perfis_esperados)
         divergencias = servico.analisar(

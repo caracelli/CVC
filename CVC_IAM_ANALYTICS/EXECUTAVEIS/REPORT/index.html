@@ -440,6 +440,17 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .badge-exp{cursor:pointer;user-select:none;transition:filter .12s;}
 .badge-exp:hover{filter:brightness(.94);}
 
+/* "de -> para" do movimento (aba Transferidos): o par vem ANTES dos acessos,
+   porque e' ele que diz se o acesso antigo ainda faz sentido */
+.mov-tit{display:inline-block;font:700 9.5px Arial;letter-spacing:.4px;
+  text-transform:uppercase;color:#5C2D91;margin-right:10px;}
+.mov-par{display:inline-flex;align-items:center;gap:6px;margin:0 12px 3px 0;
+  font-size:11px;white-space:nowrap;}
+.mov-par b{color:#5C2D91;font-weight:700;}
+.mov-de{color:#8A94A6;text-decoration:line-through;}
+.mov-seta{color:#5C2D91;font-weight:700;}
+.mov-para{color:#1F2D5C;font-weight:600;}
+
 /* ── Gráficos ───────────────────────────────────────────────────────── */
 .chart-row{flex:1;min-height:0;display:flex;gap:13px;}
 .chart-panel{
@@ -4775,14 +4786,31 @@ function pintarTransferidos(){
         + `stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">`
         + `<circle cx="12" cy="12" r="9"/><path d="M8.4 12.3l2.5 2.5 4.7-5.3"/></svg></button>`;
     }
+    // "de → para" do movimento (tabela `transferidos`). No chip vai o resumo;
+    // a linha detalhada abre junto com os acessos, porque é ela que diz se o
+    // acesso antigo ainda faz sentido.
+    const pares = d.de_para || [];
+    const dica = pares.length
+      ? pares.map(p => `${p.campo}: ${p.de||'(vazio)'} → ${p.para||'(vazio)'}`).join('\n')
+      : 'Campos que mudaram no RH';
     const campos = d.campos
-      ? `<span class="h-reab" title="Campos que mudaram no RH" style="background:#5C2D91;">${esc(d.campos)}</span>` : '—';
+      ? `<span class="h-reab" title="${esc(dica)}" style="background:#5C2D91;">${esc(d.campos)}</span>` : '—';
     h += `<tr>
       <td>${acessos.length ? `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="transfToggle(this)">${aberto?'−':'+'}</span>` : ''}</td>
       <td>${esc(d.m)}</td><td>${esc(d.n)||'—'}</td><td>${esc(d.cargo)||'—'}</td>
       <td>${esc(d.cc)||'—'}</td><td>${esc(d.gestor)||'—'}</td><td>${campos}</td>
       <td>${cel}</td><td>${sit}</td></tr>`;
     if(aberto){
+      if(pares.length){
+        h += `<tr class="sub">
+          <td></td><td></td>
+          <td colspan="7"><span class="mov-tit">movimentação${d.dt_mov?' em '+fmtDate(d.dt_mov):''}</span>`
+          + pares.map(p => `<span class="mov-par"><b>${esc(p.campo)}</b>`
+              + `<span class="mov-de">${esc(p.de)||'(vazio)'}</span>`
+              + `<span class="mov-seta">→</span>`
+              + `<span class="mov-para">${esc(p.para)||'(vazio)'}</span></span>`).join('')
+          + `</td></tr>`;
+      }
       _acessosPorSistema(acessos).forEach(g => {
         h += `<tr class="sub">
           <td></td><td></td>
@@ -4809,21 +4837,30 @@ function pintarTransferidos(){
 }
 
 function exportarTransferidos(){
+  // 'De'/'Para' entram no FIM (append não desloca índice: o formato condicional
+  // da Situação continua na coluna 10).
   const cols = ['Matrícula','Nome','Cargo','Centro de Custo','Gestor','Mudança',
-                'Sistema','Login','Perfil','Identificado em','Situação','Ticket','Motivo'];
+                'Sistema','Login','Perfil','Identificado em','Situação','Ticket','Motivo',
+                'De','Para'];
   const linhas = [], niveis = [];
   _transfFiltrados().forEach(d => {
     const t = d.tratamento || {};
     linhas.push([d.m, d.n, d.cargo, d.cc, d.gestor, d.campos, '', '', '', '',
-                 d.tratado ? 'Tratado' : 'Revisar', t.ticket||'', t.motivo||'']);
+                 d.tratado ? 'Tratado' : 'Revisar', t.ticket||'', t.motivo||'', '', '']);
     niveis.push(0);
+    // o movimento vem ANTES dos acessos, uma linha por campo que mudou
+    (d.de_para || []).forEach(p => {
+      linhas.push(['','','','','', p.campo, '', '', '', d.dt_mov ? fmtDate(d.dt_mov) : '',
+                   '', '', '', p.de, p.para]);
+      niveis.push(1);
+    });
     _acessosPorSistema(d.acessos).forEach(g => {
       linhas.push(['','','','','','', g.sis, g.login,
                    g.perfis.length > 1 ? g.perfis.length + ' perfis' : (g.perfis[0] || ''),
-                   fmtDate(g.dt), '', '', '']);
+                   fmtDate(g.dt), '', '', '', '', '']);
       niveis.push(1);
       if(g.lista.length > 1) g.lista.forEach(a => {
-        linhas.push(['','','','','','', '', a.login, a.perfil, fmtDate(a.dt), '', '', '']);
+        linhas.push(['','','','','','', '', a.login, a.perfil, fmtDate(a.dt), '', '', '', '', '']);
         niveis.push(2);
       });
     });
