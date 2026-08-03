@@ -435,6 +435,10 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .b-pendente    {background:#FDE7E9;color:#A4262C;}
 .b-resolvida   {background:#DFF6DD;color:#107C10;}
 .b-ok          {background:#D5F5E3;color:#0E6B47;}
+/* selo que TAMBEM abre/fecha o grupo (mesmo alvo da celula de sistemas) —
+   preserva a cor do badge, so acrescenta o affordance de clique */
+.badge-exp{cursor:pointer;user-select:none;transition:filter .12s;}
+.badge-exp:hover{filter:brightness(.94);}
 
 /* ── Gráficos ───────────────────────────────────────────────────────── */
 .chart-row{flex:1;min-height:0;display:flex;gap:13px;}
@@ -1656,7 +1660,7 @@ function renderConformidade(){
       <td><strong>${esc(g.m)}</strong></td><td>${esc(g.n)}</td><td>—</td>
       <td><span class="h-sis h-sisclick" data-ck="${esc(g.k)}" onclick="confSisToggle(this)" title="Clique para abrir/fechar os sistemas em que aderiu">${g.itens.length} sistemas ${open?'▾':'▸'}</span></td>
       <td>—</td><td>—</td><td>—</td>
-      <td><span class="badge b-ok">${g.itens.length} aderências</span></td>
+      <td><span class="badge b-ok badge-exp" data-ck="${esc(g.k)}" onclick="confSisToggle(this)" title="Clique para ${open?'recolher':'abrir'} as ${g.itens.length} aderências">${g.itens.length} aderências ${open?'▾':'▸'}</span></td>
       <td>—</td><td>—</td><td>${esc(g.vinc)||'—'}</td><td>${esc(g.gestor)||'—'}</td>
     </tr>`;
     g.itens.forEach(a=>{
