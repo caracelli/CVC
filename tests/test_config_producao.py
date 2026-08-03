@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """Regressao das DECISOES da entrega gravadas no config.xml de producao.
 
-Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.3.1,
-entrega multi-sistema ate Oracle EBS (SYSTUR+IC+SICA_RA+SIGOT+ORACLE_EBS ativos;
-SICA_ESFERA/SIG/OPERA inativos), desligados/terceiros fora de escopo, painel
-multi-sistema (visualizador/sistema vazio). Se alguem mexer nesses flags sem
-querer, este teste acende.
+Pina o estado do CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml: versao 1.0.0,
+os 7 sistemas da Fase 1 ativos (OPERA fora de escopo), terceiros e desligados EM
+escopo, painel multi-sistema (visualizador/sistema vazio). Se alguem mexer nesses
+flags sem querer, este teste acende.
 """
 import sys
 import unittest
@@ -25,8 +24,11 @@ class TestConfigProducao(unittest.TestCase):
     def setUpClass(cls):
         cls.cfg = LeitorConfig(str(CONFIG)).carregar()
 
-    def test_versao_1_3_1(self):
-        self.assertEqual(self.cfg.versao, "1.3.1")
+    def test_versao_1_0_0(self):
+        # RESET da numeracao para a entrega da Fase 1 (03/08/2026), como ja
+        # tinha sido feito em 08/06 na 1a entrega oficial. O pacote local da
+        # Bruna (build_entrega_bruna.py) carrega a MESMA versao.
+        self.assertEqual(self.cfg.versao, "1.0.0")
 
     def test_todos_os_sistemas_da_fase1_ativos(self):
         # Fase 1 completa p/ homologacao: os 7 sistemas em escopo (Cards 6-13).
