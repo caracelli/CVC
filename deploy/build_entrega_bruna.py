@@ -1,12 +1,12 @@
 """
-Monta o pacote de TESTE LOCAL para a Bruna — TESTE_LOCAL_BRUNA_v1.3.2.zip.
+Monta o pacote de TESTE LOCAL para a Bruna — TESTE_LOCAL_BRUNA_v1.0.0.zip.
 
 Igual ao build de producao, PORÉM:
   - <raiz> VAZIA no config.xml  -> MODO LOCAL: roda em qualquer pasta, NAO
     aponta para a rede, NAO auto-atualiza da rede. Assim NAO sobrepoe nem e'
     sobreposto pela versao que o cliente esta testando na rede.
-  - <versao> 1.3.2 (codigo novo: status "Usuario Nao Encontrado" + 3 motivos),
-    distinta da 1.3.1 do cliente.
+  - <versao> 1.0.0 (RESET da numeracao para a entrega da Fase 1; o codigo e'
+    o mais novo — retorno da Bruna aplicado), distinta da 1.3.1 do cliente.
   - ENTRADA JA POPULADA com os arquivos de entrada de TODOS os sistemas ativos
     hoje no config (SYSTUR, SIGOT, SICA_RA, SICA_ESFERA, IC, SIG, ORACLE_EBS +
     matrizes + CCO + RH ativos). A Bruna so roda o Processador.exe e o banco
@@ -31,10 +31,11 @@ RAIZ = DEPLOY_DIR.parent
 APP = RAIZ / "CVC_IAM_ANALYTICS"
 EXECS = APP / "EXECUTAVEIS"
 ENTRADA_SRC = APP / "ENTRADA"
+ORIGEM_SRC = RAIZ / "Arquivos_origem"   # bases que o cliente mandou fora da ENTRADA
 ENTREGA = RAIZ / "ENTREGA"
 STAGING = RAIZ / "_entrega_bruna_staging"
 
-VERSAO = "1.3.2"
+VERSAO = "1.0.0"
 RAIZ_LOCAL = ""  # vazio = MODO LOCAL (nao toca a rede)
 
 LAUNCHER_DIR = EXECS / "launcher"
@@ -49,7 +50,7 @@ MOTIVOS_SRC = EXECS / "CONFIG" / "motivos_resolucao.xml"
 LEIA_ME_EXECS = EXECS / "LEIA-ME.md"
 
 ENTRADA_SUBDIRS = [
-    "RH/ATIVOS", "RH/DESLIGADOS",
+    "RH/ATIVOS", "RH/DESLIGADOS", "RH/AD",
     "SISTEMAS/SIGOT", "SISTEMAS/SICA_RA", "SISTEMAS/SICA_ESFERA",
     "SISTEMAS/SYSTUR", "SISTEMAS/IC", "SISTEMAS/SIG",
     "SISTEMAS/ORACLE_EBS", "SISTEMAS/OPERA_OPERACIONAL",
@@ -109,6 +110,23 @@ ARQUIVOS_ENTRADA = [
      "SISTEMAS/SIG/SIG_18.05.26.xlsx"),
 ]
 
+# Bases que nunca passaram pela ENTRADA de dev (chegaram via git em Arquivos_origem).
+# O config de hoje EXIGE as duas: <rh><desligados><processar>true e
+# <rh><diretorio_ad><processar>true. Sem elas o pacote roda, mas a aba Desligados
+# nasce vazia e o AD grava "0 identidades" — a Bruna nao reproduziria esta rodada
+# (orfaos com dono pelo login, desligados achados pelo AD, espelho franq/prest).
+# Origem: (caminho sob Arquivos_origem) -> (destino sob ENTRADA staging).
+ARQUIVOS_ORIGEM = [
+    # RH desligados (motor de acesso de desligado)
+    ("17072026/PROJETOIAMDESLIGADOS (1).CSV",
+     "RH/DESLIGADOS/PROJETOIAMDESLIGADOS.CSV"),
+    # Diretorio AD por OU — o nome do arquivo e' que roteia a populacao
+    # (OU_Franq -> FRANQUEADO, OU_Prest -> PRESTADOR, OU_Desligados -> desligados).
+    ("17072026/OU_Franq_Bruna.csv", "RH/AD/OU_Franq_Bruna.csv"),
+    ("17072026/OU_Prest_Bruna.csv", "RH/AD/OU_Prest_Bruna.csv"),
+    ("17072026/OU_Desligados_Bruna.csv", "RH/AD/OU_Desligados_Bruna.csv"),
+]
+
 
 def checar_prerequisitos():
     base = [PRINCIPAL_VISUALIZADOR, PRINCIPAL_PROCESSADOR,
@@ -118,6 +136,10 @@ def checar_prerequisitos():
     # arquivos de entrada
     for origem, _ in ARQUIVOS_ENTRADA:
         p = ENTRADA_SRC / origem
+        if not p.exists():
+            faltando.append(str(p))
+    for origem, _ in ARQUIVOS_ORIGEM:
+        p = ORIGEM_SRC / origem
         if not p.exists():
             faltando.append(str(p))
     if faltando:
@@ -164,12 +186,12 @@ def montar_entrada(raiz: Path):
         (raiz / "ENTRADA" / sub).mkdir(parents=True, exist_ok=True)
     # arquivos de entrada de-timestampados
     n = 0
-    for origem, destino in ARQUIVOS_ENTRADA:
-        src = ENTRADA_SRC / origem
-        dst = raiz / "ENTRADA" / destino
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
-        n += 1
+    for base, lista in ((ENTRADA_SRC, ARQUIVOS_ENTRADA), (ORIGEM_SRC, ARQUIVOS_ORIGEM)):
+        for origem, destino in lista:
+            dst = raiz / "ENTRADA" / destino
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(base / origem, dst)
+            n += 1
     return n
 
 
@@ -199,7 +221,7 @@ def zipar(base: Path, alvo_zip: Path):
 
 
 LEIA_ME = """\
-TESTE LOCAL - CVC IAM Analytics (v1.3.2) - pacote da Bruna
+TESTE LOCAL - CVC IAM Analytics (v1.0.0) - pacote da Bruna
 ==========================================================
 
 Este pacote roda 100%% LOCAL. Ele NAO usa a rede e NAO interfere na versao
@@ -235,17 +257,32 @@ O QUE VEM DENTRO
 ------------------------------------------------------------
 - Sistemas ativos: SYSTUR, SIGOT, SICA_RA, SICA_ESFERA, IC, SIG, ORACLE_EBS
   + terceiros (mesma configuracao de dev de hoje).
-- Novidades desta versao:
-  * HISTORICO POR SISTEMA: o Historico agora abre por pessoa -> sistema
-    -> ciclo. Cada sistema tem seu proprio status (aderente num sistema e
-    pendente noutro deixa de aparecer na mesma linha). Reabertura de acesso
-    vira um novo ciclo (ciclo 2, 3, ...) visivel na trilha.
-  * O mesmo modelo por sistema/ciclo foi aplicado em Aderentes, Pendencias
-    e Consulta (selos "N sistemas" / "N ciclos" clicaveis).
-  * Casos "Em Analise" com varias opcoes de perfil consolidados em UMA
-    linha ("N opcoes"), e listas longas de perfil viram "N perfis" clicavel.
-  * Status "Usuario Nao Encontrado" e lista fechada de 3 motivos de
-    resolucao (Excecao / Transferencia de Area / Acesso Indevido).
+- Novidades desta versao (retorno da Bruna sobre o teste da Fase 1):
+  * "SEM ACESSO" DEIXOU DE SER PENDENCIA. Quando a pessoa nao tem acesso
+    num sistema, os perfis esperados do cargo NAO inflam mais a Pendencia
+    (era o caso do SIGOT com 8 perfis e do SICA com +22). Eles aparecem
+    como "esperado" na Consulta.
+  * CONSULTA EM 4 BLOCOS: Acessos ENCONTRADOS (o que a pessoa de fato tem),
+    ESPERADOS (o que o cargo preve e ela nao tem), NECESSITA ANALISE
+    (perfil a mais / excesso) e NAO LOCALIZADOS (sistema fora da matriz).
+  * TRATAMENTO GRANULAR: da para tratar e quarentenar POR SISTEMA e ate
+    POR ACESSO (perfil) — nao e' mais tudo de uma vez. Os botoes agora vem
+    ROTULADOS na sub-linha ("tratar <SISTEMA>", "tratar acesso",
+    "quarentena"), e o filtro por sistema ISOLA de fato o sistema escolhido.
+    A aba Quarentena mostra o ESCOPO de cada envio (pessoa / sistema / acesso).
+  * COLUNA GESTOR nas grids e na Consulta.
+  * DESLIGADOS e TRANSFERIDOS agrupam os acessos POR SISTEMA (antes vinham
+    corridos — o caso dos 122 acessos numa linha so). O Excel exportado
+    reproduz o mesmo agrupamento (+/-).
+  * O STATUS DA CONTA MANDA: conta BLOQUEADA/INATIVA deixou de contar como
+    acesso, e status vazio (ou "P" no IC) vai para "Em Analise" em vez de
+    ser assumido como ativo. No nosso reprocesso de teste isso derrubou os
+    "Usuario Nao Encontrado" de 2.631 para 99 e as pessoas com pendencia de
+    792 para 461 — os numeros da sua base podem diferir.
+  * IDENTIDADE: franqueados e prestadores do AD entram na base, e o acesso
+    orfao agora mostra o perfil que veio do extrato.
+  * Os filtros (funil) de cada coluna passaram a listar exatamente os
+    valores que estao na grid — antes ofereciam valores de fora dela.
 - SEM banco pronto: o banco nasce no 1o processamento (passo 2), ou
   reaproveite um banco anterior (ver passo 2).
 """

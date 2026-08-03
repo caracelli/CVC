@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <configuracao>
-    <versao>1.3.1</versao>
+    <versao>1.0.0</versao>
     <cliente>CVC</cliente>
     <projeto>IAM Analytics</projeto>
 
@@ -57,8 +57,10 @@
         </desligados>
         <!-- Diretorio AD (Active Directory) por OU: franqueados e prestadores.
              Da dono aos acessos orfaos (sem vinculo RH/terceiro) pela chave LOGIN
-             (usuario/CD_LOGIN do extrato == Login do AD). Arquivos OU_Franq* e
-             OU_Prest* na pasta. OU_Desligados* ainda fora (decisao pendente). -->
+             (usuario/CD_LOGIN do extrato == Login do AD). A populacao e' roteada
+             pelo NOME do arquivo: OU_Franq* = franqueado, OU_Prest* = prestador,
+             OU_Desligados* = desligado (B2 decidido SIM em 29/07 — alimenta
+             rh_desligados pelo login e o motor de acesso de desligado). -->
         <diretorio_ad>
             <processar>true</processar>
             <caminho>ENTRADA/RH/AD</caminho>
