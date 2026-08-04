@@ -2097,9 +2097,18 @@ def _calcular_visao_geral(c, sistema=""):
             f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias WHERE tipo='OK'{whereS}",
             argS).fetchone()[0]
     except Exception:
-        out["pendentes"] = c.execute(
-            "SELECT COUNT(DISTINCT matricula) FROM validacao_acessos "
-            "WHERE situacao_acao='PENDENTE'").fetchone()[0]
+        # Fallback para banco sem `bi_divergencias`. Ele TAMBEM precisa ser
+        # blindado: num banco antigo de mais (sem `validacao_acessos`) a
+        # excecao vazava e derrubava a Visao Geral inteira, em vez de a tela
+        # degradar mostrando zero. Achado em teste de schema aditivo.
+        try:
+            out["pendentes"] = c.execute(
+                "SELECT COUNT(DISTINCT matricula) FROM validacao_acessos "
+                "WHERE situacao_acao='PENDENTE'").fetchone()[0]
+        except Exception:
+            out["pendentes"] = 0
+        out.setdefault("incluir", 0)
+        out.setdefault("ok", 0)
     # Acessos de desligado: le da SAIDA do motor (divergencias ACESSO_DESLIGADO),
     # que ja aplica uniao matricula/CPF + filtro de status (so conta ativa). Conta
     # PESSOAS distintas (nao linhas — o SIG e' matricial e inflaria a contagem).
@@ -2194,15 +2203,23 @@ def _calcular_visao_geral(c, sistema=""):
     hoje = datetime.date.today()
     top = []
     wsis_top = "AND x.sistema = ?" if sistema else ""
-    for r in c.execute(f"""
-        SELECT d.nome, d.data_desligamento, d.cargo_descricao,
-               COUNT(DISTINCT x.sistema) AS sistemas, COUNT(*) AS perfis
-        FROM rh_desligados d
-        JOIN divergencias x ON x.matricula = d.matricula AND x.tipo='ACESSO_DESLIGADO'
-        WHERE d.data_desligamento IS NOT NULL {wsis_top}
-        GROUP BY d.matricula
-        ORDER BY d.data_desligamento DESC LIMIT 10
-    """, argS):
+    # Blindado como os demais blocos: banco de schema anterior (sem alguma das
+    # colunas do JOIN) fazia esta consulta levantar e derrubar a Visao Geral
+    # INTEIRA, em vez de o bloco vir vazio. Achado em teste de schema aditivo.
+    try:
+        linhas_top = c.execute(f"""
+            SELECT d.nome, d.data_desligamento, d.cargo_descricao,
+                   COUNT(DISTINCT x.sistema) AS sistemas, COUNT(*) AS perfis
+            FROM rh_desligados d
+            JOIN divergencias x ON x.matricula = d.matricula AND x.tipo='ACESSO_DESLIGADO'
+            WHERE d.data_desligamento IS NOT NULL {wsis_top}
+            GROUP BY d.matricula
+            ORDER BY d.data_desligamento DESC LIMIT 10
+        """, argS).fetchall()
+    except Exception as e:
+        print(f"  [vg] top de desligados indisponivel ({e!r}) — banco de schema antigo?")
+        linhas_top = []
+    for r in linhas_top:
         try:
             dias = (hoje - datetime.date.fromisoformat(r[1])).days
         except Exception:
