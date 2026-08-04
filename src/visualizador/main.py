@@ -2161,6 +2161,33 @@ def _calcular_visao_geral(c, sistema=""):
     except Exception:
         out["div_sistemas"] = {}
 
+    # Card 24 — TRANSFERIDOS na Visao Geral (espelha o que ja existe p/ desligados).
+    # Pessoas com acesso a revisar (saida do motor) + o numero acionavel do Card 23:
+    # acessos que so faziam sentido na funcao/equipe anterior.
+    out["transf_pessoas"] = 0
+    out["transf_sobrou"] = 0
+    out["transf_movimentos"] = 0
+    try:
+        out["transf_pessoas"] = c.execute(
+            "SELECT COUNT(DISTINCT matricula) FROM divergencias "
+            "WHERE tipo='ACESSO_TRANSFERIDO'" + (" AND sistema = ?" if sistema else ""),
+            argS).fetchone()[0] or 0
+    except Exception:
+        pass
+    for tabela, chave, sql in (
+            ("revalidacao_transferido", "transf_sobrou",
+             "SELECT COUNT(*) FROM revalidacao_transferido WHERE situacao='SOBROU'"
+             + (" AND sistema = ?" if sistema else "")),
+            ("transferidos", "transf_movimentos",
+             "SELECT COUNT(*) FROM transferidos")):
+        try:
+            if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                         (tabela,)).fetchone():
+                arg = argS if ("?" in sql) else []
+                out[chave] = c.execute(sql, arg).fetchone()[0] or 0
+        except Exception:
+            pass
+
     # Top 10 desligados recentes ainda com acesso ativo NO SISTEMA do escopo.
     # Fonte = saida do motor (divergencias ACESSO_DESLIGADO): ja e' uniao
     # matricula/CPF + so conta ativa. 'perfis' = nº de acessos ativos flagados.
@@ -2536,6 +2563,49 @@ def _transferidos_depara(c, matriculas):
     return out
 
 
+def _revalidacao_transferidos(c, matriculas):
+    """Card 23 — leitura da `revalidacao_transferido` (o veredito por acesso).
+
+    Devolve {matricula: {"resumo": {...}, "sobrou": [...], "falta": [...],
+                         "pares": (antes, depois)}}.
+
+    SOBROU e' o sinal novo — nenhuma outra regra o enxerga. FALTA e' CONTEXTO:
+    a inclusao ja aparece na aba de pendencias pela regra geral (e la ela passa
+    pelo filtro B1 de adesao, que aqui nao se aplica); repetir como pendencia
+    inflaria a fila, que foi exatamente a reclamacao da area.
+    """
+    if not matriculas:
+        return {}
+    try:
+        tem = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                        "AND name='revalidacao_transferido'").fetchone()
+        if not tem:
+            return {}
+        qm = ",".join("?" * len(matriculas))
+        linhas = c.execute(
+            "SELECT matricula, sistema, perfil, situacao, origem, pares_antes,"
+            " pares_depois FROM revalidacao_transferido "
+            f"WHERE matricula IN ({qm})"
+            + (" AND sistema = ?" if SISTEMA else ""),
+            list(matriculas) + ([SISTEMA] if SISTEMA else [])).fetchall()
+    except Exception as e:
+        print(f"  [transf] revalidacao indisponivel: {e!r}")
+        return {}
+    out = {}
+    for r in linhas:
+        d = out.setdefault(r["matricula"], {
+            "resumo": {"MANTEM": 0, "SOBROU": 0, "EXCESSO": 0, "FALTA": 0},
+            "sobrou": [], "falta": [], "pares": None})
+        sit = r["situacao"]
+        d["resumo"][sit] = d["resumo"].get(sit, 0) + 1
+        if sit in ("SOBROU", "FALTA"):
+            d[sit.lower()].append({"sis": r["sistema"], "perfil": r["perfil"],
+                                   "origem": r["origem"] or ""})
+        if r["pares_antes"] is not None and d["pares"] is None:
+            d["pares"] = [r["pares_antes"], r["pares_depois"]]
+    return out
+
+
 def listar_transferidos():
     """Aba Transferidos: pessoas que MUDARAM cargo/CC/departamento/gestor (detectado
     do historico do RH) e cujos acessos precisam de REVISÃO. Fonte = saida do motor
@@ -2585,10 +2655,16 @@ def listar_transferidos():
         # Banco de Processador antigo nao tem a tabela: o painel so nao mostra o
         # par, o resto da aba segue igual.
         depara = _transferidos_depara(c, list(por_mat))
+        reval = _revalidacao_transferidos(c, list(por_mat))
         for mat, acessos in por_mat.items():
             info = rh.get(mat)
             dp = depara.get(mat) or {}
+            rv = reval.get(mat) or {}
             out.append({
+                "reval": rv.get("resumo"),
+                "sobrou": rv.get("sobrou", []),
+                "falta": rv.get("falta", []),
+                "pares": rv.get("pares"),
                 "m": mat,
                 "n": (info["nome"] if info else "") or (acessos[0].get("login") or ""),
                 "cargo": (info["cargo_descricao"] if info else "") or "",
@@ -2604,6 +2680,12 @@ def listar_transferidos():
     finally:
         c.close()
 
+    # Quem se MOVEU mas nao tem acesso em sistema nenhum: nao gera divergencia
+    # (nao ha o que revisar) e, ate aqui, sumia do painel inteiro — a pessoa
+    # mudou de cargo/gestor e ninguem via. Entra com sit="Sem acesso", fora dos
+    # KPIs de revisao: e' movimentacao para conhecimento, nao fila de trabalho.
+    out += _transferidos_sem_acesso(por_mat)
+
     tratamentos = _tratamentos_transferido_mesclados()
     for d in out:
         t = tratamentos.get(str(d["m"]))
@@ -2612,10 +2694,58 @@ def listar_transferidos():
             d["tratamento"] = {"ticket": t["ticket"], "ticket_url": t["ticket_url"],
                                "descricao": t["descricao"], "motivo": t["motivo"],
                                "por": t["por"], "em": t["em"]}
-    revisar = sum(1 for d in out if not d.get("tratado"))
-    tratados = sum(1 for d in out if d.get("tratado"))
-    return {"lista": out, "kpis": {"revisar": revisar, "tratados": tratados,
-                                   "total": len(out)}}
+    com_acesso = [d for d in out if not d.get("sem_acesso")]
+    revisar = sum(1 for d in com_acesso if not d.get("tratado"))
+    tratados = sum(1 for d in com_acesso if d.get("tratado"))
+    # Card 23: quantos acessos sobraram da funcao anterior (o sinal acionavel)
+    sobrou = sum(len(d.get("sobrou") or []) for d in out)
+    pessoas_sobrou = sum(1 for d in out if d.get("sobrou"))
+    return {"lista": out,
+            "kpis": {"revisar": revisar, "tratados": tratados,
+                     "total": len(com_acesso),
+                     "sem_acesso": len(out) - len(com_acesso),
+                     "sobrou": sobrou, "pessoas_sobrou": pessoas_sobrou}}
+
+
+def _transferidos_sem_acesso(ja_listados):
+    """Movimentos gravados em `transferidos` que NAO viraram linha da aba porque
+    a pessoa nao tem acesso em sistema nenhum. Respeita o escopo por sistema:
+    com <visualizador><sistema> definido, a aba e' daquele sistema — listar quem
+    nao tem acesso nenhum ali seria ruido."""
+    if SISTEMA:
+        return []
+    c = conn_ro()
+    try:
+        tem = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                        "AND name='transferidos'").fetchone()
+        if not tem:
+            return []
+        linhas = c.execute(
+            "SELECT matricula, nome, campos_mudados, data_transferencia, "
+            "cargo_atual, centro_custo_atual, gestor_atual FROM transferidos").fetchall()
+        mats = [r["matricula"] for r in linhas if r["matricula"] not in ja_listados]
+        depara = _transferidos_depara(c, mats)
+    except Exception as e:
+        print(f"  [transf] sem-acesso indisponivel: {e!r}")
+        return []
+    finally:
+        c.close()
+    out = []
+    for r in linhas:
+        mat = r["matricula"]
+        if mat in ja_listados:
+            continue
+        dp = depara.get(mat) or {}
+        out.append({
+            "m": mat, "n": r["nome"] or mat,
+            "cargo": r["cargo_atual"] or "", "depto": "",
+            "cc": r["centro_custo_atual"] or "", "gestor": r["gestor_atual"] or "",
+            "campos": r["campos_mudados"] or "",
+            "de_para": dp.get("pares", []),
+            "dt_mov": r["data_transferencia"] or "",
+            "acessos": [], "sit": "Sem acesso", "sem_acesso": True,
+        })
+    return out
 
 
 def _tratamento_transferido_vivo(interacoes=None):

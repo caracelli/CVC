@@ -451,6 +451,20 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .mov-seta{color:#5C2D91;font-weight:700;}
 .mov-para{color:#1F2D5C;font-weight:600;}
 
+/* Card 23 — revalidacao pos-transferencia */
+.rev-sobrou{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;
+  background:#FEF3E2;color:#833C00;font:700 10px Arial;white-space:nowrap;}
+.rev-kpi{display:inline-block;margin-right:10px;font-size:11px;font-weight:600;}
+.rev-k-mantem{color:#0E6B47;} .rev-k-sobrou{color:#833C00;}
+.rev-k-exc{color:#856404;}    .rev-k-falta{color:#004578;}
+.rev-lista{margin:5px 0 2px;padding:6px 9px;background:#FFF8F0;
+  border:1px solid #F0DFC8;border-radius:6px;font-size:11px;line-height:1.9;}
+.rev-lista.rev-info{background:#F5F9FD;border-color:#D9E6F2;}
+.rev-lista b{color:#833C00;margin-right:6px;}
+.rev-lista.rev-info b{color:#004578;}
+.rev-perf{display:inline-block;margin:0 5px 3px 0;padding:1px 7px;border-radius:4px;
+  background:#fff;border:1px solid #E7EBF2;color:#1F2D5C;white-space:nowrap;}
+
 /* ── Gráficos ───────────────────────────────────────────────────────── */
 .chart-row{flex:1;min-height:0;display:flex;gap:13px;}
 .chart-panel{
@@ -1067,6 +1081,14 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
         <div class="kpi-val" style="color:#2980B9;" id="vg-k-incluir">—</div>
         <div class="kpi-lbl" style="color:#2980B9;">Incluir Acesso ↗</div>
       </div>
+      <!-- Card 24 — transferidos. O número grande é o ACIONÁVEL (acessos que
+           sobraram da função anterior), não o total de gente que se moveu. -->
+      <div class="kpi vg-kpi kpi-link" style="background:#FEF3E2;border:1px solid #F0DFC8;--kpi-bar:#B36B00;"
+           onclick="irTransferidos()" title="Ver a aba Transferidos">
+        <div class="kpi-val" style="color:#B36B00;" id="vg-k-transf">—</div>
+        <div class="kpi-lbl" style="color:#B36B00;">Acessos p/ Revogar ↗</div>
+        <div class="kpi-meta" id="vg-k-transf-meta"></div>
+      </div>
     </div>
 
     <!-- Linha 2 — Chamados | Tempo de Tratamento | Movimentação RH -->
@@ -1428,6 +1450,9 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
     <div class="quar-toolbar">
       <button class="seg active" data-view="revisar" onclick="transfView(this)">A Revisar</button>
       <button class="seg"        data-view="tratados" onclick="transfView(this)">Tratados</button>
+      <!-- moveu-se mas nao tem acesso em sistema nenhum: nao ha o que revisar,
+           mas a movimentacao existe e precisa ser visivel -->
+      <button class="seg"        data-view="sem_acesso" onclick="transfView(this)">Sem acesso</button>
       <button class="seg"        data-view="todos"   onclick="transfView(this)">Todos</button>
       <span class="quar-count" id="transf-count"></span>
       <input id="transf-busca" class="conf-busca" placeholder="Buscar matrícula, nome, cargo, gestor, mudança…"
@@ -3626,6 +3651,13 @@ function renderVisaoGeral(){
   if (k) k.textContent = (vg.cobertura_pct != null) ? Math.round(vg.cobertura_pct) + '%' : '—';
   _vgKpi('vg-k-quar', vg.quarentena_ativa);
   _vgKpi('vg-k-incluir', vg.incluir);
+  // Card 24 — transferidos
+  _vgKpi('vg-k-transf', vg.transf_sobrou);
+  const tm = document.getElementById('vg-k-transf-meta');
+  if(tm) tm.textContent = (vg.transf_movimentos != null)
+    ? `${vg.transf_movimentos} movimentaç${vg.transf_movimentos===1?'ão':'ões'} · `
+      + `${vg.transf_pessoas||0} c/ acesso a revisar`
+    : '';
   // Chamados
   _vgChamados(vg);
   // Tempo de tratamento (ciclo de vida)
@@ -4729,7 +4761,8 @@ async function renderTransferidos(){
     _transfRecs = d.lista || [];
     const k = d.kpis || {};
     const el = document.getElementById('transf-count');
-    if(el) el.textContent = `${k.revisar||0} a revisar · ${k.tratados||0} tratado(s) · ${k.total||0} transferidos`;
+    if(el) el.textContent = `${k.revisar||0} a revisar · ${k.tratados||0} tratado(s) · ${k.total||0} transferidos`
+          + (k.sem_acesso ? ` · ${k.sem_acesso} sem acesso` : '');
   }catch(e){ _transfRecs = []; }
   pintarTransferidos();
 }
@@ -4738,6 +4771,10 @@ function _transfFiltrados(){
   const q = (document.getElementById('transf-busca')?.value || '').trim().toLowerCase();
   return _transfRecs.filter(d => {
     const tratado = !!d.tratado;
+    // quem não tem acesso não é fila de trabalho: só aparece no próprio
+    // segmento e em "Todos", nunca misturado com "A Revisar"/"Tratados"
+    if(_transfView === 'sem_acesso') { if(!d.sem_acesso) return false; }
+    else if(d.sem_acesso && _transfView !== 'todos') return false;
     if(_transfView === 'revisar' && tratado) return false;
     if(_transfView === 'tratados' && !tratado) return false;
     if(!q) return true;
@@ -4766,11 +4803,22 @@ function pintarTransferidos(){
   pag.forEach(d => {
     const acessos = d.acessos || [];
     const aberto = _transfExp.has(d.m);
+    // Card 23 — dos acessos marcados para revisão, quantos só faziam sentido
+    // na função/equipe anterior. É o número acionável: "olhe estes", não "olhe tudo".
+    const sobrou = d.sobrou || [];
+    const selo = sobrou.length
+      ? ` <span class="rev-sobrou" title="Acessos que eram padrão na função/equipe anterior e não são na nova — candidatos a revogar">${sobrou.length} sobrou</span>` : '';
     const cel = !acessos.length ? '—'
       : `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="transfToggle(this)"
-           title="Clique para ver os acessos a revisar">${acessos.length} ${acessos.length===1?'acesso':'acessos'} ${aberto?'▾':'▸'}</span>`;
+           title="Clique para ver os acessos a revisar">${acessos.length} ${acessos.length===1?'acesso':'acessos'} ${aberto?'▾':'▸'}</span>${selo}`;
+    // expande se há acesso OU se há movimento a mostrar — sem isto, quem mudou
+    // e não tem acesso nunca conseguiria abrir o próprio "de → para"
+    const podeAbrir = acessos.length || (d.de_para||[]).length;
     let sit;
-    if(d.tratado){
+    if(d.sem_acesso){
+      // sem acesso = nada a revisar; sem botão de tratar (não há fila)
+      sit = `<span class="badge b-sem-acesso" title="Mudou de cadastro, mas não tem acesso em nenhum sistema — nada a revisar">Sem acesso</span>`;
+    } else if(d.tratado){
       const tk = (d.tratamento && d.tratamento.ticket) ? ' ('+esc(d.tratamento.ticket)+')' : '';
       sit = `<span class="badge b-resolvida">Tratado</span>`
         + `<button class="btn-res lupa" title="Ver dados do tratamento${tk}" `
@@ -4796,7 +4844,7 @@ function pintarTransferidos(){
     const campos = d.campos
       ? `<span class="h-reab" title="${esc(dica)}" style="background:#5C2D91;">${esc(d.campos)}</span>` : '—';
     h += `<tr>
-      <td>${acessos.length ? `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="transfToggle(this)">${aberto?'−':'+'}</span>` : ''}</td>
+      <td>${podeAbrir ? `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="transfToggle(this)">${aberto?'−':'+'}</span>` : ''}</td>
       <td>${esc(d.m)}</td><td>${esc(d.n)||'—'}</td><td>${esc(d.cargo)||'—'}</td>
       <td>${esc(d.cc)||'—'}</td><td>${esc(d.gestor)||'—'}</td><td>${campos}</td>
       <td>${cel}</td><td>${sit}</td></tr>`;
@@ -4809,6 +4857,24 @@ function pintarTransferidos(){
               + `<span class="mov-de">${esc(p.de)||'(vazio)'}</span>`
               + `<span class="mov-seta">→</span>`
               + `<span class="mov-para">${esc(p.para)||'(vazio)'}</span></span>`).join('')
+          + `</td></tr>`;
+      }
+      // Card 23 — o veredito da revalidação vem logo depois do movimento e
+      // antes da lista crua de acessos: é o que diz onde olhar.
+      const rv = d.reval, falta = d.falta || [];
+      if(rv && (sobrou.length || falta.length)){
+        const par = d.pares ? ` <small style="color:#6B7280;">(equipe de ${d.pares[0]} → ${d.pares[1]} pessoas)</small>` : '';
+        h += `<tr class="sub"><td></td><td></td><td colspan="7">`
+          + `<span class="mov-tit">revalidação pós-transferência</span>`
+          + `<span class="rev-kpi rev-k-mantem">${rv.MANTEM||0} mantêm</span>`
+          + `<span class="rev-kpi rev-k-sobrou">${rv.SOBROU||0} sobraram da anterior</span>`
+          + `<span class="rev-kpi rev-k-exc">${rv.EXCESSO||0} fora do padrão</span>`
+          + `<span class="rev-kpi rev-k-falta">${rv.FALTA||0} faltando na nova</span>${par}`
+          + (sobrou.length ? `<div class="rev-lista"><b>Sobraram da função/equipe anterior — candidatos a revogar:</b> `
+              + sobrou.map(s => `<span class="rev-perf">${esc(s.sis)} · ${esc(s.perfil)}</span>`).join('') + `</div>` : '')
+          + (falta.length ? `<div class="rev-lista rev-info"><b>A nova função/equipe tem e esta pessoa não:</b> `
+              + falta.map(s => `<span class="rev-perf">${esc(s.sis)} · ${esc(s.perfil)}</span>`).join('')
+              + ` <i>(informativo — a inclusão já aparece nas pendências)</i></div>` : '')
           + `</td></tr>`;
       }
       _acessosPorSistema(acessos).forEach(g => {
@@ -4932,7 +4998,8 @@ async function confirmarTratamentoTransferido(){
         _transfRecs = j.transferidos.lista || [];
         const k = j.transferidos.kpis || {};
         const el = document.getElementById('transf-count');
-        if(el) el.textContent = `${k.revisar||0} a revisar · ${k.tratados||0} tratado(s) · ${k.total||0} transferidos`;
+        if(el) el.textContent = `${k.revisar||0} a revisar · ${k.tratados||0} tratado(s) · ${k.total||0} transferidos`
+          + (k.sem_acesso ? ` · ${k.sem_acesso} sem acesso` : '');
       }
       pintarTransferidos();
       msg = 'Revisão de ' + mid + ' registrada sob o ticket ' + ticket + '.';
@@ -5430,6 +5497,16 @@ function irConsultaIncluir(){
   const b = document.getElementById('cs-busca'); if (b) b.value = '';
   _csPag = 1;
   showPage('consulta');
+}
+/* Card 24 — KPI da Visão Geral leva à aba Transferidos, já em "A Revisar". */
+function irTransferidos(){
+  _transfView = 'revisar';
+  _transfPag = 1;
+  const b = document.getElementById('transf-busca'); if(b) b.value = '';
+  showPage('transf');
+  document.querySelectorAll('#pg-transf .seg').forEach(s =>
+    s.classList.toggle('active', s.dataset.view === 'revisar'));
+  if(typeof pintarTransferidos === 'function') pintarTransferidos();
 }
 function limparCatConsulta(){
   _csCatFiltro = null;

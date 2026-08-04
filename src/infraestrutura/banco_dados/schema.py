@@ -305,6 +305,41 @@ class TransferidoModel(Base):
     dt_importacao = Column(DateTime, default=datetime.now)
 
 
+class RevalidacaoTransferidoModel(Base):
+    """Card 23 — revalidacao de acesso POS-TRANSFERENCIA, por acesso.
+
+    O Card 22 marca TODOS os acessos do transferido como "revisar" (383 linhas
+    para 10 pessoas; 132 so da KARINE). Isso diz "olhe tudo", nao "estes nao
+    cabem mais". Aqui cada acesso e' comparado com o que se espera da funcao/
+    equipe NOVA e da ANTIGA:
+
+      MANTEM  - esperado na nova (segue fazendo sentido)
+      SOBROU  - era esperado na ANTIGA e nao e' na nova  <- o que o card entrega
+      EXCESSO - fora das duas (ja cai em Em Analise pela regra geral)
+      FALTA   - a nova espera e a pessoa NAO tem (inclusao disparada pela mudanca)
+
+    Medido na base real: dos 371 acessos SIG dos transferidos, 45 SOBRARAM e 3
+    FALTAM — contra 1 unico achado quando se compara so a matriz de cargo (13
+    dos 18 movimentos mantiveram cargo e centro de custo: so o gestor mudou, e
+    o SIG e' validado por ESPELHO do grupo, nao por matriz).
+
+    Snapshot: reescrita a cada analise, como `divergencias` e `transferidos`."""
+    __tablename__ = "revalidacao_transferido"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    matricula = Column(String, nullable=False, index=True)
+    nome = Column(String)
+    sistema = Column(String, nullable=False, index=True)
+    perfil = Column(String)
+    situacao = Column(String, nullable=False)   # MANTEM/SOBROU/EXCESSO/FALTA
+    # de onde veio o "esperado" daquele sistema: MATRIZ/CCO ou ESPELHO
+    origem = Column(String)
+    # tamanho dos grupos-espelho comparados (so ESPELHO) — da confianca ao numero
+    pares_antes = Column(Integer)
+    pares_depois = Column(Integer)
+    dt_importacao = Column(DateTime, default=datetime.now)
+
+
 class DivergenciaModel(Base):
     __tablename__ = "divergencias"
 

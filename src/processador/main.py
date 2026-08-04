@@ -22,6 +22,7 @@ from aplicacao.casos_de_uso.vincular_acessos_rh import VincularAcessosRh
 from aplicacao.casos_de_uso.analisar_divergencias import AnalisarDivergencias
 from aplicacao.casos_de_uso.gerar_saidas import GerarSaidas
 from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
+from aplicacao.casos_de_uso.revalidar_transferidos import RevalidarTransferidos
 from aplicacao.casos_de_uso.registrar_ciclo_vida import RegistrarCicloVida
 from aplicacao.casos_de_uso.registrar_ciclo_historico import RegistrarCicloHistorico
 from aplicacao.casos_de_uso.registrar_eventos_acesso import RegistrarEventosAcesso
@@ -320,6 +321,11 @@ def _executar(caminho_config: Path) -> int:
 
         # Validação de acessos (inclusão/alteração) — grava na tabela validacao_acessos
         ValidarAcessosSistema(conexao=conexao).executar()
+
+        # Card 23 — revalidacao POS-TRANSFERENCIA. Depois do AnalisarDivergencias
+        # (que grava a tabela `transferidos` com o de/para) e da validacao, para
+        # usar o mesmo criterio de "esperado" de cada sistema.
+        RevalidarTransferidos(conexao=conexao).executar()
 
         # Ciclo de vida (Pendencia -> Resolvido -> Aderente) — idempotente/blindado.
         # Depois da validacao (validacao_acessos) e da dobra (resolucoes, acima).

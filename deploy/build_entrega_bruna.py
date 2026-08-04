@@ -66,11 +66,8 @@ DADOS_SUBDIRS = [
 # Pego a versao mais recente de cada base, ja SEM o sufixo _AAAAMMDD_HHMMSS que o
 # Processador adiciona ao mover para PROCESSADOS (o Processador re-adiciona ao rodar).
 ARQUIVOS_ENTRADA = [
-    # RH ativos — FUNCIONARIOS CLT (base principal p/ vinculacao dos acessos).
-    # PROJETOIAM tem CPF/Matricula/Nome/Email 100%. SEM ela, os acessos dos
-    # sistemas nao acham funcionario e caem em "Usuario Nao Encontrado".
-    ("RH/ATIVOS/PROCESSADOS/PROJETOIAM (8)_20260611_091052.CSV",
-     "RH/ATIVOS/PROJETOIAM (8).CSV"),
+    # (RH ativos CLT: as DUAS cargas datadas vem de Arquivos_origem —
+    #  ver ARQUIVOS_ORIGEM e ARQUIVOS_2A_CARGA abaixo.)
     # RH ativos — TERCEIROS (processar_terceiros=true; validados por espelho).
     ("RH/ATIVOS/PROCESSADOS/QuickReport_1780421571311_20260624_124746.xlsx",
      "RH/ATIVOS/QuickReport_1780421571311.xlsx"),
@@ -117,6 +114,14 @@ ARQUIVOS_ENTRADA = [
 # (orfaos com dono pelo login, desligados achados pelo AD, espelho franq/prest).
 # Origem: (caminho sob Arquivos_origem) -> (destino sob ENTRADA staging).
 ARQUIVOS_ORIGEM = [
+    # RH ativos CLT — 1a CARGA (17/06). A 2a (01/07) NAO entra na ENTRADA: ver
+    # ARQUIVOS_2A_CARGA. Trocamos a antiga "PROJETOIAM (8)" (11/05) por esta
+    # serie datada porque as duas cargas precisam ser COMPARAVEIS — (8) x 01/07
+    # acusaria mudanca em meio mundo (vintages diferentes), o que e' ruido, nao
+    # transferencia. Este par (17/06 -> 01/07) e' o provado: 31 alteracoes no
+    # CDC -> 18 pessoas -> 10 com acesso a revisar.
+    ("17072026/ENTRADA/RH/ATIVOS/PROCESSADOS/PROJETOIAM_20260617_114249_20260701_142343.CSV",
+     "RH/ATIVOS/PROJETOIAM.CSV"),
     # RH desligados (motor de acesso de desligado)
     ("17072026/PROJETOIAMDESLIGADOS (1).CSV",
      "RH/DESLIGADOS/PROJETOIAMDESLIGADOS.CSV"),
@@ -125,6 +130,19 @@ ARQUIVOS_ORIGEM = [
     ("17072026/OU_Franq_Bruna.csv", "RH/AD/OU_Franq_Bruna.csv"),
     ("17072026/OU_Prest_Bruna.csv", "RH/AD/OU_Prest_Bruna.csv"),
     ("17072026/OU_Desligados_Bruna.csv", "RH/AD/OU_Desligados_Bruna.csv"),
+]
+
+# 2a CARGA de RH — vai FORA da ENTRADA, numa pasta que o Processador nao varre.
+# Motivo (medido): ImportarRh le a pasta inteira e faz UM unico CDC sobre a
+# UNIAO dos arquivos (leitor_rh.ler_ativos: `ativos.extend(novos)`). Com as duas
+# cargas juntas na ENTRADA, o comparativo seria "uniao x banco vazio" = tudo
+# NOVO, ZERO alteracao -> a aba Transferidos nasceria vazia de novo. A 2a carga
+# tem de chegar DEPOIS da 1a execucao, exatamente como na operacao real (o
+# cliente deposita um snapshot por dia). O LEIA-ME instrui os 2 passos.
+PASTA_2A_CARGA = "2a_CARGA_RH"
+ARQUIVOS_2A_CARGA = [
+    ("17072026/ENTRADA/RH/ATIVOS/PROCESSADOS/PROJETOIAM_20260701_101549_20260701_142346.CSV",
+     "PROJETOIAM.CSV"),
 ]
 
 
@@ -138,7 +156,7 @@ def checar_prerequisitos():
         p = ENTRADA_SRC / origem
         if not p.exists():
             faltando.append(str(p))
-    for origem, _ in ARQUIVOS_ORIGEM:
+    for origem, _ in ARQUIVOS_ORIGEM + ARQUIVOS_2A_CARGA:
         p = ORIGEM_SRC / origem
         if not p.exists():
             faltando.append(str(p))
@@ -195,10 +213,29 @@ def montar_entrada(raiz: Path):
     return n
 
 
+def montar_2a_carga(raiz: Path):
+    """Pasta FORA da ENTRADA (o Processador nao a varre) com o snapshot de RH
+    do dia seguinte. So depois da 1a execucao ela vai para a ENTRADA — e' esse
+    intervalo que produz o CDC de onde saem os transferidos."""
+    dst = raiz / PASTA_2A_CARGA
+    dst.mkdir(parents=True, exist_ok=True)
+    for origem, destino in ARQUIVOS_2A_CARGA:
+        shutil.copy2(ORIGEM_SRC / origem, dst / destino)
+    (dst / "LEIA-ME.txt").write_text(LEIA_ME_2A_CARGA, encoding="utf-8")
+    return len(ARQUIVOS_2A_CARGA)
+
+
+ROTEIRO = RAIZ / "docs" / "ROTEIRO_VALIDACAO_TRANSFERIDOS.md"
+
+
 def montar(base: Path):
     raiz = base / "CVC_IAM_ANALYTICS"
     montar_executaveis(raiz / "EXECUTAVEIS")
     n = montar_entrada(raiz)
+    montar_2a_carga(raiz)
+    # roteiro de validacao junto do pacote (a usuaria nao tem o repo)
+    if ROTEIRO.exists():
+        shutil.copy2(ROTEIRO, raiz / "ROTEIRO_VALIDACAO.md")
     for sub in DADOS_SUBDIRS:
         (raiz / "DADOS" / sub).mkdir(parents=True, exist_ok=True)
     (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
@@ -220,6 +257,31 @@ def zipar(base: Path, alvo_zip: Path):
                 zf.writestr(zipfile.ZipInfo(arcname), "")
 
 
+LEIA_ME_2A_CARGA = """\
+SEGUNDA CARGA DE RH - para ver a aba TRANSFERIDOS
+=================================================
+
+Este PROJETOIAM.CSV e' o snapshot de RH do dia seguinte (01/07). Ele NAO esta
+na ENTRADA de proposito.
+
+POR QUE: o sistema descobre quem foi transferido COMPARANDO duas cargas de RH
+(mudanca de cargo, centro de custo, departamento ou gestor). Se as duas cargas
+entrarem juntas, nao ha "antes" e "depois" — o sistema le tudo como cadastro
+novo e a aba Transferidos fica vazia.
+
+COMO USAR (2 passos, e' assim que funciona no dia a dia):
+
+  1. Rode o Processador.exe normalmente (a 1a carga ja esta na ENTRADA).
+     Nesse momento a aba Transferidos ainda fica vazia — e' o esperado.
+
+  2. COPIE o PROJETOIAM.CSV desta pasta para
+         CVC_IAM_ANALYTICS\\ENTRADA\\RH\\ATIVOS\\
+     e rode o Processador.exe DE NOVO.
+
+     Agora a aba Transferidos mostra quem mudou, com o "de -> para" de cada
+     movimento (ex.: gestor: FULANO -> CICLANO) e os acessos a revisar.
+"""
+
 LEIA_ME = """\
 TESTE LOCAL - CVC IAM Analytics (v1.0.0) - pacote da Bruna
 ==========================================================
@@ -240,6 +302,11 @@ COMO USAR
    o banco DADOS\\BANCO\\iam_analytics.db e' criado e os arquivos lidos
    vao para PROCESSADOS.
 
+   >> O Processador nao abre janela preta: ele abre uma ABA DO NAVEGADOR com
+      o log ao vivo. Quando aparecer "Concluido", clique em FECHAR nessa aba
+      (ou feche a aba) — so entao o Processador encerra de verdade. Se voce
+      rodar de novo sem fechar, fica uma aba por execucao.
+
    >> REAPROVEITAR UMA BASE EXISTENTE (opcional):
       Se ja tiver um iam_analytics.db de um teste anterior, copie-o para
       CVC_IAM_ANALYTICS\\DADOS\\BANCO\\ ANTES de rodar o Processador. O
@@ -251,6 +318,13 @@ COMO USAR
 3. Abra o painel: rode
        CVC_IAM_ANALYTICS\\EXECUTAVEIS\\visualizador.exe
    Ele abre http://127.0.0.1:8800/ no navegador, lendo o banco local.
+
+4. PARA VER A ABA TRANSFERIDOS: ela depende de DUAS cargas de RH (o sistema
+   descobre quem mudou comparando o antes e o depois). A 2a carga esta em
+       CVC_IAM_ANALYTICS\\2a_CARGA_RH\\
+   Copie o PROJETOIAM.CSV de la para ENTRADA\\RH\\ATIVOS\\ e rode o
+   Processador.exe de novo. Detalhes no LEIA-ME.txt daquela pasta.
+   (Antes desse 2o processamento a aba fica vazia — e' o esperado, nao e' erro.)
 
 ------------------------------------------------------------
 O QUE VEM DENTRO
@@ -283,6 +357,27 @@ O QUE VEM DENTRO
     orfao agora mostra o perfil que veio do extrato.
   * Os filtros (funil) de cada coluna passaram a listar exatamente os
     valores que estao na grid — antes ofereciam valores de fora dela.
+  * TRANSFERIDOS com "DE -> PARA": ao abrir uma pessoa transferida, a
+    primeira linha mostra o que mudou no cadastro (ex.: gestor:
+    ANDREIA RIBEIRO SANTOS -> NATHALIA MAQUEA DA SILVA), antes dos acessos
+    a revisar — e' esse par que diz se o acesso antigo ainda faz sentido.
+    O Excel exportado traz as colunas De/Para.
+  * Na aba Aderentes, o selo "N aderencias" tambem abre/fecha os sistemas
+    (antes so a coluna "N sistemas" respondia ao clique).
+  * REVALIDACAO POS-TRANSFERENCIA: em vez de mandar revisar TODOS os acessos
+    de quem foi transferido, o sistema aponta quais deixaram de fazer sentido.
+    Cada acesso e' comparado com o que se espera da funcao/equipe NOVA e da
+    ANTIGA, e a aba mostra:
+       - "N sobraram da anterior" -> candidatos a REVOGAR (o numero acionavel)
+       - quantos MANTEM, quantos estao fora do padrao e o que FALTA na nova
+    Exemplo real do nosso teste: uma pessoa com 131 acessos no SIG teve 92
+    mantidos e 21 apontados como sobra da equipe anterior — em vez de abrir
+    os 131 um a um.
+    Para os sistemas com matriz o criterio e' a matriz de cargo; para o SIG,
+    que nao tem matriz, e' o padrao da EQUIPE (quem trabalha junto), por isso
+    a troca de gestor muda o resultado.
+  * VISAO GERAL: novo indicador "Acessos p/ Revogar", que leva direto para a
+    aba Transferidos.
 - SEM banco pronto: o banco nasce no 1o processamento (passo 2), ou
   reaproveite um banco anterior (ver passo 2).
 """
