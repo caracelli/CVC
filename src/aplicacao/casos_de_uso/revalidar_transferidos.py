@@ -25,7 +25,8 @@ from typing import Dict, List, Set, Tuple
 
 from loguru import logger
 
-from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema, _norm
+from aplicacao.casos_de_uso.validar_acessos_sistema import (
+    ValidarAcessosSistema, _SISTEMAS_PERFIL_APROXIMADO, _norm, _norm_perfil)
 from dominio.objetos_valor.sistema import Sistema
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.schema import (
@@ -157,22 +158,34 @@ class RevalidarTransferidos:
                     "pares_antes": n_antes if espelho else None,
                     "pares_depois": n_depois if espelho else None}
 
+        # Casamento de perfil: EXATO por padrao; por APROXIMACAO nos sistemas em
+        # que o extrato e a matriz escrevem diferente (hoje so o IC, que traz
+        # 'IC_CONSULTA' no extrato e 'IC CONSULTA' na matriz). Sem isto, todo
+        # acesso do IC cairia como EXCESSO/SOBROU por diferenca de underscore —
+        # e a revalidacao contradiria a validacao normal, que ja aproxima.
+        def _chave(sistema, perfil):
+            return _norm_perfil(perfil) if sistema in _SISTEMAS_PERFIL_APROXIMADO else perfil
+
         regs = []
         for sistema, perfis in meus.items():
-            esp_n, esp_v = novo.get(sistema, set()), velho.get(sistema, set())
+            esp_n = {_chave(sistema, p) for p in novo.get(sistema, set())}
+            esp_v = {_chave(sistema, p) for p in velho.get(sistema, set())}
             # Sistema sem esperado em NENHUM dos dois momentos: a revalidacao nao
             # tem o que dizer (a regra geral ja trata). Nao inventamos veredito.
             if not esp_n and not esp_v:
                 continue
             for perfil in sorted(perfis):
-                if perfil in esp_n:
+                k = _chave(sistema, perfil)
+                if k in esp_n:
                     regs.append(_reg(sistema, perfil, MANTEM))
-                elif perfil in esp_v:
+                elif k in esp_v:
                     regs.append(_reg(sistema, perfil, SOBROU))
                 else:
                     regs.append(_reg(sistema, perfil, EXCESSO))
         # o que a funcao/equipe NOVA espera e a pessoa nao tem
         for sistema, esperados in novo.items():
-            for perfil in sorted(esperados - meus.get(sistema, set())):
-                regs.append(_reg(sistema, perfil, FALTA))
+            tenho = {_chave(sistema, p) for p in meus.get(sistema, set())}
+            for perfil in sorted(esperados):
+                if _chave(sistema, perfil) not in tenho:
+                    regs.append(_reg(sistema, perfil, FALTA))
         return regs

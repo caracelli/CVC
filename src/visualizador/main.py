@@ -2676,6 +2676,9 @@ def listar_transferidos():
                 "dt_mov": dp.get("dt", ""),
                 "acessos": acessos,
                 "sit": "Revisar",
+                # explicito nas DUAS origens de linha: quem consome a lista nao
+                # precisa saber de onde ela veio para saber o formato
+                "sem_acesso": False,
             })
     finally:
         c.close()
@@ -2725,6 +2728,10 @@ def _transferidos_sem_acesso(ja_listados):
             "cargo_atual, centro_custo_atual, gestor_atual FROM transferidos").fetchall()
         mats = [r["matricula"] for r in linhas if r["matricula"] not in ja_listados]
         depara = _transferidos_depara(c, mats)
+        # Estas pessoas nao tem acesso, mas PODEM ter FALTA (o que a funcao nova
+        # espera e elas nao tem). Sem isto a linha sairia com formato diferente
+        # das outras — e a informacao mais util sobre elas se perderia.
+        reval = _revalidacao_transferidos(c, mats)
     except Exception as e:
         print(f"  [transf] sem-acesso indisponivel: {e!r}")
         return []
@@ -2736,6 +2743,7 @@ def _transferidos_sem_acesso(ja_listados):
         if mat in ja_listados:
             continue
         dp = depara.get(mat) or {}
+        rv = reval.get(mat) or {}
         out.append({
             "m": mat, "n": r["nome"] or mat,
             "cargo": r["cargo_atual"] or "", "depto": "",
@@ -2743,6 +2751,9 @@ def _transferidos_sem_acesso(ja_listados):
             "campos": r["campos_mudados"] or "",
             "de_para": dp.get("pares", []),
             "dt_mov": r["data_transferencia"] or "",
+            # mesmo formato das demais linhas da aba
+            "reval": rv.get("resumo"), "sobrou": rv.get("sobrou", []),
+            "falta": rv.get("falta", []), "pares": rv.get("pares"),
             "acessos": [], "sit": "Sem acesso", "sem_acesso": True,
         })
     return out

@@ -123,6 +123,20 @@ class TestSemAcesso(unittest.TestCase):
         r = self._rodar([_transf("20", "SEM ACESSO", campos="cargo, gestor")], [])
         self.assertEqual(r["lista"][0]["campos"], "cargo, gestor")
 
+    def test_todas_as_linhas_tem_o_MESMO_formato(self):
+        """Achado por auditoria: a linha de "sem acesso" saia sem os campos da
+        revalidacao (reval/sobrou/falta/pares). O front tolerava, mas quem
+        consumisse a lista quebrava — e a informacao mais util sobre essas
+        pessoas (o que a funcao NOVA espera e elas nao tem) se perdia."""
+        r = self._rodar([_transf("10", "COM ACESSO"), _transf("20", "SEM ACESSO")],
+                        [_div("10")])
+        chaves = [set(d) for d in r["lista"]]
+        self.assertEqual(chaves[0], chaves[1],
+                         "linhas da mesma lista com formatos diferentes")
+        for d in r["lista"]:
+            for campo in ("reval", "sobrou", "falta", "pares", "de_para", "acessos"):
+                self.assertIn(campo, d, f"{d['m']} sem o campo '{campo}'")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
