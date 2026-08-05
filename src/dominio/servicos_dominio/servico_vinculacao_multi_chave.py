@@ -150,6 +150,14 @@ class ServicoVinculacaoMultiChave:
         # mesmo primeiro nome. Custo de indexacao: O(N). Beneficio: fuzzy de
         # O(N*M*L) para ~O(N*M/K*L), onde K=num primeiros nomes distintos.
         self._nomes_por_token: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
+        # Memoria da cascata: (cpf, email, nome, cpf_mascarado, login) -> resultado.
+        # A cascata e' funcao PURA das chaves de entrada mais o indice (que nao
+        # muda depois do __init__), entao a mesma entrada da sempre a mesma
+        # saida. Medido na base real: 92.794 acessos para 12.170 chaves
+        # DISTINTAS — 87% das chamadas repetem trabalho ja feito. O SIG e'
+        # matricial (uma linha por perfil), entao a mesma pessoa e' resolvida
+        # ate 141 vezes com a mesma entrada.
+        self._memo: Dict[Tuple[str, str, str, str, str], ResultadoVinculacao] = {}
 
         for f in funcionarios:
             if f.cpf:
@@ -170,7 +178,24 @@ class ServicoVinculacaoMultiChave:
 
     def vincular(self, *, cpf="", email="", nome="", cpf_mascarado="", login="") -> ResultadoVinculacao:
         """Aplica a cascata pra um unico acesso. Inputs ja em formato bruto
-        (a normalizacao acontece aqui)."""
+        (a normalizacao acontece aqui).
+
+        Memoizado por entrada: ver `self._memo`. Cada chamada recebe um objeto
+        PROPRIO (o resultado guardado nunca sai da memoria), para que ninguem
+        altere sem querer o resultado de outra linha."""
+        chave = (cpf or "", email or "", nome or "", cpf_mascarado or "", login or "")
+        lembrado = self._memo.get(chave)
+        if lembrado is not None:
+            return ResultadoVinculacao(
+                lembrado.metodo, lembrado.score, lembrado.matricula,
+                list(lembrado.candidatos) if lembrado.candidatos else None)
+        resultado = self._resolver(cpf, email, nome, cpf_mascarado, login)
+        self._memo[chave] = resultado
+        return ResultadoVinculacao(
+            resultado.metodo, resultado.score, resultado.matricula,
+            list(resultado.candidatos) if resultado.candidatos else None)
+
+    def _resolver(self, cpf, email, nome, cpf_mascarado, login) -> ResultadoVinculacao:
         cpf_n = normalizar_cpf(cpf)
         email_n = normalizar_email(email)
         nome_n = normalizar_nome(nome)
