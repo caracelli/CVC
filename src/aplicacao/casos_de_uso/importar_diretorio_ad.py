@@ -8,12 +8,51 @@ Roteia a populacao pelo NOME do arquivo:
   OU_Desligados* -> DESLIGADOS (B2 = sim, 29/07): grava em rh_desligados com o
                     LOGIN como chave, alimentando o motor de acesso de desligado.
 """
+import re
 from pathlib import Path
 
 from loguru import logger
 
+# Subpasta de mes do cliente: "07-2026" -> 202607, "01-2027" -> 202701.
+# Ordenar pelo NOME da pasta poria "01-2027" ANTES de "07-2026" (alfabetico),
+# fazendo o snapshot de dezembro vencer o de janeiro na virada do ano — o dado
+# mais VELHO ganharia. Vira numero AAAAMM justamente para ordenar direito.
+_RE_PASTA_MES = re.compile(r"^(\d{2})-(\d{4})$")
+
+
+def _mes_da_pasta(arquivo: Path) -> int:
+    """AAAAMM da subpasta de mes mais proxima do arquivo (0 se nao houver)."""
+    for parte in reversed(arquivo.parts[:-1]):
+        m = _RE_PASTA_MES.match(parte)
+        if m:
+            return int(m.group(2)) * 100 + int(m.group(1))
+    return 0
+
+
+def _chave_cronologica(arquivo: Path):
+    """Ordem de importacao: do MAIS ANTIGO para o MAIS RECENTE.
+
+    Importa porque o merge e' por login: chegando varios snapshots da mesma
+    populacao, o ULTIMO processado prevalece — entao o ultimo tem de ser o mais
+    novo.
+
+    A data do NOME manda, pela MESMA funcao que os extratos de sistema ja usam
+    (`chave_data_arquivo`: DD_MM_AAAA_HH-MM, DD_MM_AAAA ou DD_MM). A pasta do
+    mes entra so para COMPLETAR o ano quando o nome nao tem — sem isso, um nome
+    no formato curto DD_MM compararia meses de anos diferentes como se fossem
+    do mesmo ano. Arquivo sem data nenhuma (layout antigo) fica no inicio,
+    cedendo lugar aos datados; o caminho fecha a ordem para ser deterministica."""
+    ano, mes, dia, hora, minuto = chave_data_arquivo(arquivo.name)
+    if not ano:
+        aaaamm = _mes_da_pasta(arquivo)
+        if aaaamm:
+            ano = aaaamm // 100
+            mes = mes or (aaaamm % 100)
+    return (ano, mes, dia, hora, minuto, str(arquivo).lower())
+
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.leitores_arquivos.leitor_diretorio_ad import LeitorDiretorioAd
+from infraestrutura.leitores_arquivos.leitor_sistema import chave_data_arquivo
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
 
 
@@ -66,6 +105,11 @@ class ImportarDiretorioAd:
                 if chave not in vistos:
                     vistos.add(chave)
                     arquivos.append(arq)
+        # cronologica, NAO alfabetica pelo caminho (ver _chave_cronologica)
+        arquivos.sort(key=_chave_cronologica)
+        if len(arquivos) > 1:
+            logger.info("Diretorio AD: ordem de importacao (mais antigo -> mais recente): "
+                        + " | ".join(a.name for a in arquivos))
         for arquivo in arquivos:
             pop = _populacao(arquivo.name)
             if pop is None:
