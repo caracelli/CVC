@@ -31,6 +31,12 @@ def ler_tabela(arquivo, dtype=str, header=0, skiprows=0,
             bruto = f.read(65536)
         if enc is None:
             enc = (chardet.detect(bruto).get("encoding") if bruto else None) or "utf-8"
+            # 'ascii' vindo da AMOSTRA nao garante ascii no arquivo todo: o
+            # extrato do SIG de 15/07 (12 MB) so tem o 1o acento no byte 78.344
+            # e estourava aqui, ja fora da janela lida. utf-8 e' superconjunto
+            # do ascii — le tudo o que ascii leria, e ainda o acento tardio.
+            if str(enc).lower() in ("ascii", "us-ascii"):
+                enc = "utf-8"
         if sep is None:
             try:
                 linhas = bruto.decode(enc, errors="replace").splitlines()
@@ -134,10 +140,26 @@ class LeitorArquivoBase:
         shutil.move(str(arquivo), str(destino / novo_nome))
         logger.error(f"Movido para erros: {arquivo.name} — {erro}")
 
+    # Amostra por PONTO do arquivo. Ler so o comeco engana em export grande:
+    # o extrato do SIG de 15/07 (12 MB) so tem o 1o acento no byte 78.344 —
+    # a amostra antiga (50 KB do inicio) via ASCII puro, devolvia 'ascii' e a
+    # leitura do arquivo INTEIRO estourava no primeiro 'Ç'. O arquivo era
+    # descartado para ERROS e o snapshot se perdia em silencio.
+    _AMOSTRA = 200_000
+
     def detectar_encoding(self, arquivo: Path) -> str:
+        tam = arquivo.stat().st_size
         with open(arquivo, "rb") as f:
-            raw = f.read(50_000)
-        resultado = chardet.detect(raw)
-        encoding = resultado.get("encoding") or "utf-8"
+            raw = f.read(self._AMOSTRA)
+            if tam > self._AMOSTRA * 2:          # tambem o meio e o fim
+                f.seek(tam // 2)
+                raw += f.read(self._AMOSTRA)
+                f.seek(max(0, tam - self._AMOSTRA))
+                raw += f.read(self._AMOSTRA)
+        encoding = (chardet.detect(raw).get("encoding") or "utf-8").lower()
+        # 'ascii' e' subconjunto de utf-8 E de cp1252: assumir utf-8 le tudo o
+        # que ascii leria e ainda aguenta o acento que a amostra nao alcancou.
+        if encoding in ("ascii", "us-ascii"):
+            encoding = "utf-8"
         logger.debug(f"Encoding detectado ({arquivo.name}): {encoding}")
         return encoding
