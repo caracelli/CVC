@@ -60,8 +60,9 @@ class RevalidarTransferidos:
             for t in movimentos:
                 regs.extend(self._revalidar(t, *dados))
             sessao.query(RevalidacaoTransferidoModel).delete()
-            for r in regs:
-                sessao.add(RevalidacaoTransferidoModel(**r))
+            if regs:
+                # lote: sao ~9,4 mil linhas por execucao na base real
+                sessao.bulk_insert_mappings(RevalidacaoTransferidoModel, regs)
             sessao.commit()
 
         por_sit = defaultdict(int)
