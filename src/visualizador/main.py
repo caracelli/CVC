@@ -3011,6 +3011,26 @@ def retirar_quarentena(registro_id, motivo=""):
     return 1
 
 
+def _validar_tratativa(rid, motivo, parecer):
+    """Regra da TRATATIVA INTERNA (05/08/2026). Devolve o JSON do erro ou None.
+
+    O que mudou e por que: o ticket do Jira ERA obrigatorio. Com a regra nova —
+    "Resolver" (o analista trata internamente) separado de "Abrir chamado no
+    Jira" — exigir o ticket impediria justamente o caminho novo: nao daria para
+    registrar uma tratativa sem antes existir chamado. Agora o obrigatorio e' o
+    que prova a tratativa: o MOTIVO e o PARECER do analista. Ticket e link ficam
+    opcionais, para quando o chamado ja existir (ou for aberto pelo Jira).
+    """
+    if not rid:
+        return '{"ok":false,"erro":"registro obrigatorio"}'
+    if not motivo:
+        return '{"ok":false,"erro":"Selecione o motivo da tratativa."}'
+    if not str(parecer or "").strip():
+        return ('{"ok":false,"erro":"Descreva o parecer da tratativa '
+                '(o que foi verificado e decidido)."}')
+    return None
+
+
 def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo="",
                        sistema="", perfil=""):
     """Grava uma interacao RESOLUCAO na rede — marca o funcionario como
@@ -3749,9 +3769,9 @@ class H(BaseHTTPRequestHandler):
                 rid = str(payload.get("id") or "").strip()
                 ticket = str(payload.get("ticket") or "").strip()
                 motivo = str(payload.get("motivo") or "").strip()
-                if not rid or not ticket or not motivo:
-                    self._send(400, '{"ok":false,"erro":"id, ticket e motivo obrigatorios"}',
-                               "application/json")
+                erro = _validar_tratativa(rid, motivo, payload.get("descricao"))
+                if erro:
+                    self._send(400, erro, "application/json; charset=utf-8")
                     return
                 linhas = resolver_pendencia(rid, ticket, payload.get("ticket_url"),
                                             payload.get("descricao"), motivo,
@@ -3769,9 +3789,9 @@ class H(BaseHTTPRequestHandler):
                 rid = str(payload.get("id") or "").strip()
                 ticket = str(payload.get("ticket") or "").strip()
                 motivo = str(payload.get("motivo") or "").strip()
-                if not rid or not ticket or not motivo:
-                    self._send(400, '{"ok":false,"erro":"id, ticket e motivo obrigatorios"}',
-                               "application/json")
+                erro = _validar_tratativa(rid, motivo, payload.get("descricao"))
+                if erro:
+                    self._send(400, erro, "application/json; charset=utf-8")
                     return
                 linhas = tratar_desligado(rid, ticket, payload.get("ticket_url"),
                                           payload.get("descricao"), motivo)
@@ -3787,9 +3807,9 @@ class H(BaseHTTPRequestHandler):
                 rid = str(payload.get("id") or "").strip()
                 ticket = str(payload.get("ticket") or "").strip()
                 motivo = str(payload.get("motivo") or "").strip()
-                if not rid or not ticket or not motivo:
-                    self._send(400, '{"ok":false,"erro":"id, ticket e motivo obrigatorios"}',
-                               "application/json")
+                erro = _validar_tratativa(rid, motivo, payload.get("descricao"))
+                if erro:
+                    self._send(400, erro, "application/json; charset=utf-8")
                     return
                 linhas = tratar_transferido(rid, ticket, payload.get("ticket_url"),
                                             payload.get("descricao"), motivo)

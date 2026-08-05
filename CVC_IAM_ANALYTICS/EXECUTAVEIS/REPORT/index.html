@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -238,6 +238,18 @@ body{
 .mf-cancel:hover{background:#E0E5EC;}
 .mf-ok{background:var(--gold);color:#1F2D5C;}
 .mf-ok:hover{filter:brightness(1.05);}
+/* "Abrir chamado no Jira": existe, mas ainda nao faz nada (depende do
+   formulario no Jira). Desabilitado e' honesto — deixa claro que o caminho
+   existe sem prometer o que ainda nao entrega. */
+.mf-jira{background:#E8EEF7;color:#8A9099;border:1px dashed #C5D2EA;}
+.mf-jira:disabled{cursor:not-allowed;}
+.mf-jira:disabled:hover{filter:none;}
+/* separadores do formulario de tratativa: o que o analista decide vem antes,
+   o chamado (referencia externa, opcional) depois */
+.trat-sec{font:700 9.5px Arial;letter-spacing:.06em;text-transform:uppercase;
+  color:#1F2D5C;margin:2px 0 8px;padding-bottom:5px;border-bottom:1px solid #E7EBF2;}
+.trat-sec2{margin-top:16px;color:#6B7280;}
+.trat-sec small{font:400 9.5px Arial;text-transform:none;letter-spacing:0;color:#8A9099;}
 .modal-vw{font:400 12px/1.5 Arial;color:#3A3F4C;}
 .modal-vw .vw-row{margin-bottom:12px;}
 .modal-vw .vw-row:last-child{margin-bottom:2px;}
@@ -3948,39 +3960,109 @@ function abrirResolver(uid, sistema, perfil){
     + (_resPerfil ? ' — este acesso' : _resSistema ? ' — por sistema' : '') + '</h3>'
     + '<p>' + esc(u.n) + ' — ' + esc(u.u) + escopo + '</p></div>'
     + '<div class="modal-bd">'
-    + '<label>Nº do ticket do Jira <span class="req">*</span></label>'
-    + '<input id="res-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
-    + '<label>Motivo <span class="req">*</span></label>'
-    + '<select id="res-motivo"><option value="" disabled selected>Carregando motivos…</option></select>'
-    + '<label>Link do ticket</label>'
-    + '<input id="res-url" placeholder="https://..." autocomplete="off">'
-    + '<label>Descrição</label>'
-    + '<textarea id="res-desc" placeholder="Observações sobre a resolução (opcional)" '
-    + 'maxlength="600"></textarea>'
+    + _campoTratativa('res')
     + '<div class="modal-err" id="res-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
-    + '<button class="mf-ok" onclick="confirmarResolucao()">Confirmar resolução</button>'
+    + _btnJira()
+    + '<button class="mf-ok" onclick="confirmarResolucao()">Resolver</button>'
     + '</div>');
   _preencherMotivos();
-  setTimeout(() => { const i = document.getElementById('res-ticket'); if(i) i.focus(); }, 60);
+  setTimeout(() => { const i = document.getElementById('res-motivo'); if(i) i.focus(); }, 60);
 }
 
-// Motivos do combobox de resolucao — vem do XML (via /api/motivos-resolucao),
-// carregados 1x e cacheados. Atualizam junto com a versao do sistema.
+/* Motivos do combobox de resolução — vêm do XML (/api/motivos-resolucao).
+   O motivo é obrigatório: combobox vazio TRAVA a resolução, o analista não
+   consegue concluir nada. A versão anterior fazia fill([]) em qualquer falha
+   e não dizia uma palavra — a tela mostrava "Selecione o motivo…" com zero
+   opções e ninguém sabia se era o XML, o arquivo ausente ou a rota.
+   Agora: nunca fica vazio (cai numa lista mínima que destrava) e o motivo da
+   falha aparece na própria tela, para dar o que reportar. */
 let _MOTIVOS_RES = null;
-function _preencherMotivos(){
-  const fill = (lista) => {
-    const sel = document.getElementById('res-motivo');
-    if(!sel) return;
-    sel.innerHTML = '<option value="" disabled selected>Selecione o motivo…</option>'
-      + (lista||[]).map(m => '<option value="'+esc(m)+'">'+esc(m)+'</option>').join('');
-  };
-  if(_MOTIVOS_RES){ fill(_MOTIVOS_RES); return; }
-  fetch('/api/motivos-resolucao').then(r => r.json())
-    .then(m => { _MOTIVOS_RES = Array.isArray(m) ? m : []; fill(_MOTIVOS_RES); })
-    .catch(() => fill([]));
+const _MOTIVOS_FALLBACK = ['Exceção', 'Transferência de Área', 'Acesso Indevido'];
+
+/* Dois caminhos de tratativa (regra nova, 05/08):
+     RESOLVER      — o analista informa o ticket que JÁ existe; grava na base.
+     ABRIR CHAMADO — vai criar o ticket no Jira pela API e guardar os dados do
+                     que foi aberto. Ainda NÃO implementado: depende do
+                     alinhamento da equipe e do formulário no Jira (Cards 25-26).
+   Fica visível e DESABILITADO, com o motivo na dica. Botão habilitado que não
+   faz nada é armadilha — o analista clicaria achando que abriu chamado.
+   Um lugar só: os três formulários de tratativa usam esta função. */
+function _btnJira(){
+  return '<button class="mf-ok mf-jira" disabled '
+    + 'title="Abertura automática no Jira — em implementação (depende do formulário '
+    + 'no Jira). Por enquanto, abra o chamado no Jira e informe o número acima.">'
+    + 'Abrir chamado no Jira</button>';
 }
+
+/* Corpo do formulário de TRATATIVA — o mesmo nos três fluxos (pendência,
+   desligado, transferido); `p` é o prefixo dos ids (res/tr/tt).
+
+   A ordem conta: primeiro o que o ANALISTA decidiu (motivo + parecer, os dois
+   obrigatórios), depois o chamado, que é referência externa e OPCIONAL. Até
+   05/08 o ticket do Jira era o primeiro campo e obrigatório — o que impedia
+   registrar tratativa sem chamado aberto, justamente o caminho que a regra
+   nova criou. */
+/* Validação da tratativa — a mesma nos três formulários e igual à do servidor
+   (_validar_tratativa no visualizador). Devolve false e aponta o campo. */
+function _validarTratativa(p, motivo, parecer){
+  const err = document.getElementById(p + '-err');
+  if(!motivo){
+    if(err) err.textContent = 'Selecione o motivo da tratativa.';
+    const el = document.getElementById(p + '-motivo'); if(el) el.focus();
+    return false;
+  }
+  if(!String(parecer||'').trim()){
+    if(err) err.textContent = 'Descreva o parecer da tratativa (o que foi verificado e decidido).';
+    const el = document.getElementById(p + '-desc'); if(el) el.focus();
+    return false;
+  }
+  return true;
+}
+
+function _campoTratativa(p){
+  return '<div class="trat-sec">Tratativa do analista</div>'
+    + '<label>Motivo <span class="req">*</span></label>'
+    + '<select id="' + p + '-motivo">'
+    + '<option value="" disabled selected>Carregando motivos…</option></select>'
+    + '<label>Parecer <span class="req">*</span></label>'
+    + '<textarea id="' + p + '-desc" maxlength="600" '
+    + 'placeholder="O que foi verificado e o que foi decidido"></textarea>'
+    + '<div class="trat-sec trat-sec2">Chamado no Jira <small>(opcional)</small></div>'
+    + '<label>Nº do ticket</label>'
+    + '<input id="' + p + '-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
+    + '<label>Link do ticket</label>'
+    + '<input id="' + p + '-url" placeholder="https://..." autocomplete="off">';
+}
+
+function _fillMotivos(idSel, lista, aviso){
+  const sel = document.getElementById(idSel);
+  if(!sel) return;
+  const itens = (lista && lista.length) ? lista : _MOTIVOS_FALLBACK;
+  sel.innerHTML = '<option value="" disabled selected>Selecione o motivo…</option>'
+    + itens.map(m => '<option value="'+esc(m)+'">'+esc(m)+'</option>').join('');
+  const err = document.getElementById(idSel.split('-')[0] + '-err');
+  if(err && aviso){
+    err.innerHTML = '<small style="color:#856404;">Não foi possível ler a lista de '
+      + 'motivos do arquivo de configuração (' + esc(aviso) + '). '
+      + 'Usando a lista padrão — avise o suporte.</small>';
+  }
+}
+
+function _carregarMotivos(idSel){
+  if(_MOTIVOS_RES){ _fillMotivos(idSel, _MOTIVOS_RES); return; }
+  fetch('/api/motivos-resolucao')
+    .then(r => { if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(m => {
+      if(!Array.isArray(m) || !m.length) throw new Error('lista vazia');
+      _MOTIVOS_RES = m;
+      _fillMotivos(idSel, m);
+    })
+    .catch(e => _fillMotivos(idSel, null, e.message || 'falha na leitura'));
+}
+
+function _preencherMotivos(){ _carregarMotivos('res-motivo'); }
 
 async function confirmarResolucao(){
   if(!_resAlvo) return;
@@ -3988,17 +4070,9 @@ async function confirmarResolucao(){
   const url    = document.getElementById('res-url').value.trim();
   const desc   = document.getElementById('res-desc').value.trim();
   const motivo = document.getElementById('res-motivo').value;
-  if(!ticket){
-    document.getElementById('res-err').textContent =
-      'O número do ticket do Jira é obrigatório.';
-    document.getElementById('res-ticket').focus();
-    return;
-  }
-  if(!motivo){
-    document.getElementById('res-err').textContent = 'Selecione o motivo da resolução.';
-    document.getElementById('res-motivo').focus();
-    return;
-  }
+  // obrigatório é o que PROVA a tratativa (motivo + parecer); o ticket é
+  // referência externa e pode nem existir ainda — ver _validar_tratativa
+  if(!_validarTratativa('res', motivo, desc)) return;
   const uid = _resAlvo.u, sis = _resSistema, pf = _resPerfil;
   fecharModal();
   proc(true);
@@ -4089,20 +4163,31 @@ function _modalResolucao(sub, rc){
   const dsc = esc(rc.descricao)
     ? '<div class="vw-desc">' + esc(rc.descricao) + '</div>'
     : '<span class="vw-vazio">— sem descrição —</span>';
+  // Duas seções, na mesma ordem do formulário: primeiro a TRATATIVA do
+  // analista, depois o CHAMADO. O bloco do Jira é SOMENTE LEITURA por
+  // princípio — a fonte da verdade do chamado é o Jira; deixar editar aqui
+  // criaria dois números divergentes sem ninguém saber qual vale.
+  const temJira = !!(esc(rc.ticket) || esc(rc.ticket_url));
   _modal(
-    '<div class="modal-hd"><h3>Resolução</h3>'
+    '<div class="modal-hd"><h3>Tratativa</h3>'
     + '<p>' + esc(sub) + '</p></div>'
     + '<div class="modal-bd modal-vw">'
+    + '<div class="trat-sec">Tratativa do analista</div>'
     + '<div class="vw-grid2">'
-    + '<div><div class="vw-lbl">Ticket do Jira</div>'
-    + '<div class="vw-val" style="font-size:14px;">' + (esc(rc.ticket) || '—')
-    + '</div></div>'
+    + '<div><div class="vw-lbl">Motivo</div><div class="vw-val">'
+    + (esc(rc.motivo) || '—') + '</div></div>'
     + '<div><div class="vw-lbl">Resolvido em</div><div class="vw-val">'
     + (rc.em ? fmtDT(rc.em) : '—') + '</div></div></div>'
-    + '<div class="vw-lbl vw-mt">Motivo</div><div class="vw-val">'
-    + (esc(rc.motivo) || '—') + '</div>'
-    + '<div class="vw-lbl vw-mt">Link do Jira</div><div>' + link + '</div>'
-    + '<div class="vw-lbl vw-mt">Descrição</div><div>' + dsc + '</div>'
+    + '<div class="vw-lbl vw-mt">Parecer</div><div>' + dsc + '</div>'
+    + '<div class="trat-sec trat-sec2">Chamado no Jira'
+    + '<small> · somente leitura</small></div>'
+    + (temJira
+        ? '<div class="vw-grid2">'
+          + '<div><div class="vw-lbl">Nº do ticket</div>'
+          + '<div class="vw-val" style="font-size:14px;">' + (esc(rc.ticket) || '—')
+          + '</div></div>'
+          + '<div><div class="vw-lbl">Link</div><div>' + link + '</div></div></div>'
+        : '<span class="vw-vazio">— tratativa registrada sem chamado —</span>')
     + '</div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Fechar</button></div>');
@@ -4660,32 +4745,16 @@ function abrirTratarDesligado(m){
     + '<p>' + esc(d.n||d.m) + ' — ' + esc(d.m) + ' · ' + n
     + ' acesso(s) ativo(s) a revogar</p></div>'
     + '<div class="modal-bd">'
-    + '<label>Nº do ticket do Jira <span class="req">*</span></label>'
-    + '<input id="tr-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
-    + '<label>Motivo <span class="req">*</span></label>'
-    + '<select id="tr-motivo"><option value="" disabled selected>Carregando motivos…</option></select>'
-    + '<label>Link do ticket</label>'
-    + '<input id="tr-url" placeholder="https://..." autocomplete="off">'
-    + '<label>Descrição</label>'
-    + '<textarea id="tr-desc" placeholder="Observações sobre o tratamento (opcional)" '
-    + 'maxlength="600"></textarea>'
+    + _campoTratativa('tr')
     + '<div class="modal-err" id="tr-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
-    + '<button class="mf-ok" onclick="confirmarTratamentoDesligado()">Confirmar tratamento</button>'
+    + _btnJira()
+    + '<button class="mf-ok" onclick="confirmarTratamentoDesligado()">Resolver</button>'
     + '</div>');
-  // reutiliza o mesmo combobox de motivos da resolução de pendência
-  const fill = (lista) => {
-    const sel = document.getElementById('tr-motivo');
-    if(!sel) return;
-    sel.innerHTML = '<option value="" disabled selected>Selecione o motivo…</option>'
-      + (lista||[]).map(x => '<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
-  };
-  if(_MOTIVOS_RES){ fill(_MOTIVOS_RES); }
-  else fetch('/api/motivos-resolucao').then(r=>r.json())
-    .then(mm => { _MOTIVOS_RES = Array.isArray(mm)?mm:[]; fill(_MOTIVOS_RES); })
-    .catch(() => fill([]));
-  setTimeout(() => { const i = document.getElementById('tr-ticket'); if(i) i.focus(); }, 60);
+  // mesma fonte e mesma blindagem da resolução de pendência
+  _carregarMotivos('tr-motivo');
+  setTimeout(() => { const i = document.getElementById('tr-motivo'); if(i) i.focus(); }, 60);
 }
 
 async function confirmarTratamentoDesligado(){
@@ -4694,14 +4763,7 @@ async function confirmarTratamentoDesligado(){
   const url    = document.getElementById('tr-url').value.trim();
   const desc   = document.getElementById('tr-desc').value.trim();
   const motivo = document.getElementById('tr-motivo').value;
-  if(!ticket){
-    document.getElementById('tr-err').textContent = 'O número do ticket do Jira é obrigatório.';
-    document.getElementById('tr-ticket').focus(); return;
-  }
-  if(!motivo){
-    document.getElementById('tr-err').textContent = 'Selecione o motivo do tratamento.';
-    document.getElementById('tr-motivo').focus(); return;
-  }
+  if(!_validarTratativa('tr', motivo, desc)) return;
   const mid = _deslTratAlvo.m;
   fecharModal();
   proc(true);
@@ -4949,29 +5011,15 @@ function abrirTratarTransferido(m){
     + '<p>' + esc(d.n||d.m) + ' — ' + esc(d.m) + ' · mudança de ' + (esc(d.campos)||'cadastro')
     + '</p></div>'
     + '<div class="modal-bd">'
-    + '<label>Nº do ticket do Jira <span class="req">*</span></label>'
-    + '<input id="tt-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
-    + '<label>Motivo <span class="req">*</span></label>'
-    + '<select id="tt-motivo"><option value="" disabled selected>Carregando motivos…</option></select>'
-    + '<label>Link do ticket</label>'
-    + '<input id="tt-url" placeholder="https://..." autocomplete="off">'
-    + '<label>Descrição</label>'
-    + '<textarea id="tt-desc" placeholder="Observações sobre a revisão (opcional)" maxlength="600"></textarea>'
+    + _campoTratativa('tt')
     + '<div class="modal-err" id="tt-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
-    + '<button class="mf-ok" onclick="confirmarTratamentoTransferido()">Confirmar revisão</button>'
+    + _btnJira()
+    + '<button class="mf-ok" onclick="confirmarTratamentoTransferido()">Resolver</button>'
     + '</div>');
-  const fill = (lista) => {
-    const sel = document.getElementById('tt-motivo');
-    if(!sel) return;
-    sel.innerHTML = '<option value="" disabled selected>Selecione o motivo…</option>'
-      + (lista||[]).map(x => '<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
-  };
-  if(_MOTIVOS_RES){ fill(_MOTIVOS_RES); }
-  else fetch('/api/motivos-resolucao').then(r=>r.json())
-    .then(mm => { _MOTIVOS_RES = Array.isArray(mm)?mm:[]; fill(_MOTIVOS_RES); }).catch(()=>fill([]));
-  setTimeout(() => { const i = document.getElementById('tt-ticket'); if(i) i.focus(); }, 60);
+  _carregarMotivos('tt-motivo');
+  setTimeout(() => { const i = document.getElementById('tt-motivo'); if(i) i.focus(); }, 60);
 }
 
 async function confirmarTratamentoTransferido(){
@@ -4980,10 +5028,7 @@ async function confirmarTratamentoTransferido(){
   const url    = document.getElementById('tt-url').value.trim();
   const desc   = document.getElementById('tt-desc').value.trim();
   const motivo = document.getElementById('tt-motivo').value;
-  if(!ticket){ document.getElementById('tt-err').textContent = 'O número do ticket do Jira é obrigatório.';
-    document.getElementById('tt-ticket').focus(); return; }
-  if(!motivo){ document.getElementById('tt-err').textContent = 'Selecione o motivo.';
-    document.getElementById('tt-motivo').focus(); return; }
+  if(!_validarTratativa('tt', motivo, desc)) return;
   const mid = _transfTratAlvo.m;
   fecharModal(); proc(true);
   let msg;
