@@ -2934,9 +2934,16 @@ def listar_quarentena():
 
 
 # tipo (em log_importacoes) -> (grupo, rotulo amigavel) para o painel "Bases"
-_BASES_GRUPOS = ["RH", "Matrizes", "Extratos dos Sistemas"]
+_BASES_GRUPOS = ["RH", "Diretório (AD)", "Matrizes", "Extratos dos Sistemas"]
 _BASES_LABEL = {
     "RH_ATIVOS":              ("RH", "Funcionários Ativos"),
+    "RH_DESLIGADOS":          ("RH", "Funcionários Desligados"),
+    # AD: sem estas linhas, uma entrega SEM os exports do diretorio e' invisivel
+    # — a tela segue mostrando as identidades da carga anterior e nada avisa.
+    # Sao elas que dao dono aos acessos orfaos e achem desligado pelo login.
+    "AD_FRANQUEADOS":         ("Diretório (AD)", "Franqueados"),
+    "AD_PRESTADORES":         ("Diretório (AD)", "Prestadores"),
+    "AD_DESLIGADOS":          ("Diretório (AD)", "Desligados (AD)"),
     "MATRIZ_PERFIS":          ("Matrizes", "Matriz de Perfis de Acesso"),
     "MATRIZ_CCO":             ("Matrizes", "Mapeamento CCO_CSC"),
     "SYSTUR":                 ("Extratos dos Sistemas", "SYSTUR"),

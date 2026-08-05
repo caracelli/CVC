@@ -54,6 +54,18 @@ from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.leitores_arquivos.leitor_diretorio_ad import LeitorDiretorioAd
 from infraestrutura.leitores_arquivos.leitor_sistema import chave_data_arquivo
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
+from infraestrutura.repositorios.repositorio_log_importacao import (
+    RepositorioLogImportacao, data_modificacao, loga_se_reimportacao,
+)
+
+# tipo gravado em log_importacoes por populacao — e' o que o painel "Bases"
+# mostra. Sem isto, uma entrega SEM os exports do AD e' silenciosa: a tela segue
+# exibindo as identidades da carga anterior e nada diz que nao veio nada novo.
+_TIPO_LOG = {
+    "FRANQUEADO": "AD_FRANQUEADOS",
+    "PRESTADOR": "AD_PRESTADORES",
+    "DESLIGADOS": "AD_DESLIGADOS",
+}
 
 
 def _populacao(nome_arquivo: str):
@@ -85,6 +97,7 @@ class ImportarDiretorioAd:
         'errado' nao classifica ninguem errado."""
         self._leitor = LeitorDiretorioAd(pasta_processados=pasta_processados, pasta_erros=pasta_erros)
         self._repo = RepositorioFuncionarioSqlite(conexao)
+        self._log = RepositorioLogImportacao(conexao)
         self._pastas = [pasta] if isinstance(pasta, (str, Path)) else list(pasta or [])
         self._processar = processar
 
@@ -115,6 +128,14 @@ class ImportarDiretorioAd:
             if pop is None:
                 logger.info(f"Diretorio AD: '{arquivo.name}' sem populacao mapeada — ignorado.")
                 continue
+            # data do PROPRIO arquivo (disponibilizacao), capturada ANTES de
+            # mover para PROCESSADOS — e' ela que o painel "Bases" exibe
+            dt_arq = data_modificacao(arquivo)
+            try:
+                hash_arq = loga_se_reimportacao(self._log, caminho=arquivo, tipo=_TIPO_LOG[pop])
+            except Exception as e:
+                logger.warning(f"Diretorio AD: falha calculando hash de '{arquivo.name}': {e!r}")
+                hash_arq = ""
             try:
                 if pop == "DESLIGADOS":
                     identidades = self._leitor.ler_desligados(arquivo)
@@ -126,8 +147,14 @@ class ImportarDiretorioAd:
                     if identidades:
                         self._repo.salvar_ativos(identidades, arquivo.name)
                         total += len(identidades)
+                self._log.registrar(
+                    arquivo=arquivo.name, tipo=_TIPO_LOG[pop], hash_arquivo=hash_arq,
+                    total_registros=len(identidades), status="SUCESSO", dt_arquivo=dt_arq)
                 self._leitor.mover_para_processados(arquivo)
             except Exception as e:
+                self._log.registrar(
+                    arquivo=arquivo.name, tipo=_TIPO_LOG[pop], hash_arquivo=hash_arq,
+                    status="ERRO", mensagem_erro=str(e), dt_arquivo=dt_arq)
                 logger.error(f"Diretorio AD: erro em '{arquivo.name}': {e!r}")
                 self._leitor.mover_para_erros(arquivo, str(e))
 

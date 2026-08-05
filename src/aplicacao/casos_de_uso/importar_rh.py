@@ -52,11 +52,20 @@ class ImportarRh:
 
         desligados = []
         if self._processar_desligados:
+            mtimes_desl = mtimes_da_pasta(self._pasta_desligados)
             desligados, arq_desligados = self._leitor.ler_desligados(self._pasta_desligados)
             if desligados:
                 # Desligados fora do escopo da trilha de ouvidoria (Fase 1):
                 # atualiza só a base, sem registrar histórico de movimentação.
                 self._repositorio.salvar_desligados(desligados, ", ".join(arq_desligados))
+                # registra no log de importacoes para o painel "Bases" mostrar
+                # que arquivo/data alimentou os desligados — sem isto, uma
+                # entrega SEM o arquivo de desligados passa despercebida.
+                for nome in arq_desligados:
+                    self._log.registrar(
+                        arquivo=nome, tipo="RH_DESLIGADOS", hash_arquivo="",
+                        total_registros=len(desligados), status="SUCESSO",
+                        dt_arquivo=mtimes_desl.get(nome))
         else:
             # Escopo da fase: SYSTUR inclusão/alteração não trata desligados.
             # A pasta não é lida, mesmo que haja arquivo (revogação é fluxo
