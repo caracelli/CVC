@@ -246,7 +246,7 @@ def _executar(caminho_config: Path) -> int:
         # primeiro), nao decorre desta ordem de importacao.
         ImportarDiretorioAd(
             conexao=conexao,
-            pasta=str(app_raiz / cfg.rh_diretorio_ad_caminho),
+            pasta=[str(app_raiz / p) for p in cfg.rh_diretorio_ad_caminhos],
             pasta_processados=pasta_proc,
             pasta_erros=pasta_err,
             processar=cfg.rh_processar_diretorio_ad,

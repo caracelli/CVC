@@ -63,7 +63,16 @@
              rh_desligados pelo login e o motor de acesso de desligado). -->
         <diretorio_ad>
             <processar>true</processar>
+            <!-- Desde a entrega de 05/08/2026 o cliente separa os exports por
+                 POPULACAO, cada pasta com subpastas por mes (07-2026, 08-2026).
+                 Aceita varios <caminho>; a varredura e' recursiva. O primeiro
+                 e' o formato antigo, mantido para bases ja existentes. A
+                 classificacao continua vindo do NOME do arquivo (franq/prest/
+                 deslig), nao da pasta. -->
             <caminho>ENTRADA/RH/AD</caminho>
+            <caminho>ENTRADA/SISTEMAS/AD_FRANQUEADOS</caminho>
+            <caminho>ENTRADA/SISTEMAS/AD_PRESTADORES</caminho>
+            <caminho>ENTRADA/SISTEMAS/AD_DESLIGADOS</caminho>
         </diretorio_ad>
     </rh>
 

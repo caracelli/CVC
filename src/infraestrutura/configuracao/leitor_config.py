@@ -43,8 +43,12 @@ class Configuracao:
     # terceiros ficam fora. Default True preserva o comportamento legado.
     rh_processar_desligados: bool
     rh_processar_terceiros: bool
-    # Diretorio AD (franqueados/prestadores) — identidades p/ dar dono aos orfaos.
-    rh_diretorio_ad_caminho: str
+    # Diretorio AD (franqueados/prestadores/desligados) — identidades p/ dar dono
+    # aos orfaos. Aceita VARIOS <caminho>: desde 05/08/2026 o cliente entrega os
+    # exports em pastas separadas por populacao (SISTEMAS/AD_FRANQUEADOS,
+    # AD_PRESTADORES, AD_DESLIGADOS), nao mais numa pasta unica.
+    rh_diretorio_ad_caminho: str            # o primeiro (compatibilidade)
+    rh_diretorio_ad_caminhos: List[str]     # todos
     rh_processar_diretorio_ad: bool
     processados: str
     erros: str
@@ -59,6 +63,17 @@ class Configuracao:
     saida_logs: str
     visualizador_sistema: str
     visualizador_quarentena_dias: int
+
+
+def _ad_caminhos(root) -> List[str]:
+    """Todos os <caminho> de <rh><diretorio_ad>, na ordem do arquivo.
+
+    Um unico <caminho> (formato antigo) continua valendo — vira lista de um.
+    Vazios sao descartados para um <caminho/> solto nao virar a raiz do app."""
+    no = root.find("rh/diretorio_ad")
+    if no is None:
+        return []
+    return [c.text.strip() for c in no.findall("caminho") if (c.text or "").strip()]
 
 
 class LeitorConfig:
@@ -116,7 +131,8 @@ class LeitorConfig:
             rh_desligados_caminho=root.findtext("rh/desligados/caminho", ""),
             rh_processar_desligados=_bool("rh/desligados/processar"),
             rh_processar_terceiros=_bool("rh/ativos/processar_terceiros"),
-            rh_diretorio_ad_caminho=root.findtext("rh/diretorio_ad/caminho", "ENTRADA/RH/AD"),
+            rh_diretorio_ad_caminho=(_ad_caminhos(root) or ["ENTRADA/RH/AD"])[0],
+            rh_diretorio_ad_caminhos=_ad_caminhos(root) or ["ENTRADA/RH/AD"],
             rh_processar_diretorio_ad=_bool("rh/diretorio_ad/processar"),
             processados=root.findtext("rede/processados", "DADOS/PROCESSADOS"),
             erros=root.findtext("rede/erros", "DADOS/ERROS"),

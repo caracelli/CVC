@@ -33,14 +33,20 @@ class ImportarDiretorioAd:
     def __init__(
         self,
         conexao: ConexaoBancoDados,
-        pasta: str,
+        pasta,
         pasta_processados: str = None,
         pasta_erros: str = None,
         processar: bool = True,
     ):
+        """`pasta` aceita um caminho OU uma lista deles. Desde 05/08/2026 o
+        cliente entrega os exports do AD em pastas separadas por populacao
+        (AD_FRANQUEADOS / AD_PRESTADORES / AD_DESLIGADOS), cada uma com
+        subpastas por mes — antes era uma pasta unica. O roteamento continua
+        sendo pelo NOME do arquivo, nao pela pasta: uma pasta com o nome
+        'errado' nao classifica ninguem errado."""
         self._leitor = LeitorDiretorioAd(pasta_processados=pasta_processados, pasta_erros=pasta_erros)
         self._repo = RepositorioFuncionarioSqlite(conexao)
-        self._pasta = pasta
+        self._pastas = [pasta] if isinstance(pasta, (str, Path)) else list(pasta or [])
         self._processar = processar
 
     def executar(self) -> int:
@@ -50,7 +56,17 @@ class ImportarDiretorioAd:
         logger.info("=== Importacao Diretorio AD iniciada ===")
 
         total = 0
-        for arquivo in self._leitor.listar_arquivos(self._pasta):
+        arquivos = []
+        vistos = set()
+        for pasta in self._pastas:
+            for arq in self._leitor.listar_arquivos(str(pasta)):
+                # a mesma pasta configurada duas vezes (ou aninhada) nao pode
+                # importar o mesmo arquivo duas vezes
+                chave = str(arq.resolve()).lower()
+                if chave not in vistos:
+                    vistos.add(chave)
+                    arquivos.append(arq)
+        for arquivo in arquivos:
             pop = _populacao(arquivo.name)
             if pop is None:
                 logger.info(f"Diretorio AD: '{arquivo.name}' sem populacao mapeada — ignorado.")
