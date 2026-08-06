@@ -237,6 +237,13 @@ def montar_2a_carga(raiz: Path):
 
 
 ROTEIRO = RAIZ / "docs" / "ROTEIRO_VALIDACAO_TRANSFERIDOS.md"
+# Roteiro de REGRAS (docx + pdf): vai na raiz do pacote, junto do LEIA-ME. Ela
+# recebe o zip por outro canal que nao o repo — se o documento nao viajar com o
+# pacote, chega separado ou nao chega.
+ROTEIRO_REGRAS = [
+    ENTREGA / f"ROTEIRO_REGRAS_CVC_IAM_v{VERSAO}.docx",
+    ENTREGA / f"ROTEIRO_REGRAS_CVC_IAM_v{VERSAO}.pdf",
+]
 
 
 def montar(base: Path):
@@ -249,6 +256,11 @@ def montar(base: Path):
     # roteiro de validacao junto do pacote (a usuaria nao tem o repo)
     if ROTEIRO.exists():
         shutil.copy2(ROTEIRO, raiz / "ROTEIRO_VALIDACAO.md")
+    for doc in ROTEIRO_REGRAS:
+        if doc.exists():
+            shutil.copy2(doc, raiz / doc.name)
+        else:
+            print(f"  AVISO: roteiro de regras ausente, nao vai no pacote: {doc.name}")
     for sub in DADOS_SUBDIRS:
         (raiz / "DADOS" / sub).mkdir(parents=True, exist_ok=True)
     (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
@@ -317,6 +329,20 @@ COMO USAR — sao 2 passos
 2. Rode
        CVC_IAM_ANALYTICS\\EXECUTAVEIS\\visualizador.exe
    Ele abre http://127.0.0.1:8800/ no navegador. Pronto, e' so isso.
+
+------------------------------------------------------------
+POR ONDE COMECAR — o roteiro esta aqui nesta pasta
+------------------------------------------------------------
+   ROTEIRO_REGRAS_CVC_IAM_v1.0.0.docx   (o mesmo em .pdf)
+
+Ele lista as 22 regras que decidem sozinhas alguma coisa no painel: o criterio
+de cada uma (com os limiares), o filtro para conferir na tela e o numero que
+deve aparecer. Cada regra tem uma linha para voce responder se ela esta certa.
+
+Os testes provam que o sistema faz o que foi programado. So voce prova que a
+REGRA esta certa — e' para isso que o roteiro existe.
+As regras marcadas com estrela sao as que mais mudam volume de trabalho; se o
+tempo for curto, comece por elas.
 
 VOCE NAO PRECISA RODAR O PROCESSADOR. O banco JA VEM PRONTO no pacote, com
 dois meses de dados (junho, julho e agosto/2026) — inclusive o historico de
