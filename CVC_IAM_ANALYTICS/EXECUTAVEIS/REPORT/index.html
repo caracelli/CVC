@@ -4339,10 +4339,17 @@ function toggleBacc(gi){
   b.hidden = !b.hidden;
   tg.textContent = b.hidden ? '+' : '−';
 }
-function _modalBases(gs){
+function _modalBases(gs, erro){
   _basesItens = {};
   let corpo;
-  if(!gs || !gs.length){
+  if(erro){
+    // nao foi possivel LER — diferente de nao haver nada
+    corpo = '<div class="bases-cap" style="color:#B33A3A;">'
+          + 'Não foi possível ler a lista de arquivos importados ('
+          + esc(erro) + ').<br>Os dados podem existir — o que falhou foi a '
+          + 'consulta. Feche e abra o painel; se continuar, avise o suporte '
+          + 'com essa mensagem.</div>';
+  } else if(!gs || !gs.length){
     corpo = '<div class="bases-cap">Nenhuma importação registrada ainda — '
           + 'os dados aparecem após o próximo processamento.</div>';
   } else {
@@ -4393,9 +4400,14 @@ function verBase(tipo){
     + '<button class="mf-cancel" onclick="fecharModal()">Fechar</button></div>');
 }
 function abrirBases(){
-  fetch('/api/bases').then(r => r.json())
+  // FALHA e VAZIO nao podem dar a mesma tela. Antes, qualquer erro caia em
+  // _modalBases(null) e a usuaria lia "Nenhuma importação registrada" — ou
+  // seja, um problema de leitura se disfarcava de "não há nada importado", e
+  // nao havia o que reportar ao suporte.
+  fetch('/api/bases')
+    .then(r => { if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(gs => _modalBases(gs))
-    .catch(() => _modalBases(null));
+    .catch(e => _modalBases(null, e.message || 'falha na leitura'));
 }
 
 document.addEventListener('keydown', e => {

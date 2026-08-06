@@ -2964,17 +2964,22 @@ def listar_bases():
     devolve o arquivo/dt_arquivo da linha de maior dt_importacao por tipo)."""
     c = conn_ro()
     try:
-        # base ainda nao migrada (sem dt_arquivo) — Visualizador nao pode quebrar:
-        # mostra o nome do arquivo; a data so existe apos o Processador rodar.
-        tem_dt = any(r["name"] == "dt_arquivo"
-                     for r in c.execute("PRAGMA table_info(log_importacoes)"))
-        col_dt = "dt_arquivo" if tem_dt else "'' AS dt_arquivo"
+        # DOIS casos que davam a MESMA tela vazia (achado 06/08: a base aparecia
+        # numa maquina e nao na outra, com o MESMO pacote):
+        #   a) tabela ausente  -> banco ainda nao processado. Vazio e' a verdade.
+        #   b) erro de leitura -> o dado pode existir; o que falhou foi a
+        #      consulta. Antes o `except: rows = []` engolia isto e a tela dizia
+        #      "Nenhuma importacao registrada" — mentindo, e sem deixar rastro
+        #      para diagnosticar. Agora propaga: a rota devolve 500 e o painel
+        #      mostra o motivo.
+        cols = [r["name"] for r in c.execute("PRAGMA table_info(log_importacoes)")]
+        if not cols:
+            return []                      # (a) nunca processou: vazio de verdade
+        col_dt = "dt_arquivo" if "dt_arquivo" in cols else "'' AS dt_arquivo"
         rows = c.execute(
             f"SELECT tipo, arquivo, {col_dt}, total_registros, MAX(dt_importacao) AS dt_imp "
             "FROM log_importacoes WHERE status='SUCESSO' "
-            "GROUP BY tipo").fetchall()
-    except Exception:
-        rows = []
+            "GROUP BY tipo").fetchall()     # (b) qualquer erro sobe
     finally:
         c.close()
 
@@ -3626,6 +3631,16 @@ class H(BaseHTTPRequestHandler):
             b = _gzip.compress(b, 5)
         self.send_response(code)
         self.send_header("Content-Type", ctype)
+        # NAO CACHEAR (06/08). O painel mora sempre no mesmo endereco
+        # (127.0.0.1:8800), entao a versao NOVA de um pacote chega na mesma URL
+        # da anterior. Sem nenhum cabecalho de cache o navegador decide sozinho
+        # e pode servir a pagina do pacote antigo: aconteceu no teste — o painel
+        # mostrava os dados certos (vem da API a cada abertura) mas a tela era a
+        # velha, e o popup de arquivos importados vinha vazio. So se resolveu
+        # limpando o cache do navegador, o que nao da para pedir a cada entrega.
+        # Aqui nada e' estatico o bastante para valer cache: o HTML e' gerado e
+        # as respostas mudam a cada tratativa.
+        self.send_header("Cache-Control", "no-store, must-revalidate")
         if comprimir:
             self.send_header("Content-Encoding", "gzip")
         self.send_header("Content-Length", str(len(b)))
