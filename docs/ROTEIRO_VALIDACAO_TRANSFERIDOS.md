@@ -3,32 +3,20 @@
 Pacote: `TESTE_LOCAL_BRUNA_v1.0.0.zip`. Roda 100% local, não usa a rede e não
 interfere na versão instalada no ambiente do cliente.
 
-> **Antes de começar — dois avisos que evitam falso alarme**
->
-> 1. O Processador **não abre janela preta**: ele abre uma **aba do navegador**
->    com o log ao vivo. Quando aparecer "Concluído", clique em **Fechar** nessa
->    aba. Se rodar de novo sem fechar, fica uma aba por execução.
-> 2. A aba **Transferidos nasce vazia no primeiro processamento**. Isso é o
->    esperado, não é erro — o sistema descobre quem foi transferido comparando
->    **duas** cargas de RH (o "antes" e o "depois"). O passo 2 abaixo traz a
->    segunda carga.
-
----
-
-## Passo 1 — primeiro processamento
+## Como começar
 
 1. Extraia a pasta `CVC_IAM_ANALYTICS` em qualquer lugar do seu PC.
-2. Rode `EXECUTAVEIS\Processador.exe`. Ao terminar, clique em **Fechar** na aba.
-3. Rode `EXECUTAVEIS\visualizador.exe` — o painel abre em `http://127.0.0.1:8800/`.
+2. Rode `EXECUTAVEIS\visualizador.exe` — o painel abre em
+   `http://127.0.0.1:8800/`.
 
-- [ ] A aba **Transferidos** está vazia. *(esperado neste momento)*
+**Só isso.** Você **não precisa rodar o Processador**: o banco já vem pronto,
+com dois meses de dados (junho a agosto/2026). O histórico de movimentações
+existe porque várias cargas de RH foram comparadas ao longo do período.
 
-## Passo 2 — chega a segunda carga de RH
+Pode tratar, resolver, quarentenar e exportar à vontade — tudo fica na sua
+cópia local e não afeta a rede nem a versão do cliente.
 
-4. Copie `CVC_IAM_ANALYTICS\2a_CARGA_RH\PROJETOIAM.CSV` para
-   `CVC_IAM_ANALYTICS\ENTRADA\RH\ATIVOS\`.
-5. Rode o `Processador.exe` de novo (e clique em **Fechar** ao terminar).
-6. Atualize o painel (F5).
+---
 
 ---
 
@@ -83,7 +71,39 @@ de caber na função/equipe nova.
 Por isso uma **troca de gestor** muda o resultado no SIG: a pessoa passa a ser
 comparada com a equipe nova.
 
-## 3. Visão Geral (Card 24)
+## 3. Formulário de tratativa (regra nova)
+
+**Onde:** qualquer botão de tratar/resolver — nas abas Pendências, Desligados e
+Transferidos. O formulário agora é o mesmo nos três.
+
+Antes o **nº do ticket do Jira era obrigatório**: não dava para registrar uma
+tratativa sem ter um chamado aberto. Agora o formulário separa as duas coisas.
+
+- [ ] O formulário tem duas seções: **Tratativa do analista** (Motivo e Parecer,
+      os dois obrigatórios) e **Chamado no Jira**, marcada como **opcional**.
+- [ ] O cursor começa no **Motivo**, não no ticket.
+- [ ] O combobox de **Motivo** vem preenchido com os três motivos:
+      Exceção · Transferência de Área · Acesso Indevido.
+      *(Se aparecer um aviso amarelo dizendo que não conseguiu ler a lista,
+      avise — a tela continua funcionando, mas é sinal de problema.)*
+- [ ] **Resolver sem informar ticket**: preencha só Motivo e Parecer e confirme.
+      Tem que funcionar — é o ponto principal da mudança.
+- [ ] **Tentar resolver sem Parecer**: tem que recusar e explicar o que falta.
+- [ ] **Tentar resolver sem Motivo**: idem.
+- [ ] O botão **"Abrir chamado no Jira"** aparece, mas está **desabilitado** —
+      passe o mouse e leia a explicação. É o esperado nesta versão: a abertura
+      automática depende do formulário no Jira.
+- [ ] Na **lupa** de um caso já tratado, as duas seções aparecem separadas, e o
+      bloco do Jira está marcado como **somente leitura**.
+- [ ] Numa tratativa registrada **sem** chamado, a lupa diz
+      *"tratativa registrada sem chamado"* em vez de campos vazios.
+
+> **Sobre o histórico:** as resoluções antigas continuam lá, inteiras. Algumas
+> têm motivos da lista anterior (ex.: "Justificado pelo gestor"), que não estão
+> mais disponíveis para escolha. A tela mostra o motivo **registrado na época** —
+> histórico não é reescrito para caber na lista atual.
+
+## 4. Visão Geral (Card 24)
 
 **Onde:** aba **Visão Geral**.
 

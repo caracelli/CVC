@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """Granularidade por ACESSO (item 5 da Bruna, ultimo passo): tratar/quarentenar
 UM perfil especifico, nao o sistema inteiro nem a pessoa.
 
@@ -60,7 +60,7 @@ class _Base(unittest.TestCase):
 class TestResolverPorPerfil(_Base):
 
     def test_resolve_so_o_acesso_alvo(self):
-        n = vm.resolver_pendencia("M1", "IAM-1", motivo="Exceção",
+        n = vm.resolver_pendencia("M1", "IAM-1", descricao="Parecer do analista.", motivo="Exceção",
                                   sistema="SYSTUR", perfil="P_A")
         self.assertEqual(n, 1)
         u, st = self._divs()
@@ -70,7 +70,7 @@ class TestResolverPorPerfil(_Base):
         self.assertFalse(u.get("resolvido"))                   # pessoa segue pendente
 
     def test_chave_composta_de_tres_partes(self):
-        vm.resolver_pendencia("M1", "IAM-1", motivo="Exceção",
+        vm.resolver_pendencia("M1", "IAM-1", descricao="Parecer do analista.", motivo="Exceção",
                               sistema="SYSTUR", perfil="P_A")
         conteudo = ""
         for f in os.listdir(self.inter):
@@ -80,7 +80,7 @@ class TestResolverPorPerfil(_Base):
         self.assertIn('"perfil": "P_A"', conteudo)
 
     def test_snapshot_so_do_acesso_alvo(self):
-        vm.resolver_pendencia("M1", "IAM-1", motivo="Exceção",
+        vm.resolver_pendencia("M1", "IAM-1", descricao="Parecer do analista.", motivo="Exceção",
                               sistema="SYSTUR", perfil="P_A")
         reg = None
         for f in os.listdir(self.inter):
@@ -92,21 +92,21 @@ class TestResolverPorPerfil(_Base):
         self.assertEqual(pend[0]["pe"], "P_A")
 
     def test_resolver_o_sistema_continua_valendo(self):
-        vm.resolver_pendencia("M1", "IAM-9", motivo="Exceção", sistema="SYSTUR")
+        vm.resolver_pendencia("M1", "IAM-9", descricao="Parecer do analista.", motivo="Exceção", sistema="SYSTUR")
         _, st = self._divs()
         self.assertEqual(st[("SYSTUR", "P_A")], "Resolvido")
         self.assertEqual(st[("SYSTUR", "P_B")], "Resolvido")
         self.assertEqual(st[("SICA_RA", "P_C")], "Pendente")
 
     def test_resolver_a_pessoa_continua_valendo(self):
-        vm.resolver_pendencia("M1", "IAM-9", motivo="Exceção")
+        vm.resolver_pendencia("M1", "IAM-9", descricao="Parecer do analista.", motivo="Exceção")
         u, st = self._divs()
         self.assertTrue(all(v == "Resolvido" for v in st.values()))
         self.assertTrue(u.get("resolvido"))
 
     def test_perfil_sem_sistema_e_ignorado(self):
         # perfil so faz sentido dentro de um sistema: sem sistema, resolve a pessoa
-        vm.resolver_pendencia("M1", "IAM-1", motivo="Exceção", perfil="P_A")
+        vm.resolver_pendencia("M1", "IAM-1", descricao="Parecer do analista.", motivo="Exceção", perfil="P_A")
         u, _ = self._divs()
         self.assertTrue(u.get("resolvido"))
 

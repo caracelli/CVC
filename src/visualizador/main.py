@@ -1463,7 +1463,7 @@ def gerar_xlsx_painel(dash_secoes, analiticos, titulo="Visão Geral"):
          "aba": "Divergências (analítico)", "cat_ci": 3, "px": (636, 128, 610, 250)},
         {"titulo": "Aging das Pendências (registros)", "tipo": "col",
          "aba": "Aging (analítico)", "cat_ci": 7, "px": (14, 396, 610, 250)},
-        {"titulo": "Motivos dos Tratamentos (registros)", "tipo": "doughnut",
+        {"titulo": "Motivos das Resoluções — Pendências (registros)", "tipo": "doughnut",
          "aba": "Motivos (analítico)", "cat_ci": 2, "px": (636, 396, 610, 250)},
     ]
     icells = {}
@@ -2825,11 +2825,12 @@ def _tratamentos_transferido_mesclados(interacoes=None):
 
 def tratar_transferido(registro_id, ticket, ticket_url="", descricao="", motivo=""):
     """Grava interacao TRATAMENTO_TRANSFERIDO (mesmo padrao do desligado): registra
-    a revisao de acesso pos-mudanca sob um ticket. registro_id = matricula."""
+    a revisao de acesso pos-mudanca. Ticket OPCIONAL desde 05/08 — ver
+    `_validar_tratativa`. registro_id = matricula."""
     rid = str(registro_id or "").strip()
     tk = str(ticket or "").strip()
     motivo = str(motivo or "").strip()
-    if not rid or not tk or not motivo:
+    if not rid or not motivo or not str(descricao or "").strip():
         return 0
     nome = ""
     try:
@@ -3033,9 +3034,14 @@ def _validar_tratativa(rid, motivo, parecer):
 
 def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo="",
                        sistema="", perfil=""):
-    """Grava uma interacao RESOLUCAO na rede — marca o funcionario como
-    resolvido sob um ticket do Jira, com o MOTIVO (obrigatorio, vindo do combobox
-    do XML). Devolve 1 se gravou, 0 se invalido.
+    """Grava uma interacao RESOLUCAO na rede — registra a TRATATIVA do analista
+    (motivo + parecer), com o ticket do Jira OPCIONAL. Devolve 1 se gravou, 0 se
+    invalido.
+
+    O ticket ERA obrigatorio aqui tambem (regra antiga). Ficou opcional em
+    05/08 junto com a separacao "Resolver" x "Abrir chamado no Jira": exigir o
+    ticket impediria registrar a tratativa interna, que e' o caminho novo. O
+    obrigatorio agora e' o que prova a tratativa — ver `_validar_tratativa`.
 
     Alvo (retorno Bruna, 3 niveis):
       - so `registro_id`            -> a PESSOA inteira (compat);
@@ -3047,7 +3053,7 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=
     perf_alvo = str(perfil or "").strip() if sis_alvo else ""
     tk = str(ticket or "").strip()
     motivo = str(motivo or "").strip()
-    if not rid or not tk or not motivo:
+    if not rid or not motivo or not str(descricao or "").strip():
         return 0
     nome, _, _ = _meta_divergencia(rid)
     # chave da resolucao: composta quando por sistema/acesso (nao muda schema)
@@ -3129,12 +3135,13 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=
 
 def tratar_desligado(registro_id, ticket, ticket_url="", descricao="", motivo=""):
     """Grava uma interacao TRATAMENTO_DESLIGADO na rede — registra o tratamento do
-    acesso de um desligado sob um ticket do Jira (mesmo padrao da resolucao de
-    pendencia). `registro_id` = matricula do desligado. Devolve 1 se gravou."""
+    acesso de um desligado (mesmo padrao da resolucao de pendencia). Ticket
+    OPCIONAL desde 05/08 — ver `_validar_tratativa`. `registro_id` = matricula
+    do desligado. Devolve 1 se gravou."""
     rid = str(registro_id or "").strip()
     tk = str(ticket or "").strip()
     motivo = str(motivo or "").strip()
-    if not rid or not tk or not motivo:
+    if not rid or not motivo or not str(descricao or "").strip():
         return 0
     # Snapshot p/ auditoria: dados do desligado + acessos ainda ativos no momento.
     nome = cargo = centro_custo = ""
@@ -3440,7 +3447,8 @@ def _vg_secoes(de="", ate=""):
          "linhas": [[SL.get(k, k), v] for k, v in sorted(ds.items(), key=lambda x: -x[1])]},
         {"titulo": "Aging das Pendências", "chart": {"tipo": "col"}, "colunas": ["Faixa (dias)", "Qtd"],
          "linhas": [[k, v] for k, v in ag.items()]},
-        {"titulo": "Motivos dos Tratamentos" + (f" ({de} a {ate})" if (de or ate) else " (todo o período)"),
+        {"titulo": "Motivos das Resoluções — Pendências"
+                   + (f" ({de} a {ate})" if (de or ate) else " (todo o período)"),
          "chart": {"tipo": "doughnut"}, "colunas": ["Motivo", "Qtd", "%"],
          "linhas": [[it["motivo"], it["n"], pct(it["n"], tot_m)] for it in mot.get("itens", [])]},
     ]

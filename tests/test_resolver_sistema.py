@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """Resolução POR SISTEMA (retorno Bruna item 5): resolver um sistema marca só
 aquele como Resolvido; os outros seguem Pendente. Usa a chave composta
 `usuario##sistema` — sem mudar schema."""
@@ -56,7 +56,7 @@ class TestResolverPorSistema(unittest.TestCase):
         self.assertEqual(antes.get("SYSTUR"), "Pendente")
         self.assertEqual(antes.get("SICA_RA"), "Pendente")
         # resolve SÓ o SYSTUR
-        n = vm.resolver_pendencia("M1", "IAM-1", motivo="Exceção", sistema="SYSTUR")
+        n = vm.resolver_pendencia("M1", "IAM-1", descricao="Parecer do analista.", motivo="Exceção", sistema="SYSTUR")
         self.assertEqual(n, 1)
         depois, u = self._divs_por_sis()
         self.assertEqual(depois.get("SYSTUR"), "Resolvido")     # resolvido
@@ -65,7 +65,7 @@ class TestResolverPorSistema(unittest.TestCase):
         self.assertFalse(u.get("resolvido"))
 
     def test_resolver_a_pessoa_inteira_marca_todos(self):
-        n = vm.resolver_pendencia("M1", "IAM-9", motivo="Exceção")   # sem sistema
+        n = vm.resolver_pendencia("M1", "IAM-9", descricao="Parecer do analista.", motivo="Exceção")   # sem sistema
         self.assertEqual(n, 1)
         depois, u = self._divs_por_sis()
         self.assertEqual(depois.get("SYSTUR"), "Resolvido")
@@ -73,7 +73,7 @@ class TestResolverPorSistema(unittest.TestCase):
         self.assertTrue(u.get("resolvido"))
 
     def test_interacao_gravada_com_chave_composta(self):
-        vm.resolver_pendencia("M1", "IAM-1", motivo="Exceção", sistema="SYSTUR")
+        vm.resolver_pendencia("M1", "IAM-1", descricao="Parecer do analista.", motivo="Exceção", sistema="SYSTUR")
         conteudo = ""
         for f in os.listdir(self.inter):
             with open(os.path.join(self.inter, f), encoding="utf-8") as fh:

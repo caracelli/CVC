@@ -71,6 +71,70 @@ class TestFormatoDoErro(unittest.TestCase):
         self.assertIn("verificado", msg.lower())
 
 
+class TestGravadorConcordaComOValidador(unittest.TestCase):
+    """A validacao da rota e a funcao que GRAVA precisam concordar.
+
+    Achado no E2E do pacote: a rota ja aceitava sem ticket (HTTP 200), mas
+    `resolver_pendencia` continuava exigindo `tk` por dentro e devolvia 0 —
+    "falha ao resolver", sem explicacao. Testar so o validador nao pegava:
+    eram duas regras, em dois lugares, discordando.
+    """
+
+    def setUp(self):
+        import os
+        import sqlite3
+        import tempfile
+        import visualizador.main as vm
+        self.vm = vm
+        self._orig = (vm.DB_PATH, vm.PASTA_INTERACOES, vm.SISTEMA)
+        self._tmp = tempfile.mkdtemp(prefix="cvc_trat_")
+        # banco minimo: as funcoes leem metadados para o snapshot de auditoria
+        db = os.path.join(self._tmp, "t.db")
+        c = sqlite3.connect(db)
+        c.executescript(
+            "CREATE TABLE bi_divergencias (usuario TEXT, nome_usuario TEXT,"
+            " sistema TEXT, matricula TEXT, tipo TEXT, acao TEXT,"
+            " perfil_encontrado TEXT, perfil_esperado TEXT, origem TEXT);"
+            "CREATE TABLE rh_ativos (matricula TEXT, cargo_descricao TEXT,"
+            " centro_custo_codigo TEXT, centro_custo_nome TEXT);"
+            "CREATE TABLE rh_desligados (matricula TEXT, nome TEXT,"
+            " cargo_descricao TEXT, centro_custo_codigo TEXT);"
+            "CREATE TABLE divergencias (tipo TEXT, sistema TEXT, usuario TEXT,"
+            " matricula TEXT, perfil_encontrado TEXT);")
+        c.commit()
+        c.close()
+        vm.DB_PATH = db
+        vm.PASTA_INTERACOES = self._tmp
+        vm.SISTEMA = ""
+
+    def tearDown(self):
+        self.vm.DB_PATH, self.vm.PASTA_INTERACOES, self.vm.SISTEMA = self._orig
+
+    def _funcoes(self):
+        return (self.vm.resolver_pendencia, self.vm.tratar_desligado,
+                self.vm.tratar_transferido)
+
+    def test_gravam_SEM_ticket(self):
+        for fn in self._funcoes():
+            self.assertEqual(
+                fn("123", "", "", "Parecer do analista.", "Exceção"), 1,
+                f"{fn.__name__} recusou tratativa sem ticket")
+
+    def test_nao_gravam_sem_parecer(self):
+        for fn in self._funcoes():
+            self.assertEqual(fn("123", "IAM-1", "", "", "Exceção"), 0,
+                             f"{fn.__name__} gravou sem parecer")
+
+    def test_nao_gravam_sem_motivo(self):
+        for fn in self._funcoes():
+            self.assertEqual(fn("123", "IAM-1", "", "Parecer.", ""), 0,
+                             f"{fn.__name__} gravou sem motivo")
+
+    def test_com_ticket_continua_gravando(self):
+        for fn in self._funcoes():
+            self.assertEqual(fn("123", "IAM-1", "", "Parecer.", "Exceção"), 1)
+
+
 class TestOsTresFluxosUsamAMesmaRegra(unittest.TestCase):
     """resolver / tratar-desligado / tratar-transferido nao podem divergir."""
 

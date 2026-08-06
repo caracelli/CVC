@@ -139,13 +139,30 @@ class TestWritesQuarentena(_Base):
         # motivo (combobox obrigatorio do XML) viaja na interacao
         self.assertEqual(res[0]["motivo"], "Acesso incluído conforme solicitação")
 
-    def test_resolver_pendencia_sem_ticket_nao_grava(self):
-        self.assertEqual(vm.resolver_pendencia("R1", ticket="", motivo="X"), 0)
-        self.assertEqual(self._interacoes(), [])
+    def test_resolver_pendencia_SEM_TICKET_grava(self):
+        """REGRA NOVA (05/08/2026) — este teste era o inverso.
+
+        O ticket do Jira era obrigatorio. Com a separacao "Resolver" (tratativa
+        interna do analista) x "Abrir chamado no Jira", exigir o ticket
+        impediria o caminho novo: nao daria para registrar tratativa sem
+        chamado aberto. Agora o obrigatorio e' motivo + parecer."""
+        n = vm.resolver_pendencia("R1", ticket="", descricao="Validado com o gestor.",
+                                  motivo="Exceção")
+        self.assertEqual(n, 1)
+        res = [i for i in self._interacoes() if i.get("tipo_interacao") == "RESOLUCAO"]
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]["ticket"], "")
 
     def test_resolver_pendencia_sem_motivo_nao_grava(self):
         # motivo e' OBRIGATORIO (combobox do XML)
-        self.assertEqual(vm.resolver_pendencia("R1", ticket="IAM-1", motivo=""), 0)
+        self.assertEqual(
+            vm.resolver_pendencia("R1", ticket="IAM-1", descricao="ok", motivo=""), 0)
+        self.assertEqual(self._interacoes(), [])
+
+    def test_resolver_pendencia_sem_parecer_nao_grava(self):
+        # parecer e' o que PROVA a tratativa — obrigatorio desde 05/08
+        self.assertEqual(
+            vm.resolver_pendencia("R1", ticket="IAM-1", descricao="", motivo="Exceção"), 0)
         self.assertEqual(self._interacoes(), [])
 
     def test_quarentena_bloqueia_acima_de_90_dias(self):

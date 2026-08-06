@@ -38,6 +38,17 @@ STAGING = RAIZ / "_entrega_bruna_staging"
 VERSAO = "1.0.0"
 RAIZ_LOCAL = ""  # vazio = MODO LOCAL (nao toca a rede)
 
+# A Bruna NAO roda o Processador: ela so usa o Visualizador (definido em
+# 05/08). Entao o pacote leva o BANCO PRONTO e a ENTRADA vai VAZIA — so a
+# estrutura de pastas. Sem isso ela abriria o painel num banco inexistente.
+# Deixar a ENTRADA populada tambem seria risco: um clique no Processador
+# reprocessaria e mudaria a base que ela esta validando.
+BANCO_PRONTO = Path(
+    r"C:\Users\user\AppData\Local\Temp\claude"
+    r"\c--Users-user-OneDrive-Backup-Note-Projetos-Antlia-cvc-CVC"
+    r"\34c299f2-b0ec-4b8f-baf4-db3c2f55ef38\scratchpad\bruto"
+    r"\CVC_IAM_ANALYTICS\DADOS\BANCO\iam_analytics.db")
+
 LAUNCHER_DIR = EXECS / "launcher"
 PRINCIPAL_VISUALIZADOR = EXECS / "visualizador.exe"
 PRINCIPAL_PROCESSADOR = EXECS / "Processador.exe"
@@ -231,14 +242,21 @@ ROTEIRO = RAIZ / "docs" / "ROTEIRO_VALIDACAO_TRANSFERIDOS.md"
 def montar(base: Path):
     raiz = base / "CVC_IAM_ANALYTICS"
     montar_executaveis(raiz / "EXECUTAVEIS")
-    n = montar_entrada(raiz)
-    montar_2a_carga(raiz)
+    # ENTRADA so com a estrutura (ela nao processa) — ver BANCO_PRONTO
+    for sub in ENTRADA_SUBDIRS:
+        (raiz / "ENTRADA" / sub).mkdir(parents=True, exist_ok=True)
+    n = 0
     # roteiro de validacao junto do pacote (a usuaria nao tem o repo)
     if ROTEIRO.exists():
         shutil.copy2(ROTEIRO, raiz / "ROTEIRO_VALIDACAO.md")
     for sub in DADOS_SUBDIRS:
         (raiz / "DADOS" / sub).mkdir(parents=True, exist_ok=True)
     (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
+    # BANCO PRONTO — o painel abre direto nele
+    if not BANCO_PRONTO.exists():
+        print(f"FALHA — banco de entrega ausente:\n  {BANCO_PRONTO}")
+        sys.exit(1)
+    shutil.copy2(BANCO_PRONTO, raiz / "DADOS" / "BANCO" / "iam_analytics.db")
     (raiz / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
     return n
 
@@ -291,40 +309,26 @@ que o cliente esta testando (config.xml com <raiz> vazia = modo local; os
 executaveis NAO se auto-atualizam da rede).
 
 ------------------------------------------------------------
-COMO USAR
+COMO USAR — sao 2 passos
 ------------------------------------------------------------
 1. Extraia a pasta CVC_IAM_ANALYTICS para qualquer lugar do seu PC
    (ex.: C:\\CVC_TESTE\\CVC_IAM_ANALYTICS). NAO precisa estar na rede.
 
-2. Gere o banco (1a vez): rode
-       CVC_IAM_ANALYTICS\\EXECUTAVEIS\\Processador.exe
-   Os arquivos de entrada JA vem posicionados em ENTRADA\\. Ao terminar,
-   o banco DADOS\\BANCO\\iam_analytics.db e' criado e os arquivos lidos
-   vao para PROCESSADOS.
-
-   >> O Processador nao abre janela preta: ele abre uma ABA DO NAVEGADOR com
-      o log ao vivo. Quando aparecer "Concluido", clique em FECHAR nessa aba
-      (ou feche a aba) — so entao o Processador encerra de verdade. Se voce
-      rodar de novo sem fechar, fica uma aba por execucao.
-
-   >> REAPROVEITAR UMA BASE EXISTENTE (opcional):
-      Se ja tiver um iam_analytics.db de um teste anterior, copie-o para
-      CVC_IAM_ANALYTICS\\DADOS\\BANCO\\ ANTES de rodar o Processador. O
-      Processador novo e' ADITIVO/NAO-DESTRUTIVO: ele apenas CRIA a nova
-      tabela de eventos (ciclo_eventos_acesso) e a preenche a partir do
-      historico ja existente — NAO apaga nem altera os dados anteriores
-      (validacoes, ciclos, resolucoes e quarentenas ficam intactos).
-
-3. Abra o painel: rode
+2. Rode
        CVC_IAM_ANALYTICS\\EXECUTAVEIS\\visualizador.exe
-   Ele abre http://127.0.0.1:8800/ no navegador, lendo o banco local.
+   Ele abre http://127.0.0.1:8800/ no navegador. Pronto, e' so isso.
 
-4. PARA VER A ABA TRANSFERIDOS: ela depende de DUAS cargas de RH (o sistema
-   descobre quem mudou comparando o antes e o depois). A 2a carga esta em
-       CVC_IAM_ANALYTICS\\2a_CARGA_RH\\
-   Copie o PROJETOIAM.CSV de la para ENTRADA\\RH\\ATIVOS\\ e rode o
-   Processador.exe de novo. Detalhes no LEIA-ME.txt daquela pasta.
-   (Antes desse 2o processamento a aba fica vazia — e' o esperado, nao e' erro.)
+VOCE NAO PRECISA RODAR O PROCESSADOR. O banco JA VEM PRONTO no pacote, com
+dois meses de dados (junho, julho e agosto/2026) — inclusive o historico de
+movimentacoes, que so existe porque varias cargas de RH foram comparadas ao
+longo do periodo. E' esse banco que o painel abre.
+
+A pasta ENTRADA vem VAZIA de proposito: nada para processar, e nenhum risco
+de um clique no Processador alterar a base que voce esta validando.
+
+O QUE VOCE PODE FAZER A VONTADE: tratar pendencias, resolver, enviar para
+quarentena, exportar as planilhas. Tudo o que voce fizer fica gravado na sua
+copia local e NAO afeta ninguem — nem a rede, nem a versao do cliente.
 
 ------------------------------------------------------------
 O QUE VEM DENTRO
@@ -378,8 +382,19 @@ O QUE VEM DENTRO
     a troca de gestor muda o resultado.
   * VISAO GERAL: novo indicador "Acessos p/ Revogar", que leva direto para a
     aba Transferidos.
-- SEM banco pronto: o banco nasce no 1o processamento (passo 2), ou
-  reaproveite um banco anterior (ver passo 2).
+  * FORMULARIO DE TRATATIVA — regra nova. O nº do ticket do Jira NAO e' mais
+    obrigatorio: agora o formulario separa a TRATATIVA DO ANALISTA (motivo e
+    parecer, obrigatorios) do CHAMADO NO JIRA (ticket e link, opcionais).
+    Assim da para registrar uma tratativa interna sem depender de chamado
+    aberto. O botao "Abrir chamado no Jira" aparece DESABILITADO — a abertura
+    automatica depende do formulario no Jira e vem depois.
+    Na lupa, os dados do chamado aparecem em bloco proprio, somente leitura.
+  * Os motivos do combobox nunca mais ficam em branco: se a lista nao puder ser
+    lida, a tela usa a lista padrao e AVISA o motivo da falha (antes ficava
+    vazia em silencio e travava a resolucao, por ser campo obrigatorio).
+- BANCO PRONTO (nao precisa processar): 13.430 pessoas no RH ativo, 29.831
+  desligados, 92.794 acessos nos 7 sistemas, 727 movimentacoes de cadastro
+  detectadas no periodo e 13.773 acessos a revisar por transferencia.
 """
 
 
@@ -397,7 +412,9 @@ def main():
     alvo = ENTREGA / f"TESTE_LOCAL_BRUNA_v{VERSAO}.zip"
     zipar(STAGING / "CVC_IAM_ANALYTICS", alvo)
     print(f"\n  OK -> {alvo}  ({alvo.stat().st_size/1024/1024:.1f} MB)")
-    print(f"  versao={VERSAO}  raiz=<vazia/local>  ENTRADA={n} arquivos  DADOS=sem banco")
+    mb = BANCO_PRONTO.stat().st_size / 1024 / 1024
+    print(f"  versao={VERSAO}  raiz=<vazia/local>  ENTRADA=vazia (nao processa)  "
+          f"BANCO PRONTO={mb:.0f} MB")
 
     shutil.rmtree(STAGING, ignore_errors=True)
     print(f"Concluido em {(datetime.now()-inicio).total_seconds():.1f}s.")

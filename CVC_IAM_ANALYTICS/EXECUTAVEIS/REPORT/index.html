@@ -297,6 +297,9 @@ body{
 .h-stchip.on::after{content:"▾";opacity:.85;}
 .h-sisclick{cursor:pointer;user-select:none;}
 .h-sisclick:hover{background:#E1E8F4;border-color:#C6D2E6;}
+/* chip ABERTO: o usuario precisa ver ONDE clicar de novo para fechar. So a
+   setinha ▾ nao bastava — a dica tambem passou a dizer "RECOLHER". */
+.sis-on{box-shadow:inset 0 0 0 1.5px #2D6CDF;font-weight:700;}
 /* perfil expansível no Detalhe (lista longa vira "N perfis" clicável) */
 .perf-exp{cursor:pointer;color:#2D6CDF;font-weight:600;user-select:none;white-space:nowrap;}
 .perf-exp:hover{text-decoration:underline;}
@@ -1071,22 +1074,27 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
     </div>
     <!-- KPIs principais — paleta CVC (navy/gold) com acentos sóbrios de status -->
     <div class="kpi-row">
-      <div class="kpi vg-kpi" style="background:#FFF7E0;border:1px solid #F5D77A;--kpi-bar:#F5B800;">
+      <!-- Todo card que tem aba correspondente LEVA para ela. Cobertura RH e' o
+           unico sem link: e' um percentual, nao uma fila de trabalho. -->
+      <div class="kpi vg-kpi kpi-link" style="background:#FFF7E0;border:1px solid #F5D77A;--kpi-bar:#F5B800;"
+           onclick="irPendencias()" title="Ver a aba Inclusão / Alteração">
         <div class="kpi-val" style="color:#1F2D5C;" id="vg-k-pend">—</div>
-        <div class="kpi-lbl" style="color:#1F2D5C;">Pendências Abertas</div>
+        <div class="kpi-lbl" style="color:#1F2D5C;">Pendências Abertas ↗</div>
       </div>
-      <div class="kpi vg-kpi" style="background:#FBEAEA;border:1px solid #ECC2C2;--kpi-bar:#B33A3A;">
+      <div class="kpi vg-kpi kpi-link" style="background:#FBEAEA;border:1px solid #ECC2C2;--kpi-bar:#B33A3A;"
+           onclick="irDesligados()" title="Ver a aba Desligados, no segmento Com Acesso/Tratar">
         <div class="kpi-val" style="color:#B33A3A;" id="vg-k-desl">—</div>
-        <div class="kpi-lbl" style="color:#B33A3A;">Desligados com Acesso</div>
+        <div class="kpi-lbl" style="color:#B33A3A;">Desligados com Acesso ↗</div>
         <div class="kpi-meta" id="vg-k-desl-meta"></div>
       </div>
       <div class="kpi vg-kpi" style="background:#E8EEF7;border:1px solid #C5D2EA;--kpi-bar:#1F2D5C;">
         <div class="kpi-val" style="color:#1F2D5C;" id="vg-k-cob">—</div>
         <div class="kpi-lbl" style="color:#1F2D5C;">Cobertura RH (%)</div>
       </div>
-      <div class="kpi vg-kpi" style="background:#EDE9F7;border:1px solid #C5BCE3;--kpi-bar:#5B47A8;">
+      <div class="kpi vg-kpi kpi-link" style="background:#EDE9F7;border:1px solid #C5BCE3;--kpi-bar:#5B47A8;"
+           onclick="irQuarentena()" title="Ver a aba Quarentena">
         <div class="kpi-val" style="color:#5B47A8;" id="vg-k-quar">—</div>
-        <div class="kpi-lbl" style="color:#5B47A8;">Em Quarentena</div>
+        <div class="kpi-lbl" style="color:#5B47A8;">Em Quarentena ↗</div>
       </div>
       <div class="kpi vg-kpi kpi-link" style="background:#EBF5FB;border:1px solid #C5D2EA;--kpi-bar:#2980B9;"
            onclick="irConsultaIncluir()" title="Ver na Consulta os funcionários com acesso a incluir">
@@ -1175,7 +1183,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
       </div>
       <div class="panel vg-panel">
         <div class="vg-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span>🗂️ Motivos dos Tratamentos</span>
+          <span>🗂️ Motivos das Resoluções <span class="vg-soft">— Pendências</span></span>
           <button class="mot-combo" id="mot-combo" onclick="motAbrirPeriodo(this)" title="Selecionar período">
             📅 <b id="mot-per-lbl">Tudo</b> <span class="mot-caret">▾</span>
           </button>
@@ -2167,7 +2175,10 @@ function _inclAcaoResumo(u){
   const ordem=['Incluir Acesso','Alterar Perfil','Em Análise','Usuário Não Encontrado','Aderente'];
   return ks.sort((x,y)=>{const ix=ordem.indexOf(x),iy=ordem.indexOf(y);return (ix<0?9:ix)-(iy<0?9:iy);})
     .map(a=>{const c=_csCorAcao(a);
-      return `<span class="acao-chip" data-u="${esc(u.u)}" onclick="inclAcaoToggle(this)" style="color:${c};border-color:${c}66;background:${c}12;cursor:pointer;" title="Clique para abrir/recolher esta pessoa">${esc(a)} (${cont[a]}) ${_inclExpand.has(u.u)?'▾':'▸'}</span>`;})
+      const aberto=_inclExpand.has(u.u);
+      const dica=aberto?'Clique para RECOLHER esta pessoa'
+                       :'Clique para abrir TODOS os acessos desta pessoa';
+      return `<span class="acao-chip${aberto?' sis-on':''}" data-u="${esc(u.u)}" onclick="inclAcaoToggle(this)" style="color:${c};border-color:${c}66;background:${c}12;cursor:pointer;" title="${dica}">${esc(a)} (${cont[a]}) ${aberto?'▾':'▸'}</span>`;})
     .join('');
 }
 /* Célula Sistema no cabeçalho da Pendências: 1 sistema = o nome; vários = CHIPS
@@ -2193,7 +2204,10 @@ function _pendSisCel(ddivs, u){
   if(s.length===1) return `<span class="h-sis">${esc(s[0])}</span>${_selo(s[0])}`;
   const chips=s.slice(0,4).map(sis=>{
     const on=_inclSisExp.has(u.u+'|'+sis);
-    return `<span class="h-sis h-sisclick" data-u="${esc(u.u)}" data-sis="${esc(sis)}" onclick="inclSisToggle(this)" title="Clique para ver ${esc(sis)}">${esc(sis)} ${on?'▾':'▸'}</span>${_selo(sis)}`;
+    // a dica diz o que o PRÓXIMO clique faz, e o chip aberto fica marcado —
+    // só a setinha não bastava para o usuário perceber que fecha no mesmo lugar
+    const dica = on ? `Clique para RECOLHER ${sis}` : `Clique para abrir os acessos de ${sis}`;
+    return `<span class="h-sis h-sisclick${on?' sis-on':''}" data-u="${esc(u.u)}" data-sis="${esc(sis)}" onclick="inclSisToggle(this)" title="${esc(dica)}">${esc(sis)} ${on?'▾':'▸'}</span>${_selo(sis)}`;
   }).join(' ');
   const extra=s.length>4?` <span class="h-sis" style="cursor:default;" title="${esc(s.slice(4).join(', '))}">+${s.length-4}</span>`:'';
   return `<span style="display:inline-flex;flex-wrap:wrap;gap:3px;align-items:center;">${chips}${extra}</span>`;
@@ -5543,6 +5557,21 @@ function irConsultaIncluir(){
   _csPag = 1;
   showPage('consulta');
 }
+/* Cards da Visão Geral que levam à aba correspondente. Cada um abre a aba já no
+   segmento certo — o card fala de uma FILA específica, não da aba inteira.
+   (Cobertura RH é o único sem link: é um percentual, não uma fila.) */
+function irPendencias(){ showPage('incl'); }
+function irQuarentena(){ showPage('quar'); }
+function irDesligados(){
+  _deslView = 'tratar';           // o card conta quem TEM acesso a tratar
+  _deslPag = 1;
+  const b = document.getElementById('desl-busca'); if(b) b.value = '';
+  showPage('deslig');
+  document.querySelectorAll('#pg-deslig .seg').forEach(s =>
+    s.classList.toggle('active', s.dataset.view === 'tratar'));
+  if(typeof pintarDesligados === 'function') pintarDesligados();
+}
+
 /* Card 24 — KPI da Visão Geral leva à aba Transferidos, já em "A Revisar". */
 function irTransferidos(){
   _transfView = 'revisar';
