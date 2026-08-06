@@ -4198,9 +4198,15 @@ function _modalResolucao(sub, rc){
     + '<p>' + esc(sub) + '</p></div>'
     + '<div class="modal-bd modal-vw">'
     + '<div class="trat-sec">Tratativa do analista</div>'
+    // O Motivo só existe na PENDÊNCIA (06/08). Nos outros fluxos vem vazio —
+    // mostrar "Motivo —" para sempre seria ruído. Some a coluna, e a data
+    // ocupa a linha inteira. Tratativas ANTIGAS de desligado/transferido, que
+    // foram gravadas com motivo, continuam exibindo o que registraram.
     + '<div class="vw-grid2">'
-    + '<div><div class="vw-lbl">Motivo</div><div class="vw-val">'
-    + (esc(rc.motivo) || '—') + '</div></div>'
+    + (esc(rc.motivo)
+        ? '<div><div class="vw-lbl">Motivo</div><div class="vw-val">'
+          + esc(rc.motivo) + '</div></div>'
+        : '')
     + '<div><div class="vw-lbl">Resolvido em</div><div class="vw-val">'
     + (rc.em ? fmtDT(rc.em) : '—') + '</div></div></div>'
     + '<div class="vw-lbl vw-mt">Parecer</div><div>' + dsc + '</div>'
