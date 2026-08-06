@@ -854,6 +854,12 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .cs-aba-btn[disabled]{opacity:.42;cursor:not-allowed;pointer-events:none;}
 .cs-vazio{text-align:center;padding:38px 18px;color:#7B8294;
   font:500 13px 'Segoe UI';}
+/* Aviso do filtro de sistema na Consulta: âmbar de atenção (não é erro, é
+   "leia com cuidado") e discreto, para não competir com a grid. */
+.cs-aviso{display:inline-block;padding:3px 10px;border-radius:11px;
+  background:#FCF3DC;border:1px solid #E9D8A6;color:#7A5B10;
+  font:500 11.5px 'Segoe UI';line-height:1.35;max-width:520px;cursor:help;}
+.cs-aviso b{color:#5C4308;font-weight:700;}
 .cs-vazio b{color:var(--navy);font-weight:700;}
 .cs-pill{display:inline-block;padding:2px 8px;border-radius:9px;
   font:700 10px 'Segoe UI';}
@@ -1328,6 +1334,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
       <span class="pager" id="cs-pager"></span>
       <span class="lista-total" id="cs-total"></span>
       <span id="cs-cat-badge"></span>
+      <span id="cs-aviso-sis"></span>
       <button class="atl-btn" onclick="limparFiltrosGrid()" title="Limpar todos os filtros desta grade (busca, funis e o filtro salvo aplicado)">🧹 Limpar filtros</button>
       <div class="atl-actions" id="atl-actions-consulta"></div>
       <button class="btn-exp" onclick="csExportar()">
@@ -1989,6 +1996,11 @@ const FILTROS = [
   {id:'sistema', campo:'sis', rotulo:'Sistema'},
 ];
 const filtroSel = {};
+/* Universo de cada filtro lateral (todos os valores que existem). `filtroSel`
+   nasce com tudo marcado e nunca é apagado, então "filtro ativo" = seleção
+   MENOR que o universo — sem isto não dá para saber se o usuário escolheu algo
+   ou se está vendo o padrão. Usado pelo aviso da Consulta. */
+const filtroVals = {};
 
 // Textos do (i) dos filtros — validados nas regras de validar_acessos_sistema.py
 const DESC_FILTRO = {
@@ -2033,6 +2045,7 @@ function montarFiltros(){
            if (f.id === 'tipo' || f.id === 'acao')
              vals = vals.filter(v => v !== 'Aderente' && v !== 'Incluir Acesso' && v !== 'Sem Acesso'); }
     filtroSel[f.id] = new Set(vals);
+    filtroVals[f.id] = vals.slice();
     const comInfo = (f.id === 'acao' || f.id === 'status' || f.id === 'tipo');
     const todos = `<button class="pill yellow" data-all="1" onclick="filtroTodos('${f.id}',this)">Desmarcar Todos</button>`;
     const pills = vals.map(v => {
@@ -2408,6 +2421,24 @@ function _pendDisp(c,u){
   const v=_PEND_KEY[c](u);
   return (v==null||v==='')?'—':String(v);
 }
+
+/* Colunas cujo valor é do ACESSO, não da pessoa. O funil delas precisa casar
+   QUALQUER acesso exibido: ler só `divs[0]` (o acesso do cabeçalho) escondia
+   quem tem pendência em dois sistemas — filtrando pelo segundo, a pessoa sumia
+   mesmo tendo pendência ali, e sem aviso nenhum na tela, só um total menor.
+   Medido na base de 05/08: 5 de 404 pessoas (Sistema e Perfil Encontrado), 4
+   em Perfil Esperado. Pequeno hoje porque quase todos têm pendência num
+   sistema só, e cresce conforme as bases entram.
+   A semântica passa a ser a MESMA do filtro lateral de Sistema, que a Bruna já
+   validou: casa qualquer acesso e ISOLA na linha o que casou. */
+const _PEND_POR_ACESSO = {8:d=>d.sis, 14:d=>d.pe, 15:d=>d.pp, 16:d=>d.o};
+const _pendCel = v => (v==null||v==='') ? '—' : String(v);
+/* Valores que UMA pessoa oferece ao funil da coluna: um por acesso nas colunas
+   por acesso, um só nas colunas da pessoa (nome, gestor, cargo...). */
+function _pendValoresFunil(u, c){
+  const f = _PEND_POR_ACESSO[+c];
+  return f ? u.divs.map(d => _pendCel(f(d))) : [_pendDisp(+c, u)];
+}
 /* Categoria (2), Status (4), Tipo (13) tem chips no topo — na grid so ORDENAM.
    Data (0) tem filtro PROPRIO (atalhos + range). Demais usam funil padrao. */
 const _PEND_SO_ORD=new Set([2,4,13]);
@@ -2522,7 +2553,10 @@ function _pendMenu(c,th){
   // Mesma base da grid: divs reduzidos ao que está na tela (senão o funil lista
   // "Aderente"/"Sem Acesso"/sistema de um acesso que não é a pendência).
   const base=_usersPendBase();
-  const sv=new Set(); base.forEach(u=>sv.add(_pendDisp(c,u)));
+  // um valor por ACESSO nas colunas por acesso — senão o funil só ofereceria o
+  // sistema/perfil do cabeçalho e um valor que existe na tela ficaria de fora
+  const sv=new Set();
+  base.forEach(u => _pendValoresFunil(u, c).forEach(v => sv.add(v)));
   const lista=[...sv].sort(_gxCmp), sel=_filtPend[c];
   const m=document.createElement('div'); m.className='gx-menu'; m.id='gx-menu';
   m.innerHTML=
@@ -2592,8 +2626,20 @@ function renderMatrix(){
   // "filtro por sistema deve isolar o sistema, não mostrar todos").
   _usersFiltrados = _usersPendBase();
   const fp = Object.entries(_filtPend);
-  if(fp.length) _usersFiltrados = _usersFiltrados.filter(u =>
-    fp.every(([c,set]) => set.has(_pendDisp(+c,u))));
+  if(fp.length){
+    // 1) colunas por ACESSO reduzem os divs ao que casou — mesma regra do
+    //    filtro lateral de Sistema (a pessoa entra por qualquer acesso, e a
+    //    linha mostra só aquele). Antes casava só `divs[0]` e perdia gente.
+    const porAcesso = fp.filter(([c]) => _PEND_POR_ACESSO[+c]);
+    if(porAcesso.length) _usersFiltrados = _usersFiltrados
+      .map(u => ({...u, divs: u.divs.filter(d => porAcesso.every(
+        ([c,set]) => set.has(_pendCel(_PEND_POR_ACESSO[+c](d)))))}))
+      .filter(u => u.divs.length > 0);
+    // 2) colunas da PESSOA depois, para a Qtd bater com o que sobrou na linha
+    const porPessoa = fp.filter(([c]) => !_PEND_POR_ACESSO[+c]);
+    if(porPessoa.length) _usersFiltrados = _usersFiltrados.filter(u =>
+      porPessoa.every(([c,set]) => set.has(_pendDisp(+c,u))));
+  }
   // Filtro especial de Data (col 0): aplica range derivado de _filtData
   if (_filtroDataAtivo()) {
     const r = _calcularRangeData();
@@ -5612,6 +5658,28 @@ function _renderBadgeCatConsulta(){
     : '';
 }
 
+/* A Consulta é a visão 360° da PESSOA: o filtro lateral de Sistema decide quem
+   entra na lista, mas as colunas (Sistemas, Pendências, Última divergência) e a
+   expansão seguem contando TODOS os acessos dela — esconder metade dos acessos
+   de alguém que você abriu para consultar seria pior.
+   O risco é de leitura, não de número: filtrando SIGOT, uma linha com
+   "5 sistemas · 12 pendências" é lida como 12 pendências NO SIGOT. O aviso
+   abaixo diz em voz alta o que a tela está fazendo.
+   (Na aba Pendências é o contrário: lá o filtro ISOLA o sistema na linha.) */
+function _csAvisoSistema(){
+  const host = document.getElementById('cs-aviso-sis');
+  if (!host) return;
+  const sel = filtroSel.sistema, todos = filtroVals.sistema;
+  const ativo = sel && todos && sel.size && sel.size < todos.length;
+  if (!ativo) { host.innerHTML = ''; return; }
+  const lista = [...sel].join(', ');
+  host.innerHTML = '<span class="cs-aviso" title="Na aba Pendências o filtro de '
+    + 'sistema isola o sistema na linha. Aqui ele escolhe quem aparece, porque a '
+    + 'Consulta mostra a pessoa inteira.">Filtro de sistema: <b>' + esc(lista)
+    + '</b> — escolhe <b>quem</b> aparece; os números da linha contam todos os '
+    + 'sistemas da pessoa</span>';
+}
+
 function renderConsulta(){
   const body = document.getElementById('cs-body');
   const totEl = document.getElementById('cs-total');
@@ -5619,6 +5687,7 @@ function renderConsulta(){
   if (!body) return;
   // Sincroniza o "X" de limpar busca
   if (clearBtn) clearBtn.classList.toggle('show', !!_csBusca);
+  _csAvisoSistema();
 
   const users = _csFiltrarUsers();
   totEl.textContent = users.length === 1
