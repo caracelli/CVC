@@ -37,10 +37,17 @@ class TestObrigatorios(unittest.TestCase):
     def test_sem_registro_recusa(self):
         self.assertIn("registro", _validar_tratativa("", "Exceção", "ok"))
 
-    def test_sem_motivo_recusa(self):
+    def test_sem_motivo_recusa_na_pendencia(self):
         erro = _validar_tratativa("123", "", "ok")
         self.assertIsNotNone(erro)
         self.assertIn("motivo", erro.lower())
+
+    def test_sem_motivo_ACEITA_onde_o_campo_nao_existe(self):
+        # desligado e transferido chamam com exige_motivo=False
+        self.assertIsNone(_validar_tratativa("123", "", "ok", exige_motivo=False))
+
+    def test_parecer_continua_obrigatorio_mesmo_sem_motivo(self):
+        self.assertIsNotNone(_validar_tratativa("123", "", "", exige_motivo=False))
 
     def test_sem_parecer_recusa(self):
         erro = _validar_tratativa("123", "Exceção", "")
@@ -125,10 +132,18 @@ class TestGravadorConcordaComOValidador(unittest.TestCase):
             self.assertEqual(fn("123", "IAM-1", "", "", "Exceção"), 0,
                              f"{fn.__name__} gravou sem parecer")
 
-    def test_nao_gravam_sem_motivo(self):
-        for fn in self._funcoes():
-            self.assertEqual(fn("123", "IAM-1", "", "Parecer.", ""), 0,
-                             f"{fn.__name__} gravou sem motivo")
+    def test_pendencia_exige_motivo(self):
+        """So a PENDENCIA tem a lista fechada — e' dela que sai o grafico."""
+        self.assertEqual(
+            self.vm.resolver_pendencia("123", "IAM-1", "", "Parecer.", ""), 0)
+
+    def test_desligado_e_transferido_NAO_exigem_motivo(self):
+        """Decisao de 06/08: no desligado o desfecho e' sempre revogar, e no
+        transferido o motivo so repetiria o rotulo da aba. Campo obrigatorio de
+        resposta unica e' atrito, nao dado."""
+        for fn in (self.vm.tratar_desligado, self.vm.tratar_transferido):
+            self.assertEqual(fn("123", "IAM-1", "", "Parecer.", ""), 1,
+                             f"{fn.__name__} ainda exige motivo")
 
     def test_com_ticket_continua_gravando(self):
         for fn in self._funcoes():

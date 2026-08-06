@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Visualizador CVC IAM — servidor local que torna o index.html FUNCIONAL e
 IGUALZINHO ao BI, lendo direto do SQLite (sem Parquet), por queries.
@@ -2830,7 +2830,7 @@ def tratar_transferido(registro_id, ticket, ticket_url="", descricao="", motivo=
     rid = str(registro_id or "").strip()
     tk = str(ticket or "").strip()
     motivo = str(motivo or "").strip()
-    if not rid or not motivo or not str(descricao or "").strip():
+    if not rid or not str(descricao or "").strip():
         return 0
     nome = ""
     try:
@@ -3012,19 +3012,24 @@ def retirar_quarentena(registro_id, motivo=""):
     return 1
 
 
-def _validar_tratativa(rid, motivo, parecer):
+def _validar_tratativa(rid, motivo, parecer, exige_motivo=True):
     """Regra da TRATATIVA INTERNA (05/08/2026). Devolve o JSON do erro ou None.
 
-    O que mudou e por que: o ticket do Jira ERA obrigatorio. Com a regra nova —
-    "Resolver" (o analista trata internamente) separado de "Abrir chamado no
-    Jira" — exigir o ticket impediria justamente o caminho novo: nao daria para
-    registrar uma tratativa sem antes existir chamado. Agora o obrigatorio e' o
-    que prova a tratativa: o MOTIVO e o PARECER do analista. Ticket e link ficam
-    opcionais, para quando o chamado ja existir (ou for aberto pelo Jira).
+    O ticket do Jira ERA obrigatorio. Com a regra nova — "Resolver" (o analista
+    trata internamente) separado de "Abrir chamado no Jira" — exigir o ticket
+    impediria justamente o caminho novo: nao daria para registrar uma tratativa
+    sem antes existir chamado. O obrigatorio passou a ser o que PROVA a
+    tratativa: o PARECER do analista. Ticket e link ficam opcionais.
+
+    O MOTIVO (lista fechada do XML) so vale na PENDENCIA — `exige_motivo`
+    (06/08). A lista responde "por que este acesso divergente da matriz vai
+    ficar assim?", pergunta que nao cabe nos outros dois fluxos: no desligado o
+    desfecho e' sempre revogar (obrigatorio de resposta unica e' atrito, nao
+    dado) e no transferido "Transferencia de Area" so repete o rotulo da aba.
     """
     if not rid:
         return '{"ok":false,"erro":"registro obrigatorio"}'
-    if not motivo:
+    if exige_motivo and not motivo:
         return '{"ok":false,"erro":"Selecione o motivo da tratativa."}'
     if not str(parecer or "").strip():
         return ('{"ok":false,"erro":"Descreva o parecer da tratativa '
@@ -3053,6 +3058,8 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=
     perf_alvo = str(perfil or "").strip() if sis_alvo else ""
     tk = str(ticket or "").strip()
     motivo = str(motivo or "").strip()
+    # a PENDENCIA mantem o motivo obrigatorio (e' o unico fluxo com a lista
+    # fechada, e e' dela que sai o grafico "Motivos das Resolucoes")
     if not rid or not motivo or not str(descricao or "").strip():
         return 0
     nome, _, _ = _meta_divergencia(rid)
@@ -3141,7 +3148,7 @@ def tratar_desligado(registro_id, ticket, ticket_url="", descricao="", motivo=""
     rid = str(registro_id or "").strip()
     tk = str(ticket or "").strip()
     motivo = str(motivo or "").strip()
-    if not rid or not motivo or not str(descricao or "").strip():
+    if not rid or not str(descricao or "").strip():
         return 0
     # Snapshot p/ auditoria: dados do desligado + acessos ainda ativos no momento.
     nome = cargo = centro_custo = ""
@@ -3797,7 +3804,8 @@ class H(BaseHTTPRequestHandler):
                 rid = str(payload.get("id") or "").strip()
                 ticket = str(payload.get("ticket") or "").strip()
                 motivo = str(payload.get("motivo") or "").strip()
-                erro = _validar_tratativa(rid, motivo, payload.get("descricao"))
+                erro = _validar_tratativa(rid, motivo, payload.get("descricao"),
+                                          exige_motivo=False)
                 if erro:
                     self._send(400, erro, "application/json; charset=utf-8")
                     return
@@ -3815,7 +3823,8 @@ class H(BaseHTTPRequestHandler):
                 rid = str(payload.get("id") or "").strip()
                 ticket = str(payload.get("ticket") or "").strip()
                 motivo = str(payload.get("motivo") or "").strip()
-                erro = _validar_tratativa(rid, motivo, payload.get("descricao"))
+                erro = _validar_tratativa(rid, motivo, payload.get("descricao"),
+                                          exige_motivo=False)
                 if erro:
                     self._send(400, erro, "application/json; charset=utf-8")
                     return

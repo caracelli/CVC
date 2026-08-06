@@ -3974,7 +3974,7 @@ function abrirResolver(uid, sistema, perfil){
     + (_resPerfil ? ' — este acesso' : _resSistema ? ' — por sistema' : '') + '</h3>'
     + '<p>' + esc(u.n) + ' — ' + esc(u.u) + escopo + '</p></div>'
     + '<div class="modal-bd">'
-    + _campoTratativa('res')
+    + _campoTratativa('res', true)
     + '<div class="modal-err" id="res-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
@@ -4022,9 +4022,11 @@ function _btnJira(){
    (_validar_tratativa no visualizador). Devolve false e aponta o campo. */
 function _validarTratativa(p, motivo, parecer){
   const err = document.getElementById(p + '-err');
-  if(!motivo){
+  // o motivo só é exigido onde o campo existe (pendência) — ver _campoTratativa
+  const temCampoMotivo = !!document.getElementById(p + '-motivo');
+  if(temCampoMotivo && !motivo){
     if(err) err.textContent = 'Selecione o motivo da tratativa.';
-    const el = document.getElementById(p + '-motivo'); if(el) el.focus();
+    document.getElementById(p + '-motivo').focus();
     return false;
   }
   if(!String(parecer||'').trim()){
@@ -4035,11 +4037,20 @@ function _validarTratativa(p, motivo, parecer){
   return true;
 }
 
-function _campoTratativa(p){
+function _campoTratativa(p, comMotivo){
+  // O MOTIVO só existe na PENDÊNCIA (decisão de 06/08). A lista fechada
+  // responde "por que este acesso divergente da matriz vai ficar assim?" —
+  // pergunta que não cabe nos outros dois fluxos: no desligado o desfecho é
+  // sempre revogar (campo obrigatório de resposta única é atrito, não dado) e
+  // no transferido "Transferência de Área" só repete o rótulo da aba. Nos dois,
+  // o parecer é que carrega a informação. O gráfico não muda: ele sempre contou
+  // apenas as pendências.
   return '<div class="trat-sec">Tratativa do analista</div>'
-    + '<label>Motivo <span class="req">*</span></label>'
-    + '<select id="' + p + '-motivo">'
-    + '<option value="" disabled selected>Carregando motivos…</option></select>'
+    + (comMotivo
+        ? '<label>Motivo <span class="req">*</span></label>'
+          + '<select id="' + p + '-motivo">'
+          + '<option value="" disabled selected>Carregando motivos…</option></select>'
+        : '')
     + '<label>Parecer <span class="req">*</span></label>'
     + '<textarea id="' + p + '-desc" maxlength="600" '
     + 'placeholder="O que foi verificado e o que foi decidido"></textarea>'
@@ -4759,7 +4770,7 @@ function abrirTratarDesligado(m){
     + '<p>' + esc(d.n||d.m) + ' — ' + esc(d.m) + ' · ' + n
     + ' acesso(s) ativo(s) a revogar</p></div>'
     + '<div class="modal-bd">'
-    + _campoTratativa('tr')
+    + _campoTratativa('tr', false)
     + '<div class="modal-err" id="tr-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
@@ -4767,8 +4778,7 @@ function abrirTratarDesligado(m){
     + '<button class="mf-ok" onclick="confirmarTratamentoDesligado()">Resolver</button>'
     + '</div>');
   // mesma fonte e mesma blindagem da resolução de pendência
-  _carregarMotivos('tr-motivo');
-  setTimeout(() => { const i = document.getElementById('tr-motivo'); if(i) i.focus(); }, 60);
+  setTimeout(() => { const i = document.getElementById('tr-desc'); if(i) i.focus(); }, 60);
 }
 
 async function confirmarTratamentoDesligado(){
@@ -4776,7 +4786,7 @@ async function confirmarTratamentoDesligado(){
   const ticket = document.getElementById('tr-ticket').value.trim();
   const url    = document.getElementById('tr-url').value.trim();
   const desc   = document.getElementById('tr-desc').value.trim();
-  const motivo = document.getElementById('tr-motivo').value;
+  const motivo = '';   // desligado nao tem motivo (ver _campoTratativa)
   if(!_validarTratativa('tr', motivo, desc)) return;
   const mid = _deslTratAlvo.m;
   fecharModal();
@@ -5025,15 +5035,14 @@ function abrirTratarTransferido(m){
     + '<p>' + esc(d.n||d.m) + ' — ' + esc(d.m) + ' · mudança de ' + (esc(d.campos)||'cadastro')
     + '</p></div>'
     + '<div class="modal-bd">'
-    + _campoTratativa('tt')
+    + _campoTratativa('tt', false)
     + '<div class="modal-err" id="tt-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
     + _btnJira()
     + '<button class="mf-ok" onclick="confirmarTratamentoTransferido()">Resolver</button>'
     + '</div>');
-  _carregarMotivos('tt-motivo');
-  setTimeout(() => { const i = document.getElementById('tt-motivo'); if(i) i.focus(); }, 60);
+  setTimeout(() => { const i = document.getElementById('tt-desc'); if(i) i.focus(); }, 60);
 }
 
 async function confirmarTratamentoTransferido(){
@@ -5041,7 +5050,7 @@ async function confirmarTratamentoTransferido(){
   const ticket = document.getElementById('tt-ticket').value.trim();
   const url    = document.getElementById('tt-url').value.trim();
   const desc   = document.getElementById('tt-desc').value.trim();
-  const motivo = document.getElementById('tt-motivo').value;
+  const motivo = '';   // transferido nao tem motivo (ver _campoTratativa)
   if(!_validarTratativa('tt', motivo, desc)) return;
   const mid = _transfTratAlvo.m;
   fecharModal(); proc(true);
