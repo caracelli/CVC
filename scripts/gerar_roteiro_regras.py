@@ -72,10 +72,20 @@ def coletar():
                  for k in {x.get("a") for u in U for x in u["divs"] if x.get("a")}},
         "tipo": {k: usr(lambda x, k=k: x.get("tl") == k)
                  for k in {x.get("tl") for u in U for x in u["divs"] if x.get("tl")}},
+        # ATENCAO — cada aba conta o SEU universo:
+        #   Consulta      = a pessoa inteira (todos os acessos dela);
+        #   Pendencias    = so o que exige acao (exclui Aderente e Incluir Acesso).
+        # A versao anterior usava o numero da Consulta e mandava filtrar em
+        # Pendencias: dava 1.775 no papel e 362 na tela. Agora cada regra usa o
+        # numero da aba para a qual ela manda ir.
         "vinculo": {k: usr(lambda x, k=k: x.get("vinc") == k)
                     for k in {x.get("vinc") for u in U for x in u["divs"] if x.get("vinc")}},
+        "vinculo_pend": {k: usr(lambda x, k=k: x.get("vinc") == k and pend(x))
+                         for k in {x.get("vinc") for u in U for x in u["divs"] if x.get("vinc")}},
         "origem": {k: usr(lambda x, k=k: x.get("o") == k)
                    for k in {x.get("o") for u in U for x in u["divs"] if x.get("o")}},
+        "origem_pend": {k: usr(lambda x, k=k: x.get("o") == k and pend(x))
+                        for k in {x.get("o") for u in U for x in u["divs"] if x.get("o")}},
         "sistema_pend": {},
         "linhas": len([1 for u in U for _ in u["divs"]]),
     }
@@ -293,7 +303,8 @@ def main():
           "validação nas seções seguintes.",
           "Funcionário vem do RH; franqueado e prestador vêm de três exportações "
           "do diretório (AD), lidas em ordem cronológica, valendo a mais recente.",
-          "Pendências → filtro Vínculo (ou coluna Vínculo na Consulta).",
+          "Consulta → filtro Vínculo (a Consulta mostra a população inteira; "
+          "em Pendências o mesmo filtro traz só quem tem algo a tratar).",
           "  ·  ".join(f"{kk} {N(vv)}" for kk, vv in
                        sorted(vi.items(), key=lambda x: -x[1])) + " (pessoas).")
 
@@ -330,19 +341,25 @@ def main():
           "O perfil esperado, quando existe matriz para o cargo. É a regra "
           "principal — as outras entram onde ela não alcança.",
           "Chave: centro de custo + cargo.",
-          "Pendências → filtro Origem, valores que começam com “Matriz ”.",
-          "  ·  ".join(f"{kk.replace('Matriz ', '')} {N(vv)}"
-                       for kk, vv in sorted(d["origem"].items(), key=lambda x: -x[1])
-                       if kk.startswith("Matriz ") and kk != "Matriz CCO")
-          + " (pessoas).", prioritaria=True)
+          "Pendências → funil da coluna Origem → um valor “Matriz <sistema>”.",
+          "Pessoas A TRATAR por origem: "
+          + "  ·  ".join(f"{kk.replace('Matriz ', '')} {N(vv)}"
+                         for kk, vv in sorted(d["origem_pend"].items(), key=lambda x: -x[1])
+                         if kk.startswith("Matriz ") and kk != "Matriz CCO" and vv)
+          + ". O alcance da matriz é bem maior — "
+          + N(sum(v for k, v in d["origem"].items()
+                  if k.startswith("Matriz ") and k != "Matriz CCO"))
+          + " pessoas validadas por ela —, mas a aba Pendências só lista quem "
+          "precisa de ação.", prioritaria=True)
 
     regra(doc, "2.2", "CCO — centro de custo + gestor",
           "O perfil esperado quando o cargo não está na matriz, mas o centro de "
           "custo e o gestor estão no mapeamento CCO/CSC.",
           "Chave: centro de custo + gestor. Aplicada ANTES da regra de Em "
           "Análise, senão sistemas sem CCO virariam enxurrada de Em Análise falso.",
-          "Pendências → filtro Origem = “Matriz CCO”.",
-          f"{N(d['origem'].get('Matriz CCO', 0))} pessoas.")
+          "Pendências → funil da coluna Origem = “Matriz CCO”.",
+          f"{N(d['origem_pend'].get('Matriz CCO', 0))} pessoas a tratar, de "
+          f"{N(d['origem'].get('Matriz CCO', 0))} validadas por esta regra.")
 
     regra(doc, "2.3", "Espelho dinâmico do SIG",
           "O perfil esperado no SIG, que não tem matriz de cargo.",
@@ -364,8 +381,14 @@ def main():
           "terceiro espelha por empresa + supervisor; franqueado e prestador, "
           "por empresa + gestor do diretório. Vale em todos os sistemas.",
           "Pendências → filtro Vínculo, tudo que não seja Funcionário.",
-          "  ·  ".join(f"{kk} {N(vv)}" for kk, vv in sorted(vi.items(), key=lambda x: -x[1])
-                       if kk != "Funcionário") + " (pessoas).")
+          "Pessoas a tratar: "
+          + "  ·  ".join(f"{kk} {N(vv)}" for kk, vv in
+                         sorted(d["vinculo_pend"].items(), key=lambda x: -x[1])
+                         if kk != "Funcionário")
+          + ". Na Consulta, sem o recorte da fila, a população é "
+          + "  ·  ".join(f"{kk} {N(vv)}" for kk, vv in
+                         sorted(vi.items(), key=lambda x: -x[1])
+                         if kk != "Funcionário") + ".")
 
     regra(doc, "2.5", "Limiar de inclusão — 30% de adesão",
           "Se a falta de um acesso vira pendência de Incluir Acesso.",
