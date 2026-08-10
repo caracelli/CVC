@@ -160,27 +160,84 @@ os dois.
 
 ## 4. Padrão de texto do chamado
 
-Definido pelo Nelson em 10/08:
+Definido pelo Nelson em 10/08. Cobre os três campos do formulário.
+
+### `summary` — Resumo
 
 ```
-summary      Sanitização - <Sistema> - <Nome do Usuário>
-
-description  Revogar usuario abaixo:
-
-             <nome> <login> <sistema> <perfil>
+Sanitização - <Sistema> - <Nome do Usuário>
 ```
 
-Exemplo com dado real da base:
+Limite de 255 caracteres no Jira — truncar defensivamente.
+
+### `description` — Descrição
 
 ```
-Sanitização - SYSTUR - AGATHA DIAS
+Prezados,
+Revogar o usuario abaixo:
 
-Revogar usuario abaixo:
-
-AGATHA DIAS  INTADM333  SYSTUR  UX_E_UI
+<tabela: nome do usuário | login | perfil>
 ```
 
-O `summary` do Jira tem limite de 255 caracteres — truncar defensivamente.
+O sistema **não** entra na tabela: ele já está no título, e o chamado é de um
+sistema só.
+
+### `customfield_11936` — Características de Solicitação
+
+```
+Revogação de acessos
+```
+
+Valor fixo.
+
+### Exemplo — um perfil
+
+```
+summary       Sanitização - SYSTUR - AGATHA DIAS
+
+description   Prezados,
+              Revogar o usuario abaixo:
+
+              NOME         | LOGIN      | PERFIL
+              AGATHA DIAS  | INTADM333  | UX_E_UI
+
+campo 11936   Revogação de acessos
+```
+
+### Exemplo — vários perfis
+
+A tabela resolve o caso de múltiplos perfis: **um chamado por (usuário,
+sistema)**, com uma linha por perfil. Dado real —`LETICIA DE LIMA DUARTE` tem 6
+perfis divergentes no SYSTUR:
+
+```
+summary       Sanitização - SYSTUR - LETICIA DE LIMA DUARTE
+
+description   Prezados,
+              Revogar o usuario abaixo:
+
+              NOME                    | LOGIN          | PERFIL
+              LETICIA DE LIMA DUARTE  | CORPC90001246  | PAGAMENTOS_NACIONAIS_CP
+              LETICIA DE LIMA DUARTE  | CORPC90001246  | SUPORTE_N1_CP
+              ...                     | ...            | ... (6 linhas)
+```
+
+### A VERIFICAR: a tabela renderiza?
+
+A descrição vai como **texto puro** no `requestFieldValues`, mas o Jira Cloud
+armazena descrição em **ADF** (o formato de blocos do editor). Duas incertezas
+que só o POST real resolve:
+
+1. Markup de tabela (wiki `||cab||` ou markdown) provavelmente **não** é
+   interpretado — vira texto literal.
+2. Tabela alinhada por espaços perde o alinhamento se o portal renderizar em
+   fonte proporcional.
+
+Fallback seguro, caso a tabela não renderize: uma linha por perfil, com
+separador visível (`|`) e sem depender de alinhamento — é o que está nos
+exemplos acima e funciona em texto corrido.
+
+Decidir isso é o primeiro item do teste de POST, quando ele for autorizado.
 
 ## 5. Desenho acordado (ainda não implementado)
 
@@ -220,17 +277,30 @@ Ressalva: os testes foram feitos com uma conta do tipo `atlassian`. A conta de
 serviço será `customer`. O `user-search` é endpoint do portal do cliente, então
 deve valer igual — mas é o único ponto a reconfirmar com a credencial definitiva.
 
-## 7. Pendências com a Bruna — bloqueiam a implementação
+## 7. Pendências
 
-1. O que vai em **"Características de Solicitação"** (`customfield_11936`)?
-   Campo obrigatório, texto livre, sem nenhuma orientação no formulário.
-2. O **"Usuário Afetado"** é informativo, ou alguma automação do lado do Jira o
-   consome para executar a revogação? Decide se pode existir usuário substituto.
-   Se for consumido, apontar outra pessoa equivale a revogar o acesso dela.
-3. Confirmação do rótulo do status de exceção ("Sem conta no Jira").
-4. **Um chamado por (usuário, sistema)** com N perfis listados na descrição, ou
-   um chamado por perfil? Há casos reais com 6 perfis divergentes no mesmo
-   sistema (`LETICIA DE LIMA DUARTE` no SYSTUR).
-5. O botão "Abrir chamado" aparece **só nos casos de revogação**? O texto diz
+### Resolvidas em 10/08
+
+- ~~O que vai em "Características de Solicitação"?~~ → **"Revogação de acessos"**,
+  valor fixo.
+- ~~O "Usuário Afetado" é consumido por automação?~~ → **o campo foi removido do
+  formulário** a pedido da equipe. A pergunta deixou de existir, junto com toda
+  a necessidade de resolver `accountId`.
+- ~~Um chamado por (usuário, sistema) ou por perfil?~~ → **por (usuário,
+  sistema)**, com uma linha de tabela por perfil na descrição.
+- ~~Rótulo do status de exceção ("Sem conta no Jira")~~ → sem sentido agora: sem
+  User Picker, não há caso de "usuário não localizado no Jira".
+
+### Em aberto
+
+1. O botão "Abrir chamado" aparece **só nos casos de revogação**? O texto diz
    "Revogar" e o form é de "Revogação Automática", mas o painel também trata
-   `SEM_ACESSO`, que é acesso **a incluir** — 520 das 1.800 pessoas.
+   `SEM_ACESSO`, que é acesso **a incluir** — 520 das 1.800 pessoas. Isso define
+   em quais linhas do painel o botão aparece.
+2. A tabela da descrição renderiza? Ver "A VERIFICAR" na seção 4 — depende do
+   primeiro POST real.
+
+### Fora do caminho crítico
+
+Continua valendo o pedido à CVC da seção 6 (conta de serviço + API token). É o
+que falta para sair do stub e abrir chamado de verdade.
