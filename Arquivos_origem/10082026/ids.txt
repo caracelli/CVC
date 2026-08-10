@@ -1,0 +1,44 @@
+Campo na imagem
+	
+Field ID
+	
+Nome interno no Jira
+	
+Tipo
+
+
+Usuário Afetado
+	
+customfield_11358
+	
+Usuário Afetado
+	
+User Picker
+
+
+Summary
+	
+summary
+	
+Resumo
+	
+String (sistema)
+
+
+Description
+	
+description
+	
+Descrição
+	
+String (sistema)
+
+
+Perfil
+	
+customfield_11936
+	
+Características de Solicitação
+	
+Text Field
+ 
