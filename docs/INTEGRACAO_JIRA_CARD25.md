@@ -10,6 +10,34 @@ de desenvolvimento tenha tudo o que foi apurado.
 
 ---
 
+## ⚠️ O formulário mudou no meio do levantamento (10/08, fim da tarde)
+
+Na primeira consulta o formulário tinha **quatro** campos obrigatórios,
+incluindo `customfield_11358` ("Usuário Afetado", User Picker). Horas depois, na
+reconferência, ele **não existe mais** — restaram três:
+
+```
+summary            obrigatorio  string
+description        obrigatorio  string
+customfield_11936  obrigatorio  textfield  "Caracteristicas de Solicitacao"
+```
+
+**Confirmar com a Bruna se a remoção foi intencional e definitiva.** Enquanto
+não confirmar, tratar como estado possivelmente transitório (alguém pode estar
+editando o formulário).
+
+Se for definitiva, cai o maior obstáculo do Card 25: sem User Picker não é
+preciso resolver `accountId`, o endpoint interno da seção 3 deixa de ser
+necessário e o popup de desempate da seção 5 perde a razão de existir. Os 63
+casos que não resolviam deixam de ser problema — todos cabem na descrição, que
+é texto livre.
+
+**As seções 3 e 5 abaixo ficam preservadas de propósito.** Se o campo voltar —
+ou se aparecer em outro tipo de solicitação — o levantamento já está feito e não
+precisa ser refeito. Leia-as como contingência, não como plano corrente.
+
+---
+
 ## 1. Parâmetros confirmados
 
 | Item | Valor | Como foi confirmado |

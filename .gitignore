@@ -100,3 +100,9 @@ CVC_IAM_ANALYTICS/.pbi_local
 # src/visualizador/visualizador_log.txt
 src/DADOS/
 _commit_msg.txt
+
+# Credenciais locais (nunca versionar)
+.jira_cred
+.env
+token.txt
+medicao_accountid.json
