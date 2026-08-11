@@ -166,24 +166,61 @@ por espaço se perderia em fonte proporcional. **Não há retrabalho no texto.**
 
 Os três campos foram aceitos como enviados.
 
-### ⚠️ Achado que bloqueia o valor da entrega
+### ⚠️ Achado que bloqueia o valor da entrega — falta o COMPONENTE
 
 **O chamado não cai em nenhuma fila.** Varremos as **71 filas** do service desk
-9 (987 issues, zero erros de leitura): `SDTTI-1545753` não está em nenhuma.
+9 (987 issues, zero erros): `SDTTI-1545753` não está em nenhuma. Chamado criado
+que ninguém vê na fila é entrega no vazio.
 
-Filas do JSM são filtros JQL. Se o tipo 8819 não estiver no filtro de nenhuma,
-os chamados são criados mas **não aparecem para os agentes trabalharem** — a
-automação entregaria no vazio.
+A causa está no JQL das filas — elas filtram por **componente**, não por tipo de
+solicitação. A fila do nosso fluxo é a `1517 — 7 - Gestão de Acessos -
+Desligamento`, com 29 chamados ativos:
 
-Indício forte: a fila `1231 — 5 - Gestão de Acessos - Revogações` existe e está
-com **zero issues**. Parece feita para esses chamados, mas o filtro ainda não os
-alcança.
+```sql
+project = SDTTI
+AND status in (Aberto, "Aguardando Fornecedor", "Aguardando RFC",
+               "Aguardando usuário", "Em análise Nível 1", "Em análise nível 2",
+               "Em progresso", Pendente, Reaberto)
+AND component = "7 - Gestão de Acessos - Desligamento"     ← id 12165
+```
 
-**Pedido a quem criou o formulário:** incluir o tipo de solicitação 8819 no
-filtro da fila apropriada. O SDTTI-1545753 serve de caso concreto.
+O chamado atendia o `status`. Faltou só o componente, que o tipo 8819 não
+atribui.
 
-Ressalva: a conta usada não é agente pleno (o `/rest/api/3/issue/` devolve 404
-nela), então a confirmação definitiva é um agente olhando a própria fila.
+**E não conseguimos resolver do nosso lado — testado, não suposto.** Em
+`SDTTI-1545878` criamos o chamado e tentamos carimbar o componente via
+`PUT /rest/api/3/issue/{key}`:
+
+```
+404 — "O item não existe ou você não tem permissão para vê-lo"
+```
+
+Isso mesmo com `mypermissions` afirmando `EDIT_ISSUES: True`. Permissão de
+projeto não se traduz em acesso ao issue: para o Jira a conta é *cliente*
+naquele chamado, e cliente só opera pela API do portal. **O `mypermissions` não
+serve como previsão** — reporta concessões, não capacidade efetiva.
+
+Depender disso também exigiria conta de serviço com perfil de agente, o oposto
+do privilégio mínimo que sustenta o resto do desenho.
+
+**Pedido a quem criou o formulário:**
+
+> O tipo de solicitação 8819 cria chamados **sem componente**, e as filas de
+> Gestão de Acessos filtram por `component`. Configurar o 8819 para atribuir
+> automaticamente **"7 - Gestão de Acessos - Desligamento"** (id 12165) — por
+> valor padrão no tipo ou por automação no projeto. Pela API do portal não
+> conseguimos enviá-lo: o formulário expõe apenas `summary`, `description` e
+> `customfield_11936`.
+
+Confirmar com a área se é essa a fila do fluxo de desligamento — existem também
+`Revogações`, `Ouro`, `Fornecedores` e `N3 CVC`.
+
+Ressalva: a conta usada não é agente, então a confirmação final é um agente
+vendo o chamado na própria fila.
+
+**Ambos os chamados de teste foram cancelados** (`Cancelado pelo solicitante`).
+O ciclo criar → cancelar é automatizável pela API (transição id 261, 204 limpo),
+o que permite revalidar depois do ajuste sem sujar a fila.
 
 ---
 
