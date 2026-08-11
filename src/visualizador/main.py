@@ -618,6 +618,17 @@ SELECT
   COALESCE(v.perfil_atual,'')    AS perfil_encontrado,
   COALESCE(v.perfil_esperado,'') AS perfil_esperado,
   ''                             AS descricao,
+  -- POR QUE a linha esta neste status, quando o status nao se explica sozinho.
+  -- Nasceu do retorno da area (10/08/2026): a grid mostrava "Em Analise" com
+  -- perfil esperado == encontrado e nao havia como saber que o motivo era o
+  -- status da CONTA no extrato. O motivo e' decidido no motor (validacao), aqui
+  -- so vira texto.
+  CASE COALESCE(v.motivo_status,'')
+    WHEN 'CONTA_INDEFINIDA' THEN
+      'O perfil confere com o esperado, mas a conta esta com status pendente/'
+      || 'indefinido no extrato do sistema — nao da para afirmar que o acesso '
+      || 'esta ativo. Confirmar a situacao da conta no proprio sistema.'
+    ELSE '' END                  AS motivo,
   COALESCE(v.dt_processamento,'') AS data_identificacao,
   0                              AS resolvida,
   CASE v.status WHEN 'SEM_ACESSO' THEN 'Incluir Acesso'
@@ -639,6 +650,7 @@ SELECT
   COALESCE(d.perfil_encontrado,'') AS perfil_encontrado,
   COALESCE(d.perfil_esperado,'')  AS perfil_esperado,
   COALESCE(d.descricao,'')        AS descricao,
+  ''                              AS motivo,
   COALESCE(d.data_identificacao,'') AS data_identificacao,
   d.resolvida, 'Usuário Não Encontrado' AS acao, '' AS origem,
   d.usuario AS login
@@ -711,10 +723,19 @@ def garantir_estrutura(force=False):
         existe = c.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='bi_divergencias'"
         ).fetchone()
+        # Banco gerado por Processador antigo pode nao ter `motivo_status` em
+        # validacao_acessos — sem isso o CREATE do snapshot abaixo quebraria.
+        try:
+            _v_cols = [r[1] for r in c.execute("PRAGMA table_info(validacao_acessos)")]
+            if _v_cols and "motivo_status" not in _v_cols:
+                c.execute("ALTER TABLE validacao_acessos ADD COLUMN motivo_status TEXT")
+                c.commit()
+        except Exception:
+            pass
         if existe and not force:
             cols = [r[1] for r in c.execute("PRAGMA table_info(bi_divergencias)")]
-            if "origem" not in cols or "login" not in cols:
-                force = True  # migração de schema: coluna 'origem'/'login' nova
+            if "origem" not in cols or "login" not in cols or "motivo" not in cols:
+                force = True  # migração de schema: coluna 'origem'/'login'/'motivo'
         if force or not existe:
             c.execute("DROP TABLE IF EXISTS bi_divergencias")
             c.executescript(_SQL_BI)
@@ -1897,6 +1918,7 @@ def _montar_base():
             f"""SELECT b.usuario, b.nome_usuario, b.matricula, b.tipo, b.acao,
                        b.perfil_encontrado, b.perfil_esperado, b.data_identificacao,
                        b.resolvida, b.origem, b.sistema, b.login,
+                       COALESCE(b.motivo,'') motivo,
                        COALESCE(r.cargo_descricao,'') cargo,
                        COALESCE(r.departamento,'')   depto,
                        COALESCE(r.centro_custo_codigo,'') cc_cod,
@@ -1930,6 +1952,10 @@ def _montar_base():
                 "sis": r["sistema"] or "",
                 "login": r["login"] or "",   # login do sistema (CD_LOGIN) desta linha
                 "pe": r["perfil_encontrado"], "pp": r["perfil_esperado"],
+                # motivo do status, quando o status nao se explica sozinho
+                # (hoje: conta pendente/indefinida no extrato) — a grid mostra
+                # como aviso na linha. Vazio na esmagadora maioria das linhas.
+                "mot": r["motivo"] or "",
                 "dt": r["data_identificacao"] or "",
                 "s": ("Aderente" if tp == "OK"
                       else "Resolvido" if r["resolvida"] else "Pendente"),

@@ -44,6 +44,25 @@ class AnalisarDivergencias:
 
         self._repo_div.salvar_lote(divergencias)
 
+        # Auditavel: quantos ACESSOS nao entraram como "de desligado" porque a
+        # conta pertence a alguem ATIVO (a pessoa trocou de matricula e segue
+        # usando a mesma conta) — ver RegraAcessoDesligado. Numero alto e'
+        # esperado nesta base: 99,8% de quem volta mantem o mesmo usuario.
+        _recontratados = getattr(servico, "recontratados_suprimidos", 0)
+        if _recontratados:
+            logger.info(
+                f"[desligados] {_recontratados} acesso(s) fora da conta: a conta "
+                f"e' de alguem ATIVO hoje (matricula nova, MESMO login)."
+            )
+        # O outro lado da regra da area: ativo com login DIFERENTE e' apontado.
+        # E' o caso com algo a revogar — identidade antiga que sobrou viva.
+        _login_dif = getattr(servico, "login_diferente_apontado", 0)
+        if _login_dif:
+            logger.info(
+                f"[desligados] {_login_dif} acesso(s) APONTADO(S): a pessoa esta "
+                f"ativa, mas com login DIFERENTE (identidade antiga viva)."
+            )
+
         por_tipo = {}
         for d in divergencias:
             por_tipo[d.tipo.value] = por_tipo.get(d.tipo.value, 0) + 1

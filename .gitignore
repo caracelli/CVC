@@ -107,3 +107,6 @@ _commit_msg.txt
 token.txt
 medicao_accountid.json
 jira_token.txt
+# credencial nunca entra, nem compactada — zip passa pela varredura do GitHub
+jira_cred.zip
+*.jira_cred

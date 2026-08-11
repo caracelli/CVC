@@ -27,7 +27,13 @@ class ServicoAnaliseDivergencias:
         transferidos: List[Transferido],
     ) -> List[Divergencia]:
         divergencias: List[Divergencia] = []
-        divergencias.extend(self._regra_desligado.verificar(acessos, desligados))
+        # `ativos` entra na regra de desligado para suprimir o RECONTRATADO
+        # (mesma pessoa, matricula nova ativa + matricula antiga desligada).
+        divergencias.extend(
+            self._regra_desligado.verificar(acessos, desligados, ativos))
+        # repassa os contadores da regra para o caso de uso logar
+        self.recontratados_suprimidos = self._regra_desligado.recontratados_suprimidos
+        self.login_diferente_apontado = self._regra_desligado.login_diferente_apontado
         divergencias.extend(self._regra_transferido.verificar(acessos, transferidos))
         divergencias.extend(self._regra_sem_vinculo.verificar(acessos))
         divergencias.extend(self._regra_perfil.verificar(acessos, ativos))

@@ -207,6 +207,11 @@ class ValidacaoAcessoModel(Base):
     acesso_manual = Column(Boolean, default=False)
     status = Column(String, nullable=False, index=True)
     situacao_acao = Column(String, default="PENDENTE", index=True)  # PENDENTE / RESOLVIDO
+    # POR QUE a linha esta neste status, quando o status nao se explica sozinho.
+    # Hoje so 'CONTA_INDEFINIDA' (conta pendente/indefinida no extrato derrubou
+    # um Aderente para Em Analise) — sem isso a tela mostra perfil esperado ==
+    # encontrado marcado como pendencia e ninguem entende o motivo.
+    motivo_status = Column(String)
     origem_matriz = Column(String)
     dt_processamento = Column(DateTime, default=datetime.now)
 

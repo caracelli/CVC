@@ -157,6 +157,11 @@ class ValidarAcessosSistema:
             if r["status"] in (StatusValidacao.OK.value, StatusValidacao.DIVERGENTE.value) \
                     and (r["matricula"], r["sistema"]) in self._status_indefinido:
                 r["status"] = StatusValidacao.EM_ANALISE.value
+                # Guarda o PORQUE: sem isso a tela mostra uma linha com perfil
+                # esperado == encontrado marcada como pendencia e o analista nao
+                # tem como saber que o motivo e' o status da conta no extrato
+                # (retorno da area, 10/08/2026).
+                r["motivo_status"] = "CONTA_INDEFINIDA"
                 self._forcado_analise += 1
 
         # PENDENCIAS (acao): so DIVERGENTE e EM_ANALISE. SEM_ACESSO ("esperado")
@@ -323,27 +328,39 @@ class ValidarAcessosSistema:
     ) -> List[Dict]:
         base = self._registro_base(func)
 
-        # Dedup por NOME de perfil: a matriz pode ter linhas repetidas (mesmo
-        # cargo+sistema+perfil). EM_ANALISE deve ser decidido pelo numero de
-        # perfis DISTINTOS — sem isso, uma linha duplicada viraria 2 perfis e
-        # marcaria EM_ANALISE indevido (escondendo ADERENTE/SEM_ACESSO).
-        _vistos: Dict[str, Tuple[bool, str]] = {}
-        for _p, _m, _o in perfis:
-            if _p not in _vistos:
-                _vistos[_p] = (_m, _o)
-        perfis = [(p, m, o) for p, (m, o) in _vistos.items()]
-
-        acessos_atuais = {
-            perfil for sis, perfil in acessos_por_matricula.get(func.matricula, [])
-            if sis == sistema_valor
-        }
-
         # Casamento de perfil:
         #  - SEMPRE case-insensitive (+ acento/trim) via _norm: a matriz pode vir
         #    'Analista_M_C' e o extrato 'ANALISTA_M_C' — e' o mesmo perfil.
         #  - Para os sistemas em _SISTEMAS_PERFIL_APROXIMADO (hoje so o IC), tambem
         #    aproxima '_' <-> espaco (extrato usa '_', matriz usa espaco).
         aproximado = sistema_valor in _SISTEMAS_PERFIL_APROXIMADO
+        _chave = _norm_perfil if aproximado else _norm
+
+        # Dedup por NOME de perfil: a matriz pode ter linhas repetidas (mesmo
+        # cargo+sistema+perfil). EM_ANALISE deve ser decidido pelo numero de
+        # perfis DISTINTOS — sem isso, uma linha duplicada viraria 2 perfis e
+        # marcaria EM_ANALISE indevido (escondendo ADERENTE/SEM_ACESSO).
+        #
+        # A chave e' a MESMA do casamento (_chave), nao a string crua. Retorno da
+        # area (10/08/2026): a matriz tem o mesmo perfil grafado de dois jeitos
+        # ('IC_CONSULTA' x 'IC CONSULTA', 'GERENTE REGIONAL' x 'GERENTE_REGIONAL'
+        # — 17 grupos assim na base), e o dedup por string exata transformava
+        # isso em "2 perfis esperados", inflando a lista de opcoes que a tela
+        # mostra ("9 opcoes" e "8 opcoes" eram a MESMA lista). Regra: se dois
+        # nomes casariam como o mesmo perfil na hora de aderir, sao o mesmo
+        # perfil na lista de opcoes. Vence a primeira grafia vista (a matriz e'
+        # avaliada antes da CCO).
+        _vistos: Dict[str, Tuple[str, bool, str]] = {}
+        for _p, _m, _o in perfis:
+            k = _chave(_p)
+            if k not in _vistos:
+                _vistos[k] = (_p, _m, _o)
+        perfis = list(_vistos.values())
+
+        acessos_atuais = {
+            perfil for sis, perfil in acessos_por_matricula.get(func.matricula, [])
+            if sis == sistema_valor
+        }
 
         def _adere(esperado: str) -> bool:
             if aproximado:

@@ -450,6 +450,14 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .b-pendente    {background:#FDE7E9;color:#A4262C;}
 .b-resolvida   {background:#DFF6DD;color:#107C10;}
 .b-ok          {background:#D5F5E3;color:#0E6B47;}
+/* "?" ao lado do tipo: existe SO quando o status precisa de explicacao (hoje,
+   conta pendente/indefinida no extrato). Discreto de proposito — a esmagadora
+   maioria das linhas nao tem motivo, e um icone chamativo viraria ruido. */
+.mot-info{display:inline-flex;align-items:center;justify-content:center;
+  width:14px;height:14px;margin-left:5px;border-radius:50%;cursor:help;
+  background:#E8EEF7;color:#4B5563;font-size:9.5px;font-weight:700;
+  vertical-align:middle;}
+.mot-info:hover{background:#D6E0F0;color:#1F2D5C;}
 /* selo que TAMBEM abre/fecha o grupo (mesmo alvo da celula de sistemas) —
    preserva a cor do badge, so acrescenta o affordance de clique */
 .badge-exp{cursor:pointer;user-select:none;transition:filter .12s;}
@@ -1285,12 +1293,13 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
               <col style="width:120px">   <!-- 8  Sistema -->
               <col style="width:58px">    <!-- 9  Qtd -->
               <col style="width:150px">   <!-- 10 Departamento -->
-              <col style="width:170px">   <!-- 11 Gestor -->
-              <col style="width:160px">   <!-- 12 Cargo -->
-              <col style="width:120px">   <!-- 13 Tipo -->
-              <col style="width:150px">   <!-- 12 Perfil Encontrado -->
-              <col style="width:150px">   <!-- 13 Perfil Esperado -->
-              <col style="width:96px">    <!-- 15 Origem -->
+              <col style="width:150px">   <!-- 11 Centro de Custo -->
+              <col style="width:170px">   <!-- 12 Gestor -->
+              <col style="width:160px">   <!-- 13 Cargo -->
+              <col style="width:120px">   <!-- 14 Tipo -->
+              <col style="width:150px">   <!-- 15 Perfil Encontrado -->
+              <col style="width:150px">   <!-- 16 Perfil Esperado -->
+              <col style="width:96px">    <!-- 17 Origem -->
             </colgroup>
             <thead>
               <tr>
@@ -1305,6 +1314,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
                 <th>Sistema</th>
                 <th style="text-align:center;">Qtd</th>
                 <th>Departamento</th>
+                <th>Centro de Custo</th>
                 <th>Gestor</th>
                 <th>Cargo</th>
                 <th>Tipo</th>
@@ -2175,7 +2185,15 @@ const TIPO_CSS = {
   'DIVERGENTE':            'b-divergente',
   'EM_ANALISE':            'b-em-analise'
 };
-function tipoBadge(t, tl){ return `<span class="badge ${TIPO_CSS[t]||''}">${tl||t}</span>`; }
+/* Badge do tipo + o PORQUÊ, quando o tipo não se explica sozinho.
+   Retorno da área (10/08): havia linhas "Em Análise" com perfil esperado IGUAL
+   ao encontrado — pelo painel era impossível saber que o motivo era o status da
+   CONTA no extrato (pendente/indefinido), não o perfil. O motivo vem do motor
+   (validacao_acessos.motivo_status), não é inferido aqui. */
+function tipoBadge(t, tl, mot){
+  const b = `<span class="badge ${TIPO_CSS[t]||''}">${tl||t}</span>`;
+  return mot ? b + `<span class="mot-info" title="${esc(mot)}">?</span>` : b;
+}
 function stBadge(s)      { const cls = s==='Pendente'?'b-pendente':(s==='Aderente'?'b-ok':'b-resolvida'); return `<span class="badge ${cls}">${s}</span>`; }
 /* Resumo das AÇÕES da pessoa no cabeçalho (recolhido): "Incluir (2) · Em Análise
    (1)" — igual ao Histórico, some com o engano de mostrar só a 1ª. null quando há
@@ -2229,12 +2247,18 @@ function _pendSisCel(ddivs, u){
    candidatos), mostra "N opções" clicável em vez de repetir linhas. Senão, o
    perfil esperado normal ("N perfis" p/ listas longas). */
 function _pendEsp(d, u){
-  if(d && d.opcoes && d.opcoes.length>1){
-    const key=(u.m||'')+'|'+(d.sis||'')+'|op'+d.opcoes.length;
+  // Dedup ANTES de contar: a matriz repete o mesmo perfil com grafia diferente,
+  // e sem isso a tela anunciava "9 opções" e "8 opções" para a MESMA lista
+  // (retorno da área, 10/08). Bancos já processados também se beneficiam — o
+  // dedup do motor só vale a partir do próximo processamento.
+  const ops = (d && d.opcoes && d.opcoes.length) ? _perfDedup(d.opcoes).map(_perfNome) : [];
+  if(ops.length>1){
+    const key=(u.m||'')+'|'+(d.sis||'')+'|op'+ops.length;
     const open=_histPerfExp.has(key);
-    const head=`<span class="perf-exp" data-pk="${esc(key)}" onclick="perfToggle(this)" title="Perfis esperados possíveis para o cargo (Em Análise)"><b>${d.opcoes.length}</b> opções ${open?'▾':'▸'}</span>`;
-    return open ? head+`<div class="perf-lista">`+d.opcoes.map(x=>`<div>• ${esc(x)}</div>`).join('')+`</div>` : head;
+    const head=`<span class="perf-exp" data-pk="${esc(key)}" onclick="perfToggle(this)" title="Perfis esperados possíveis para o cargo (Em Análise)"><b>${ops.length}</b> opções ${open?'▾':'▸'}</span>`;
+    return open ? head+`<div class="perf-lista">`+ops.map(x=>`<div>• ${esc(x)}</div>`).join('')+`</div>` : head;
   }
+  if(ops.length===1) return _perfResumo(ops[0],{matricula:u.m,sistema:(d&&d.sis)});
   return _perfResumo((d&&d.pp)||'',{matricula:u.m,sistema:(d&&d.sis)})||'—';
 }
 /* Clique num chip de ação abre/recolhe a pessoa (igual ao + / aos chips do Histórico). */
@@ -2393,10 +2417,11 @@ function _gxMenu(tableId,c,th){
 
 /* Pendências (grid agrupada): ordenação por coluna no clique do cabeçalho */
 /* Indices das colunas APOS reordenacao
-   Ordem REAL (0..16) — este mapa é a fonte da verdade (o header segue esta ordem):
+   Ordem REAL (0..17) — este mapa é a fonte da verdade (o header segue esta ordem):
      0=Data, 1=Quarentena, 2=Categoria, 3=+(expand), 4=Status, 5=Nome,
-     6=Matricula, 7=Usuario, 8=Sistema, 9=Qtd, 10=Departamento, 11=Gestor,
-     12=Cargo, 13=Tipo, 14=PerfilEnc, 15=PerfilEsp, 16=Origem
+     6=Matricula, 7=Usuario, 8=Sistema, 9=Qtd, 10=Departamento,
+     11=CentroCusto, 12=Gestor, 13=Cargo, 14=Tipo, 15=PerfilEnc,
+     16=PerfilEsp, 17=Origem
    Colunas SEM extracao de dado (Quarentena=1, +=3) ficam fora do _PEND_KEY. */
 const _PEND_KEY={
   0:u=>u.divs[0].dt,
@@ -2404,9 +2429,9 @@ const _PEND_KEY={
   4:u=>u.divs[0].s,
   5:u=>u.n, 6:u=>u.m, 7:u=>u.login,
   8:u=>u.divs[0].sis, 9:u=>u.divs.length,
-  10:u=>u.d, 11:u=>u.gestor, 12:u=>u.c,
-  13:u=>u.divs[0].tl, 14:u=>u.divs[0].pe, 15:u=>u.divs[0].pp,
-  16:u=>u.divs[0].o};
+  10:u=>u.d, 11:u=>u.cc, 12:u=>u.gestor, 13:u=>u.c,
+  14:u=>u.divs[0].tl, 15:u=>u.divs[0].pe, 16:u=>u.divs[0].pp,
+  17:u=>u.divs[0].o};
 let _ordPend=null;
 const _filtPend={};
 function _ordenarPend(arr){
@@ -2431,7 +2456,7 @@ function _pendDisp(c,u){
    sistema só, e cresce conforme as bases entram.
    A semântica passa a ser a MESMA do filtro lateral de Sistema, que a Bruna já
    validou: casa qualquer acesso e ISOLA na linha o que casou. */
-const _PEND_POR_ACESSO = {8:d=>d.sis, 14:d=>d.pe, 15:d=>d.pp, 16:d=>d.o};
+const _PEND_POR_ACESSO = {8:d=>d.sis, 15:d=>d.pe, 16:d=>d.pp, 17:d=>d.o};
 const _pendCel = v => (v==null||v==='') ? '—' : String(v);
 /* Valores que UMA pessoa oferece ao funil da coluna: um por acesso nas colunas
    por acesso, um só nas colunas da pessoa (nome, gestor, cargo...). */
@@ -2441,7 +2466,7 @@ function _pendValoresFunil(u, c){
 }
 /* Categoria (2), Status (4), Tipo (13) tem chips no topo — na grid so ORDENAM.
    Data (0) tem filtro PROPRIO (atalhos + range). Demais usam funil padrao. */
-const _PEND_SO_ORD=new Set([2,4,13]);
+const _PEND_SO_ORD=new Set([2,4,14]);
 
 /* Estado do filtro especial de Data (col 1).
    tipo: "" (sem filtro) | "hoje" | "7d" | "mes" | "ano" | "range"
@@ -2700,9 +2725,10 @@ function pintarPagina(){
       <td>${_pendSisCel(ddivs, u)}</td>
       <td style="text-align:center;font-weight:700;color:#1F2D5C;">${ddivs.length}</td>
       <td>${esc(u.d)||'—'}</td>
+      <td>${esc(u.cc)||'—'}</td>
       <td>${esc(u.gestor)||'—'}</td>
       <td>${esc(u.c)||'—'}</td>
-      <td>${_acaoResumo || tipoBadge(d0.t,d0.tl)}</td>
+      <td>${_acaoResumo || tipoBadge(d0.t,d0.tl,d0.mot)}</td>
       <td class="perfil-cel">${_perfResumo(d0.pe,{matricula:u.m,sistema:d0.sis})||'—'}</td>
       <td class="perfil-cel">${hasMore
         ? ('<span class="esp-resumo"' + (_inclExpand.has(u.u) ? ' style="display:none"' : '') + '>'
@@ -2736,8 +2762,8 @@ function pintarPagina(){
         <td>—</td>
         <td>${d.sis?`<span class="h-sis">${esc(d.sis)}</span>`:'—'}</td>
         <td style="text-align:center;">1</td>
-        <td>—</td><td>—</td><td>—</td>
-        <td>${tipoBadge(d.t,d.tl)}</td>
+        <td>—</td><td>—</td><td>—</td><td>—</td>
+        <td>${tipoBadge(d.t,d.tl,d.mot)}</td>
         <td class="perfil-cel">${_perfResumo(d.pe,{matricula:u.m,sistema:d.sis})||'—'}</td>
         <td class="perfil-cel">${_pendEsp(d, u)}</td>
         <td style="text-align:center;">${esc(d.o)||'—'}</td>
@@ -2745,7 +2771,7 @@ function pintarPagina(){
     });
   });
   document.getElementById('matrix-body').innerHTML = h ||
-    '<tr><td colspan="17" style="text-align:center;padding:28px;color:#8A9099;">Nenhum registro com os filtros atuais.</td></tr>';
+    '<tr><td colspan="18" style="text-align:center;padding:28px;color:#8A9099;">Nenhum registro com os filtros atuais.</td></tr>';
   const tot = document.getElementById('incl-total');
   if(tot) tot.innerHTML =
     `<strong style="color:#1F2D5C;font-size:14px;">${total.toLocaleString('pt-BR')}</strong> usuários filtrados`;
@@ -3323,14 +3349,14 @@ function _atlDropFora(ev){
 
 /* Mapeamento col → nome do header da grid Inclusão/Alteração.
    Usado para serializar filtros do funil da grid de forma legível no atalho.
-   Ordem REAL (0..16), igual ao _PEND_KEY: Data, Quarentena, Categoria, +, Status,
-   Nome, Matrícula, Usuário, Sistema, Qtd, Departamento, Gestor, Cargo, Tipo,
-   Perfil Encontrado, Perfil Esperado, Origem.
-   Colunas SO_ORD (2=Categoria, 4=Status, 13=Tipo) ficam fora — sao chips no topo. */
+   Ordem REAL (0..17), igual ao _PEND_KEY: Data, Quarentena, Categoria, +, Status,
+   Nome, Matrícula, Usuário, Sistema, Qtd, Departamento, Centro de Custo, Gestor,
+   Cargo, Tipo, Perfil Encontrado, Perfil Esperado, Origem.
+   Colunas SO_ORD (2=Categoria, 4=Status, 14=Tipo) ficam fora — sao chips no topo. */
 const _GRID_COL_NOME = {
   0:'Data', 5:'Nome', 6:'Matrícula', 7:'Usuário', 8:'Sistema', 9:'Qtd',
-  10:'Departamento', 11:'Gestor', 12:'Cargo', 14:'Perfil Encontrado',
-  15:'Perfil Esperado', 16:'Origem',
+  10:'Departamento', 11:'Centro de Custo', 12:'Gestor', 13:'Cargo',
+  15:'Perfil Encontrado', 16:'Perfil Esperado', 17:'Origem',
 };
 const _GRID_NOME_COL = Object.fromEntries(
   Object.entries(_GRID_COL_NOME).map(([c, n]) => [n, +c]));
@@ -5259,8 +5285,35 @@ function _histLupa(r, txt, fn){
    perfis) -> "N perfis" CLICÁVEL que expande a lista. Estado por (matrícula|
    sistema) -> persiste no auto-refresh. */
 const _histPerfExp=new Set();   // "matricula|sistema" com a lista de perfis aberta
+/* Grafia do perfil na TELA — sempre MAIÚSCULAS (pedido da área, 10/08). A base
+   traz o mesmo perfil escrito de vários jeitos ('Suporte ao Caixa_CP' x
+   'SUPORTE _AO_CAIXA_CP'), porque a matriz do cliente é inconsistente. Aqui é
+   só exibição: o dado gravado continua como veio da matriz, e é o motor quem
+   trata o casamento. */
+function _perfNome(s){ return String(s||'').trim().toUpperCase(); }
+
+/* Mesma lista de perfis em texto puro (para o Excel): dedup + maiúsculas, na
+   ordem original. Mantém exportação e grid dizendo a mesma coisa. */
+function _perfLista(p){
+  return _perfDedup(String(p||'').split(',').map(s=>s.trim()).filter(Boolean))
+    .map(_perfNome).join(', ');
+}
+
+/* Duas grafias do MESMO perfil não podem virar duas opções na lista. Mesma
+   chave do motor: maiúsculas, sem acento, '_' = espaço. Vence a 1ª ocorrência. */
+function _perfDedup(arr){
+  const vistos=new Map();
+  arr.forEach(x=>{
+    const k=_perfNome(x).normalize('NFD').replace(/[̀-ͯ]/g,'')
+             .replace(/_/g,' ').replace(/\s+/g,' ').trim();
+    if(k && !vistos.has(k)) vistos.set(k, x);
+  });
+  return Array.from(vistos.values());
+}
+
 function _perfResumo(p, r){
-  const arr=String(p||'').split(',').map(s=>s.trim()).filter(Boolean);
+  let arr=String(p||'').split(',').map(s=>s.trim()).filter(Boolean);
+  arr=_perfDedup(arr).map(_perfNome);
   if(!arr.length) return '';
   const full=arr.join(', ');
   if(full.length<=42) return `<span title="${esc(full)}">${esc(full)}</span>`;
@@ -5589,9 +5642,66 @@ function _csNorm(s){
     .replace(/\s+/g, ' ').trim();
 }
 
+/* CPF canônico para agrupar identidades — mesma regra do motor: 11 dígitos,
+   zeros à esquerda recuperados, e descarta o que não desambigua (mascarado,
+   parcial, 000…/111…). null = não dá para agrupar com segurança. */
+function _csChaveCpf(u){
+  const d = String(u.cpf||'').replace(/\D/g,'');
+  if (!d) return null;
+  const p = d.padStart(11,'0');
+  return (p.length === 11 && new Set(p).size > 1) ? p : null;
+}
+
+/* A MESMA PESSOA aparecia duas vezes na Consulta (retorno da área, 10/08:
+   "se é a mesma pessoa por que trás separado?"). Acontece quando ela existe em
+   duas origens — ex.: prestador no diretório AD (PREST-*) e terceiro na base de
+   RH (TERC-*), mesmo CPF, cada identidade com os seus sistemas. São 746 CPFs
+   assim na base.
+
+   Aqui elas viram UMA linha, unindo acessos e contadores. É fusão de
+   APRESENTAÇÃO: cada acesso guarda de qual identidade veio (`_orig`), o detalhe
+   mostra isso, e `u.u` continua sendo o da identidade principal — as tratativas
+   seguem gravadas contra a identidade real, sem inventar chave nova. */
+function _csUnificarPorCpf(users){
+  const grupos = new Map(), soltos = [];
+  users.forEach(u => {
+    const k = _csChaveCpf(u);
+    if (!k) { soltos.push(u); return; }
+    if (!grupos.has(k)) grupos.set(k, []);
+    grupos.get(k).push(u);
+  });
+  const fundidos = [];
+  grupos.forEach(g => {
+    if (g.length === 1) { fundidos.push(g[0]); return; }
+    // principal = quem tem mais acessos (desempate: FUNCIONARIO na frente)
+    const ord = g.slice().sort((a,b) =>
+      (b.divs||[]).length - (a.divs||[]).length ||
+      ((b.vinc==='Funcionário')-(a.vinc==='Funcionário')));
+    const p = ord[0];
+    const uni = (campo) => {
+      const vs = [];
+      ord.forEach(x => String(x[campo]||'').split(/\s*[,·]\s*/).forEach(v => {
+        v = v.trim(); if (v && !vs.includes(v)) vs.push(v);
+      }));
+      return vs.join(' · ');
+    };
+    const pri = (campo) => (ord.find(x => String(x[campo]||'').trim()) || {})[campo] || '';
+    fundidos.push({...p,
+      n: ord.map(x=>x.n||'').sort((a,b)=>b.length-a.length)[0] || p.n,
+      m: uni('m'), login: uni('login'), vinc: uni('vinc'),
+      c: pri('c'), d: pri('d'), cc: pri('cc'), gestor: pri('gestor'),
+      email: pri('email'),
+      // cada acesso lembra de qual identidade veio
+      divs: ord.flatMap(x => (x.divs||[]).map(dv => ({...dv, _orig: x.m || x.u}))),
+      _ids: ord.map(x => x.m || x.u),
+    });
+  });
+  return soltos.concat(fundidos);
+}
+
 function _csFiltrarUsers(){
   // Aplica MESMOS filtros laterais que a Inclusao + busca livre + funil por coluna
-  let users = DB.users.filter(u => u.divs.some(divPassa));
+  let users = _csUnificarPorCpf(DB.users).filter(u => u.divs.some(divPassa));
   // Filtro de categoria vindo de card (ex.: card "Incluir Acesso" -> so quem tem)
   if (_csCatFiltro === 'incluir')
     users = users.filter(u => u.divs.some(d => d.a === 'Incluir Acesso'));
@@ -6099,7 +6209,12 @@ function _csDetalheCategorias(divs, pfx, comData){
       const perfis = lista.map(d => _csPerfilTxt(d)).join(', ');
       const dt = (comData && lista[0].dt)
         ? ` <span style="color:#8A9099">· ${fmtDH(lista[0].dt)}</span>` : '';
-      linhas += `<div class="${pfx}-p"><span class="h-sis">${esc(sis)}</span> ${perfis}${dt}</div>`;
+      // Pessoa com duas identidades (mesmo CPF): diz de qual delas veio o
+      // acesso — a linha é uma só, a rastreabilidade continua.
+      const og = [...new Set(lista.map(d => d._orig).filter(Boolean))];
+      const orig = og.length
+        ? ` <span style="color:#9AA3B5;font-size:10.5px;">(${og.map(esc).join(', ')})</span>` : '';
+      linhas += `<div class="${pfx}-p"><span class="h-sis">${esc(sis)}</span> ${perfis}${orig}${dt}</div>`;
     });
     h += `<div style="margin:9px 0 4px;">`
        + `<div style="color:${cat.cor};font-weight:700;font-size:12px;">● ${cat.lbl} (${n})`
@@ -6109,13 +6224,50 @@ function _csDetalheCategorias(divs, pfx, comData){
   return h || '<div style="color:#7B8294;font-style:italic;">Sem registros de acesso.</div>';
 }
 
+/* Universo de sistemas = os que aparecem em qualquer pessoa da base. Se um
+   sistema tem extrato importado, alguém o tem — então esta lista é o conjunto
+   de sistemas que o painel consegue avaliar. Cacheado por tamanho de DB.users
+   (muda quando o servidor devolve dados novos). */
+let _sisUniverso = null, _sisUniversoN = -1;
+function _sisTodos(){
+  const n = (DB.users||[]).length;
+  if (_sisUniverso && _sisUniversoN === n) return _sisUniverso;
+  const s = new Set();
+  (DB.users||[]).forEach(u => (u.divs||[]).forEach(d => { if (d.sis) s.add(d.sis); }));
+  _sisUniverso = Array.from(s).sort(); _sisUniversoN = n;
+  return _sisUniverso;
+}
+
+/* "Por que ela não tem o IC?" (retorno da área, 10/08). Antes, o sistema em que
+   a pessoa não tem acesso simplesmente NÃO APARECIA — e não dava para saber se
+   era porque a matriz não prevê nada para o cargo/CC dela, ou porque prevê e
+   ela não tem. O segundo caso já existe: vira "Acessos esperados" (Incluir).
+   Este bloco cobre o primeiro: sistema avaliado, sem nada previsto para ela.
+   É calculado na tela, não gravado — virariam ~5.000 pessoas × 7 sistemas de
+   linhas no banco para dizer "nada a fazer". */
+function _csSemMapeamento(u){
+  const tem = new Set((u.divs||[]).map(d => d.sis).filter(Boolean));
+  const faltam = _sisTodos().filter(s => !tem.has(s));
+  if (!faltam.length) return '';
+  const linhas = faltam.map(s =>
+    `<div class="cs-sub-acc-p"><span class="h-sis">${esc(s)}</span> `
+    + `<span style="color:#8A9099;">sem perfil previsto para o cargo/centro de custo</span></div>`
+  ).join('');
+  return `<div style="margin:9px 0 4px;">`
+    + `<div style="color:#7B8294;font-weight:700;font-size:12px;">● Sem mapeamento (${faltam.length})`
+    + ` <span style="color:#9AA3B5;font-weight:500;font-size:11px;">— a matriz não prevê acesso`
+    + ` a este sistema para o cargo/centro de custo dela; nada a incluir</span></div>`
+    + linhas + `</div>`;
+}
+
 function _csMontarSub(u){
   if (!u.divs || !u.divs.length) {
     return '<div class="cs-sub-titulo">Acessos</div>'
       + '<div style="color:#7B8294;font-style:italic;">Sem registros de acesso.</div>';
   }
   return '<div class="cs-sub-titulo">Acessos / divergências</div>'
-    + _csDetalheCategorias(u.divs, 'cs-sub-acc', true);
+    + _csDetalheCategorias(u.divs, 'cs-sub-acc', true)
+    + _csSemMapeamento(u);
 }
 
 function csLimparBusca(){
@@ -6352,8 +6504,10 @@ function exportarInclusao(){
   _usersFiltrados.forEach(u => {
     const rc = u.resolucao || {};
     u.divs.filter(divPassa).forEach((d, i) => {
+      // perfil sai no Excel com a MESMA grafia da grid (maiúsculas, sem a
+      // duplicata de grafia da matriz) — exportação replica a tela
       linhas.push([d.vinc||'', u.login||'', u.n, u.m||'', u.d||'', u.gestor||'', u.cc||'', u.c||'', d.tl,
-                   d.pe||'', d.pp||'', fmtDate(d.dt), d.s, d.o||'',
+                   _perfLista(d.pe), _perfLista(d.pp), fmtDate(d.dt), d.s, d.o||'',
                    rc.ticket||'', rc.ticket_url||'', rc.descricao||'',
                    rc.em ? fmtDate(rc.em) : '']);
       niveis.push(i === 0 ? 0 : 1);

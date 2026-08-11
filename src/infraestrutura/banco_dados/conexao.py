@@ -152,6 +152,14 @@ class ConexaoBancoDados:
                 "ALTER TABLE validacao_acessos ADD COLUMN situacao_acao TEXT DEFAULT 'PENDENTE'"))
             conn.commit()
             logger.info("Migration: validacao_acessos.situacao_acao adicionada.")
+        # POR QUE esta linha caiu neste status (retorno da area 10/08/2026: a
+        # tela mostrava "Em Analise" com esperado == encontrado e nao dizia o
+        # motivo — a conta estava com status pendente no extrato).
+        if "motivo_status" not in cols:
+            conn.execute(text(
+                "ALTER TABLE validacao_acessos ADD COLUMN motivo_status TEXT"))
+            conn.commit()
+            logger.info("Migration: validacao_acessos.motivo_status adicionada.")
 
     def _migrar_rh_ativos_tipo_vinculo(self, conn):
         if "rh_ativos" not in self._tabelas(conn):
