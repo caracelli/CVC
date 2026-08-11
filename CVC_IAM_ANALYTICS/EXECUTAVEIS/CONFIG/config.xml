@@ -277,4 +277,9 @@
         <sistema></sistema>
         <quarentena_dias>90</quarentena_dias>
     </visualizador>
+
+    <!-- A configuracao do Jira (Cards 25-26) NAO fica aqui: vive em
+         CONFIG/jira.xml, arquivo proprio preenchido pela INFRA e NAO versionado
+         (carrega o token). Modelo em CONFIG/jira.xml.exemplo.
+         Sem esse arquivo, o botao "Abrir chamado no Jira" segue desabilitado. -->
 </configuracao>

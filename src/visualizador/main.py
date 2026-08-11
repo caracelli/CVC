@@ -22,7 +22,10 @@ config.xml (ao lado do exe):
   </config>
 """
 import sys, os, io, json, time, socket, sqlite3, threading, webbrowser, getpass, zipfile
+import base64
 import subprocess
+import urllib.error
+import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -44,6 +47,10 @@ BANCO_LOCAL = os.path.join(DADOS_DIR, "BANCO", "iam_analytics.db")
 LOG_PATH = os.path.join(DADOS_DIR, "LOGS", "visualizador.log")
 INDEX_PATH = os.path.join(REPORT_DIR, "index.html")
 CONFIG_PATH = os.path.join(BASE_APP, "CONFIG", "config.xml")
+# Jira: arquivo PROPRIO (CONFIG/jira.xml), preenchido pela infra e NAO
+# versionado — carrega o token. O caminho e' resolvido em tempo de execucao
+# por _jira_xml_path(), que prefere a REDE ao local.
+JIRA_XML_LOCAL = os.path.join(BASE_APP, "CONFIG", "jira.xml")
 # Alias historico — algumas funcoes mais abaixo ainda usam BASE.
 BASE = BASE_APP
 
@@ -228,6 +235,193 @@ def carregar_config():
 
 
 REDE_RAIZ, BANCO_SUB, SISTEMA, QUAR_DIAS, META_ACESSOS_DESLIG, CONFIG_SRC = carregar_config()
+
+
+def _jira_xml_path():
+    """Caminho do jira.xml. PREFERE A REDE ao local.
+
+    Ler da rede (e nao da copia local que o auto-update traz) e' deliberado: o
+    auto-update so copia quando a <versao> muda, entao um token trocado ficaria
+    parado na rede ate a proxima release — toda rotacao viraria pedido de
+    publicacao. Lendo direto, a infra troca o token e vale para todos os
+    analistas na proxima abertura do painel. De quebra, o token nao se replica
+    no disco de cada maquina.
+
+    Sem <rede><raiz> (modo local / dev), cai no arquivo ao lado do config.
+    """
+    if REDE_RAIZ:
+        try:
+            sub = (ET.parse(CONFIG_PATH).getroot().findtext("rede/executaveis")
+                   or "EXECUTAVEIS") if os.path.exists(CONFIG_PATH) else "EXECUTAVEIS"
+            rede = os.path.join(REDE_RAIZ, sub, "CONFIG", "jira.xml")
+            if os.path.exists(rede):
+                return rede, "rede"
+        except Exception:
+            pass
+    if os.path.exists(JIRA_XML_LOCAL):
+        return JIRA_XML_LOCAL, "local"
+    return None, "ausente"
+
+
+def carregar_config_jira():
+    """Le CONFIG/jira.xml — TODOS os parametros do Jira, inclusive credencial.
+
+    Arquivo proprio, preenchido pela infra, fora do config.xml: aquele e'
+    versionado, e um token nele seria commitado. Este esta no .gitignore.
+    Modelo em CONFIG/jira.xml.exemplo.
+    """
+    cfg = {"ativo": False, "url": "", "service_desk_id": "",
+           "request_type_id": "", "campo_tipo": "customfield_11936",
+           "tipo_solicitacao": "", "prefixo_titulo": "Sanitização",
+           "timeout_s": 30, "usuario": "", "token": "", "origem": "ausente"}
+    caminho, origem = _jira_xml_path()
+    cfg["origem"] = origem
+    if not caminho:
+        return cfg
+    try:
+        r = ET.parse(caminho).getroot()
+        for k in ("url", "service_desk_id", "request_type_id", "campo_tipo",
+                  "tipo_solicitacao", "prefixo_titulo", "usuario", "token"):
+            v = (r.findtext(k) or "").strip()
+            if v:
+                cfg[k] = v
+        cfg["ativo"] = (r.findtext("ativo", "false") or "").strip().lower() == "true"
+        t = (r.findtext("timeout_s") or "").strip()
+        if t.isdigit():
+            cfg["timeout_s"] = int(t)
+    except Exception as e:
+        cfg["origem"] = f"{origem} (invalido: {e!r})"
+    return cfg
+
+
+def jira_diagnostico() -> str:
+    """Uma linha dizendo em que pe' esta a integracao. Vai para o log de
+    inicializacao: sem tela de teste, um valor errado no jira.xml falharia em
+    silencio — este e' o unico ponto em que isso fica visivel."""
+    if JIRA["origem"] == "ausente":
+        return "Jira     : nao configurado (sem CONFIG/jira.xml)"
+    if "invalido" in JIRA["origem"]:
+        return f"Jira     : ERRO ao ler jira.xml — {JIRA['origem']}"
+    if not JIRA["ativo"]:
+        return f"Jira     : desligado (<ativo>false</ativo>, {JIRA['origem']})"
+    faltando = [k for k in ("usuario", "token", "url", "service_desk_id",
+                            "request_type_id") if not JIRA[k]]
+    if faltando:
+        return (f"Jira     : INCOMPLETO ({JIRA['origem']}) — falta "
+                + ", ".join(faltando))
+    return (f"Jira     : ativo ({JIRA['origem']}) — {JIRA['usuario']} "
+            f"-> portal {JIRA['service_desk_id']} / tipo {JIRA['request_type_id']}")
+
+
+JIRA = carregar_config_jira()
+
+
+def jira_habilitado():
+    """So habilita com <ativo>true</ativo> E credencial presente. Sem isso o
+    botao do painel fica desabilitado, como esta hoje — botao habilitado que nao
+    abre chamado e' armadilha (mesmo principio do _btnJira no index.html)."""
+    return bool(JIRA["ativo"] and JIRA["usuario"] and JIRA["token"]
+                and JIRA["url"] and JIRA["service_desk_id"]
+                and JIRA["request_type_id"])
+
+
+class JiraErro(Exception):
+    """Falha ao abrir chamado. A mensagem vai INTEIRA para a tela: o analista
+    precisa saber se pode tentar de novo ou se tem de abrir na mao."""
+
+
+# Limite do campo Resumo no Jira. Truncar aqui e' melhor do que levar 400 do
+# outro lado com o chamado nao criado.
+_JIRA_MAX_SUMMARY = 255
+
+
+def _data_br(valor) -> str:
+    """'2025-06-30' / '2025-06-30 00:00:00' -> '30/06/2025'. O chamado e' lido
+    por pessoa, nao por maquina. Formato desconhecido volta como veio."""
+    s = str(valor or "").strip()[:10]
+    try:
+        a, m, d = s.split("-")
+        return f"{d}/{m}/{a}"
+    except ValueError:
+        return str(valor or "").strip()
+
+
+def jira_titulo(sistema: str, nome: str) -> str:
+    """'Sanitizacao - SYSTUR - AGATHA DIAS'. Titulo GERADO, nao o motivo: e' o
+    que distingue um chamado do outro na fila do Service Desk sem abrir."""
+    t = f"{JIRA['prefixo_titulo']} - {sistema or '?'} - {nome or '?'}"
+    return t[:_JIRA_MAX_SUMMARY]
+
+
+def jira_descricao(linhas, contexto: str = "", parecer: str = "") -> str:
+    """Corpo do chamado. `linhas` = [(nome, login, perfil), ...] — uma por
+    perfil revogado; `contexto` = a linha propria do fluxo ("Desligamento: ..."
+    no desligado, "Motivo: ..." na pendencia); `parecer` = o texto do analista.
+
+    TABELA EM TEXTO SEPARADO POR '|': a descricao vai como texto puro e o Jira
+    Cloud guarda descricao em ADF, entao markup de tabela provavelmente NAO e'
+    interpretado e alinhamento por espaco nao segura em fonte proporcional. O
+    separador visivel sobrevive aos dois casos. Confirmar no 1o chamado real.
+    """
+    corpo = ["Prezados,", "Revogar o usuario abaixo:", "",
+             "NOME | LOGIN | PERFIL"]
+    for nome, login, perfil in linhas:
+        corpo.append(f"{nome or '—'} | {login or '—'} | {perfil or '—'}")
+    if contexto:
+        corpo += ["", contexto]
+    if parecer:
+        corpo += ["", "Parecer do analista:", parecer.strip()]
+    return "\n".join(corpo)
+
+
+def jira_abrir_chamado(titulo: str, descricao: str):
+    """POST em /rest/servicedeskapi/request. Devolve (ticket, url).
+
+    urllib da stdlib de proposito: o painel e' standalone e o spec nao empacota
+    dependencia. A descricao vai como STRING — este endpoint aceita texto puro,
+    diferente da API generica de issues, que exigiria montar ADF.
+
+    Levanta JiraErro em qualquer falha. Quem chama TEM de tratar: se o POST
+    falhou, nenhum chamado existe; se deu certo mas a gravacao seguinte falhar,
+    o numero precisa chegar na tela de qualquer jeito.
+    """
+    if not jira_habilitado():
+        raise JiraErro("Integracao com o Jira desabilitada ou sem credencial "
+                       "(ver <jira> no config.xml).")
+    payload = {
+        "serviceDeskId": str(JIRA["service_desk_id"]),
+        "requestTypeId": str(JIRA["request_type_id"]),
+        "requestFieldValues": {
+            "summary": titulo,
+            "description": descricao,
+            JIRA["campo_tipo"]: JIRA["tipo_solicitacao"],
+        },
+    }
+    auth = base64.b64encode(
+        f"{JIRA['usuario']}:{JIRA['token']}".encode()).decode()
+    req = urllib.request.Request(
+        JIRA["url"].rstrip("/") + "/rest/servicedeskapi/request",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Basic {auth}",
+                 "Content-Type": "application/json",
+                 "Accept": "application/json"},
+        method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=JIRA["timeout_s"]) as r:
+            dados = json.loads(r.read().decode("utf-8", "replace"))
+    except urllib.error.HTTPError as e:
+        detalhe = e.read().decode("utf-8", "replace")[:300]
+        raise JiraErro(f"Jira respondeu {e.code}: {detalhe}")
+    except Exception as e:
+        raise JiraErro(f"Falha de rede ao abrir chamado: {type(e).__name__}: {e}")
+
+    ticket = (dados.get("issueKey") or "").strip()
+    url = ((dados.get("_links") or {}).get("web") or "").strip()
+    if not ticket:
+        raise JiraErro("Jira aceitou a requisicao mas nao devolveu o numero do "
+                       "chamado. Confira no portal antes de tentar de novo.")
+    return ticket, url
+
 
 # Limite maximo de dias que uma quarentena pode receber no formulario (regra de
 # negocio; o front tambem bloqueia). Acima disso, enviar_quarentena rejeita.
@@ -437,6 +631,69 @@ def _tratamento_desligado_vivo(interacoes=None):
         if ant is None or str(it.get("data_acao", "")) >= str(ant.get("data_acao", "")):
             atual[rid] = it
     return atual
+
+
+def chamados_abertos(interacoes=None):
+    """{registro_id: {ticket, ticket_url, por, em}} — chamados JA abertos pelo
+    painel. Mesmo padrao mesclado dos tratamentos: banco dobrado + interacoes
+    vivas da rede.
+
+    LE DE TODOS OS .jsonl DA REDE, nao so' do usuario atual: dois analistas em
+    maquinas diferentes podem estar com a mesma linha aberta, e quem abriu o
+    chamado pode nao ser quem esta tentando abrir agora. Essa e' justamente a
+    duplicata que precisamos impedir.
+
+    O primeiro a abrir VENCE (nao o mais recente, como nos tratamentos): o
+    chamado ja existe no Service Desk e nao ha' o que sobrepor.
+    """
+    out = {}
+    # Lado dobrado. LE DA REDE, nao do cache local — e isto importa:
+    #
+    #   09:00 o painel abre e copia o banco para o cache (sem chamado nenhum)
+    #   10:00 outro analista abre um chamado -> vai para o .jsonl da rede
+    #   11:00 o Processador dobra no banco e APAGA a pasta de interacoes
+    #   11:05 este painel, aberto desde as 09:00, olharia um .jsonl vazio e um
+    #         cache velho — nao acharia o chamado e deixaria abrir o duplicado.
+    #
+    # A tabela e' pequena e a consulta e' pontual; nao justifica ressincronizar
+    # o banco inteiro. Sem rede (modo local), cai no proprio DB_PATH.
+    banco = _rede_db_path() if REDE_RAIZ else DB_PATH
+    try:
+        c = sqlite3.connect(f"file:{banco}?mode=ro", uri=True, timeout=10)
+        c.row_factory = sqlite3.Row
+        try:
+            if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                         "AND name='chamados_abertos'").fetchone():
+                for r in c.execute("SELECT registro_id,ticket,ticket_url,"
+                                   "aberto_por,aberto_em FROM chamados_abertos"):
+                    out[str(r["registro_id"])] = {
+                        "ticket": r["ticket"] or "",
+                        "ticket_url": r["ticket_url"] or "",
+                        "por": r["aberto_por"] or "", "em": r["aberto_em"] or ""}
+        finally:
+            c.close()
+    except Exception as e:
+        # Nao engolir em silencio: sem esta leitura o painel deixaria abrir
+        # chamado duplicado sem avisar ninguem.
+        print(f"  [CHAMADO] aviso: nao foi possivel ler chamados_abertos ({e!r})")
+
+    for it in (interacoes if interacoes is not None else _interacoes_ler()):
+        if it.get("tipo_interacao") != "CHAMADO_ABERTO":
+            continue
+        rid = str(it.get("registro_id") or "")
+        if not rid or not it.get("ticket"):
+            continue
+        # Normaliza ANTES de comparar: o envelope traz "2026-08-11T09:00:00" e o
+        # que ja esta em `out` usa espaco. Comparar cru contra normalizado
+        # inverte a ordem ('T' > ' ' em ASCII) e faria o MAIS RECENTE vencer —
+        # o oposto da regra.
+        em = (it.get("data_acao") or "").replace("T", " ")
+        ant = out.get(rid)
+        if ant is None or em < str(ant.get("em", "")):
+            out[rid] = {"ticket": it.get("ticket") or "",
+                        "ticket_url": it.get("ticket_url") or "",
+                        "por": it.get("usuario") or "", "em": em}
+    return out
 
 
 def _tratamentos_desligado_db():
@@ -2550,13 +2807,26 @@ def listar_desligados():
                                "descricao": t["descricao"], "motivo": t["motivo"],
                                "por": t["por"], "em": t["em"]}
 
+    # Chamado JA aberto e tratativa ainda NAO concluida: o analista foi
+    # interrompido entre uma coisa e outra. A linha precisa dizer isso — sem
+    # isto ela volta a parecer intocada e o proximo abre um segundo chamado
+    # para o mesmo caso. O formulario usa `chamado` para travar a abertura.
+    abertos = chamados_abertos()
+    for d in out:
+        ch = abertos.get(str(d["m"]))
+        if ch and not d.get("tratado"):
+            d["chamado"] = ch
+
     # KPIs: "Tratar" = com acesso e AINDA nao tratado; "tratado" e' categoria a
     # parte (encaminhado). "OK" segue = sem acesso.
     tratar = sum(1 for d in out if d["sit"] == "Tratar" and not d.get("tratado"))
     tratados = sum(1 for d in out if d.get("tratado"))
     ok = sum(1 for d in out if d["sit"] == "OK")
+    # `jira` diz a tela se o botao "Abrir chamado" pode habilitar. Vem do
+    # servidor porque so ele sabe se ha credencial — o front nunca ve o token.
     return {"lista": out, "kpis": {"tratar": tratar, "tratados": tratados,
-                                   "ok": ok, "total": len(out)}}
+                                   "ok": ok, "total": len(out)},
+            "jira": jira_habilitado()}
 
 
 import re as _re_transf
@@ -3221,6 +3491,100 @@ def tratar_desligado(registro_id, ticket, ticket_url="", descricao="", motivo=""
     return 1
 
 
+def abrir_chamado_desligado(registro_id, parecer):
+    """Abre o chamado de revogacao de um DESLIGADO e registra a abertura.
+
+    Devolve (ticket, url). Levanta JiraErro se o chamado nao foi criado.
+
+    POR QUE GRAVA AQUI, e nao so' no Resolver: entre criar o chamado no Jira e o
+    analista concluir a tratativa nao ha' nada persistido. Se ele fechar o modal
+    no meio, o chamado existe no Service Desk e o painel nao sabe — a pendencia
+    segue aberta e o proximo analista abre um segundo chamado para a mesma coisa.
+    Gravando na resposta do POST, o painel passa a saber, e o estado "aguardando
+    chamado" cai de graca: e' a pendencia que tem ticket e ainda nao tem parecer.
+
+    A ORDEM IMPORTA: cria primeiro, grava depois. Se a gravacao falhar (rede,
+    share fora), o chamado JA existe — por isso o erro devolve o numero junto,
+    para a tela exibi-lo e o analista nao perder o dado.
+    """
+    rid = str(registro_id or "").strip()
+    if not rid:
+        raise JiraErro("Registro nao informado.")
+    parecer = str(parecer or "").strip()
+    if not parecer:
+        raise JiraErro("Descreva o parecer antes de abrir o chamado.")
+
+    # Ja existe chamado para este registro? A checagem e' AQUI, no servidor, e
+    # nao so' na tela: a tela de um analista nao sabe do clique do outro, e o
+    # painel roda em varias maquinas contra a mesma pasta de interacoes.
+    ja = chamados_abertos().get(rid)
+    if ja:
+        raise JiraErro(
+            f"Ja existe o chamado {ja['ticket']} para este registro, aberto por "
+            f"{ja['por'] or '?'} em {ja['em'] or '?'}. Conclua a tratativa em vez "
+            f"de abrir outro.")
+
+    nome, desligamento = "", ""
+    acessos = []
+    try:
+        c = conn_ro()
+        try:
+            rh = c.execute(
+                "SELECT nome, data_desligamento FROM rh_desligados WHERE matricula=?",
+                [rid]).fetchone()
+            if rh:
+                nome = rh["nome"] or ""
+                desligamento = rh["data_desligamento"] or ""
+            for r in c.execute(
+                    "SELECT sistema, usuario, perfil_encontrado "
+                    "FROM divergencias WHERE tipo='ACESSO_DESLIGADO' AND matricula=?",
+                    [rid]):
+                acessos.append({"sistema": r["sistema"] or "",
+                                "login": r["usuario"] or "",
+                                "perfil": r["perfil_encontrado"] or ""})
+        finally:
+            c.close()
+    except Exception as e:
+        # Sem os acessos nao da' para dizer O QUE revogar — abrir um chamado
+        # vazio seria pior do que nao abrir.
+        raise JiraErro(f"Nao foi possivel ler os dados do desligado: {e}")
+
+    if not acessos:
+        raise JiraErro("Nenhum acesso ativo encontrado para este desligado.")
+
+    # Um chamado por (usuario, SISTEMA): o titulo carrega um sistema so. Com
+    # acesso em mais de um sistema, o primeiro define o titulo e os demais vao
+    # na tabela — a area confirmou um chamado por pessoa/sistema, e hoje o
+    # escopo do painel e' de um sistema so'.
+    sistema = acessos[0]["sistema"]
+    titulo = jira_titulo(sistema, nome)
+    contexto = (f"Desligamento: {_data_br(desligamento)}"
+                if desligamento else "")
+    descricao = jira_descricao(
+        [(nome, a["login"], a["perfil"]) for a in acessos], contexto, parecer)
+
+    ticket, url = jira_abrir_chamado(titulo, descricao)   # pode levantar JiraErro
+
+    try:
+        _interacao_gravar({
+            "schema_version": 1,
+            "tipo_interacao": "CHAMADO_ABERTO", "registro_id": rid,
+            "acao": "ABRIR_CHAMADO", "fluxo": "DESLIGADO",
+            "ticket": ticket, "ticket_url": url,
+            "nome": nome, "sistema": sistema, "acessos": acessos,
+            "usuario": USUARIO,
+            "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        })
+    except Exception as e:
+        raise JiraErro(
+            f"Chamado {ticket} foi ABERTO no Jira, mas nao foi possivel "
+            f"registrar no painel ({e}). Anote o numero e informe no campo "
+            f"'N do ticket' antes de resolver.")
+
+    print(f"  [CHAMADO] {ticket} aberto para desligado {rid} por {USUARIO}")
+    return ticket, url
+
+
 def listar_historico_rh():
     """Trilha de pendências: cada resolução gera o par "Pendência identificada"
     / "Pendência resolvida". Lista plana, ordenada por data decrescente; a tela
@@ -3858,6 +4222,34 @@ class H(BaseHTTPRequestHandler):
                      "desligados": listar_desligados()}, ensure_ascii=False),
                     "application/json; charset=utf-8")
                 return
+            if self.path == "/api/abrir-chamado":
+                n = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+                fluxo = str(payload.get("fluxo") or "desligado").strip().lower()
+                if fluxo != "desligado":
+                    # Escopo atual: so' revogacao de desligado. Pendencia e
+                    # transferido seguem em alinhamento com a area.
+                    self._send(400, json.dumps(
+                        {"ok": False, "erro": "Abertura automatica disponivel "
+                                              "apenas para desligados."},
+                        ensure_ascii=False),
+                        "application/json; charset=utf-8")
+                    return
+                try:
+                    ticket, url = abrir_chamado_desligado(
+                        payload.get("id"), payload.get("descricao"))
+                except JiraErro as e:
+                    # 409: o chamado PODE ter sido criado (ver abrir_chamado_
+                    # desligado). A mensagem carrega o numero quando existe, e a
+                    # tela precisa mostra-la inteira.
+                    self._send(409, json.dumps(
+                        {"ok": False, "erro": str(e)}, ensure_ascii=False),
+                        "application/json; charset=utf-8")
+                    return
+                self._send(200, json.dumps(
+                    {"ok": True, "ticket": ticket, "ticket_url": url},
+                    ensure_ascii=False), "application/json; charset=utf-8")
+                return
             if self.path == "/api/tratar-transferido":
                 n = int(self.headers.get("Content-Length", 0))
                 payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
@@ -4087,6 +4479,9 @@ def banner():
     print(f"  Config    : {CONFIG_SRC}")
     print(f"  Banco     : {DB_PATH}")
     print(f"  Escopo    : {SISTEMA or '(todos)'} | quarentena {QUAR_DIAS} dias")
+    # Sem tela de teste, um valor errado no jira.xml so' apareceria quando um
+    # chamado falhasse. Aqui ele aparece na abertura.
+    print(f"  {jira_diagnostico()}")
     print(f"  Endereco  : http://{HOST}:{PORT}/")
     print("=" * 64)
 

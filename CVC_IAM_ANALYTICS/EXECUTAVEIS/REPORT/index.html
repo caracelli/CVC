@@ -244,6 +244,19 @@ body{
 .mf-jira{background:#E8EEF7;color:#8A9099;border:1px dashed #C5D2EA;}
 .mf-jira:disabled{cursor:not-allowed;}
 .mf-jira:disabled:hover{filter:none;}
+/* habilitado: passa a parecer acionável (o tracejado dizia "não faz nada") */
+.mf-jira:not(:disabled){background:var(--navy);color:#fff;border:1px solid var(--navy);
+  cursor:pointer;}
+.mf-jira:not(:disabled):hover{background:var(--navy-l);}
+/* já aberto: o número no lugar do rótulo — o analista vê o que existe */
+.mf-jira-done{background:#E3F3E8;color:#1E7B43;border:1px solid #1E7B43;
+  cursor:default;}
+.mf-jira-done:disabled{cursor:default;}
+/* campo preenchido pelo Jira: some a aparência de editável */
+.fld-ro{background:#F4F6FA;color:#5A6377;cursor:default;}
+.trat-lock{font:600 10.5px Arial;color:#8A9099;margin-top:-2px;}
+/* selo da linha que já tem chamado e ainda não tem parecer */
+.b-aguard{background:#FFF4DB;color:#B26A00;}
 /* separadores do formulario de tratativa: o que o analista decide vem antes,
    o chamado (referencia externa, opcional) depois */
 .trat-sec{font:700 9.5px Arial;letter-spacing:.06em;text-transform:uppercase;
@@ -4050,7 +4063,7 @@ function abrirResolver(uid, sistema, perfil){
     + '<div class="modal-err" id="res-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
-    + _btnJira()
+    + _btnJira({ativo: _JIRA_ATIVO, fluxo: false})
     + '<button class="mf-ok" onclick="confirmarResolucao()">Resolver</button>'
     + '</div>');
   _preencherMotivos();
@@ -4075,11 +4088,51 @@ const _MOTIVOS_FALLBACK = ['Exceção', 'Transferência de Área', 'Acesso Indev
    Fica visível e DESABILITADO, com o motivo na dica. Botão habilitado que não
    faz nada é armadilha — o analista clicaria achando que abriu chamado.
    Um lugar só: os três formulários de tratativa usam esta função. */
-function _btnJira(){
-  return '<button class="mf-ok mf-jira" disabled '
-    + 'title="Abertura automática no Jira — em implementação (depende do formulário '
-    + 'no Jira). Por enquanto, abra o chamado no Jira e informe o número acima.">'
+function _btnJira(op){
+  op = op || {};
+  // JÁ ABERTO: mostra o número e não deixa abrir outro. A trava real é no
+  // servidor (dois analistas em máquinas diferentes não veem o clique um do
+  // outro); aqui é só para não oferecer o que vai ser recusado.
+  if(op.chamado && op.chamado.ticket){
+    return '<button class="mf-ok mf-jira-done" disabled title="'
+      + 'Chamado já aberto por ' + esc(op.chamado.por||'?')
+      + ' em ' + esc(op.chamado.em||'?') + '. Conclua a tratativa.">'
+      + '✓ ' + esc(op.chamado.ticket) + ' aberto</button>';
+  }
+  if(!op.ativo){
+    return '<button class="mf-ok mf-jira" disabled '
+      + 'title="Abertura automática indisponível — integração com o Jira não '
+      + 'configurada. Abra o chamado no portal e informe o número acima.">'
+      + 'Abrir chamado no Jira</button>';
+  }
+  if(!op.fluxo){   // só o fluxo de DESLIGADOS por ora (escopo fechado em 11/08)
+    return '<button class="mf-ok mf-jira" disabled '
+      + 'title="Abertura automática disponível apenas para desligados. Abra o '
+      + 'chamado no portal e informe o número acima.">'
+      + 'Abrir chamado no Jira</button>';
+  }
+  // Nasce DESABILITADO mesmo com tudo pronto: o parecer vai DENTRO do chamado,
+  // então não existe chamado antes dele. _ligarBtnJira habilita ao digitar.
+  return '<button class="mf-ok mf-jira" id="btn-jira" disabled '
+    + 'onclick="abrirChamadoJira()" '
+    + 'title="Escreva o parecer para habilitar.">'
     + 'Abrir chamado no Jira</button>';
+}
+
+/* Liga o botão ao conteúdo do parecer. Sem isso ele ficaria clicável com o
+   campo vazio e o servidor recusaria — erro que a tela podia ter evitado. */
+function _ligarBtnJira(p){
+  const desc = document.getElementById(p + '-desc');
+  const btn  = document.getElementById('btn-jira');
+  if(!desc || !btn) return;
+  const sync = () => {
+    const tem = !!desc.value.trim();
+    btn.disabled = !tem;
+    btn.title = tem ? 'Abre o chamado no Jira com o parecer acima.'
+                    : 'Escreva o parecer para habilitar.';
+  };
+  desc.addEventListener('input', sync);
+  sync();
 }
 
 /* Corpo do formulário de TRATATIVA — o mesmo nos três fluxos (pendência,
@@ -4109,7 +4162,7 @@ function _validarTratativa(p, motivo, parecer){
   return true;
 }
 
-function _campoTratativa(p, comMotivo){
+function _campoTratativa(p, comMotivo, chamado){
   // O MOTIVO só existe na PENDÊNCIA (decisão de 06/08). A lista fechada
   // responde "por que este acesso divergente da matriz vai ficar assim?" —
   // pergunta que não cabe nos outros dois fluxos: no desligado o desfecho é
@@ -4126,11 +4179,29 @@ function _campoTratativa(p, comMotivo){
     + '<label>Parecer <span class="req">*</span></label>'
     + '<textarea id="' + p + '-desc" maxlength="600" '
     + 'placeholder="O que foi verificado e o que foi decidido"></textarea>'
-    + '<div class="trat-sec trat-sec2">Chamado no Jira <small>(opcional)</small></div>'
+    + _campoChamado(p, chamado);
+}
+
+/* Bloco do chamado. Aberto PELO PAINEL vem preenchido e em somente leitura: a
+   fonte da verdade é o Jira, e deixar editar criaria dois números divergentes
+   sem ninguém saber qual vale (mesmo princípio da lupa). Sem chamado, os campos
+   ficam livres — o caminho manual, de quem abriu no portal, continua valendo. */
+function _campoChamado(p, chamado){
+  const tk = chamado && chamado.ticket ? chamado.ticket : '';
+  const ur = chamado && chamado.ticket_url ? chamado.ticket_url : '';
+  const ro = tk ? ' readonly class="fld-ro"' : '';
+  return '<div class="trat-sec trat-sec2">Chamado no Jira '
+    + (tk ? '<small>· aberto pelo painel</small>'
+          : '<small>(opcional)</small>') + '</div>'
     + '<label>Nº do ticket</label>'
-    + '<input id="' + p + '-ticket" placeholder="ex: IAM-1234" autocomplete="off" maxlength="40">'
+    + '<input id="' + p + '-ticket" value="' + esc(tk) + '"'
+    + (tk ? ro : ' placeholder="ex: GAAR-1234"')
+    + ' autocomplete="off" maxlength="40">'
     + '<label>Link do ticket</label>'
-    + '<input id="' + p + '-url" placeholder="https://..." autocomplete="off">';
+    + '<input id="' + p + '-url" value="' + esc(ur) + '"'
+    + (tk ? ro : ' placeholder="https://..."') + ' autocomplete="off">'
+    + (tk ? '<div class="trat-lock">🔒 preenchido pelo Jira · somente leitura</div>'
+          : '');
 }
 
 function _fillMotivos(idSel, lista, aviso){
@@ -4687,6 +4758,10 @@ function _acessosPorSistema(acessos){
 }
 let _deslRecs = [], _deslView = 'tratar', _deslPag = 1, _deslPP = 50;
 const _deslExp = new Set();   // matrículas com os acessos abertos
+/* Integração com o Jira disponível? Vem do SERVIDOR (/api/desligados) — só ele
+   sabe se há credencial; o front nunca vê o token. Falso = botão desabilitado
+   com a dica explicando, que é o estado de hoje. */
+let _JIRA_ATIVO = false;
 
 function deslPP(v){ _deslPP = parseInt(v,10) || 50; _deslPag = 1; pintarDesligados(); }
 function deslIr(p){ _deslPag = p; pintarDesligados(); }
@@ -4708,6 +4783,7 @@ async function renderDesligados(){
     const r = await fetch('/api/desligados');
     const d = await r.json();
     _deslRecs = d.lista || [];
+    _JIRA_ATIVO = !!d.jira;
     const k = d.kpis || {};
     const el = document.getElementById('desl-count');
     if(el) el.textContent = `${k.tratar||0} a tratar · ${k.tratados||0} tratado(s) · ${k.ok||0} OK · ${k.total||0} desligados`;
@@ -4763,8 +4839,18 @@ function pintarDesligados(){
         + `stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/>`
         + `<path d="M21 21l-4.3-4.3"/></svg></button>`;
     } else {
-      sit = `<span class="badge b-pendente">Tratar</span>`
-        + `<button class="btn-res ico-res" title="Tratar — abrir chamado" `
+      // Chamado JÁ aberto e tratativa ainda não concluída: o analista foi
+      // interrompido entre uma coisa e outra. Sem este selo a linha voltaria a
+      // parecer intocada e o próximo abriria um SEGUNDO chamado para o mesmo
+      // caso. Estado de exceção — no caminho normal a linha vai direto para
+      // Tratado, sem passar por aqui.
+      const ch = d.chamado;
+      sit = ch && ch.ticket
+        ? `<span class="badge b-aguard" title="Chamado aberto por ${esc(ch.por||'?')}`
+          + ` em ${esc(ch.em||'?')} — falta concluir a tratativa">`
+          + `⏳ ${esc(ch.ticket)}</span>`
+        : `<span class="badge b-pendente">Tratar</span>`;
+      sit += `<button class="btn-res ico-res" title="Tratar — abrir chamado" `
         + `onclick="abrirTratarDesligado('${esc(d.m)}')">`
         + `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" `
         + `stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">`
@@ -4860,15 +4946,53 @@ function abrirTratarDesligado(m){
     + '<p>' + esc(d.n||d.m) + ' — ' + esc(d.m) + ' · ' + n
     + ' acesso(s) ativo(s) a revogar</p></div>'
     + '<div class="modal-bd">'
-    + _campoTratativa('tr', false)
+    + _campoTratativa('tr', false, d.chamado)
     + '<div class="modal-err" id="tr-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
-    + _btnJira()
+    + _btnJira({ativo: _JIRA_ATIVO, fluxo: true, chamado: d.chamado})
     + '<button class="mf-ok" onclick="confirmarTratamentoDesligado()">Resolver</button>'
     + '</div>');
+  _ligarBtnJira('tr');
   // mesma fonte e mesma blindagem da resolução de pendência
   setTimeout(() => { const i = document.getElementById('tr-desc'); if(i) i.focus(); }, 60);
+}
+
+/* Abre o chamado e devolve o número para os campos do formulário.
+   NÃO grava a tratativa: motivo e parecer são julgamento humano e a regra de
+   05/08 os exige — quem grava é o Resolver, depois. */
+async function abrirChamadoJira(){
+  if(!_deslTratAlvo) return;
+  const desc = document.getElementById('tr-desc').value.trim();
+  const err  = document.getElementById('tr-err');
+  const btn  = document.getElementById('btn-jira');
+  if(!desc){ if(err) err.textContent = 'Escreva o parecer antes de abrir o chamado.'; return; }
+  if(err) err.textContent = '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Abrindo…'; }
+  try{
+    const r = await fetch('/api/abrir-chamado', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({fluxo:'desligado', id:_deslTratAlvo.m, descricao:desc})
+    });
+    const j = await r.json();
+    if(j && j.ok){
+      const t = document.getElementById('tr-ticket');
+      const u = document.getElementById('tr-url');
+      if(t){ t.value = j.ticket; t.readOnly = true; t.className = 'fld-ro'; }
+      if(u){ u.value = j.ticket_url || ''; u.readOnly = true; u.className = 'fld-ro'; }
+      if(btn){ btn.textContent = '✓ ' + j.ticket + ' aberto';
+               btn.className = 'mf-ok mf-jira-done'; btn.disabled = true; }
+      _deslTratAlvo.chamado = {ticket:j.ticket, ticket_url:j.ticket_url};
+    } else {
+      // A mensagem pode conter o número de um chamado que NASCEU mas não foi
+      // registrado — exibir inteira, senão o analista perde o dado.
+      if(err) err.textContent = (j && j.erro) || 'Falha ao abrir o chamado.';
+      if(btn){ btn.disabled = false; btn.textContent = 'Abrir chamado no Jira'; }
+    }
+  }catch(e){
+    if(err) err.textContent = 'Sem conexão com o visualizador. O chamado pode ou não ter sido aberto — confira no Jira antes de tentar de novo.';
+    if(btn){ btn.disabled = false; btn.textContent = 'Abrir chamado no Jira'; }
+  }
 }
 
 async function confirmarTratamentoDesligado(){
@@ -5129,7 +5253,7 @@ function abrirTratarTransferido(m){
     + '<div class="modal-err" id="tt-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
-    + _btnJira()
+    + _btnJira({ativo: _JIRA_ATIVO, fluxo: false})
     + '<button class="mf-ok" onclick="confirmarTratamentoTransferido()">Resolver</button>'
     + '</div>');
   setTimeout(() => { const i = document.getElementById('tt-desc'); if(i) i.focus(); }, 60);

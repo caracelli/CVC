@@ -110,3 +110,4 @@ jira_token.txt
 # credencial nunca entra, nem compactada — zip passa pela varredura do GitHub
 jira_cred.zip
 *.jira_cred
+jira.xml

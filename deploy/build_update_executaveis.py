@@ -43,7 +43,14 @@ def main():
         shutil.rmtree(STAGING, ignore_errors=True)
     destino_execs = STAGING / "EXECUTAVEIS"
     # copia a pasta EXECUTAVEIS inteira (exes + launcher + REPORT + CONFIG + py)
-    shutil.copytree(EXECS, destino_execs)
+    #
+    # jira.xml FICA DE FORA: ele carrega o token da conta de servico e vive na
+    # pasta de rede, colocado uma vez pela infra. Se um jira.xml existir na
+    # maquina de build, o copytree o embarcaria no pacote e a credencial se
+    # espalharia para toda maquina que aplicasse o update. O .exemplo, esse sim,
+    # vai junto — e' so' modelo.
+    shutil.copytree(EXECS, destino_execs,
+                    ignore=shutil.ignore_patterns("jira.xml"))
     # remove caches do build, se vieram juntos
     for lixo in destino_execs.rglob("__pycache__"):
         shutil.rmtree(lixo, ignore_errors=True)

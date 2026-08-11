@@ -132,6 +132,70 @@ def main():
     print(f"    /rest/api/3/user/search -> status={st}"
           + ("  (esperado)" if st == 403 else "  (INESPERADO — reavaliar)"))
 
+    print("\n[5] chamado de teste")
+    payload = _payload_teste()
+    if "--criar-chamado" not in sys.argv:
+        print("    (nao enviado — rode com --criar-chamado para abrir de verdade)")
+        print("    Seria enviado:\n")
+        for k, v in payload["requestFieldValues"].items():
+            print(f"    {k}:")
+            for linha in str(v).splitlines() or [""]:
+                print(f"      {linha}")
+            print()
+        return
+    _criar_chamado(payload)
+
+
+def _payload_teste():
+    """Payload com o FORMATO exato que o painel monta, mas com dados FALSOS.
+
+    Nada de login ou perfil real aqui. O request type se chama "Catalogo para
+    API de Revogacao Automatica de GA": se houver automacao consumindo esses
+    chamados, um teste com dados reais dispararia uma revogacao de verdade —
+    e cancelar o chamado depois nao desfaz o que ja foi executado. Com
+    TESTE000000 nao ha o que revogar; a automacao, se existir, falha sem causar
+    dano, e a propria falha vira informacao.
+
+    Duas linhas na tabela de proposito: e' o que responde se ela renderiza.
+    """
+    titulo = "Sanitização - SYSTUR - TESTE INTEGRACAO IAM"
+    descricao = "\n".join([
+        "Prezados,", "Revogar o usuario abaixo:", "",
+        "NOME | LOGIN | PERFIL",
+        "TESTE INTEGRACAO IAM | TESTE000000 | PERFIL_TESTE_A",
+        "TESTE INTEGRACAO IAM | TESTE000000 | PERFIL_TESTE_B",
+        "", "Desligamento: 01/01/2000",
+        "", "Parecer do analista:",
+        "TESTE DE INTEGRACAO — validando o formato da descricao. NAO HA USUARIO "
+        "REAL neste chamado; nenhum acesso deve ser revogado. Pode ser cancelado.",
+    ])
+    return {"serviceDeskId": str(PORTAL), "requestTypeId": str(REQUEST_TYPE),
+            "requestFieldValues": {"summary": titulo, "description": descricao,
+                                   "customfield_11936": "Revogação de acessos"}}
+
+
+def _criar_chamado(payload):
+    """POST real. So roda com --criar-chamado explicito."""
+    req = urllib.request.Request(
+        HOST + "/rest/servicedeskapi/request",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Basic {AUTH}",
+                 "Content-Type": "application/json",
+                 "Accept": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            d = json.loads(r.read().decode("utf-8", "replace"))
+    except urllib.error.HTTPError as e:
+        print(f"    FALHOU {e.code}: {e.read().decode('utf-8','replace')[:400]}")
+        return
+    except Exception as e:
+        print(f"    FALHOU: {type(e).__name__}: {e}")
+        return
+    print(f"    CRIADO: {d.get('issueKey')}")
+    print(f"    link  : {(d.get('_links') or {}).get('web')}")
+    print("    Abra o link e confira se a TABELA da descricao renderizou "
+          "alinhada ou virou texto corrido.")
+
 
 if __name__ == "__main__":
     main()

@@ -34,6 +34,41 @@ fica em `CONFIG\config.xml`, seção `<rede>`.
 Ao iniciar, cada exe compara a `<versao>` do `config.xml` local com a da rede;
 se diferente, copia a versão nova da rede e reinicia.
 
+## Abertura de chamado no Jira (instalação — feita uma vez)
+
+O botão **Abrir chamado no Jira**, na aba Desligados, nasce desabilitado. Para
+habilitar, alguém com acesso ao compartilhamento cria **um arquivo**:
+
+```
+<raiz de rede>\EXECUTAVEIS\CONFIG\jira.xml
+```
+
+Use o modelo `CONFIG\jira.xml.exemplo`, que já vem com todos os campos
+comentados. A infra preenche `<ativo>true</ativo>`, o e-mail da conta de serviço
+e o token; o resto já vem preenchido.
+
+Três coisas que valem saber:
+
+- **É colocado uma vez e fica.** Nenhuma atualização de versão sobrescreve ou
+  apaga esse arquivo.
+- **É lido direto da rede**, não da cópia local. Trocar o token vale para todos
+  os analistas na próxima vez que abrirem o painel — sem republicar versão.
+- **Não vai para o pacote de atualização.** Se existir um `jira.xml` na máquina
+  de quem gera o build, ele é deliberadamente excluído do zip, para a credencial
+  não se espalhar.
+
+Deve ser uma **conta de serviço**, cadastrada como cliente do portal — não a
+conta pessoal de um analista. Ela só precisa abrir chamado.
+
+Para conferir se funcionou, abra o visualizador e olhe a linha `Jira` no início
+do log:
+
+```
+Jira      : ativo (rede) — svc-iam@cvccorp.com.br -> portal 9 / tipo 8819
+Jira      : nao configurado (sem CONFIG/jira.xml)
+Jira      : INCOMPLETO (rede) — falta token
+```
+
 ## Diagnóstico
 
 `visualizador_log.txt` (nesta pasta) registra cada execução do visualizador.

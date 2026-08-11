@@ -121,6 +121,21 @@ CREATE TABLE IF NOT EXISTS tratamentos_transferido (
 )
 """
 
+_SQL_CHAMADOS = """
+CREATE TABLE IF NOT EXISTS chamados_abertos (
+  registro_id TEXT PRIMARY KEY,
+  fluxo TEXT NOT NULL DEFAULT 'DESLIGADO',
+  ticket TEXT NOT NULL,
+  ticket_url TEXT,
+  nome TEXT,
+  sistema TEXT,
+  acessos TEXT,
+  aberto_por TEXT,
+  aberto_em TEXT,
+  dobrado_em TEXT
+)
+"""
+
 _SQL_ATALHOS = """
 CREATE TABLE IF NOT EXISTS atalhos (
   id TEXT PRIMARY KEY,
@@ -233,6 +248,23 @@ class DobrarInteracoes:
                     ant.get("data_acao", "")):
                 transf_reg[str(rid)] = it
 
+        # CHAMADO_ABERTO: chamado criado no Jira pelo painel. AQUI VENCE O
+        # PRIMEIRO, nao o mais recente — ao contrario de todos os tipos acima.
+        # O chamado ja existe no Service Desk e nao ha' o que sobrepor; um
+        # segundo registro para o mesmo `registro_id` E' a duplicata que o
+        # painel tenta impedir, e deixa-lo vencer apagaria o numero real.
+        cham_reg: dict = {}
+        for it in interacoes:
+            if it.get("tipo_interacao") != "CHAMADO_ABERTO":
+                continue
+            rid = it.get("registro_id")
+            if not rid or not it.get("ticket"):
+                continue
+            ant = cham_reg.get(str(rid))
+            if ant is None or str(it.get("data_acao", "")) < str(
+                    ant.get("data_acao", "")):
+                cham_reg[str(rid)] = it
+
         # ATALHO: para cada id, vence a interacao de data_acao mais recente
         # (acao=CRIAR ou EXCLUIR). Idempotente.
         atalho_reg: dict = {}
@@ -256,6 +288,7 @@ class DobrarInteracoes:
             c.executescript(_SQL_RES)
             c.executescript(_SQL_TRAT_DESL)
             c.executescript(_SQL_TRAT_TRANSF)
+            c.executescript(_SQL_CHAMADOS)
             c.executescript(_SQL_ATALHOS)
             _migrar_colunas_quar(c)
             n_env = n_res = 0
@@ -316,6 +349,23 @@ class DobrarInteracoes:
                      (it.get("data_acao") or "").replace("T", " "), agora])
                 n_transf += 1
 
+            # INSERT OR IGNORE (nao REPLACE, como os de cima): se o registro ja
+            # tem chamado, o que esta no banco e' o verdadeiro. Isto tambem da'
+            # a idempotencia — reprocessar a mesma pasta nao reescreve nada.
+            n_cham = 0
+            for rid, it in cham_reg.items():
+                cur = c.execute(
+                    "INSERT OR IGNORE INTO chamados_abertos (registro_id,fluxo,"
+                    "ticket,ticket_url,nome,sistema,acessos,aberto_por,aberto_em,"
+                    "dobrado_em) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    [rid, it.get("fluxo") or "DESLIGADO", it.get("ticket") or "",
+                     it.get("ticket_url") or "", it.get("nome") or "",
+                     it.get("sistema") or "",
+                     json.dumps(it.get("acessos") or [], ensure_ascii=False),
+                     it.get("usuario") or "",
+                     (it.get("data_acao") or "").replace("T", " "), agora])
+                n_cham += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+
             n_atalho_cri = n_atalho_exc = 0
             for rid, it in atalho_reg.items():
                 ex = it.get("extras") or {}
@@ -339,6 +389,7 @@ class DobrarInteracoes:
                 f"{n_resol} resolucao(oes) de pendencia, "
                 f"{n_trat} tratamento(s) de desligado, "
                 f"{n_transf} tratamento(s) de transferido, "
+                f"{n_cham} chamado(s) do Jira, "
                 f"{n_atalho_cri} atalho(s) criado/atualizado, "
                 f"{n_atalho_exc} atalho(s) excluido(s) aplicado(s) na base.")
         finally:

@@ -273,6 +273,39 @@ class CicloEventosAcessoModel(Base):
     dt_registro = Column(DateTime, default=datetime.now)
 
 
+class ChamadoAbertoModel(Base):
+    """Chamados abertos NO JIRA pelo painel (Cards 25-26).
+
+    POR QUE ESTA TABELA EXISTE: o chamado e' gravado no `.jsonl` no instante em
+    que o Jira responde, mas o `.jsonl` NAO e' permanente — a cada execucao o
+    Processador renomeia a pasta INTERACOES, dobra e a apaga. Sem persistir
+    aqui, o painel esqueceria todos os chamados a cada processamento e voltaria
+    a deixar abrir um segundo chamado para o mesmo registro — desta vez sem
+    ninguem perceber, porque o numero existiria no Jira e em lugar nenhum aqui.
+
+    `registro_id` e' a CHAVE (matricula, no fluxo de desligado): um registro tem
+    no maximo um chamado aberto pelo painel. A consolidacao usa INSERT OR IGNORE
+    — o PRIMEIRO vence. Diferente dos outros tipos de interacao, onde a mais
+    recente sobrepoe: aqui o chamado ja existe no Service Desk e nao ha' o que
+    sobrepor; um segundo registro para a mesma matricula E' a duplicata que
+    queremos impedir, e nao pode apagar o primeiro.
+
+    NUNCA E' LIMPA, nem apos a tratativa concluir — e' dela que a lupa mostra de
+    onde veio o numero do chamado."""
+    __tablename__ = "chamados_abertos"
+
+    registro_id = Column(String, primary_key=True)
+    fluxo = Column(String, nullable=False, default="DESLIGADO")  # prepara os demais
+    ticket = Column(String, nullable=False)
+    ticket_url = Column(String)
+    nome = Column(String)          # snapshot p/ auditoria
+    sistema = Column(String)
+    acessos = Column(String)       # JSON: perfis que entraram no chamado
+    aberto_por = Column(String)
+    aberto_em = Column(String)     # ISO datetime
+    dt_registro = Column(DateTime, default=datetime.now)
+
+
 class TransferidoModel(Base):
     """O "de -> para" de quem MUDOU de cargo/CC/departamento/gestor (Card 22).
 
