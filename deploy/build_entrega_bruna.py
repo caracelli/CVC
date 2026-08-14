@@ -52,7 +52,8 @@ BANCO_PRONTO = Path(
 LAUNCHER_DIR = EXECS / "launcher"
 PRINCIPAL_VISUALIZADOR = EXECS / "visualizador.exe"
 PRINCIPAL_PROCESSADOR = EXECS / "Processador.exe"
-LAUNCHER_ATUALIZADOR = LAUNCHER_DIR / "launcher_atualizador.exe"
+# Sem LAUNCHER_ATUALIZADOR de proposito — este pacote nao o leva (ver
+# montar_executaveis). Nao reintroduzir sem ler a nota de la'.
 LAUNCHER_VISUALIZADOR = LAUNCHER_DIR / "launcher_visualizador.exe"
 LAUNCHER_PROCESSADOR = LAUNCHER_DIR / "launcher_processador.exe"
 REPORT_DIR = EXECS / "REPORT"
@@ -158,8 +159,9 @@ ARQUIVOS_2A_CARGA = [
 
 
 def checar_prerequisitos():
+    # LAUNCHER_ATUALIZADOR NAO entra: ver a nota em montar_executaveis().
     base = [PRINCIPAL_VISUALIZADOR, PRINCIPAL_PROCESSADOR,
-            LAUNCHER_ATUALIZADOR, LAUNCHER_VISUALIZADOR, LAUNCHER_PROCESSADOR,
+            LAUNCHER_VISUALIZADOR, LAUNCHER_PROCESSADOR,
             CONFIG_SRC, MOTIVOS_SRC, REPORT_DIR / "index.html"]
     faltando = [str(p) for p in base if not p.exists()]
     # arquivos de entrada
@@ -204,7 +206,17 @@ def montar_executaveis(execs_destino: Path):
     grava_config(execs_destino / "CONFIG" / "config.xml", VERSAO, RAIZ_LOCAL)
     if MOTIVOS_SRC.exists():
         shutil.copy2(MOTIVOS_SRC, execs_destino / "CONFIG" / "motivos_resolucao.xml")
-    shutil.copy2(LAUNCHER_ATUALIZADOR, launcher_d / "launcher_atualizador.exe")
+    # launcher_atualizador.exe FICA DE FORA deste pacote, por dois motivos que
+    # se somam:
+    #
+    # 1. E' INUTIL AQUI. Este pacote e' MODO LOCAL (<raiz> vazia): nao existe
+    #    rede de onde se atualizar. O atualizador viajava sem funcao nenhuma.
+    # 2. O DEFENDER O DERRUBA. Ele da' falso positivo neste exe e o apaga no
+    #    meio do build — o zip saia TRUNCADO, e o erro so' aparecia na maquina
+    #    do destinatario, na forma de um pacote que nao abre.
+    #
+    # O pacote de PRODUCAO (build_entrega_prd.py) continua levando o
+    # atualizador: la' ele tem funcao, porque ha' rede e auto-update.
     shutil.copy2(LAUNCHER_VISUALIZADOR, launcher_d / "launcher_visualizador.exe")
     shutil.copy2(LAUNCHER_PROCESSADOR, launcher_d / "launcher_processador.exe")
 
