@@ -101,6 +101,7 @@ class ConexaoBancoDados:
             self._migrar_rh_ativos_login(conn)
             self._migrar_rh_desligados_login(conn)
             self._migrar_gestor(conn)
+            self._migrar_chamados_dobrado_em(conn)
             self._migrar_ciclo_vida(conn)
             self._migrar_ciclo_eventos_backfill(conn)
 
@@ -208,6 +209,28 @@ class ConexaoBancoDados:
                 "CREATE INDEX IF NOT EXISTS ix_matriz_cco_gestor ON matriz_cco (gestor)"))
             conn.commit()
             logger.info("Migration: matriz_cco.gestor adicionada.")
+
+    def _migrar_chamados_dobrado_em(self, conn):
+        """chamados_abertos.dobrado_em (aditiva).
+
+        Bancos criados entre 86a64ea e esta correcao nasceram com `dt_registro`
+        no lugar de `dobrado_em`, porque o modelo e o INSERT da dobra usavam
+        nomes diferentes. O create_all NAO conserta: a tabela ja existe, entao
+        ele nao mexe nela. Sem esta migracao, a primeira dobra com um chamado
+        estoura `no such column: dobrado_em` — e como a dobra e' o primeiro
+        passo do Processador, a execucao inteira morre.
+
+        A `dt_registro` antiga fica onde esta: a tabela nunca chegou a receber
+        linha nenhuma (a dobra sempre falhou antes de inserir), entao nao ha'
+        dado a migrar, e derrubar coluna em SQLite exige recriar a tabela —
+        risco sem retorno."""
+        if "chamados_abertos" not in self._tabelas(conn):
+            return
+        if "dobrado_em" in self._cols(conn, "chamados_abertos"):
+            return
+        conn.execute(text("ALTER TABLE chamados_abertos ADD COLUMN dobrado_em TEXT"))
+        conn.commit()
+        logger.info("Migration: chamados_abertos.dobrado_em adicionada.")
 
     def _migrar_ciclo_vida(self, conn):
         """Tabela ciclo_vida_acesso (aditiva). CREATE IF NOT EXISTS — nao toca

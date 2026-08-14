@@ -303,7 +303,14 @@ class ChamadoAbertoModel(Base):
     acessos = Column(String)       # JSON: perfis que entraram no chamado
     aberto_por = Column(String)
     aberto_em = Column(String)     # ISO datetime
-    dt_registro = Column(DateTime, default=datetime.now)
+    # QUANDO A DOBRA CONSOLIDOU (nao quando o chamado foi aberto — esse e'
+    # `aberto_em`). O NOME IMPORTA: e' este modelo que cria a tabela em
+    # producao, e o INSERT da dobra (DobrarInteracoes._aplicar) escreve nesta
+    # coluna pelo nome. O CREATE TABLE IF NOT EXISTS que a dobra carrega e'
+    # no-op quando a tabela ja existe, entao divergir aqui NAO da' erro de
+    # criacao: da' `no such column` na primeira consolidacao, derrubando a
+    # execucao inteira do Processador. Ver test_dobra_usa_schema_de_producao.
+    dobrado_em = Column(String)
 
 
 class TransferidoModel(Base):

@@ -228,5 +228,124 @@ class ConsolidacaoNoProcessador(unittest.TestCase):
         self.assertEqual(n, 1)
 
 
+class DobraSobreSchemaDeProducao(unittest.TestCase):
+    """A dobra REAL, sobre a tabela criada pelo schema.py — o caminho de producao.
+
+    POR QUE ESTE TESTE EXISTE: a classe acima passava com o bug em producao, por
+    dois motivos que se somaram. Ela cria a tabela pelo `_SQL_CHAMADOS` (o DDL
+    que a propria dobra carrega) e nunca pelo `schema.py`, que e' quem cria o
+    banco de verdade; e nao chama `DobrarInteracoes` — escreve um INSERT proprio
+    com 4 colunas, que nunca toca a coluna divergente. O resultado era um teste
+    verde exercitando a semantica do INSERT OR IGNORE do SQLite, nao o codigo.
+
+    Em producao o `schema.py` criava `dt_registro` e o INSERT da dobra escrevia
+    em `dobrado_em`: `no such column`. Como a dobra e' o PRIMEIRO passo dentro
+    do try do Processador, e o try so tem `finally`, a excecao subia e matava a
+    execucao inteira — sem importar RH, sem analisar divergencias, sem relatorio.
+    Bastava um analista ter aberto um chamado.
+
+    Entao este teste faz as duas coisas que faltavam: cria pelo schema.py e roda
+    o executar() de verdade.
+    """
+
+    def setUp(self):
+        from infraestrutura.banco_dados.conexao import ConexaoBancoDados
+        self.tmp = tempfile.mkdtemp()
+        self.db = os.path.join(self.tmp, "iam.db")
+        self.inter = os.path.join(self.tmp, "INTERACOES")
+        os.makedirs(self.inter)
+        # Caminho de producao: quem cria o banco e' o Processador.
+        ConexaoBancoDados(self.db).inicializar()
+
+    def _envelope(self, rid, ticket, usuario, quando):
+        return {"schema_version": 1, "tipo_interacao": "CHAMADO_ABERTO",
+                "registro_id": rid, "acao": "ABRIR_CHAMADO", "fluxo": "DESLIGADO",
+                "ticket": ticket, "ticket_url": f"https://x/{ticket}",
+                "nome": "FULANO", "sistema": "SYSTUR",
+                "acessos": [{"sistema": "SYSTUR", "login": "f.lano",
+                             "perfil": "PERFIL_A"}],
+                "usuario": usuario, "data_acao": quando}
+
+    def _escrever(self, nome, envelopes):
+        with open(os.path.join(self.inter, f"interacao_{nome}.jsonl"),
+                  "w", encoding="utf-8") as f:
+            for e in envelopes:
+                f.write(json.dumps(e, ensure_ascii=False) + "\n")
+
+    def _dobrar(self):
+        from aplicacao.casos_de_uso.dobrar_interacoes import DobrarInteracoes
+        DobrarInteracoes(self.db, self.inter, 90).executar()
+
+    def _linhas(self):
+        c = sqlite3.connect(self.db)
+        try:
+            c.row_factory = sqlite3.Row
+            return [dict(r) for r in c.execute(
+                "SELECT registro_id, ticket, aberto_por, dobrado_em "
+                "FROM chamados_abertos")]
+        finally:
+            c.close()
+
+    def test_dobra_consolida_sem_estourar(self):
+        """O caso que derrubava o Processador: uma dobra com um chamado."""
+        self._escrever("ana", [self._envelope("111", "GAAR-1", "ana",
+                                              "2026-08-14T09:00:00")])
+        self._dobrar()                      # nao pode levantar
+        linhas = self._linhas()
+        self.assertEqual(len(linhas), 1)
+        self.assertEqual(linhas[0]["registro_id"], "111")
+        self.assertEqual(linhas[0]["ticket"], "GAAR-1")
+        self.assertEqual(linhas[0]["aberto_por"], "ana")
+        self.assertTrue(linhas[0]["dobrado_em"],
+                        "dobrado_em tem de ser preenchido na consolidacao")
+
+    def test_primeiro_vence_entre_analistas(self):
+        """Dois analistas, mesmo registro: o segundo e' a duplicata que a tabela
+        existe para impedir — nao pode apagar o primeiro."""
+        self._escrever("ana", [self._envelope("111", "GAAR-1", "ana",
+                                              "2026-08-14T09:00:00")])
+        self._escrever("bruno", [self._envelope("111", "GAAR-2", "bruno",
+                                                "2026-08-14T09:05:00")])
+        self._dobrar()
+        linhas = self._linhas()
+        self.assertEqual(len(linhas), 1)
+        self.assertEqual(linhas[0]["ticket"], "GAAR-1")
+
+    def test_reprocessar_e_idempotente(self):
+        """Rodar o Processador de novo nao duplica nem reescreve."""
+        self._escrever("ana", [self._envelope("111", "GAAR-1", "ana",
+                                              "2026-08-14T09:00:00")])
+        self._dobrar()
+        # Mesma interacao reaparecendo numa execucao seguinte.
+        self._escrever("ana", [self._envelope("111", "GAAR-9", "ana",
+                                              "2026-08-14T10:00:00")])
+        self._dobrar()
+        linhas = self._linhas()
+        self.assertEqual(len(linhas), 1)
+        self.assertEqual(linhas[0]["ticket"], "GAAR-1")
+
+    def test_banco_antigo_com_dt_registro_e_migrado(self):
+        """Bancos criados antes da correcao nasceram com `dt_registro`. A
+        migracao aditiva tem de adicionar `dobrado_em` e a dobra tem de rodar."""
+        from infraestrutura.banco_dados.conexao import ConexaoBancoDados
+        db2 = os.path.join(self.tmp, "antigo.db")
+        c = sqlite3.connect(db2)
+        c.executescript("""
+            CREATE TABLE chamados_abertos (
+              registro_id TEXT PRIMARY KEY, fluxo TEXT, ticket TEXT,
+              ticket_url TEXT, nome TEXT, sistema TEXT, acessos TEXT,
+              aberto_por TEXT, aberto_em TEXT, dt_registro DATETIME)
+        """)
+        c.commit()
+        c.close()
+        ConexaoBancoDados(db2).inicializar()
+        c = sqlite3.connect(db2)
+        try:
+            cols = {r[1] for r in c.execute("PRAGMA table_info(chamados_abertos)")}
+        finally:
+            c.close()
+        self.assertIn("dobrado_em", cols)
+
+
 if __name__ == "__main__":
     unittest.main()
