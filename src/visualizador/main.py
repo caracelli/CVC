@@ -721,7 +721,11 @@ def _tratamentos_desligado_db():
                 "por": r["tratado_por"] or "", "em": r["tratado_em"] or "",
                 "acessos": acessos}
         return out
-    except Exception:
+    except Exception as e:
+        # Nao engolir em silencio: o {} faz a tela mostrar os desligados como
+        # NAO tratados, e o analista refaz tratativa que ja existe. A tela
+        # continua de pe' (por isso nao relevantamos), mas o log tem de dizer.
+        print(f"  [TRAT-DESL] aviso: falha lendo tratamentos_desligado ({e!r})")
         return {}
     finally:
         c.close()
@@ -771,8 +775,12 @@ def _resolucoes_db():
                 "por": r["resolvido_por"] or "", "em": r["resolvido_em"] or "",
                 "pendencias": pend}
         return out
-    except Exception:
-        return {}                       # tabela antiga sem coluna pendencias
+    except Exception as e:
+        # O caso previsto e' tabela antiga sem a coluna pendencias — mas
+        # qualquer OUTRA falha caia aqui igual, e o {} apaga da tela toda
+        # resolucao ja dobrada, como se ninguem tivesse tratado nada.
+        print(f"  [RESOL] aviso: falha lendo resolucoes ({e!r})")
+        return {}
     finally:
         c.close()
 
@@ -2846,8 +2854,11 @@ def _transferidos_depara(c, matriculas):
         tem = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
                         "AND name='transferidos'").fetchone()
         if not tem:
-            return {}
-    except Exception:
+            return {}                   # Processador anterior: previsto, silencioso
+    except Exception as e:
+        # Falhar a consulta ao sqlite_master ja' e' banco inacessivel — nao e'
+        # o caso previsto acima, e some com o de/para da aba sem dizer nada.
+        print(f"  [transf] aviso: falha checando a tabela transferidos ({e!r})")
         return {}
     campos = (("cargo", "cargo_anterior", "cargo_atual"),
               ("departamento", "departamento_anterior", "departamento_atual"),
@@ -3102,7 +3113,10 @@ def _tratamentos_transferido_db():
                 "descricao": r["descricao"] or "", "motivo": r["motivo"] or "",
                 "por": r["tratado_por"] or "", "em": r["tratado_em"] or ""}
         return out
-    except Exception:
+    except Exception as e:
+        # Mesmo raciocinio de _tratamentos_desligado_db: o {} faz a aba mostrar
+        # transferido tratado como pendente, e a tratativa e' refeita.
+        print(f"  [TRAT-TRANSF] aviso: falha lendo tratamentos_transferido ({e!r})")
         return {}
     finally:
         c.close()
