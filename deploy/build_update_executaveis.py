@@ -6,7 +6,7 @@ este pacote NAO traz ENTRADA/DADOS/INTERACOES — assim o cliente copia so os
 executaveis por cima de Z:\\CVC\\CVC_IAM_ANALYTICS\\EXECUTAVEIS\\ sem risco de
 apagar o banco nem as interacoes.
 
-Grava no config do pacote: <versao>1.1.1</versao> e <rede><raiz>Z:\\...</raiz>.
+Grava no config do pacote a VERSAO abaixo e <rede><raiz>Z:\\...</raiz>.
 
 Uso:  cd deploy && python build_update_executaveis.py
 """
@@ -21,7 +21,13 @@ EXECS = RAIZ / "CVC_IAM_ANALYTICS" / "EXECUTAVEIS"
 ENTREGA = RAIZ / "ENTREGA"
 STAGING = RAIZ / "_update_staging"
 
-VERSAO = "1.3.4"
+# MAJOR.PROCESSADOR.VISUALIZADOR. Da 1.3.4 (entregue em 07/08) para ca mudaram
+# OS DOIS lados, por isso os dois digitos sobem:
+#   Processador  3->4: schema/dobra do chamados_abertos, migracao dobrado_em,
+#                      regra do desligado recontratado, motivo_status
+#   Visualizador 4->5: abertura de chamado no Jira, os 6 ajustes da Bruna,
+#                      as 4 leituras de tratativa que nao falham mais em silencio
+VERSAO = "1.4.5"
 RAIZ_REDE = r"Z:\CVC\CVC_IAM_ANALYTICS"
 
 
