@@ -27,7 +27,12 @@ Suíte em 718 passed / 53 subtests, sem regressão.
 
 ## O que falta
 
-### 4. Tabela `chamados_abertos`
+> **Situação em 13/08/2026:** os itens 4 a 8 abaixo **estão construídos** (commit
+> `86a64ea`) e a suíte fecha em 737 passed + 53 subtests. O texto foi mantido
+> porque descreve o *porquê* de cada decisão, que continua valendo. O que
+> permanece aberto é só o bloqueio externo do componente — ver a seção final.
+
+### 4. Tabela `chamados_abertos` ✅
 
 **Por quê.** O `.jsonl` não é permanente: a cada execução o Processador renomeia
 `INTERACOES/`, dobra no banco e apaga a pasta. Sem a tabela, a guarda de
@@ -60,7 +65,7 @@ de onde veio o número.
 
 ---
 
-### 5. Consolidação no Processador
+### 5. Consolidação no Processador ✅
 
 **Onde.** `src/aplicacao/casos_de_uso/dobrar_interacoes.py`, método `_aplicar`
 
@@ -80,7 +85,7 @@ que sobra a primeira; dobra duas vezes e confirma que nada muda.
 
 ---
 
-### 6. Tela
+### 6. Tela ✅
 
 **Onde.** `CVC_IAM_ANALYTICS/EXECUTAVEIS/REPORT/index.html`
 
@@ -110,9 +115,12 @@ chamado que nasceu sem registro, e perder esse texto significa perder o número.
 **Como verificar.** Mockup aprovado em 11/08:
 https://claude.ai/code/artifact/1d68456f-dd59-48e8-9345-f28267853908
 
+As quatro mudanças foram validadas pelo formulário, com o analista clicando, em
+14/08 — ver a seção "Validação ponta a ponta" no fim deste documento.
+
 ---
 
-### 7. Testes
+### 7. Testes ✅
 
 | Alvo | O que cobre |
 |------|-------------|
@@ -124,7 +132,7 @@ https://claude.ai/code/artifact/1d68456f-dd59-48e8-9345-f28267853908
 
 ---
 
-### 8. Fechamento
+### 8. Fechamento ✅
 
 - Atualizar `docs/INTEGRACAO_JIRA_CARD25.md` com o que foi construído
 - Passo da infra no `LEIA-ME.md` dos executáveis (criar o `jira.xml` na rede)
@@ -207,13 +215,54 @@ do privilégio mínimo que sustenta o resto do desenho.
 
 > O tipo de solicitação 8819 cria chamados **sem componente**, e as filas de
 > Gestão de Acessos filtram por `component`. Configurar o 8819 para atribuir
-> automaticamente **"7 - Gestão de Acessos - Desligamento"** (id 12165) — por
-> valor padrão no tipo ou por automação no projeto. Pela API do portal não
-> conseguimos enviá-lo: o formulário expõe apenas `summary`, `description` e
-> `customfield_11936`.
+> automaticamente o componente do fluxo — por valor padrão no tipo ou por
+> automação no projeto. Pela API do portal não conseguimos enviá-lo: o
+> formulário expõe apenas `summary`, `description` e `customfield_11936`.
+
+*(Qual componente vai neste pedido depende da confirmação da área — ver a
+reconferência de 13/08 logo abaixo.)*
 
 Confirmar com a área se é essa a fila do fluxo de desligamento — existem também
 `Revogações`, `Ouro`, `Fornecedores` e `N3 CVC`.
+
+#### Reconferido em 13/08/2026 — continua valendo, e a fila mudou de candidata
+
+Reabrimos a questão porque havia a impressão de que o componente já tinha sido
+resolvido. **Não foi.** Quatro medições, todas com o token pessoal:
+
+| Verificação | Resultado |
+|---|---|
+| `GET /servicedesk/9/requesttype/8819/field` | devolve **3 campos** — `summary`, `description`, `customfield_11936`. Componente não está exposto |
+| Chamado do portal aberto hoje (`SDTTI-1550975`), fila 1231 | fila com **0 itens** enquanto ele estava `Aberto` |
+| Varredura das 71 filas em 11/08 (`SDTTI-1545753`, também do portal) | não estava em nenhuma |
+| Teste de controle: fila 1517 | **31 itens** — a conta *consegue* ler filas, então o zero acima é ausência real, não falta de permissão |
+
+**A confusão veio do `teste_fila_1231.py`** (scratchpad da sessão de 11/08). Ele
+provou *"componente ⇒ cai na fila"*, mas criando pela **API genérica**
+(`/rest/api/3/issue`) com o componente colado à mão — o próprio cabeçalho do
+script diz que não é a solução. O caminho real do painel é o do portal, e por
+ele o chamado continua nascendo sem componente.
+
+**Qual componente pedir — decisão da área, não técnica.** Surgiram dois
+candidatos e eles apontam para lados opostos:
+
+| Fila | Componente | Chamados abertos hoje |
+|---|---|---|
+| 1231 — `5 - Gestão de Acessos - Revogações` | 11681 | **0** |
+| 1517 — `7 - Gestão de Acessos - Desligamento` | 12165 | **31** |
+
+A 5 é a que o nome sugere (o fluxo é revogação), mas está vazia. A 7 é a que a
+equipe efetivamente opera. Pedir a configuração da 5 sem confirmar significa
+carimbar chamado para uma fila que ninguém abre — falha silenciosa, pior que o
+estado atual, porque o painel passaria a reportar sucesso.
+
+**Nota sobre leitura de chamado do portal:** a conta não lê os chamados que ela
+mesma cria pelo portal via `/rest/api/3/issue` nem por JQL (404 / vazio) — nesses
+ele é *cliente*. Só `/rest/servicedeskapi/request/{key}` responde. Por isso a
+verificação do componente tem de ser feita **pela fila**, não lendo o issue.
+Cancelamento funciona pelo portal (`transition` id 261, 204).
+
+Chamados de teste de 13/08 (`SDTTI-1550975`, `SDTTI-1550995`): ambos cancelados.
 
 Ressalva: a conta usada não é agente, então a confirmação final é um agente
 vendo o chamado na própria fila.
@@ -224,11 +273,112 @@ o que permite revalidar depois do ajuste sem sujar a fila.
 
 ---
 
-## Bloqueio externo
+## Validação ponta a ponta em 14/08/2026 — pelo formulário, com o analista clicando
 
-**Conta de serviço + API token.** Até existirem, a integração fica com
-`<ativo>false</ativo>` e o botão desabilitado. Os testes usaram a conta pessoal
-`nelsondiniz@ext.cvccorp.com.br`.
+Até aqui o que existia do lado do painel era teste de servidor mais um smoke de
+browser conferindo que `_btnJira` renderiza os 3 estados. **O fluxo pelo
+formulário nunca tinha sido exercitado.** Foi, agora: ambiente isolado (banco
+copiado, `<raiz>` de rede vazia, desligado fictício semeado), analista clicando
+na tela de verdade, POST real no Jira.
+
+| # | O que se queria provar | Resultado |
+|---|---|---|
+| 1 | Botão nasce desabilitado e só liga com o parecer | ✅ |
+| 2 | Após abrir, número e link chegam travados; parecer segue editável | ✅ |
+| 3 | Segundo clique no mesmo registro é recusado (guarda de duplicata) | ✅ |
+| 4 | Selo `⏳ Aguardando chamado` na grid | ✅ |
+
+O chamado `SDTTI-1552741` nasceu com os 3 campos exatamente como montados —
+título, tabela de perfis linha a linha, contexto de desligamento, parecer e
+`Revogação de acessos`. Cancelado ao fim.
+
+Os itens 3 e 4 foram fechados num segundo registro, **depois da dobra** — ou
+seja, com a guarda lendo da tabela `chamados_abertos` e não do `.jsonl`, que é o
+caminho mais difícil de exercitar e o que de fato roda em produção. Nenhum
+chamado foi criado nesse teste: a guarda barra **antes** do POST, por desenho.
+
+### 🐞 O que a validação encontrou — a dobra derrubava o Processador inteiro
+
+Bug real, corrigido no mesmo dia. A tabela `chamados_abertos` tinha **duas
+definições que discordavam** na última coluna:
+
+| Onde | Coluna |
+|---|---|
+| `schema.py` — quem cria o banco em produção | `dt_registro DATETIME` |
+| `dobrar_interacoes.py`, `CREATE TABLE **IF NOT EXISTS**` | `dobrado_em TEXT` |
+| o INSERT da dobra | escrevia em **`dobrado_em`** |
+
+Em produção quem cria a tabela é o `schema.py`; o `IF NOT EXISTS` da dobra vira
+no-op e a coluna errada permanece. A primeira consolidação com um chamado
+estourava `no such column: dobrado_em`. E como a dobra é o **primeiro passo**
+dentro do `try` do Processador — que só tem `finally`, sem `except` — a exceção
+subia e **matava a execução inteira**: sem importar RH, sem analisar
+divergências, sem gerar relatório. Bastava um analista ter aberto um chamado.
+
+Efeito colateral observado ao vivo: a dobra renomeia `INTERACOES/` **antes** de
+inserir, então o `.jsonl` ficou preso em `INTERACOES_processando/` e a tabela
+vazia — a amnésia exata que esta tabela existe para impedir. Quem "consertasse"
+apenas embrulhando a dobra num `try/except` trocaria a falha ruidosa por essa
+falha silenciosa, que é pior.
+
+**Por que os testes não pegaram** — dois motivos somados em
+`ConsolidacaoNoProcessador`: criava a tabela pelo `_SQL_CHAMADOS` (o DDL da
+própria dobra), nunca pelo `schema.py`; e não chamava `DobrarInteracoes` —
+escrevia um INSERT próprio de 4 colunas, que nunca tocava a coluna divergente.
+Validava a semântica do `INSERT OR IGNORE` do SQLite, não o código.
+
+**Correção:** `schema.py` alinhado para `dobrado_em`; migração aditiva
+`_migrar_chamados_dobrado_em` em `conexao.py` para os bancos já criados; e a
+classe `DobraSobreSchemaDeProducao`, que cria pelo `schema.py` e roda o
+`executar()` de verdade. Os 4 testes novos falham com a correção revertida —
+conferido, para não virarem teste decorativo como os anteriores.
+
+Suíte: **741 passed + 53 subtests**.
+
+---
+
+## Go-live — o que a CVC assumiu (14/08/2026)
+
+Os três pontos externos foram para o lado da CVC:
+
+| | Ponto | Decisão |
+|---|---|---|
+| 1 | Componente no tipo 8819 | assumido pela área |
+| 2 | Configuração do formulário | assumida |
+| 3 | Conta de serviço + API token | **entra na subida para produção** |
+
+Enquanto isso, a integração fica com `<ativo>false</ativo>` e o botão
+desabilitado — que é o estado seguro: com o componente pendente, um botão ligado
+faria o analista abrir chamado que não entra em fila, e o painel exibiria
+"✓ aberto" por cima da falha. Botão desabilitado é visível; sucesso falso não é.
+
+### Conferência obrigatória no go-live
+
+**A conferência de campos do 8819 não serve como prova.** Em 14/08 ela ainda
+devolve só `summary`, `description` e `customfield_11936` — mas o componente pode
+ser atribuído por automação do projeto, que não aparece nessa listagem. Ou seja:
+essa leitura não confirma nem desmente.
+
+O único teste conclusivo é o de ponta, e leva ~2 minutos:
+
+1. criar um chamado pelo portal (tipo 8819) com dados falsos (`TESTE000000`);
+2. varrer as filas do service desk 9 e confirmar em **qual** ele aparece;
+3. cancelar (transição 261 pela API do portal, 204).
+
+Lembrar de duas armadilhas já pagas neste projeto:
+- **não** validar criando pela API genérica com o componente na mão — isso prova
+  o roteamento do Jira, não o do nosso caminho (foi o engano de 11/08);
+- a conta não lê pela API genérica o chamado que ela mesma abre pelo portal
+  (404 / JQL vazia). A verificação tem de ser **pela fila**, e sempre com um
+  teste de controle numa fila conhecida — fila vazia pode ser falta de permissão
+  disfarçada de zero.
+
+Fazer isso **antes** de virar o `<ativo>` para `true`. Confirmação final é um
+agente vendo o chamado na própria fila.
+
+### O token dos testes não pode virar o de produção
+
+Os testes usaram a conta pessoal `nelsondiniz@ext.cvccorp.com.br`.
 
 Atenção ao perfil: em 11/08 a TI concedeu a essa conta `TRANSITION_ISSUES`,
 `Browse users and groups` e `canRaiseOnBehalfOf` — perfil de **agente**. A conta

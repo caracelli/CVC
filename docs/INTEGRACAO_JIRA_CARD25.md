@@ -291,16 +291,42 @@ deve valer igual — mas é o único ponto a reconfirmar com a credencial defini
 - ~~Rótulo do status de exceção ("Sem conta no Jira")~~ → sem sentido agora: sem
   User Picker, não há caso de "usuário não localizado no Jira".
 
-### Em aberto
+### Resolvidas em 11/08
 
-1. O botão "Abrir chamado" aparece **só nos casos de revogação**? O texto diz
-   "Revogar" e o form é de "Revogação Automática", mas o painel também trata
-   `SEM_ACESSO`, que é acesso **a incluir** — 520 das 1.800 pessoas. Isso define
-   em quais linhas do painel o botão aparece.
-2. A tabela da descrição renderiza? Ver "A VERIFICAR" na seção 4 — depende do
-   primeiro POST real.
+- ~~O botão aparece só nos casos de revogação?~~ → **sim**. Escopo fechado com a
+  área: só o fluxo de DESLIGADOS. Pendência e transferido seguem com o botão
+  desabilitado. `SEM_ACESSO` (acesso a incluir) fica de fora.
+- ~~A tabela da descrição renderiza?~~ → o `renderedValue` do primeiro POST real
+  mostrou que quebra de linha e acentuação sobrevivem e que a tabela **não** vira
+  `<table>` — as linhas com `|` ficam como texto, exatamente como o desenho
+  previa. **Sem retrabalho no texto.**
+
+### Resolvidas em 14/08 — assumidas pela CVC
+
+Componente e configuração do formulário ficaram com a área; a conta de serviço
+entra na subida para produção. Enquanto isso, `<ativo>false</ativo>`.
+
+**Há uma conferência obrigatória no go-live** — criar / varrer as filas /
+cancelar, antes de ligar o `<ativo>`. Passo a passo e as duas armadilhas já
+pagas estão em `docs/PLANO_JIRA_DESLIGADOS.md`, seção "Go-live".
+
+### O que era o bloqueio
+
+**O tipo 8819 não carimba componente, e as filas filtram por componente.** O
+chamado nasce e não entra em fila nenhuma. Reconferido em 13/08 pelo caminho real
+do portal; medições, o teste que induziu ao engano e os dois componentes
+candidatos (`5 - ... - Revogações`, vazia × `7 - ... - Desligamento`, com 31
+chamados) estão em `docs/PLANO_JIRA_DESLIGADOS.md`.
+
+Depende de duas coisas do lado da CVC:
+1. a área confirmar **qual** componente é o do fluxo;
+2. quem administra o formulário configurar o 8819 para atribuí-lo.
 
 ### Fora do caminho crítico
 
-Continua valendo o pedido à CVC da seção 6 (conta de serviço + API token). É o
-que falta para sair do stub e abrir chamado de verdade.
+Continua valendo o pedido à CVC da seção 6 (conta de serviço + API token). O
+código está pronto e testado; hoje roda com `<ativo>false</ativo>`. Para os
+testes usa-se a conta pessoal `nelsondiniz@ext.cvccorp.com.br` — **provisório**:
+ela recebeu perfil de agente em 11/08, e token de agente num `jira.xml` que todo
+analista lê contraria o privilégio mínimo em que a decisão de não criptografar se
+apoia.

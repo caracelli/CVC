@@ -15,13 +15,17 @@ Processar bases de RH e extratos de acesso dos sistemas corporativos, cruzar com
 | SICA_ESFERA | Controle de Acesso — Esfera | CSV |
 | SYSTUR | Sistema de Turismo | CSV |
 | IC | Integrador Contábil | XLSX |
-| ORACLE_EBS | Oracle EBS | — (Card 11) |
-| SIG | SIG | — (Card 12) |
+| ORACLE_EBS | Oracle EBS | CSV |
+| SIG | SIG | XLSX |
+
+Os 7 estão com `<ativo>true</ativo>` no `config.xml`. O `OPERA_OPERACIONAL`
+existe no config com `ativo=false` — fora de escopo.
 
 ## Dois aplicativos
 
 - **Processador** (`Processador.exe`) — lê as bases de `ENTRADA`, padroniza, cruza com as matrizes, grava o banco `iam_analytics.db` e gera os relatórios Excel. Roda sob demanda.
-- **Visualizador** (`visualizador.exe`) — servidor local que abre o painel (`REPORT/index.html`) no navegador, lendo o banco ao vivo. Fonte: `EXECUTAVEIS/visualizador.py` (Python stdlib puro, sem dependências).
+- **Visualizador** (`visualizador.exe`) — servidor local que abre o painel (`REPORT/index.html`) no navegador, lendo o banco ao vivo. Fonte: `src/visualizador/main.py` (Python stdlib puro, sem dependências — o
+  painel é standalone e o spec não empacota o resto do `src/`).
 
 ## Arquitetura multiusuário
 
@@ -40,7 +44,7 @@ Detalhes em `docs/ARQUITETURA_MULTIUSUARIO_FASE1.md`.
 CVC_IAM_ANALYTICS/
   ENTRADA/                   # arquivos depositados pelo cliente
     RH/ATIVOS/, RH/DESLIGADOS/
-    SISTEMAS/{SIGOT,SICA_RA,SICA_ESFERA,SYSTUR,IC}/
+    SISTEMAS/{SIGOT,SICA_RA,SICA_ESFERA,SYSTUR,IC,ORACLE_EBS,SIG}/
     MATRIZES/{ORGANIZACIONAL,PERFIS_SISTEMAS}/
   DADOS/
     BANCO/                   # iam_analytics.db (SQLite)
@@ -50,8 +54,9 @@ CVC_IAM_ANALYTICS/
     LOGS/
   EXECUTAVEIS/
     CONFIG/config.xml        # configuração única do projeto
+    CONFIG/jira.xml          # credencial do Jira — NÃO versionado, fica só na rede
     REPORT/index.html        # painel do Visualizador
-    Processador.exe, visualizador.exe, visualizador.py
+    Processador.exe, visualizador.exe, launcher/
   INTERACOES/                # interações multiusuário (.jsonl por usuário)
 ```
 
@@ -64,8 +69,8 @@ src/                         # código do Processador (DDD)
   infraestrutura/            # leitores CSV/XLSX, repositórios SQLite,
                              # configuração, interações, auto-update
   processador/main.py        # entry point do Processador
+  visualizador/main.py       # o Visualizador inteiro (standalone, stdlib pura)
 
-CVC_IAM_ANALYTICS/EXECUTAVEIS/visualizador.py   # fonte do Visualizador (standalone)
 tests/                       # testes automatizados
 docs/                        # documentação técnica
 scripts/                     # scripts utilitários
