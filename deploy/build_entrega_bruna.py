@@ -225,6 +225,15 @@ def gerar_jira_xml(destino: Path):
                        texto)
     texto = re.sub(r"<ativo>[^<]*</ativo>", "<ativo>true</ativo>", texto,
                    count=1)
+    # MODO TESTE LIGADO na homologacao (decidido em 17/08): a Bruna vai exercitar
+    # a abertura de chamado, e cada clique dela criaria um chamado real na fila
+    # de quem atende. Com true o chamado nasce, devolve numero e link para a
+    # tela, e e' cancelado na sequencia — o fluxo inteiro se prova sem sujar a
+    # fila. VIRAR PARA false ANTES DE PRODUCAO: la' o chamado tem de ficar
+    # aberto, senao ninguem revoga nada e a tela mostra "aberto" do mesmo jeito.
+    texto = re.sub(r"<cancelar_apos_abrir>[^<]*</cancelar_apos_abrir>",
+                   "<cancelar_apos_abrir>true</cancelar_apos_abrir>", texto,
+                   count=1)
     # lambda no replacement: o cabecalho tem barras invertidas, que o re
     # interpretaria como escape.
     texto = re.sub(r"<!--.*?-->", lambda _: CABECALHO_JIRA, texto,
