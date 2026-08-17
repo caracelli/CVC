@@ -276,7 +276,10 @@ def carregar_config_jira():
            "timeout_s": 30, "usuario": "", "token": "", "origem": "ausente",
            # MODO TESTE: abre o chamado, devolve os dados e cancela em seguida.
            # Default false — em producao o chamado TEM de ficar aberto.
-           "cancelar_apos_abrir": False, "transicao_cancelamento": "261"}
+           "cancelar_apos_abrir": False, "transicao_cancelamento": "261",
+           # Componentes fixos do chamado (lista). VAZIO = nao vai no payload,
+           # que e' o comportamento validado hoje.
+           "componentes": []}
     caminho, origem = _jira_xml_path()
     cfg["origem"] = origem
     if not caminho:
@@ -292,6 +295,12 @@ def carregar_config_jira():
         cfg["ativo"] = (r.findtext("ativo", "false") or "").strip().lower() == "true"
         cfg["cancelar_apos_abrir"] = (
             r.findtext("cancelar_apos_abrir", "false") or "").strip().lower() == "true"
+        # Aceita <componentes> separados por virgula OU varios <componente>.
+        # Cada item pode ser id ("12165") ou nome ("7 - Gestao de Acessos - ...").
+        comps = [(c.text or "").strip() for c in r.findall("componente")]
+        comps += [p.strip()
+                  for p in (r.findtext("componentes") or "").split(",")]
+        cfg["componentes"] = [c for c in comps if c]
         t = (r.findtext("timeout_s") or "").strip()
         if t.isdigit():
             cfg["timeout_s"] = int(t)
@@ -401,14 +410,28 @@ def jira_abrir_chamado(titulo: str, descricao: str):
     if not jira_habilitado():
         raise JiraErro("Integracao com o Jira desabilitada ou sem credencial "
                        "(ver <jira> no config.xml).")
+    campos = {
+        "summary": titulo,
+        "description": descricao,
+        JIRA["campo_tipo"]: JIRA["tipo_solicitacao"],
+    }
+    # COMPONENTE — o que decide em qual fila o chamado cai (as filas filtram por
+    # `component`, nao por tipo de solicitacao). So' entra no payload quando
+    # configurado: vazio = payload identico ao que ja funciona hoje.
+    #
+    # Em 13/08 o /requesttype/8819/field devolvia apenas summary, description e
+    # customfield_11936 — componente NAO exposto. Se o portal recusar, ele
+    # responde e a mensagem vai inteira para a tela; o chamado nao e' criado.
+    # A saida definitiva continua sendo o 8819 atribuir o componente por padrao.
+    if JIRA["componentes"]:
+        campos["components"] = [
+            ({"id": c} if c.isdigit() else {"name": c})
+            for c in JIRA["componentes"]
+        ]
     payload = {
         "serviceDeskId": str(JIRA["service_desk_id"]),
         "requestTypeId": str(JIRA["request_type_id"]),
-        "requestFieldValues": {
-            "summary": titulo,
-            "description": descricao,
-            JIRA["campo_tipo"]: JIRA["tipo_solicitacao"],
-        },
+        "requestFieldValues": campos,
     }
     auth = base64.b64encode(
         f"{JIRA['usuario']}:{JIRA['token']}".encode()).decode()

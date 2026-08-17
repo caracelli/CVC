@@ -63,4 +63,32 @@
          So' e' usado quando cancelar_apos_abrir = true. -->
     <transicao_cancelamento>261</transicao_cancelamento>
 
+    <!-- COMPONENTE(S) do chamado — e' o que decide EM QUAL FILA ele cai. As
+         filas do service desk filtram por `component`, nao por tipo de
+         solicitacao: chamado sem componente nao aparece em fila nenhuma.
+
+         Aceita id ou nome, separados por virgula. Ex.:
+             <componentes>12165</componentes>
+             <componentes>7 - Gestao de Acessos - Desligamento</componentes>
+
+         VAZIO = nao vai no payload (comportamento validado hoje).
+
+         QUAL PREENCHER E' DECISAO DA AREA, NAO TECNICA. Os dois candidatos
+         apontam para lados opostos:
+             11681  5 - Gestao de Acessos - Revogacoes   fila 1231 — 0 abertos
+             12165  7 - Gestao de Acessos - Desligamento fila 1517 — 31 abertos
+         A 5 e' a que o nome sugere (o fluxo e' revogacao), mas esta vazia; a 7
+         e' a que a equipe efetivamente opera. Carimbar a errada e' PIOR que
+         deixar vazio: o painel passaria a reportar sucesso mandando chamado
+         para uma fila que ninguem abre.
+
+         RESSALVA MEDIDA EM 13/08/2026: o formulario 8819 expoe apenas summary,
+         description e customfield_11936 — componente NAO aparece na listagem de
+         campos. Preencher aqui pode ser recusado pelo portal (a mensagem de erro
+         vai inteira para a tela, e nenhum chamado e' criado). A saida definitiva
+         e' o 8819 atribuir o componente por valor padrao ou por automacao.
+         Conferir SEMPRE pela FILA, nunca lendo o chamado: a conta nao le pela
+         API generica o chamado que ela mesma abre pelo portal. -->
+    <componentes></componentes>
+
 </jira>
