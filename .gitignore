@@ -111,3 +111,9 @@ jira_token.txt
 jira_cred.zip
 *.jira_cred
 jira.xml
+
+# Base recuperada do LFS para embutir no pacote da Bruna (17/08/2026).
+# NAO versionar: ela ja vive no LFS dentro do proprio zip de origem
+# (commit 346059a), e Arquivos_origem/ esta fora do versionamento.
+# Ver ORIGEM.txt ao lado do arquivo.
+Arquivos_origem/BANCO_ENTREGUE_BRUNA/
