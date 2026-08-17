@@ -1,17 +1,32 @@
 """
-Monta o pacote de TESTE LOCAL para a Bruna — TESTE_LOCAL_BRUNA_v1.0.0.zip.
+Monta o pacote de teste da Bruna — TESTE_LOCAL_BRUNA_v1.0.0.zip.
 
-Igual ao build de producao, PORÉM:
-  - <raiz> VAZIA no config.xml  -> MODO LOCAL: roda em qualquer pasta, NAO
-    aponta para a rede, NAO auto-atualiza da rede. Assim NAO sobrepoe nem e'
-    sobreposto pela versao que o cliente esta testando na rede.
-  - <versao> 1.0.0 (RESET da numeracao para a entrega da Fase 1; o codigo e'
-    o mais novo — retorno da Bruna aplicado), distinta da 1.3.1 do cliente.
-  - ENTRADA JA POPULADA com os arquivos de entrada de TODOS os sistemas ativos
-    hoje no config (SYSTUR, SIGOT, SICA_RA, SICA_ESFERA, IC, SIG, ORACLE_EBS +
-    matrizes + CCO + RH ativos). A Bruna so roda o Processador.exe e o banco
-    nasce localmente; depois abre o visualizador.exe.
-  - SEM banco (DADOS/BANCO vazio) — o banco e' gerado no 1o processamento.
+E' A ENTREGA DA FASE 1, NAO UM UPDATE (decidido em 17/08/2026). Por isso a
+numeracao inicial, 1.0.0. O pacote leva os executaveis, a estrutura de pastas e
+os roteiros de validacao.
+
+SEM BASE, DE PROPOSITO. Nao traz banco nem arquivos de entrada: e' aplicado POR
+CIMA da instalacao que ela ja tem (pacote de 07/08) e usa o banco e as bases que
+ja estao la'. Ate 14/08 este build embutia um banco pronto, e o LEIA-ME dizia
+"voce nao precisa rodar o Processador" — isso servia enquanto a premissa era que
+ela so' usaria o Visualizador. O que muda agora esta' na fase de ANALISE, e
+mandar banco pronto substituiria o trabalho que ela ja' registrou.
+
+  - <raiz> VAZIA no config.xml -> MODO LOCAL: roda em qualquer pasta, NAO aponta
+    para a rede, NAO auto-atualiza. Nao sobrepoe nem e' sobreposto pela versao
+    que o cliente esta' testando na rede.
+  - SEM banco e SEM ENTRADA populada. Os arquivos do cliente nao sao versionados
+    (em 14/08 faltavam 16 nesta maquina) e ela ja' os tem.
+  - DADOS/ e INTERACOES/ vao como pastas VAZIAS: numa copia por cima elas nao
+    apagam nada, e numa instalacao nova criam a estrutura.
+
+NAO USAR O build_update_bruna.py para esta entrega: aquele empacota a mesma
+EXECUTAVEIS/ como update 1.1.1, sem os roteiros. Foi descartado em 17/08.
+
+DEPOIS DE APLICAR, ELA PRECISA RODAR O Processador.exe UMA VEZ. Sem isso os
+numeros da tela continuam os antigos: os 6 ajustes agem na fase de ANALISE, nao
+na importacao. E' o reprocessamento que faz os 762 desligados recontratados
+virarem 24.
 
 Pre-requisito: exes buildados com o CODIGO ATUAL (deploy/build_all.py).
 
@@ -30,24 +45,16 @@ DEPLOY_DIR = Path(__file__).resolve().parent
 RAIZ = DEPLOY_DIR.parent
 APP = RAIZ / "CVC_IAM_ANALYTICS"
 EXECS = APP / "EXECUTAVEIS"
-ENTRADA_SRC = APP / "ENTRADA"
-ORIGEM_SRC = RAIZ / "Arquivos_origem"   # bases que o cliente mandou fora da ENTRADA
 ENTREGA = RAIZ / "ENTREGA"
 STAGING = RAIZ / "_entrega_bruna_staging"
 
+# 1.0.0 = a VERSAO INICIAL da Fase 1 (decidido em 17/08/2026). Este pacote nao
+# e' um update: e' a entrega, com numeracao propria da Fase 1 e distinta da linha
+# de producao (1.4.x). Em modo local nao ha auto-update, entao a versao e' rotulo
+# — nenhum exe compara numero com a rede.
 VERSAO = "1.0.0"
-RAIZ_LOCAL = ""  # vazio = MODO LOCAL (nao toca a rede)
-
-# A Bruna NAO roda o Processador: ela so usa o Visualizador (definido em
-# 05/08). Entao o pacote leva o BANCO PRONTO e a ENTRADA vai VAZIA — so a
-# estrutura de pastas. Sem isso ela abriria o painel num banco inexistente.
-# Deixar a ENTRADA populada tambem seria risco: um clique no Processador
-# reprocessaria e mudaria a base que ela esta validando.
-BANCO_PRONTO = Path(
-    r"C:\Users\user\AppData\Local\Temp\claude"
-    r"\c--Users-user-OneDrive-Backup-Note-Projetos-Antlia-cvc-CVC"
-    r"\34c299f2-b0ec-4b8f-baf4-db3c2f55ef38\scratchpad\bruto"
-    r"\CVC_IAM_ANALYTICS\DADOS\BANCO\iam_analytics.db")
+RAIZ_LOCAL = ""          # vazio = MODO LOCAL (nao toca a rede)
+VERSAO_ROTEIRO = "1.0.0"  # o roteiro de REGRAS acompanha a numeracao do pacote
 
 LAUNCHER_DIR = EXECS / "launcher"
 PRINCIPAL_VISUALIZADOR = EXECS / "visualizador.exe"
@@ -74,110 +81,29 @@ DADOS_SUBDIRS = [
     "SAIDAS/TRANSFERIDOS", "SAIDAS/AUDITORIA",
 ]
 
-# Arquivos de entrada a embutir: (origem sob ENTRADA_SRC) -> (destino sob ENTRADA staging).
-# Pego a versao mais recente de cada base, ja SEM o sufixo _AAAAMMDD_HHMMSS que o
-# Processador adiciona ao mover para PROCESSADOS (o Processador re-adiciona ao rodar).
-ARQUIVOS_ENTRADA = [
-    # (RH ativos CLT: as DUAS cargas datadas vem de Arquivos_origem —
-    #  ver ARQUIVOS_ORIGEM e ARQUIVOS_2A_CARGA abaixo.)
-    # RH ativos — TERCEIROS (processar_terceiros=true; validados por espelho).
-    ("RH/ATIVOS/PROCESSADOS/QuickReport_1780421571311_20260624_124746.xlsx",
-     "RH/ATIVOS/QuickReport_1780421571311.xlsx"),
-    # Mapeamento organizacional (CCO/CSC)
-    ("MATRIZES/ORGANIZACIONAL/PROCESSADOS/Mapeamento CCO_CSC (1)_20260617_173820.xlsx",
-     "MATRIZES/ORGANIZACIONAL/Mapeamento CCO_CSC (1).xlsx"),
-    # Matrizes de perfil por sistema
-    ("MATRIZES/PERFIS_SISTEMAS/PROCESSADOS/MATRIZ DE PERFIL DE ACESSO - SIGOT_20260617_173818.xlsx",
-     "MATRIZES/PERFIS_SISTEMAS/MATRIZ DE PERFIL DE ACESSO - SIGOT.xlsx"),
-    ("MATRIZES/PERFIS_SISTEMAS/PROCESSADOS/MATRIZ DE PERFIL DE ACESSO ORACLE EBS_20260625_102527.xlsx",
-     "MATRIZES/PERFIS_SISTEMAS/MATRIZ DE PERFIL DE ACESSO ORACLE EBS.xlsx"),
-    ("MATRIZES/PERFIS_SISTEMAS/PROCESSADOS/MATRIZ DE PERFIL DE ACESSO SICA ESFERA_20260624_145358.xlsx",
-     "MATRIZES/PERFIS_SISTEMAS/MATRIZ DE PERFIL DE ACESSO SICA ESFERA.xlsx"),
-    ("MATRIZES/PERFIS_SISTEMAS/PROCESSADOS/MATRIZ DE PERFIL DE ACESSO SICA RA_20260617_173818.xlsx",
-     "MATRIZES/PERFIS_SISTEMAS/MATRIZ DE PERFIL DE ACESSO SICA RA.xlsx"),
-    ("MATRIZES/PERFIS_SISTEMAS/PROCESSADOS/MATRIZ DE PERFIL DE ACESSO SYSTUR_20260617_173819.xlsx",
-     "MATRIZES/PERFIS_SISTEMAS/MATRIZ DE PERFIL DE ACESSO SYSTUR.xlsx"),
-    ("MATRIZES/PERFIS_SISTEMAS/PROCESSADOS/Matriz de Perfil de Acessso - IC Integrador Contabil_20260617_173819.xlsx",
-     "MATRIZES/PERFIS_SISTEMAS/Matriz de Perfil de Acessso - IC Integrador Contabil.xlsx"),
-    # SIG de-para (sem timestamp — fica no lugar)
-    ("MATRIZES/PERFIS_SISTEMAS/SIG/DE_PARA/ID_x_Perfis_SIG 19.08.xlsx",
-     "MATRIZES/PERFIS_SISTEMAS/SIG/DE_PARA/ID_x_Perfis_SIG 19.08.xlsx"),
-    # Extratos por sistema
-    ("SISTEMAS/SIGOT/PROCESSADOS/SIGOT_30_04_20260617_173821.csv",
-     "SISTEMAS/SIGOT/SIGOT_30_04.csv"),
-    ("SISTEMAS/SICA_RA/PROCESSADOS/SICA_RA_30_04_20260617_173821.csv",
-     "SISTEMAS/SICA_RA/SICA_RA_30_04.csv"),
-    ("SISTEMAS/SICA_ESFERA/PROCESSADOS/SICA_ESFERA_24_06_20260624_145358.csv",
-     "SISTEMAS/SICA_ESFERA/SICA_ESFERA_24_06.csv"),
-    ("SISTEMAS/SYSTUR/PROCESSADOS/relatorio systur 30.04_20260617_173827.xlsx",
-     "SISTEMAS/SYSTUR/relatorio systur 30.04.xlsx"),
-    ("SISTEMAS/IC/PROCESSADOS/relatorio IC 30.04_20260617_173827.xlsx",
-     "SISTEMAS/IC/relatorio IC 30.04.xlsx"),
-    ("SISTEMAS/ORACLE_EBS/PROCESSADOS/EXTRACAO_USUARIOS_Oracle 09.06.2026 (1)_20260625_102537.xlsx",
-     "SISTEMAS/ORACLE_EBS/EXTRACAO_USUARIOS_Oracle 09.06.2026 (1).xlsx"),
-    ("SISTEMAS/SIG/PROCESSADOS/SIG_18.05.26_20260622_161322.xlsx",
-     "SISTEMAS/SIG/SIG_18.05.26.xlsx"),
-]
-
-# Bases que nunca passaram pela ENTRADA de dev (chegaram via git em Arquivos_origem).
-# O config de hoje EXIGE as duas: <rh><desligados><processar>true e
-# <rh><diretorio_ad><processar>true. Sem elas o pacote roda, mas a aba Desligados
-# nasce vazia e o AD grava "0 identidades" — a Bruna nao reproduziria esta rodada
-# (orfaos com dono pelo login, desligados achados pelo AD, espelho franq/prest).
-# Origem: (caminho sob Arquivos_origem) -> (destino sob ENTRADA staging).
-ARQUIVOS_ORIGEM = [
-    # RH ativos CLT — 1a CARGA (17/06). A 2a (01/07) NAO entra na ENTRADA: ver
-    # ARQUIVOS_2A_CARGA. Trocamos a antiga "PROJETOIAM (8)" (11/05) por esta
-    # serie datada porque as duas cargas precisam ser COMPARAVEIS — (8) x 01/07
-    # acusaria mudanca em meio mundo (vintages diferentes), o que e' ruido, nao
-    # transferencia. Este par (17/06 -> 01/07) e' o provado: 31 alteracoes no
-    # CDC -> 18 pessoas -> 10 com acesso a revisar.
-    ("17072026/ENTRADA/RH/ATIVOS/PROCESSADOS/PROJETOIAM_20260617_114249_20260701_142343.CSV",
-     "RH/ATIVOS/PROJETOIAM.CSV"),
-    # RH desligados (motor de acesso de desligado)
-    ("17072026/PROJETOIAMDESLIGADOS (1).CSV",
-     "RH/DESLIGADOS/PROJETOIAMDESLIGADOS.CSV"),
-    # Diretorio AD por OU — o nome do arquivo e' que roteia a populacao
-    # (OU_Franq -> FRANQUEADO, OU_Prest -> PRESTADOR, OU_Desligados -> desligados).
-    ("17072026/OU_Franq_Bruna.csv", "RH/AD/OU_Franq_Bruna.csv"),
-    ("17072026/OU_Prest_Bruna.csv", "RH/AD/OU_Prest_Bruna.csv"),
-    ("17072026/OU_Desligados_Bruna.csv", "RH/AD/OU_Desligados_Bruna.csv"),
-]
-
-# 2a CARGA de RH — vai FORA da ENTRADA, numa pasta que o Processador nao varre.
-# Motivo (medido): ImportarRh le a pasta inteira e faz UM unico CDC sobre a
-# UNIAO dos arquivos (leitor_rh.ler_ativos: `ativos.extend(novos)`). Com as duas
-# cargas juntas na ENTRADA, o comparativo seria "uniao x banco vazio" = tudo
-# NOVO, ZERO alteracao -> a aba Transferidos nasceria vazia de novo. A 2a carga
-# tem de chegar DEPOIS da 1a execucao, exatamente como na operacao real (o
-# cliente deposita um snapshot por dia). O LEIA-ME instrui os 2 passos.
-PASTA_2A_CARGA = "2a_CARGA_RH"
-ARQUIVOS_2A_CARGA = [
-    ("17072026/ENTRADA/RH/ATIVOS/PROCESSADOS/PROJETOIAM_20260701_101549_20260701_142346.CSV",
-     "PROJETOIAM.CSV"),
+ROTEIRO = RAIZ / "docs" / "ROTEIRO_VALIDACAO_TRANSFERIDOS.md"
+# Roteiro de REGRAS (docx + pdf): vai na raiz do pacote, junto do LEIA-ME. Ela
+# recebe o zip por outro canal que nao o repo — se o documento nao viajar com o
+# pacote, chega separado ou nao chega.
+ROTEIRO_REGRAS = [
+    ENTREGA / f"ROTEIRO_REGRAS_CVC_IAM_v{VERSAO_ROTEIRO}.docx",
+    ENTREGA / f"ROTEIRO_REGRAS_CVC_IAM_v{VERSAO_ROTEIRO}.pdf",
 ]
 
 
 def checar_prerequisitos():
+    """So' os artefatos de BUILD. Este pacote nao leva dado, entao nao exige
+    nenhum arquivo do cliente — era isso que travava o build nesta maquina."""
     # LAUNCHER_ATUALIZADOR NAO entra: ver a nota em montar_executaveis().
     base = [PRINCIPAL_VISUALIZADOR, PRINCIPAL_PROCESSADOR,
             LAUNCHER_VISUALIZADOR, LAUNCHER_PROCESSADOR,
             CONFIG_SRC, MOTIVOS_SRC, REPORT_DIR / "index.html"]
     faltando = [str(p) for p in base if not p.exists()]
-    # arquivos de entrada
-    for origem, _ in ARQUIVOS_ENTRADA:
-        p = ENTRADA_SRC / origem
-        if not p.exists():
-            faltando.append(str(p))
-    for origem, _ in ARQUIVOS_ORIGEM + ARQUIVOS_2A_CARGA:
-        p = ORIGEM_SRC / origem
-        if not p.exists():
-            faltando.append(str(p))
     if faltando:
         print("FALHA — arquivos ausentes:")
         for f in faltando:
             print(f"  - {f}")
-        print("\nRode 'python deploy/build_all.py' e confira os arquivos de ENTRADA.")
+        print("\nRode 'python deploy/build_all.py' primeiro.")
         sys.exit(1)
 
 
@@ -206,6 +132,10 @@ def montar_executaveis(execs_destino: Path):
     grava_config(execs_destino / "CONFIG" / "config.xml", VERSAO, RAIZ_LOCAL)
     if MOTIVOS_SRC.exists():
         shutil.copy2(MOTIVOS_SRC, execs_destino / "CONFIG" / "motivos_resolucao.xml")
+    # jira.xml.exemplo viaja (e' modelo, nao credencial); jira.xml NUNCA.
+    exemplo = EXECS / "CONFIG" / "jira.xml.exemplo"
+    if exemplo.exists():
+        shutil.copy2(exemplo, execs_destino / "CONFIG" / "jira.xml.exemplo")
     # launcher_atualizador.exe FICA DE FORA deste pacote, por dois motivos que
     # se somam:
     #
@@ -221,50 +151,16 @@ def montar_executaveis(execs_destino: Path):
     shutil.copy2(LAUNCHER_PROCESSADOR, launcher_d / "launcher_processador.exe")
 
 
-def montar_entrada(raiz: Path):
-    # estrutura completa (mesmo as vazias)
-    for sub in ENTRADA_SUBDIRS:
-        (raiz / "ENTRADA" / sub).mkdir(parents=True, exist_ok=True)
-    # arquivos de entrada de-timestampados
-    n = 0
-    for base, lista in ((ENTRADA_SRC, ARQUIVOS_ENTRADA), (ORIGEM_SRC, ARQUIVOS_ORIGEM)):
-        for origem, destino in lista:
-            dst = raiz / "ENTRADA" / destino
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(base / origem, dst)
-            n += 1
-    return n
-
-
-def montar_2a_carga(raiz: Path):
-    """Pasta FORA da ENTRADA (o Processador nao a varre) com o snapshot de RH
-    do dia seguinte. So depois da 1a execucao ela vai para a ENTRADA — e' esse
-    intervalo que produz o CDC de onde saem os transferidos."""
-    dst = raiz / PASTA_2A_CARGA
-    dst.mkdir(parents=True, exist_ok=True)
-    for origem, destino in ARQUIVOS_2A_CARGA:
-        shutil.copy2(ORIGEM_SRC / origem, dst / destino)
-    (dst / "LEIA-ME.txt").write_text(LEIA_ME_2A_CARGA, encoding="utf-8")
-    return len(ARQUIVOS_2A_CARGA)
-
-
-ROTEIRO = RAIZ / "docs" / "ROTEIRO_VALIDACAO_TRANSFERIDOS.md"
-# Roteiro de REGRAS (docx + pdf): vai na raiz do pacote, junto do LEIA-ME. Ela
-# recebe o zip por outro canal que nao o repo — se o documento nao viajar com o
-# pacote, chega separado ou nao chega.
-ROTEIRO_REGRAS = [
-    ENTREGA / f"ROTEIRO_REGRAS_CVC_IAM_v{VERSAO}.docx",
-    ENTREGA / f"ROTEIRO_REGRAS_CVC_IAM_v{VERSAO}.pdf",
-]
-
-
 def montar(base: Path):
     raiz = base / "CVC_IAM_ANALYTICS"
     montar_executaveis(raiz / "EXECUTAVEIS")
-    # ENTRADA so com a estrutura (ela nao processa) — ver BANCO_PRONTO
+    # ENTRADA so' com a estrutura: o pacote nao leva dado, as bases dela ficam
+    # onde estao. Pasta vazia numa copia por cima nao apaga arquivo nenhum.
     for sub in ENTRADA_SUBDIRS:
         (raiz / "ENTRADA" / sub).mkdir(parents=True, exist_ok=True)
-    n = 0
+    for sub in DADOS_SUBDIRS:
+        (raiz / "DADOS" / sub).mkdir(parents=True, exist_ok=True)
+    (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
     # roteiro de validacao junto do pacote (a usuaria nao tem o repo)
     if ROTEIRO.exists():
         shutil.copy2(ROTEIRO, raiz / "ROTEIRO_VALIDACAO.md")
@@ -273,16 +169,29 @@ def montar(base: Path):
             shutil.copy2(doc, raiz / doc.name)
         else:
             print(f"  AVISO: roteiro de regras ausente, nao vai no pacote: {doc.name}")
-    for sub in DADOS_SUBDIRS:
-        (raiz / "DADOS" / sub).mkdir(parents=True, exist_ok=True)
-    (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
-    # BANCO PRONTO — o painel abre direto nele
-    if not BANCO_PRONTO.exists():
-        print(f"FALHA — banco de entrega ausente:\n  {BANCO_PRONTO}")
-        sys.exit(1)
-    shutil.copy2(BANCO_PRONTO, raiz / "DADOS" / "BANCO" / "iam_analytics.db")
     (raiz / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
-    return n
+
+
+def conferir_sem_base(raiz: Path):
+    """O pacote nao pode levar dado. Um banco ou uma base que escape substitui o
+    trabalho que ela ja' registrou — e o erro so' apareceria na maquina dela."""
+    achados = []
+    for p in raiz.rglob("*"):
+        if not p.is_file():
+            continue
+        rel = str(p.relative_to(raiz)).replace("\\", "/")
+        if p.suffix.lower() == ".db" or rel.startswith("DADOS/"):
+            achados.append(rel)
+        elif rel.startswith("ENTRADA/"):
+            achados.append(rel)
+        elif p.name == "jira.xml":
+            achados.append(rel)
+    if achados:
+        print("FALHA — o pacote deveria ir SEM base, mas levou:")
+        for a in achados:
+            print(f"  - {a}")
+        shutil.rmtree(STAGING, ignore_errors=True)
+        sys.exit(1)
 
 
 def zipar(base: Path, alvo_zip: Path):
@@ -299,145 +208,98 @@ def zipar(base: Path, alvo_zip: Path):
                 zf.writestr(zipfile.ZipInfo(arcname), "")
 
 
-LEIA_ME_2A_CARGA = """\
-SEGUNDA CARGA DE RH - para ver a aba TRANSFERIDOS
-=================================================
-
-Este PROJETOIAM.CSV e' o snapshot de RH do dia seguinte (01/07). Ele NAO esta
-na ENTRADA de proposito.
-
-POR QUE: o sistema descobre quem foi transferido COMPARANDO duas cargas de RH
-(mudanca de cargo, centro de custo, departamento ou gestor). Se as duas cargas
-entrarem juntas, nao ha "antes" e "depois" — o sistema le tudo como cadastro
-novo e a aba Transferidos fica vazia.
-
-COMO USAR (2 passos, e' assim que funciona no dia a dia):
-
-  1. Rode o Processador.exe normalmente (a 1a carga ja esta na ENTRADA).
-     Nesse momento a aba Transferidos ainda fica vazia — e' o esperado.
-
-  2. COPIE o PROJETOIAM.CSV desta pasta para
-         CVC_IAM_ANALYTICS\\ENTRADA\\RH\\ATIVOS\\
-     e rode o Processador.exe DE NOVO.
-
-     Agora a aba Transferidos mostra quem mudou, com o "de -> para" de cada
-     movimento (ex.: gestor: FULANO -> CICLANO) e os acessos a revisar.
-"""
-
 LEIA_ME = """\
-TESTE LOCAL - CVC IAM Analytics (v1.0.0) - pacote da Bruna
-==========================================================
+CVC IAM Analytics - Fase 1 - v1.0.0 - pacote da Bruna
+=====================================================
 
-Este pacote roda 100%% LOCAL. Ele NAO usa a rede e NAO interfere na versao
-que o cliente esta testando (config.xml com <raiz> vazia = modo local; os
-executaveis NAO se auto-atualizam da rede).
+Este e o pacote de teste da Fase 1. Ele roda 100% LOCAL: NAO usa a rede e NAO
+interfere na versao que o cliente esta testando (config.xml com <raiz> vazia =
+modo local; os executaveis nao se auto-atualizam da rede).
 
-------------------------------------------------------------
-COMO USAR — sao 2 passos
-------------------------------------------------------------
-1. Extraia a pasta CVC_IAM_ANALYTICS para qualquer lugar do seu PC
-   (ex.: C:\\CVC_TESTE\\CVC_IAM_ANALYTICS). NAO precisa estar na rede.
-
-2. Rode
-       CVC_IAM_ANALYTICS\\EXECUTAVEIS\\visualizador.exe
-   Ele abre http://127.0.0.1:8800/ no navegador. Pronto, e' so isso.
+ESTE PACOTE NAO TEM BASE. Ele nao traz banco nem arquivos de entrada, de
+proposito: voce ja tem tudo isso na sua maquina, e o pacote e aplicado POR CIMA.
+Assim o que voce ja tratou, resolveu ou mandou para quarentena CONTINUA LA.
 
 ------------------------------------------------------------
-POR ONDE COMECAR — o roteiro esta aqui nesta pasta
+COMO INSTALAR - sao 4 passos
+------------------------------------------------------------
+1. FECHE o painel e o Processador, se estiverem abertos.
+
+2. Extraia este zip e copie a pasta CVC_IAM_ANALYTICS POR CIMA da sua pasta
+   atual, mandando SUBSTITUIR os arquivos repetidos.
+   NAO apague nada. As pastas DADOS e INTERACOES vem vazias aqui - elas nao
+   apagam nem substituem o que voce ja tem.
+
+3. RODE O Processador.exe UMA VEZ. Este passo e OBRIGATORIO.
+   As regras desta versao agem na hora da ANALISE, nao na importacao: sem
+   reprocessar, a tela continua mostrando os numeros antigos.
+
+4. Abra o visualizador.exe. Ele abre http://127.0.0.1:8800/ no navegador.
+
+------------------------------------------------------------
+OS NUMEROS VAO MUDAR - e e esperado
+------------------------------------------------------------
+A regra dos desligados recontratados muda a contagem por ordem de grandeza:
+762 pessoas passam a 24. Consulta, dedup de perfis e as colunas da grid tambem
+mudam. Se voce tiver roteiro, print ou planilha feitos sobre o pacote anterior,
+eles ficam desatualizados.
+
+------------------------------------------------------------
+OS SEIS PONTOS DO SEU RETORNO - como ficaram
+------------------------------------------------------------
+A) DESLIGADO RECONTRATADO. Quem foi desligado e recontratado com o MESMO login
+   nao e mais apontado; so aparece quem voltou com login DIFERENTE. E a regra
+   que leva 762 pessoas para 24.
+B) CONSULTA UNIFICADA POR CPF. A mesma pessoa com mais de um cadastro aparece
+   uma vez so. As tratativas que voce ja registrou seguem ligadas ao acesso
+   original.
+C) BLOCO "SEM MAPEAMENTO" no detalhe da Consulta, separando o que nao tem
+   correspondencia na matriz.
+D) PERFIS ESPERADOS SEM REPETICAO, na grid e no Excel exportado.
+E) MOTIVO DO STATUS: quando um acesso e rebaixado por status indefinido, o
+   porque aparece no "?" ao lado do selo.
+F) COLUNA CENTRO DE CUSTO na grid de Pendencias.
+
+Mais dois pontos que valem saber:
+- Os motivos do combobox nunca ficam em branco: se a lista nao puder ser lida,
+  a tela usa a lista padrao e AVISA o motivo da falha (em vez de ficar vazia em
+  silencio e travar a resolucao, por ser campo obrigatorio).
+- O botao "Abrir chamado no Jira" aparece DESABILITADO. A abertura automatica
+  ja esta pronta, mas depende de dois ajustes do lado do Jira que a CVC vai
+  fazer; ate la o registro da tratativa continua manual, como hoje.
+
+------------------------------------------------------------
+POR ONDE COMECAR - o roteiro esta aqui nesta pasta
 ------------------------------------------------------------
    ROTEIRO_REGRAS_CVC_IAM_v1.0.0.docx   (o mesmo em .pdf)
 
 Ele lista as 22 regras que decidem sozinhas alguma coisa no painel: o criterio
 de cada uma (com os limiares), o filtro para conferir na tela e o numero que
 deve aparecer. Cada regra tem uma linha para voce responder se ela esta certa.
-
-Os testes provam que o sistema faz o que foi programado. So voce prova que a
-REGRA esta certa — e' para isso que o roteiro existe.
 As regras marcadas com estrela sao as que mais mudam volume de trabalho; se o
 tempo for curto, comece por elas.
 
-VOCE NAO PRECISA RODAR O PROCESSADOR. O banco JA VEM PRONTO no pacote, com
-dois meses de dados (junho, julho e agosto/2026) — inclusive o historico de
-movimentacoes, que so existe porque varias cargas de RH foram comparadas ao
-longo do periodo. E' esse banco que o painel abre.
+Os testes provam que o sistema faz o que foi programado. So voce prova que a
+REGRA esta certa - e para isso que o roteiro existe.
 
-A pasta ENTRADA vem VAZIA de proposito: nada para processar, e nenhum risco
-de um clique no Processador alterar a base que voce esta validando.
-
-O QUE VOCE PODE FAZER A VONTADE: tratar pendencias, resolver, enviar para
-quarentena, exportar as planilhas. Tudo o que voce fizer fica gravado na sua
-copia local e NAO afeta ninguem — nem a rede, nem a versao do cliente.
+Alguns numeros do roteiro podem nao bater com a tela por causa dos seis pontos
+acima - em especial o dos desligados recontratados. Quando nao bater, e a regra
+corrigida agindo, nao um erro do roteiro.
 
 ------------------------------------------------------------
-O QUE VEM DENTRO
+O QUE VOCE PODE FAZER A VONTADE
 ------------------------------------------------------------
-- Sistemas ativos: SYSTUR, SIGOT, SICA_RA, SICA_ESFERA, IC, SIG, ORACLE_EBS
-  + terceiros (mesma configuracao de dev de hoje).
-- Novidades desta versao (retorno da Bruna sobre o teste da Fase 1):
-  * "SEM ACESSO" DEIXOU DE SER PENDENCIA. Quando a pessoa nao tem acesso
-    num sistema, os perfis esperados do cargo NAO inflam mais a Pendencia
-    (era o caso do SIGOT com 8 perfis e do SICA com +22). Eles aparecem
-    como "esperado" na Consulta.
-  * CONSULTA EM 4 BLOCOS: Acessos ENCONTRADOS (o que a pessoa de fato tem),
-    ESPERADOS (o que o cargo preve e ela nao tem), NECESSITA ANALISE
-    (perfil a mais / excesso) e NAO LOCALIZADOS (sistema fora da matriz).
-  * TRATAMENTO GRANULAR: da para tratar e quarentenar POR SISTEMA e ate
-    POR ACESSO (perfil) — nao e' mais tudo de uma vez. Os botoes agora vem
-    ROTULADOS na sub-linha ("tratar <SISTEMA>", "tratar acesso",
-    "quarentena"), e o filtro por sistema ISOLA de fato o sistema escolhido.
-    A aba Quarentena mostra o ESCOPO de cada envio (pessoa / sistema / acesso).
-  * COLUNA GESTOR nas grids e na Consulta.
-  * DESLIGADOS e TRANSFERIDOS agrupam os acessos POR SISTEMA (antes vinham
-    corridos — o caso dos 122 acessos numa linha so). O Excel exportado
-    reproduz o mesmo agrupamento (+/-).
-  * O STATUS DA CONTA MANDA: conta BLOQUEADA/INATIVA deixou de contar como
-    acesso, e status vazio (ou "P" no IC) vai para "Em Analise" em vez de
-    ser assumido como ativo. No nosso reprocesso de teste isso derrubou os
-    "Usuario Nao Encontrado" de 2.631 para 99 e as pessoas com pendencia de
-    792 para 461 — os numeros da sua base podem diferir.
-  * IDENTIDADE: franqueados e prestadores do AD entram na base, e o acesso
-    orfao agora mostra o perfil que veio do extrato.
-  * Os filtros (funil) de cada coluna passaram a listar exatamente os
-    valores que estao na grid — antes ofereciam valores de fora dela.
-  * TRANSFERIDOS com "DE -> PARA": ao abrir uma pessoa transferida, a
-    primeira linha mostra o que mudou no cadastro (ex.: gestor:
-    ANDREIA RIBEIRO SANTOS -> NATHALIA MAQUEA DA SILVA), antes dos acessos
-    a revisar — e' esse par que diz se o acesso antigo ainda faz sentido.
-    O Excel exportado traz as colunas De/Para.
-  * Na aba Aderentes, o selo "N aderencias" tambem abre/fecha os sistemas
-    (antes so a coluna "N sistemas" respondia ao clique).
-  * REVALIDACAO POS-TRANSFERENCIA: em vez de mandar revisar TODOS os acessos
-    de quem foi transferido, o sistema aponta quais deixaram de fazer sentido.
-    Cada acesso e' comparado com o que se espera da funcao/equipe NOVA e da
-    ANTIGA, e a aba mostra:
-       - "N sobraram da anterior" -> candidatos a REVOGAR (o numero acionavel)
-       - quantos MANTEM, quantos estao fora do padrao e o que FALTA na nova
-    Exemplo real do nosso teste: uma pessoa com 131 acessos no SIG teve 92
-    mantidos e 21 apontados como sobra da equipe anterior — em vez de abrir
-    os 131 um a um.
-    Para os sistemas com matriz o criterio e' a matriz de cargo; para o SIG,
-    que nao tem matriz, e' o padrao da EQUIPE (quem trabalha junto), por isso
-    a troca de gestor muda o resultado.
-  * VISAO GERAL: novo indicador "Acessos p/ Revogar", que leva direto para a
-    aba Transferidos.
-  * FORMULARIO DE TRATATIVA — regra nova. O nº do ticket do Jira NAO e' mais
-    obrigatorio: agora o formulario separa a TRATATIVA DO ANALISTA (motivo e
-    parecer, obrigatorios) do CHAMADO NO JIRA (ticket e link, opcionais).
-    Assim da para registrar uma tratativa interna sem depender de chamado
-    aberto. O botao "Abrir chamado no Jira" aparece DESABILITADO — a abertura
-    automatica depende do formulario no Jira e vem depois.
-    Na lupa, os dados do chamado aparecem em bloco proprio, somente leitura.
-  * Os motivos do combobox nunca mais ficam em branco: se a lista nao puder ser
-    lida, a tela usa a lista padrao e AVISA o motivo da falha (antes ficava
-    vazia em silencio e travava a resolucao, por ser campo obrigatorio).
-- BANCO PRONTO (nao precisa processar): 13.430 pessoas no RH ativo, 29.831
-  desligados, 92.794 acessos nos 7 sistemas, 727 movimentacoes de cadastro
-  detectadas no periodo e 13.773 acessos a revisar por transferencia.
+Tratar pendencias, resolver, enviar para quarentena, exportar as planilhas.
+Tudo o que voce fizer fica gravado na sua copia local e NAO afeta ninguem - nem
+a rede, nem a versao do cliente.
+
+Sistemas ativos: SYSTUR, SIGOT, SICA_RA, SICA_ESFERA, IC, SIG, ORACLE_EBS
++ terceiros.
 """
 
 
 def main():
-    print("=== Build TESTE LOCAL BRUNA (modo local, v%s) ===" % VERSAO)
+    print("=== Build TESTE LOCAL BRUNA (modo local, SEM base, v%s) ===" % VERSAO)
     checar_prerequisitos()
     if STAGING.exists():
         shutil.rmtree(STAGING, ignore_errors=True)
@@ -445,17 +307,25 @@ def main():
     ENTREGA.mkdir(parents=True, exist_ok=True)
 
     inicio = datetime.now()
-    n = montar(STAGING)
+    montar(STAGING)
+    conferir_sem_base(STAGING / "CVC_IAM_ANALYTICS")
 
     alvo = ENTREGA / f"TESTE_LOCAL_BRUNA_v{VERSAO}.zip"
     zipar(STAGING / "CVC_IAM_ANALYTICS", alvo)
-    print(f"\n  OK -> {alvo}  ({alvo.stat().st_size/1024/1024:.1f} MB)")
-    mb = BANCO_PRONTO.stat().st_size / 1024 / 1024
-    print(f"  versao={VERSAO}  raiz=<vazia/local>  ENTRADA=vazia (nao processa)  "
-          f"BANCO PRONTO={mb:.0f} MB")
+    n = len(zipfile.ZipFile(alvo).namelist())
+    print(f"\n  OK -> {alvo}  ({alvo.stat().st_size/1024/1024:.1f} MB, {n} itens)")
+    print(f"  versao={VERSAO}  raiz=<vazia/local>  SEM banco  SEM ENTRADA")
+    print()
+    print("  INSTRUCAO PARA A BRUNA:")
+    print("   1. Fechar o painel e o Processador, se estiverem abertos.")
+    print("   2. Extrair e copiar CVC_IAM_ANALYTICS/ POR CIMA da pasta atual,")
+    print("      substituindo os repetidos. NAO apagar DADOS/ nem INTERACOES/.")
+    print("   3. Rodar o Processador.exe UMA VEZ (obrigatorio — e' ele que")
+    print("      aplica as regras novas; sem isso os numeros ficam os antigos).")
+    print("   4. Abrir o visualizador.exe.")
 
     shutil.rmtree(STAGING, ignore_errors=True)
-    print(f"Concluido em {(datetime.now()-inicio).total_seconds():.1f}s.")
+    print(f"\nConcluido em {(datetime.now()-inicio).total_seconds():.1f}s.")
 
 
 if __name__ == "__main__":
