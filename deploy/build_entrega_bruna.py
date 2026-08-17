@@ -263,7 +263,8 @@ def conferir_sem_base(raiz: Path):
 # Sem estes, o painel nao consegue abrir chamado nenhum — sao o motivo de o
 # arquivo viajar montado em vez de em branco.
 CAMPOS_ESTRUTURA = ("url", "service_desk_id", "request_type_id", "campo_tipo",
-                    "tipo_solicitacao", "prefixo_titulo", "timeout_s")
+                    "tipo_solicitacao", "prefixo_titulo", "timeout_s",
+                    "cancelar_apos_abrir", "transicao_cancelamento")
 
 
 def conferir_jira_sem_credencial(raiz: Path):

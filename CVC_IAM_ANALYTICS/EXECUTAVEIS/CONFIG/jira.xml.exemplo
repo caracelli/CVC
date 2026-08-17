@@ -45,4 +45,22 @@
 
     <timeout_s>30</timeout_s>
 
+    <!-- MODO TESTE — abre o chamado, devolve o numero para a tela e CANCELA
+         em seguida. Serve para exercitar o caminho inteiro (permissao,
+         formulario, campos, numero de volta) sem deixar chamado de teste na
+         fila de quem atende.
+
+         true  = abre e cancela  (testes seus e da Bruna)
+         false = opera normalmente, o chamado FICA ABERTO  (producao)
+
+         DEIXAR true EM PRODUCAO E' O PIOR ERRO POSSIVEL AQUI: todo chamado
+         nasceria e morreria, ninguem revogaria nada, e a tela mostraria
+         "aberto" com o numero certo. Nao ha erro visivel — so' o log do
+         visualizador avisa, em caixa alta, na linha "Jira". -->
+    <cancelar_apos_abrir>false</cancelar_apos_abrir>
+
+    <!-- Id da transicao de cancelamento no workflow (261 neste tenant).
+         So' e' usado quando cancelar_apos_abrir = true. -->
+    <transicao_cancelamento>261</transicao_cancelamento>
+
 </jira>

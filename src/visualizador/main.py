@@ -273,7 +273,10 @@ def carregar_config_jira():
     cfg = {"ativo": False, "url": "", "service_desk_id": "",
            "request_type_id": "", "campo_tipo": "customfield_11936",
            "tipo_solicitacao": "", "prefixo_titulo": "Sanitização",
-           "timeout_s": 30, "usuario": "", "token": "", "origem": "ausente"}
+           "timeout_s": 30, "usuario": "", "token": "", "origem": "ausente",
+           # MODO TESTE: abre o chamado, devolve os dados e cancela em seguida.
+           # Default false — em producao o chamado TEM de ficar aberto.
+           "cancelar_apos_abrir": False, "transicao_cancelamento": "261"}
     caminho, origem = _jira_xml_path()
     cfg["origem"] = origem
     if not caminho:
@@ -281,11 +284,14 @@ def carregar_config_jira():
     try:
         r = ET.parse(caminho).getroot()
         for k in ("url", "service_desk_id", "request_type_id", "campo_tipo",
-                  "tipo_solicitacao", "prefixo_titulo", "usuario", "token"):
+                  "tipo_solicitacao", "prefixo_titulo", "usuario", "token",
+                  "transicao_cancelamento"):
             v = (r.findtext(k) or "").strip()
             if v:
                 cfg[k] = v
         cfg["ativo"] = (r.findtext("ativo", "false") or "").strip().lower() == "true"
+        cfg["cancelar_apos_abrir"] = (
+            r.findtext("cancelar_apos_abrir", "false") or "").strip().lower() == "true"
         t = (r.findtext("timeout_s") or "").strip()
         if t.isdigit():
             cfg["timeout_s"] = int(t)
@@ -309,8 +315,15 @@ def jira_diagnostico() -> str:
     if faltando:
         return (f"Jira     : INCOMPLETO ({JIRA['origem']}) — falta "
                 + ", ".join(faltando))
+    # O modo teste vai na MESMA linha e em caixa alta de proposito: e' a unica
+    # chance de alguem perceber que ele ficou ligado. Esquecido em producao,
+    # todo chamado nasce e morre — e ninguem revoga nada, sem erro na tela.
+    teste = (f"  *** MODO TESTE: cancela apos abrir "
+             f"(transicao {JIRA['transicao_cancelamento']}) ***"
+             if JIRA["cancelar_apos_abrir"] else "")
     return (f"Jira     : ativo ({JIRA['origem']}) — {JIRA['usuario']} "
-            f"-> portal {JIRA['service_desk_id']} / tipo {JIRA['request_type_id']}")
+            f"-> portal {JIRA['service_desk_id']} / tipo {JIRA['request_type_id']}"
+            + teste)
 
 
 JIRA = carregar_config_jira()
@@ -420,7 +433,55 @@ def jira_abrir_chamado(titulo: str, descricao: str):
     if not ticket:
         raise JiraErro("Jira aceitou a requisicao mas nao devolveu o numero do "
                        "chamado. Confira no portal antes de tentar de novo.")
+
+    # MODO TESTE: o chamado nasce e e' cancelado na sequencia. Serve para
+    # exercitar o caminho inteiro — permissao, formulario, campos, numero de
+    # volta na tela — sem deixar chamado de teste na fila de quem atende.
+    #
+    # O cancelamento vem DEPOIS de ter o numero em maos, e a falha dele NAO
+    # levanta: o chamado ja existe, e engolir o numero por causa do cancelamento
+    # deixaria um chamado orfao que ninguem sabe que precisa fechar.
+    if JIRA["cancelar_apos_abrir"]:
+        try:
+            jira_cancelar_chamado(ticket)
+            print(f"  [JIRA][MODO TESTE] {ticket} aberto e CANCELADO.")
+        except JiraErro as e:
+            print(f"  [JIRA][MODO TESTE] ATENCAO: {ticket} foi aberto mas NAO "
+                  f"foi cancelado ({e}). Cancele no portal.")
     return ticket, url
+
+
+def jira_cancelar_chamado(ticket: str):
+    """Cancela um chamado pela API do PORTAL (204 = feito).
+
+    /rest/servicedeskapi/request/{key}/transition — a mesma API por onde o
+    chamado nasce. Nao usar a API generica de issues: a conta cliente nao le nem
+    transiciona por la' o chamado que ela mesma abriu pelo portal (404).
+
+    O id da transicao vem do jira.xml (261 neste tenant) em vez de fixo no
+    codigo — e' um id de workflow, muda se a CVC reconfigurar o projeto.
+    """
+    payload = {"id": str(JIRA["transicao_cancelamento"])}
+    auth = base64.b64encode(
+        f"{JIRA['usuario']}:{JIRA['token']}".encode()).decode()
+    req = urllib.request.Request(
+        JIRA["url"].rstrip("/") + f"/rest/servicedeskapi/request/{ticket}/transition",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Basic {auth}",
+                 "Content-Type": "application/json",
+                 "Accept": "application/json"},
+        method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=JIRA["timeout_s"]) as r:
+            if r.status not in (200, 204):
+                raise JiraErro(f"Jira respondeu {r.status} ao cancelar.")
+    except urllib.error.HTTPError as e:
+        detalhe = e.read().decode("utf-8", "replace")[:300]
+        raise JiraErro(f"Jira respondeu {e.code} ao cancelar: {detalhe}")
+    except JiraErro:
+        raise
+    except Exception as e:
+        raise JiraErro(f"Falha de rede ao cancelar: {type(e).__name__}: {e}")
 
 
 # Limite maximo de dias que uma quarentena pode receber no formulario (regra de
