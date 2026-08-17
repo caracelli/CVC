@@ -279,7 +279,10 @@ def carregar_config_jira():
            "cancelar_apos_abrir": False, "transicao_cancelamento": "261",
            # Componentes fixos do chamado (lista). VAZIO = nao vai no payload,
            # que e' o comportamento validado hoje.
-           "componentes": []}
+           "componentes": [],
+           # Tipo que aparece no chamado de PENDENCIA (17/08, com a Bruna):
+           # ela nao e' revogacao, entao o campo vai com outro valor.
+           "tipo_solicitacao_pendencia": "Pendência"}
     caminho, origem = _jira_xml_path()
     cfg["origem"] = origem
     if not caminho:
@@ -288,7 +291,7 @@ def carregar_config_jira():
         r = ET.parse(caminho).getroot()
         for k in ("url", "service_desk_id", "request_type_id", "campo_tipo",
                   "tipo_solicitacao", "prefixo_titulo", "usuario", "token",
-                  "transicao_cancelamento"):
+                  "transicao_cancelamento", "tipo_solicitacao_pendencia"):
             v = (r.findtext(k) or "").strip()
             if v:
                 cfg[k] = v
@@ -396,7 +399,7 @@ def jira_descricao(linhas, contexto: str = "", parecer: str = "") -> str:
     return "\n".join(corpo)
 
 
-def jira_abrir_chamado(titulo: str, descricao: str):
+def jira_abrir_chamado(titulo: str, descricao: str, tipo_solicitacao: str = ""):
     """POST em /rest/servicedeskapi/request. Devolve (ticket, url).
 
     urllib da stdlib de proposito: o painel e' standalone e o spec nao empacota
@@ -413,7 +416,10 @@ def jira_abrir_chamado(titulo: str, descricao: str):
     campos = {
         "summary": titulo,
         "description": descricao,
-        JIRA["campo_tipo"]: JIRA["tipo_solicitacao"],
+        # "Caracteristicas de Solicitacao" — o que aparece como TIPO no chamado.
+        # Varia por fluxo: revogacao no desligado, pendencia na pendencia
+        # (definido com a Bruna em 17/08). Default = o do desligado.
+        JIRA["campo_tipo"]: tipo_solicitacao or JIRA["tipo_solicitacao"],
     }
     # COMPONENTE — o que decide em qual fila o chamado cai (as filas filtram por
     # `component`, nao por tipo de solicitacao). So' entra no payload quando
@@ -3411,7 +3417,8 @@ def retirar_quarentena(registro_id, motivo=""):
     return 1
 
 
-def _validar_tratativa(rid, motivo, parecer, exige_motivo=True):
+def _validar_tratativa(rid, motivo, parecer, exige_motivo=True,
+                       exige_parecer=True):
     """Regra da TRATATIVA INTERNA (05/08/2026). Devolve o JSON do erro ou None.
 
     O ticket do Jira ERA obrigatorio. Com a regra nova — "Resolver" (o analista
@@ -3430,7 +3437,12 @@ def _validar_tratativa(rid, motivo, parecer, exige_motivo=True):
         return '{"ok":false,"erro":"registro obrigatorio"}'
     if exige_motivo and not motivo:
         return '{"ok":false,"erro":"Selecione o motivo da tratativa."}'
-    if not str(parecer or "").strip():
+    # No DESLIGADO o parecer e' OPCIONAL (17/08): o desfecho ali e' sempre
+    # revogar e o chamado tem corpo proprio ("Revogar o usuario abaixo" + a
+    # tabela de acessos). Exigir texto era campo obrigatorio de resposta unica —
+    # atrito, nao dado. Quando o analista escreve, o parecer entra como uma
+    # secao a mais no chamado; em branco, some (ver jira_descricao).
+    if exige_parecer and not str(parecer or "").strip():
         return ('{"ok":false,"erro":"Descreva o parecer da tratativa '
                 '(o que foi verificado e decidido)."}')
     return None
@@ -3547,7 +3559,9 @@ def tratar_desligado(registro_id, ticket, ticket_url="", descricao="", motivo=""
     rid = str(registro_id or "").strip()
     tk = str(ticket or "").strip()
     motivo = str(motivo or "").strip()
-    if not rid or not str(descricao or "").strip():
+    # Parecer OPCIONAL aqui desde 17/08 — ver `_validar_tratativa`. So' a
+    # matricula e' indispensavel: sem ela nao ha o que registrar.
+    if not rid:
         return 0
     # Snapshot p/ auditoria: dados do desligado + acessos ainda ativos no momento.
     nome = cargo = centro_custo = ""
@@ -3589,6 +3603,121 @@ def tratar_desligado(registro_id, ticket, ticket_url="", descricao="", motivo=""
     return 1
 
 
+def abrir_chamado_pendencia(registro_id, parecer, motivo="", sistema="",
+                            perfil=""):
+    """Abre o chamado de uma PENDENCIA. Devolve (ticket, url).
+
+    Regras definidas com a Bruna em 17/08, e todas as tres diferem do desligado:
+      - TITULO = o MOTIVO da tratativa (o da lista fechada: Excecao,
+        Transferencia de Area, Acesso Indevido). Vai acompanhado de sistema e
+        nome porque a lista tem tres valores: so' o motivo deixaria a fila do
+        Service Desk com titulos repetidos, indistinguiveis sem abrir.
+      - DESCRICAO = o texto que o analista escreveu nos detalhes (o parecer).
+      - TIPO no chamado = "Pendencia", em `customfield_11936`, no lugar de
+        "Revogacao de acessos" — nao e' revogacao.
+
+    A chave aqui e' o USUARIO (login), nao a matricula: e' assim que a pendencia
+    e' identificada no painel e em `resolver_pendencia`.
+    """
+    rid = str(registro_id or "").strip()
+    if not rid:
+        raise JiraErro("Registro nao informado.")
+    motivo = str(motivo or "").strip()
+    if not motivo:
+        # Aqui o motivo NAO e' opcional: ele e' o titulo do chamado.
+        raise JiraErro("Selecione o motivo — ele e' o titulo do chamado.")
+    parecer = str(parecer or "").strip()
+    if not parecer:
+        # Na pendencia o parecer NAO e' opcional: ele e' a descricao do chamado.
+        raise JiraErro("Descreva o parecer — ele e' a descricao do chamado.")
+
+    ja = chamados_abertos().get(rid)
+    if ja:
+        raise JiraErro(
+            f"Ja existe o chamado {ja['ticket']} para este registro, aberto por "
+            f"{ja['por'] or '?'} em {ja['em'] or '?'}. Conclua a tratativa em vez "
+            f"de abrir outro.")
+
+    nome = ""
+    acessos = []
+    try:
+        c = conn_ro()
+        try:
+            # Fonte = `bi_divergencias`, a MESMA que monta a aba (ver a consulta
+            # da Consulta/Pendencias). Nao `divergencias`: la' so' existem
+            # ACESSO_DESLIGADO / _TRANSFERIDO / _SEM_VINCULO_RH, e a pendencia
+            # ficava "sem acesso encontrado". Nem `validacao_acessos`, que e'
+            # indexada por matricula e nao tem coluna `usuario`.
+            sql = ("SELECT sistema, usuario, nome_usuario, perfil_encontrado "
+                   "FROM bi_divergencias WHERE usuario=?")
+            arg = [rid]
+            if sistema:
+                sql += " AND sistema=?"
+                arg.append(sistema)
+            if perfil:
+                sql += " AND perfil_encontrado=?"
+                arg.append(perfil)
+            vistos = set()
+            for a in c.execute(sql, arg):
+                if not nome:
+                    nome = a["nome_usuario"] or ""
+                perf = (a["perfil_encontrado"] or "").strip()
+                # Linha SEM perfil nao diz nada no chamado — sao os casos de
+                # acesso esperado/ausente, que entram na mesma tabela. E o mesmo
+                # (sistema, perfil) aparece repetido quando ha mais de uma
+                # divergencia sobre ele.
+                if not perf:
+                    continue
+                chave = (a["sistema"] or "", perf)
+                if chave in vistos:
+                    continue
+                vistos.add(chave)
+                acessos.append({"sistema": a["sistema"] or "",
+                                "login": a["usuario"] or "",
+                                "perfil": perf})
+        finally:
+            c.close()
+    except Exception as e:
+        raise JiraErro(f"Nao foi possivel ler os dados da pendencia: {e}")
+
+    if not acessos:
+        raise JiraErro("Nenhum acesso encontrado para esta pendencia.")
+
+    sis = sistema or acessos[0]["sistema"]
+    titulo = f"{motivo} - {sis or '?'} - {nome or rid}"[:_JIRA_MAX_SUMMARY]
+    # Corpo PROPRIO da pendencia — nao reusa jira_descricao, que abre com
+    # "Revogar o usuario abaixo" e e' do desligado. Aqui a informacao que vale
+    # e' o PARECER do analista; a tabela vem em seguida, como referencia.
+    corpo = [parecer, "", "SISTEMA | NOME | LOGIN | PERFIL"]
+    for a in acessos:
+        corpo.append(f"{a['sistema'] or '—'} | {nome or rid} | "
+                     f"{a['login'] or '—'} | {a['perfil']}")
+    corpo += ["", f"Motivo: {motivo}"]
+    descricao = "\n".join(corpo)
+
+    ticket, url = jira_abrir_chamado(titulo, descricao,
+                                     JIRA["tipo_solicitacao_pendencia"])
+
+    try:
+        _interacao_gravar({
+            "schema_version": 1,
+            "tipo_interacao": "CHAMADO_ABERTO", "registro_id": rid,
+            "acao": "ABRIR_CHAMADO", "fluxo": "PENDENCIA",
+            "ticket": ticket, "ticket_url": url,
+            "nome": nome, "sistema": sis, "acessos": acessos,
+            "motivo": motivo, "usuario": USUARIO,
+            "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        })
+    except Exception as e:
+        raise JiraErro(
+            f"Chamado {ticket} foi ABERTO no Jira, mas nao foi possivel "
+            f"registrar no painel ({e}). Anote o numero e informe no campo "
+            f"'N do ticket' antes de resolver.")
+
+    print(f"  [CHAMADO] {ticket} aberto para pendencia {rid} por {USUARIO}")
+    return ticket, url
+
+
 def abrir_chamado_desligado(registro_id, parecer):
     """Abre o chamado de revogacao de um DESLIGADO e registra a abertura.
 
@@ -3608,9 +3737,11 @@ def abrir_chamado_desligado(registro_id, parecer):
     rid = str(registro_id or "").strip()
     if not rid:
         raise JiraErro("Registro nao informado.")
+    # Parecer OPCIONAL desde 17/08. O chamado tem corpo proprio — "Revogar o
+    # usuario abaixo" + a tabela de acessos + a data do desligamento — e no
+    # desligado o desfecho e' sempre revogar. Em branco, jira_descricao apenas
+    # omite a secao "Parecer do analista"; preenchido, ele entra no fim.
     parecer = str(parecer or "").strip()
-    if not parecer:
-        raise JiraErro("Descreva o parecer antes de abrir o chamado.")
 
     # Ja existe chamado para este registro? A checagem e' AQUI, no servidor, e
     # nao so' na tela: a tela de um analista nao sabe do clique do outro, e o
@@ -4209,7 +4340,13 @@ class H(BaseHTTPRequestHandler):
                     for par in self.path.split("?", 1)[1].split("&"):
                         if par.startswith("s="):
                             _sessao = par[2:]
-                self._send(200, '{"ok":true}', "application/json")
+                # `jira` vai aqui porque o ping roda em TODA aba, desde o boot.
+                # Antes esse estado so' chegava junto de /api/desligados, entao
+                # quem abrisse a Pendencia sem passar pelos Desligados via o
+                # botao permanentemente desabilitado.
+                self._send(200, json.dumps({"ok": True,
+                                            "jira": jira_habilitado()}),
+                           "application/json")
             elif self.path == "/api/encerrar":
                 self._send(200, '{"ok":true}', "application/json")
                 _enc("pedido da pagina (GET)")
@@ -4308,7 +4445,7 @@ class H(BaseHTTPRequestHandler):
                 ticket = str(payload.get("ticket") or "").strip()
                 motivo = str(payload.get("motivo") or "").strip()
                 erro = _validar_tratativa(rid, motivo, payload.get("descricao"),
-                                          exige_motivo=False)
+                                          exige_motivo=False, exige_parecer=False)
                 if erro:
                     self._send(400, erro, "application/json; charset=utf-8")
                     return
@@ -4324,18 +4461,25 @@ class H(BaseHTTPRequestHandler):
                 n = int(self.headers.get("Content-Length", 0))
                 payload = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
                 fluxo = str(payload.get("fluxo") or "desligado").strip().lower()
-                if fluxo != "desligado":
-                    # Escopo atual: so' revogacao de desligado. Pendencia e
-                    # transferido seguem em alinhamento com a area.
+                # DESLIGADO e PENDENCIA abrem chamado; cada um com seu texto e
+                # seu tipo. TRANSFERIDO nao abre — decisao da Bruna (17/08), e
+                # por isso o botao nem aparece naquela aba.
+                if fluxo not in ("desligado", "pendencia"):
                     self._send(400, json.dumps(
                         {"ok": False, "erro": "Abertura automatica disponivel "
-                                              "apenas para desligados."},
+                                              "para desligados e pendencias."},
                         ensure_ascii=False),
                         "application/json; charset=utf-8")
                     return
                 try:
-                    ticket, url = abrir_chamado_desligado(
-                        payload.get("id"), payload.get("descricao"))
+                    if fluxo == "pendencia":
+                        ticket, url = abrir_chamado_pendencia(
+                            payload.get("id"), payload.get("descricao"),
+                            payload.get("motivo"), payload.get("sistema") or "",
+                            payload.get("perfil") or "")
+                    else:
+                        ticket, url = abrir_chamado_desligado(
+                            payload.get("id"), payload.get("descricao"))
                 except JiraErro as e:
                     # 409: o chamado PODE ter sido criado (ver abrir_chamado_
                     # desligado). A mensagem carrega o numero quando existe, e a

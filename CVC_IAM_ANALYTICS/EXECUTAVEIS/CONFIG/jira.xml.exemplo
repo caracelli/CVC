@@ -39,6 +39,11 @@
     <campo_tipo>customfield_11936</campo_tipo>
     <tipo_solicitacao>Revogação de acessos</tipo_solicitacao>
 
+    <!-- O mesmo campo, no fluxo de PENDENCIA: ela nao e' revogacao, entao o
+         chamado sai com outro tipo (definido com a Bruna em 17/08). No
+         desligado vale o <tipo_solicitacao> acima. -->
+    <tipo_solicitacao_pendencia>Pendência</tipo_solicitacao_pendencia>
+
     <!-- Prefixo do titulo do chamado:
          "<prefixo> - <SISTEMA> - <NOME DO USUARIO>" -->
     <prefixo_titulo>Sanitização</prefixo_titulo>

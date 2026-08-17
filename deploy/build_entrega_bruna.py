@@ -57,6 +57,17 @@ VERSAO = "1.0.0"
 RAIZ_LOCAL = ""          # vazio = MODO LOCAL (nao toca a rede)
 VERSAO_ROTEIRO = "1.0.0"  # o roteiro de REGRAS acompanha a numeracao do pacote
 
+# BASE que vai DENTRO do pacote — a mesma que foi processada aqui e entregue a
+# ela em 07/08, recuperada do LFS (commit 346059a, de dentro do proprio zip
+# entregue). Com ela o pacote e' AUTONOMO: extrair e abrir, sem copiar por cima,
+# sem reprocessar, sem depender do que existe na maquina dela.
+#
+# OPCIONAL de proposito: se o arquivo nao estiver na maquina de build, o pacote
+# sai sem base (o modo anterior) em vez de o build quebrar. Ver ORIGEM.txt ao
+# lado do arquivo.
+BANCO_ENTREGUE = (RAIZ / "Arquivos_origem" / "BANCO_ENTREGUE_BRUNA"
+                  / "iam_analytics.db")
+
 LAUNCHER_DIR = EXECS / "launcher"
 PRINCIPAL_VISUALIZADOR = EXECS / "visualizador.exe"
 PRINCIPAL_PROCESSADOR = EXECS / "Processador.exe"
@@ -165,10 +176,12 @@ CABECALHO_JIRA = """<!--
   credencial, que NAO viaja em pacote nenhum — um token num zip e' um token
   vazado.
 
-  PARA LIGAR, sao tres linhas:
-      <ativo>true</ativo>
+  FALTAM SO' DUAS LINHAS — todo o resto ja esta configurado:
       <usuario>  e-mail da conta de servico
       <token>    API token dessa conta
+
+  Preencheu as duas, a abertura de chamado esta no ar. Enquanto estiverem
+  vazias o botao fica desabilitado sozinho, sem erro na tela.
 
   A conta deve ser uma CONTA DE SERVICO cadastrada como CLIENTE do portal —
   nunca a conta pessoal de um analista (essa tem perfil de AGENTE). Ela so
@@ -194,10 +207,11 @@ def gerar_jira_xml(destino: Path):
     apurados na API (portal 9, tipo 8819, customfield_11936). Redigitar esses
     valores aqui faria os dois divergirem no primeiro ajuste do Jira.
 
-    <ativo> sai FALSE de proposito: a integracao ainda depende do componente no
-    tipo 8819 e da conta de servico, ambos com a CVC. Com false o botao nasce
-    desabilitado, que e' o estado seguro — e sem usuario/token ele continuaria
-    desabilitado de qualquer forma.
+    <ativo> sai TRUE: o pacote e' a entrega final e tudo que da' para deixar
+    pronto fica pronto. Nao ha risco nisso — jira_habilitado() exige ativo E
+    usuario E token E os tres parametros do portal, entao com a credencial
+    vazia o botao nasce desabilitado do mesmo jeito (validado nos 7 cenarios).
+    Quem instalar preenche duas linhas e acabou.
     """
     texto = (EXECS / "CONFIG" / "jira.xml.exemplo").read_text(encoding="utf-8")
     # ORDEM IMPORTA: esvaziar os campos ANTES de inserir o cabecalho. O cabecalho
@@ -209,7 +223,7 @@ def gerar_jira_xml(destino: Path):
     for campo in CREDENCIAL:
         texto = re.sub(rf"<{campo}>[^<]*</{campo}>", f"<{campo}></{campo}>",
                        texto)
-    texto = re.sub(r"<ativo>[^<]*</ativo>", "<ativo>false</ativo>", texto,
+    texto = re.sub(r"<ativo>[^<]*</ativo>", "<ativo>true</ativo>", texto,
                    count=1)
     # lambda no replacement: o cabecalho tem barras invertidas, que o re
     # interpretaria como escape.
@@ -229,6 +243,12 @@ def montar(base: Path):
     for sub in DADOS_SUBDIRS:
         (raiz / "DADOS" / sub).mkdir(parents=True, exist_ok=True)
     (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
+    if BANCO_ENTREGUE.exists():
+        shutil.copy2(BANCO_ENTREGUE, raiz / "DADOS" / "BANCO" / "iam_analytics.db")
+        print(f"  base embutida: {BANCO_ENTREGUE.stat().st_size/1024/1024:.0f} MB")
+    else:
+        print(f"  AVISO: sem base ({BANCO_ENTREGUE} nao existe) — "
+              f"pacote sai so' com os executaveis.")
     # roteiro de validacao junto do pacote (a usuaria nao tem o repo)
     if ROTEIRO.exists():
         shutil.copy2(ROTEIRO, raiz / "ROTEIRO_VALIDACAO.md")
@@ -240,20 +260,28 @@ def montar(base: Path):
     (raiz / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
 
 
-def conferir_sem_base(raiz: Path):
-    """O pacote nao pode levar dado. Um banco ou uma base que escape substitui o
-    trabalho que ela ja' registrou — e o erro so' apareceria na maquina dela."""
+BANCO_NO_PACOTE = "DADOS/BANCO/iam_analytics.db"
+
+
+def conferir_conteudo(raiz: Path):
+    """O que pode e o que nao pode viajar.
+
+    O BANCO pode (e' o ponto do pacote autonomo). A ENTRADA nao: com os arquivos
+    de entrada dentro, um clique no Processador reprocessaria e mudaria a base
+    que ela esta validando — o oposto de entregar um estado congelado. Fora o
+    banco, nada mais em DADOS/: relatorio ou log de outra rodada so' confunde.
+    """
     achados = []
     for p in raiz.rglob("*"):
         if not p.is_file():
             continue
         rel = str(p.relative_to(raiz)).replace("\\", "/")
-        if p.suffix.lower() == ".db" or rel.startswith("DADOS/"):
-            achados.append(rel)
-        elif rel.startswith("ENTRADA/"):
-            achados.append(rel)
+        if rel.startswith("ENTRADA/"):
+            achados.append(f"{rel}  (ENTRADA tem de ir vazia)")
+        elif rel.startswith("DADOS/") and rel != BANCO_NO_PACOTE:
+            achados.append(f"{rel}  (so' o banco pode ir em DADOS/)")
     if achados:
-        print("FALHA — o pacote deveria ir SEM base, mas levou:")
+        print("FALHA — o pacote levou o que nao devia:")
         for a in achados:
             print(f"  - {a}")
         shutil.rmtree(STAGING, ignore_errors=True)
@@ -328,33 +356,38 @@ Este e o pacote de teste da Fase 1. Ele roda 100% LOCAL: NAO usa a rede e NAO
 interfere na versao que o cliente esta testando (config.xml com <raiz> vazia =
 modo local; os executaveis nao se auto-atualizam da rede).
 
-ESTE PACOTE NAO TEM BASE. Ele nao traz banco nem arquivos de entrada, de
-proposito: voce ja tem tudo isso na sua maquina, e o pacote e aplicado POR CIMA.
-Assim o que voce ja tratou, resolveu ou mandou para quarentena CONTINUA LA.
+O PACOTE JA VEM COM A BASE - a MESMA que voce recebeu em 07/08, com os mesmos
+numeros. Nao precisa instalar por cima de nada, nao precisa processar, nao
+precisa mexer na pasta que voce ja tem.
 
 ------------------------------------------------------------
-COMO INSTALAR - sao 4 passos
+COMO USAR - sao 2 passos
 ------------------------------------------------------------
-1. FECHE o painel e o Processador, se estiverem abertos.
+1. Extraia a pasta CVC_IAM_ANALYTICS para qualquer lugar do seu PC
+   (ex.: C:\\CVC_TESTE\\CVC_IAM_ANALYTICS).
 
-2. Extraia este zip e copie a pasta CVC_IAM_ANALYTICS POR CIMA da sua pasta
-   atual, mandando SUBSTITUIR os arquivos repetidos.
-   NAO apague nada. As pastas DADOS e INTERACOES vem vazias aqui - elas nao
-   apagam nem substituem o que voce ja tem.
+2. Rode
+       CVC_IAM_ANALYTICS\\EXECUTAVEIS\\visualizador.exe
+   Ele abre http://127.0.0.1:8800/ no navegador. Pronto, e so isso.
 
-3. RODE O Processador.exe UMA VEZ. Este passo e OBRIGATORIO.
-   As regras desta versao agem na hora da ANALISE, nao na importacao: sem
-   reprocessar, a tela continua mostrando os numeros antigos.
+NAO RODE O Processador.exe. A base ja vem pronta, e a pasta ENTRADA vem vazia
+justamente para nao haver risco de um clique reprocessar e mudar os numeros
+que voce esta conferindo.
 
-4. Abra o visualizador.exe. Ele abre http://127.0.0.1:8800/ no navegador.
+Esta pasta e INDEPENDENTE: nao toca na versao anterior que voce tem, nao usa a
+rede e nao interfere no ambiente do cliente. Se quiser, mantenha as duas e
+compare.
 
 ------------------------------------------------------------
-OS NUMEROS VAO MUDAR - e e esperado
+O QUE MUDOU EM RELACAO AO QUE VOCE JA VIU
 ------------------------------------------------------------
-A regra dos desligados recontratados muda a contagem por ordem de grandeza:
-762 pessoas passam a 24. Consulta, dedup de perfis e as colunas da grid tambem
-mudam. Se voce tiver roteiro, print ou planilha feitos sobre o pacote anterior,
-eles ficam desatualizados.
+Os dados sao os mesmos de 07/08. O que mudou foi a TELA - quatro dos seis
+pontos do seu retorno aparecem aqui: Consulta unificada por CPF, bloco "Sem
+mapeamento", perfis esperados sem repeticao e a coluna Centro de Custo.
+
+Os outros dois (desligado recontratado, que derruba a contagem de 762 para 24
+pessoas, e o motivo do status no "?") sao calculados no processamento, nao na
+tela - eles entram no proximo ciclo, quando as bases forem reprocessadas.
 
 ------------------------------------------------------------
 OS SEIS PONTOS DO SEU RETORNO - como ficaram
@@ -380,8 +413,8 @@ Mais dois pontos que valem saber:
   ja esta pronta, mas depende de dois ajustes do lado do Jira que a CVC vai
   fazer; ate la o registro da tratativa continua manual, como hoje.
   O arquivo EXECUTAVEIS\\CONFIG\\jira.xml ja vem no pacote com a estrutura
-  montada e SEM a credencial - quem for ligar preenche <ativo>, <usuario> e
-  <token>, e nada mais. O proprio arquivo explica cada passo.
+  montada e ja LIGADA - falta so a credencial. Quem for ativar preenche duas
+  linhas, <usuario> e <token>, e nada mais. O proprio arquivo explica.
 
 ------------------------------------------------------------
 POR ONDE COMECAR - o roteiro esta aqui nesta pasta
@@ -414,7 +447,7 @@ Sistemas ativos: SYSTUR, SIGOT, SICA_RA, SICA_ESFERA, IC, SIG, ORACLE_EBS
 
 
 def main():
-    print("=== Build TESTE LOCAL BRUNA (modo local, SEM base, v%s) ===" % VERSAO)
+    print("=== Build TESTE LOCAL BRUNA (modo local, autonomo, v%s) ===" % VERSAO)
     checar_prerequisitos()
     if STAGING.exists():
         shutil.rmtree(STAGING, ignore_errors=True)
@@ -423,22 +456,22 @@ def main():
 
     inicio = datetime.now()
     montar(STAGING)
-    conferir_sem_base(STAGING / "CVC_IAM_ANALYTICS")
+    conferir_conteudo(STAGING / "CVC_IAM_ANALYTICS")
     conferir_jira_sem_credencial(STAGING / "CVC_IAM_ANALYTICS")
 
     alvo = ENTREGA / f"TESTE_LOCAL_BRUNA_v{VERSAO}.zip"
     zipar(STAGING / "CVC_IAM_ANALYTICS", alvo)
     n = len(zipfile.ZipFile(alvo).namelist())
     print(f"\n  OK -> {alvo}  ({alvo.stat().st_size/1024/1024:.1f} MB, {n} itens)")
-    print(f"  versao={VERSAO}  raiz=<vazia/local>  SEM banco  SEM ENTRADA")
+    banco = "COM banco" if BANCO_ENTREGUE.exists() else "SEM banco"
+    print(f"  versao={VERSAO}  raiz=<vazia/local>  {banco}  ENTRADA vazia  "
+          f"Jira pronto (falta usuario/token)")
     print()
     print("  INSTRUCAO PARA A BRUNA:")
-    print("   1. Fechar o painel e o Processador, se estiverem abertos.")
-    print("   2. Extrair e copiar CVC_IAM_ANALYTICS/ POR CIMA da pasta atual,")
-    print("      substituindo os repetidos. NAO apagar DADOS/ nem INTERACOES/.")
-    print("   3. Rodar o Processador.exe UMA VEZ (obrigatorio — e' ele que")
-    print("      aplica as regras novas; sem isso os numeros ficam os antigos).")
-    print("   4. Abrir o visualizador.exe.")
+    print("   1. Extrair CVC_IAM_ANALYTICS/ para qualquer pasta do PC.")
+    print("   2. Abrir EXECUTAVEIS/visualizador.exe. So' isso.")
+    print("   Pacote AUTONOMO: base ja vem dentro, nao instala por cima de")
+    print("   nada, nao roda Processador, nao toca no que ela ja tem.")
 
     shutil.rmtree(STAGING, ignore_errors=True)
     print(f"\nConcluido em {(datetime.now()-inicio).total_seconds():.1f}s.")

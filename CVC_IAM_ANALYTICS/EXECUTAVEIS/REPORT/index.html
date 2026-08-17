@@ -887,7 +887,14 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .cs-pill.pend{background:#FBE5E5;color:#B33A3A;}
 .cs-pill.ok{background:#E5F3E5;color:#1E7B43;}
 .cs-pill.deslig{background:#FFF4DD;color:#A07000;}
-.kpi-meta{font-size:11px;margin-top:3px;font-weight:600;line-height:1.2;}
+.kpi-meta{font-size:11px;margin-top:3px;font-weight:600;line-height:1.2;
+  text-align:center;padding:0 8px;max-width:100%;}
+/* O card tem height:80px + overflow:hidden, dimensionado para DUAS linhas
+   (valor + rótulo). Este é o único com uma TERCEIRA (a meta), e ela era
+   cortada pela borda. Cresce só onde a meta existe — os demais cards ficam
+   como estão, e a linha continua alinhada porque o flex estica todos. */
+.kpi:has(.kpi-meta){height:auto;min-height:80px;padding:10px 4px;}
+.kpi:has(.kpi-meta) .kpi-meta:empty{display:none;}
 .kpi-meta.risco{color:#B33A3A;}
 .kpi-meta.ok{color:#2E7D32;}
 .cs-pill.incluir{background:#EBF5FB;color:#2980B9;}
@@ -4063,10 +4070,14 @@ function abrirResolver(uid, sistema, perfil){
     + '<div class="modal-err" id="res-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
-    + _btnJira({ativo: _JIRA_ATIVO, fluxo: false})
+    + _btnJira({ativo: _JIRA_ATIVO, fluxo: true,
+                onclick: 'abrirChamadoJiraPendencia()'})
     + '<button class="mf-ok" onclick="confirmarResolucao()">Resolver</button>'
     + '</div>');
   _preencherMotivos();
+  // Na pendência o MOTIVO é o título do chamado, então ele — e não o parecer —
+  // é o que habilita o botão.
+  _ligarBtnJiraPendencia();
   setTimeout(() => { const i = document.getElementById('res-motivo'); if(i) i.focus(); }, 60);
 }
 
@@ -4114,17 +4125,95 @@ function _btnJira(op){
   // Nasce DESABILITADO mesmo com tudo pronto: o parecer vai DENTRO do chamado,
   // então não existe chamado antes dele. _ligarBtnJira habilita ao digitar.
   return '<button class="mf-ok mf-jira" id="btn-jira" disabled '
-    + 'onclick="abrirChamadoJira()" '
+    + 'onclick="' + (op.onclick || 'abrirChamadoJira()') + '" '
     + 'title="Escreva o parecer para habilitar.">'
     + 'Abrir chamado no Jira</button>';
 }
 
+/* PENDÊNCIA: quem habilita o botão é o MOTIVO, não o parecer — ele é o título
+   do chamado (regra da Bruna, 17/08). O parecer segue como descrição. */
+function _ligarBtnJiraPendencia(){
+  const sel  = document.getElementById('res-motivo');
+  const desc = document.getElementById('res-desc');
+  const btn  = document.getElementById('btn-jira');
+  if(!sel || !desc || !btn) return;
+  // Na pendência os DOIS são obrigatórios: o motivo vira o título e o parecer
+  // vira a descrição do chamado. Diferente do desligado, onde o parecer é
+  // opcional porque o corpo do chamado já se monta sozinho.
+  const sync = () => {
+    const m = !!sel.value, p = !!desc.value.trim();
+    btn.disabled = !(m && p);
+    btn.title = (m && p) ? 'Abre o chamado: motivo no título, parecer na descrição.'
+              : !m ? 'Selecione o motivo para habilitar.'
+                   : 'Escreva o parecer para habilitar.';
+  };
+  sel.addEventListener('change', sync);
+  desc.addEventListener('input', sync);
+  sync();
+}
+
+/* Abre o chamado da PENDÊNCIA e devolve o número para os campos do formulário.
+   Mesmo desenho do desligado: grava a tratativa junto e fecha, para a linha não
+   ficar pendurada com ticket e ainda "a tratar". */
+async function abrirChamadoJiraPendencia(){
+  if(!_resAlvo) return;
+  const motivo = document.getElementById('res-motivo').value;
+  const desc   = document.getElementById('res-desc').value.trim();
+  const err    = document.getElementById('res-err');
+  const btn    = document.getElementById('btn-jira');
+  if(!motivo){ if(err) err.textContent = 'Selecione o motivo — ele é o título do chamado.'; return; }
+  if(!desc){ if(err) err.textContent = 'Descreva o parecer — ele é a descrição do chamado.'; return; }
+  if(err) err.textContent = '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Abrindo…'; }
+  try{
+    const r = await fetch('/api/abrir-chamado', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({fluxo:'pendencia', id:_resAlvo.u, descricao:desc,
+                            motivo:motivo, sistema:_resSistema || '',
+                            perfil:_resPerfil || ''})
+    });
+    const j = await r.json();
+    if(j && j.ok){
+      const t = document.getElementById('res-ticket');
+      const u = document.getElementById('res-url');
+      if(t){ t.value = j.ticket; t.readOnly = true; t.className = 'fld-ro'; }
+      if(u){ u.value = j.ticket_url || ''; u.readOnly = true; u.className = 'fld-ro'; }
+      if(u && j.ticket_url && !document.getElementById('res-url-link')){
+        const a = document.createElement('a');
+        a.id = 'res-url-link'; a.href = j.ticket_url;
+        a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = 'abrir ' + j.ticket + ' no Jira ↗';
+        a.style.cssText = 'display:inline-block;margin-top:6px;color:#2D6CDF;'
+                        + 'font-weight:600;text-decoration:underline;';
+        u.insertAdjacentElement('afterend', a);
+      }
+      if(btn){ btn.textContent = '✓ ' + j.ticket + ' aberto';
+               btn.className = 'mf-ok mf-jira-done'; btn.disabled = true; }
+      setTimeout(() => { confirmarResolucao(); }, 1200);
+    } else {
+      if(err) err.textContent = (j && j.erro) || 'Falha ao abrir o chamado.';
+      if(btn){ btn.disabled = false; btn.textContent = 'Abrir chamado no Jira'; }
+    }
+  }catch(e){
+    if(err) err.textContent = 'Sem conexão com o visualizador. O chamado pode ou não ter sido aberto — confira no Jira antes de tentar de novo.';
+    if(btn){ btn.disabled = false; btn.textContent = 'Abrir chamado no Jira'; }
+  }
+}
+
 /* Liga o botão ao conteúdo do parecer. Sem isso ele ficaria clicável com o
    campo vazio e o servidor recusaria — erro que a tela podia ter evitado. */
-function _ligarBtnJira(p){
+function _ligarBtnJira(p, parecerOpcional){
   const desc = document.getElementById(p + '-desc');
   const btn  = document.getElementById('btn-jira');
   if(!desc || !btn) return;
+  // Com o parecer OPCIONAL (desligados) o botão já nasce habilitado: o chamado
+  // tem corpo próprio — "Revogar o usuário abaixo" + a tabela de acessos —, e o
+  // parecer é só uma seção a mais quando existe.
+  if(parecerOpcional){
+    btn.disabled = false;
+    btn.title = 'Abre o chamado no Jira. Sem parecer, vai só o texto padrão.';
+    return;
+  }
   const sync = () => {
     const tem = !!desc.value.trim();
     btn.disabled = !tem;
@@ -4145,7 +4234,7 @@ function _ligarBtnJira(p){
    nova criou. */
 /* Validação da tratativa — a mesma nos três formulários e igual à do servidor
    (_validar_tratativa no visualizador). Devolve false e aponta o campo. */
-function _validarTratativa(p, motivo, parecer){
+function _validarTratativa(p, motivo, parecer, parecerOpcional){
   const err = document.getElementById(p + '-err');
   // o motivo só é exigido onde o campo existe (pendência) — ver _campoTratativa
   const temCampoMotivo = !!document.getElementById(p + '-motivo');
@@ -4154,7 +4243,7 @@ function _validarTratativa(p, motivo, parecer){
     document.getElementById(p + '-motivo').focus();
     return false;
   }
-  if(!String(parecer||'').trim()){
+  if(!parecerOpcional && !String(parecer||'').trim()){
     if(err) err.textContent = 'Descreva o parecer da tratativa (o que foi verificado e decidido).';
     const el = document.getElementById(p + '-desc'); if(el) el.focus();
     return false;
@@ -4162,7 +4251,7 @@ function _validarTratativa(p, motivo, parecer){
   return true;
 }
 
-function _campoTratativa(p, comMotivo, chamado){
+function _campoTratativa(p, comMotivo, chamado, parecerOpcional){
   // O MOTIVO só existe na PENDÊNCIA (decisão de 06/08). A lista fechada
   // responde "por que este acesso divergente da matriz vai ficar assim?" —
   // pergunta que não cabe nos outros dois fluxos: no desligado o desfecho é
@@ -4176,9 +4265,14 @@ function _campoTratativa(p, comMotivo, chamado){
           + '<select id="' + p + '-motivo">'
           + '<option value="" disabled selected>Carregando motivos…</option></select>'
         : '')
-    + '<label>Parecer <span class="req">*</span></label>'
-    + '<textarea id="' + p + '-desc" maxlength="600" '
-    + 'placeholder="O que foi verificado e o que foi decidido"></textarea>'
+    + '<label>Parecer'
+    + (parecerOpcional ? ' <small>(opcional)</small>' : ' <span class="req">*</span>')
+    + '</label>'
+    + '<textarea id="' + p + '-desc" maxlength="600" placeholder="'
+    + (parecerOpcional
+        ? 'Em branco, o chamado vai só com o texto padrão de revogação'
+        : 'O que foi verificado e o que foi decidido')
+    + '"></textarea>'
     + _campoChamado(p, chamado);
 }
 
@@ -4200,7 +4294,13 @@ function _campoChamado(p, chamado){
     + '<label>Link do ticket</label>'
     + '<input id="' + p + '-url" value="' + esc(ur) + '"'
     + (tk ? ro : ' placeholder="https://..."') + ' autocomplete="off">'
-    + (tk ? '<div class="trat-lock">🔒 preenchido pelo Jira · somente leitura</div>'
+    + (tk ? '<div class="trat-lock">🔒 preenchido pelo Jira · somente leitura'
+            // O link ficava só dentro do input readonly, onde nao da' para
+            // clicar — o analista tinha de copiar e colar na barra do navegador.
+            + (ur ? ' · <a href="' + esc(ur) + '" target="_blank" rel="noopener" '
+                    + 'style="color:var(--navy);font-weight:600;">abrir '
+                    + esc(tk) + ' no Jira ↗</a>' : '')
+          + '</div>'
           : '');
 }
 
@@ -4946,14 +5046,14 @@ function abrirTratarDesligado(m){
     + '<p>' + esc(d.n||d.m) + ' — ' + esc(d.m) + ' · ' + n
     + ' acesso(s) ativo(s) a revogar</p></div>'
     + '<div class="modal-bd">'
-    + _campoTratativa('tr', false, d.chamado)
+    + _campoTratativa('tr', false, d.chamado, true)
     + '<div class="modal-err" id="tr-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
     + _btnJira({ativo: _JIRA_ATIVO, fluxo: true, chamado: d.chamado})
     + '<button class="mf-ok" onclick="confirmarTratamentoDesligado()">Resolver</button>'
     + '</div>');
-  _ligarBtnJira('tr');
+  _ligarBtnJira('tr', true);
   // mesma fonte e mesma blindagem da resolução de pendência
   setTimeout(() => { const i = document.getElementById('tr-desc'); if(i) i.focus(); }, 60);
 }
@@ -4966,7 +5066,9 @@ async function abrirChamadoJira(){
   const desc = document.getElementById('tr-desc').value.trim();
   const err  = document.getElementById('tr-err');
   const btn  = document.getElementById('btn-jira');
-  if(!desc){ if(err) err.textContent = 'Escreva o parecer antes de abrir o chamado.'; return; }
+  // Parecer OPCIONAL: em branco, o chamado vai só com o corpo padrão
+  // ("Revogar o usuário abaixo" + tabela + data); preenchido, ele entra como
+  // uma seção a mais. Quem monta é o jira_descricao, no servidor.
   if(err) err.textContent = '';
   if(btn){ btn.disabled = true; btn.textContent = 'Abrindo…'; }
   try{
@@ -4980,9 +5082,34 @@ async function abrirChamadoJira(){
       const u = document.getElementById('tr-url');
       if(t){ t.value = j.ticket; t.readOnly = true; t.className = 'fld-ro'; }
       if(u){ u.value = j.ticket_url || ''; u.readOnly = true; u.className = 'fld-ro'; }
+      // O link recem-criado ficava so' dentro do input readonly, onde nao da'
+      // para clicar — o analista tinha de copiar e colar na barra do navegador.
+      // A lupa ja' mostrava como <a>; aqui, no retorno da abertura, faltava.
+      if(u && j.ticket_url && !document.getElementById('tr-url-link')){
+        const a = document.createElement('a');
+        a.id = 'tr-url-link';
+        a.href = j.ticket_url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = 'abrir ' + j.ticket + ' no Jira ↗';
+        a.style.cssText = 'display:inline-block;margin-top:6px;color:#2D6CDF;'
+                        + 'font-weight:600;text-decoration:underline;';
+        u.insertAdjacentElement('afterend', a);
+      }
       if(btn){ btn.textContent = '✓ ' + j.ticket + ' aberto';
                btn.className = 'mf-ok mf-jira-done'; btn.disabled = true; }
       _deslTratAlvo.chamado = {ticket:j.ticket, ticket_url:j.ticket_url};
+      // GRAVA A TRATATIVA JUNTO e fecha. Antes o POST só registrava
+      // CHAMADO_ABERTO e a linha ficava pendurada — com ticket, mas ainda "a
+      // tratar", exigindo um segundo clique em Resolver. Como no desligado o
+      // desfecho é sempre revogar e o parecer é opcional, abrir o chamado JÁ é
+      // a tratativa; não há decisão a mais para o analista tomar.
+      //
+      // Reusa confirmarTratamentoDesligado: ele fecha o modal, grava, atualiza
+      // a grid e os KPIs e — o que faltou na primeira versão desta função —
+      // desliga o "processando" no finally. Os campos do ticket já estão
+      // preenchidos acima, que é de onde ele lê.
+      setTimeout(() => { confirmarTratamentoDesligado(); }, 1200);
     } else {
       // A mensagem pode conter o número de um chamado que NASCEU mas não foi
       // registrado — exibir inteira, senão o analista perde o dado.
@@ -5001,7 +5128,8 @@ async function confirmarTratamentoDesligado(){
   const url    = document.getElementById('tr-url').value.trim();
   const desc   = document.getElementById('tr-desc').value.trim();
   const motivo = '';   // desligado nao tem motivo (ver _campoTratativa)
-  if(!_validarTratativa('tr', motivo, desc)) return;
+  // parecer OPCIONAL no desligado (17/08) — mesma regra do servidor
+  if(!_validarTratativa('tr', motivo, desc, true)) return;
   const mid = _deslTratAlvo.m;
   fecharModal();
   proc(true);
@@ -5253,7 +5381,8 @@ function abrirTratarTransferido(m){
     + '<div class="modal-err" id="tt-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
-    + _btnJira({ativo: _JIRA_ATIVO, fluxo: false})
+    // TRANSFERIDO não abre chamado (decisão da Bruna, 17/08). Botão OCULTO, e
+    // não desabilitado: desabilitado sugere "ainda vai poder", e aqui não vai.
     + '<button class="mf-ok" onclick="confirmarTratamentoTransferido()">Resolver</button>'
     + '</div>');
   setTimeout(() => { const i = document.getElementById('tt-desc'); if(i) i.focus(); }, 60);
@@ -6838,7 +6967,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // SESSAO identifica esta carga da aba: um F5/Ctrl+F5 gera uma SESSAO nova,
   // cujo /api/ping cancela o encerramento agendado pela página anterior.
   const SESSAO = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  const ping = () => fetch('/api/ping?s=' + SESSAO).catch(()=>{});
+  // O ping carrega o estado do Jira: é a única chamada que roda em toda aba,
+  // desde o boot. Antes ele só chegava via /api/desligados, e quem abrisse a
+  // Pendência direto via o botão desabilitado para sempre.
+  const ping = () => fetch('/api/ping?s=' + SESSAO)
+    .then(r => r.json()).then(j => { if(j && 'jira' in j) _JIRA_ATIVO = !!j.jira; })
+    .catch(()=>{});
   ping();
   setInterval(ping, 4000);
   document.addEventListener('visibilitychange', () => {

@@ -128,9 +128,20 @@ class TestGravadorConcordaComOValidador(unittest.TestCase):
                 f"{fn.__name__} recusou tratativa sem ticket")
 
     def test_nao_gravam_sem_parecer(self):
-        for fn in self._funcoes():
+        """Pendencia e transferido continuam exigindo o parecer — e' o que PROVA
+        a tratativa. O DESLIGADO saiu desta regra em 17\08: la' o desfecho e'
+        sempre revogar e o chamado tem corpo proprio, entao exigir texto era
+        campo obrigatorio de resposta unica. Ver `_validar_tratativa`."""
+        for fn in (self.vm.resolver_pendencia, self.vm.tratar_transferido):
             self.assertEqual(fn("123", "IAM-1", "", "", "Exceção"), 0,
                              f"{fn.__name__} gravou sem parecer")
+
+    def test_desligado_grava_SEM_parecer(self):
+        """Contrapartida da regra de 17\08 — sem isto, o botao "Abrir chamado"
+        habilitado com o campo vazio levaria a uma gravacao recusada."""
+        self.assertEqual(
+            self.vm.tratar_desligado("123", "IAM-1", "", "", "Exceção"), 1,
+            "tratar_desligado recusou tratativa sem parecer")
 
     def test_pendencia_exige_motivo(self):
         """So a PENDENCIA tem a lista fechada — e' dela que sai o grafico."""
