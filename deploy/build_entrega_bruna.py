@@ -34,6 +34,7 @@ Uso:
     cd deploy
     python build_entrega_bruna.py
 """
+import re
 import shutil
 import sys
 import xml.etree.ElementTree as ET
@@ -132,10 +133,11 @@ def montar_executaveis(execs_destino: Path):
     grava_config(execs_destino / "CONFIG" / "config.xml", VERSAO, RAIZ_LOCAL)
     if MOTIVOS_SRC.exists():
         shutil.copy2(MOTIVOS_SRC, execs_destino / "CONFIG" / "motivos_resolucao.xml")
-    # jira.xml.exemplo viaja (e' modelo, nao credencial); jira.xml NUNCA.
+    # jira.xml.exemplo (modelo) + jira.xml COM a estrutura e SEM a credencial.
     exemplo = EXECS / "CONFIG" / "jira.xml.exemplo"
     if exemplo.exists():
         shutil.copy2(exemplo, execs_destino / "CONFIG" / "jira.xml.exemplo")
+        gerar_jira_xml(execs_destino / "CONFIG" / "jira.xml")
     # launcher_atualizador.exe FICA DE FORA deste pacote, por dois motivos que
     # se somam:
     #
@@ -149,6 +151,72 @@ def montar_executaveis(execs_destino: Path):
     # atualizador: la' ele tem funcao, porque ha' rede e auto-update.
     shutil.copy2(LAUNCHER_VISUALIZADOR, launcher_d / "launcher_visualizador.exe")
     shutil.copy2(LAUNCHER_PROCESSADOR, launcher_d / "launcher_processador.exe")
+
+
+# Os DOIS campos que nunca viajam preenchidos. O resto da estrutura vai
+# completo, para quem for ativar so' precisar colar a credencial.
+CREDENCIAL = ("usuario", "token")
+
+CABECALHO_JIRA = """<!--
+  ABERTURA DE CHAMADO NO JIRA — preencha os DOIS campos abaixo.
+
+  Esta estrutura ja vem pronta: url, portal, tipo de formulario e campos foram
+  apurados na API do Jira e so mudam se a CVC reconfigurar o portal. Falta a
+  credencial, que NAO viaja em pacote nenhum — um token num zip e' um token
+  vazado.
+
+  PARA LIGAR, sao tres linhas:
+      <ativo>true</ativo>
+      <usuario>  e-mail da conta de servico
+      <token>    API token dessa conta
+
+  A conta deve ser uma CONTA DE SERVICO cadastrada como CLIENTE do portal —
+  nunca a conta pessoal de um analista (essa tem perfil de AGENTE). Ela so
+  precisa abrir chamado; nao transiciona, nao fecha, nao le dado de outro
+  projeto.
+
+  ONDE ESTE ARQUIVO FICA: numa instalacao de rede, o painel le o jira.xml
+  DIRETO DA REDE (<raiz>\\EXECUTAVEIS\\CONFIG\\jira.xml), nao da copia local.
+  Trocar o token la vale para todos os analistas na proxima abertura do painel,
+  sem republicar versao. Em modo local, vale este arquivo aqui.
+
+  Ele e' colocado UMA VEZ e fica: nenhuma atualizacao de versao o sobrescreve.
+
+  CONFERENCIA: abra o visualizador e olhe a linha "Jira" no inicio do log —
+  ela diz de onde leu e o que falta.
+-->"""
+
+
+def gerar_jira_xml(destino: Path):
+    """Escreve um CONFIG/jira.xml COM a estrutura e SEM a credencial.
+
+    A estrutura sai do proprio .exemplo, que e' a fonte unica dos parametros
+    apurados na API (portal 9, tipo 8819, customfield_11936). Redigitar esses
+    valores aqui faria os dois divergirem no primeiro ajuste do Jira.
+
+    <ativo> sai FALSE de proposito: a integracao ainda depende do componente no
+    tipo 8819 e da conta de servico, ambos com a CVC. Com false o botao nasce
+    desabilitado, que e' o estado seguro — e sem usuario/token ele continuaria
+    desabilitado de qualquer forma.
+    """
+    texto = (EXECS / "CONFIG" / "jira.xml.exemplo").read_text(encoding="utf-8")
+    # ORDEM IMPORTA: esvaziar os campos ANTES de inserir o cabecalho. O cabecalho
+    # cita <usuario>/<token>/<ativo> como exemplo, e uma substituicao depois dele
+    # casaria dentro do proprio comentario.
+    # [^<]* em vez de .*? : ancora no conteudo da tag e nao atravessa markup —
+    # com DOTALL, o casamento ia do exemplo no comentario ate a tag la embaixo,
+    # engolindo o fecha-comentario e o <jira> no meio.
+    for campo in CREDENCIAL:
+        texto = re.sub(rf"<{campo}>[^<]*</{campo}>", f"<{campo}></{campo}>",
+                       texto)
+    texto = re.sub(r"<ativo>[^<]*</ativo>", "<ativo>false</ativo>", texto,
+                   count=1)
+    # lambda no replacement: o cabecalho tem barras invertidas, que o re
+    # interpretaria como escape.
+    texto = re.sub(r"<!--.*?-->", lambda _: CABECALHO_JIRA, texto,
+                   count=1, flags=re.S)
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(texto, encoding="utf-8")
 
 
 def montar(base: Path):
@@ -184,14 +252,57 @@ def conferir_sem_base(raiz: Path):
             achados.append(rel)
         elif rel.startswith("ENTRADA/"):
             achados.append(rel)
-        elif p.name == "jira.xml":
-            achados.append(rel)
     if achados:
         print("FALHA — o pacote deveria ir SEM base, mas levou:")
         for a in achados:
             print(f"  - {a}")
         shutil.rmtree(STAGING, ignore_errors=True)
         sys.exit(1)
+
+
+# Sem estes, o painel nao consegue abrir chamado nenhum — sao o motivo de o
+# arquivo viajar montado em vez de em branco.
+CAMPOS_ESTRUTURA = ("url", "service_desk_id", "request_type_id", "campo_tipo",
+                    "tipo_solicitacao", "prefixo_titulo", "timeout_s")
+
+
+def conferir_jira_sem_credencial(raiz: Path):
+    """O jira.xml agora VIAJA — com a estrutura, sem a credencial.
+
+    Confere as tres coisas que podem dar errado, e nesta ordem: o arquivo tem de
+    ser XML VALIDO (a geracao mexe no texto com regex — um padrao que atravesse
+    markup produz um arquivo que so' falharia na maquina do destinatario), a
+    estrutura tem de estar completa (senao viaja um arquivo inutil) e a
+    credencial tem de estar VAZIA (o build roda em maquina que pode ter um
+    jira.xml preenchido; token em zip nao se recolhe depois de enviado).
+    """
+    for p in raiz.rglob("jira.xml"):
+        rel = str(p.relative_to(raiz)).replace("\\", "/")
+        try:
+            r = ET.parse(p).getroot()
+        except ET.ParseError as e:
+            print(f"FALHA — {rel} nao e' XML valido: {e}")
+            shutil.rmtree(STAGING, ignore_errors=True)
+            sys.exit(1)
+        vazios = [c for c in CAMPOS_ESTRUTURA if not (r.findtext(c) or "").strip()]
+        if vazios:
+            print(f"FALHA — {rel} saiu sem a estrutura: {', '.join(vazios)}")
+            shutil.rmtree(STAGING, ignore_errors=True)
+            sys.exit(1)
+        if r.find("ativo") is None:
+            print(f"FALHA — {rel} saiu sem a tag <ativo>.")
+            shutil.rmtree(STAGING, ignore_errors=True)
+            sys.exit(1)
+        for campo in CREDENCIAL:
+            if r.find(campo) is None:
+                print(f"FALHA — {rel} saiu sem a tag <{campo}>.")
+                shutil.rmtree(STAGING, ignore_errors=True)
+                sys.exit(1)
+            if (r.findtext(campo) or "").strip():
+                print(f"FALHA — {rel} saiu com <{campo}> PREENCHIDO. "
+                      "Credencial nao entra em pacote.")
+                shutil.rmtree(STAGING, ignore_errors=True)
+                sys.exit(1)
 
 
 def zipar(base: Path, alvo_zip: Path):
@@ -267,6 +378,9 @@ Mais dois pontos que valem saber:
 - O botao "Abrir chamado no Jira" aparece DESABILITADO. A abertura automatica
   ja esta pronta, mas depende de dois ajustes do lado do Jira que a CVC vai
   fazer; ate la o registro da tratativa continua manual, como hoje.
+  O arquivo EXECUTAVEIS\\CONFIG\\jira.xml ja vem no pacote com a estrutura
+  montada e SEM a credencial - quem for ligar preenche <ativo>, <usuario> e
+  <token>, e nada mais. O proprio arquivo explica cada passo.
 
 ------------------------------------------------------------
 POR ONDE COMECAR - o roteiro esta aqui nesta pasta
@@ -309,6 +423,7 @@ def main():
     inicio = datetime.now()
     montar(STAGING)
     conferir_sem_base(STAGING / "CVC_IAM_ANALYTICS")
+    conferir_jira_sem_credencial(STAGING / "CVC_IAM_ANALYTICS")
 
     alvo = ENTREGA / f"TESTE_LOCAL_BRUNA_v{VERSAO}.zip"
     zipar(STAGING / "CVC_IAM_ANALYTICS", alvo)
