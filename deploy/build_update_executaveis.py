@@ -56,7 +56,13 @@ def main():
     # espalharia para toda maquina que aplicasse o update. O .exemplo, esse sim,
     # vai junto — e' so' modelo.
     shutil.copytree(EXECS, destino_execs,
-                    ignore=shutil.ignore_patterns("jira.xml"))
+                    # jira.xml = credencial. Os demais sao artefatos de DEV
+                    # da maquina de build: logs com o caminho local e uma copia
+                    # antiga do fonte do painel. A v1.3.4 ENTREGUE levava os
+                    # tres (achado em 26/08/2026).
+                    ignore=shutil.ignore_patterns(
+                        "jira.xml", "__pycache__", "*.log",
+                        "visualizador_log.txt", "launcher_dev"))
     # remove caches do build, se vieram juntos
     for lixo in destino_execs.rglob("__pycache__"):
         shutil.rmtree(lixo, ignore_errors=True)

@@ -26,10 +26,14 @@ O QUE O UPDATE **NAO** TOCA: DADOS/ e INTERACOES/. As tratativas que ela ja
 registrou sobrevivem, e o banco migra sozinho no proximo processamento (as
 migracoes em conexao.py sao aditivas).
 
+O QUE ELE ACRESCENTA EM ENTRADA/: um unico arquivo, o de-para de codigos do SIG
+(tabela de REFERENCIA, ver DE_PARA_SIG_ORIGEM). Nenhum dado dela e' substituido.
+
 DEPOIS DE APLICAR, ELA PRECISA RODAR O Processador.exe UMA VEZ. Sem isso os
-numeros da tela continuam os antigos: os 6 ajustes agem na fase de ANALISE, nao
-na importacao. E' o reprocessamento que faz os 762 desligados recontratados
-virarem 24.
+numeros da tela continuam os antigos: os ajustes agem na fase de ANALISE, nao
+na importacao. E' o reprocessamento que grava motivo_status (a conta BLOQUEADA
+que aparecia como "sem acesso" mudo), traduz os codigos do SIG pelo de-para e,
+na rodada anterior, fez os 762 desligados recontratados virarem 24.
 
 Uso:  cd deploy && python build_update_bruna.py
 """
@@ -50,13 +54,42 @@ STAGING = RAIZ / "_update_bruna_staging"
 #                      recontratado (762 -> 24), motivo_status
 #   Visualizador 0->1: os 6 ajustes do 2o retorno, abertura de chamado no Jira,
 #                      as 4 leituras de tratativa que nao falham mais em silencio
-VERSAO = "1.1.1"
+# 1.1.1 -> 1.2.2 (26/08): a rodada do 3o retorno tocou os dois lados de novo.
+#   Processador  1->2: de-para do SIG persiste no catalogo (perfil volta a ter
+#                      NOME), motivo_status=CONTA_BLOQUEADA
+#   Visualizador 1->2: categoria sem inventar vinculo, alerta de sistema sem
+#                      extrato, snapshot que enxerga o reprocesso, pino da
+#                      Consulta, coluna Origem, Excel de Transferidos/Desligados
+# Em modo local a versao e' ROTULO (nao ha rede para o auto-update comparar) —
+# serve para ela e nos sabermos o que esta instalado.
+VERSAO = "1.2.2"
 RAIZ_LOCAL = ""          # vazio = MODO LOCAL (nao toca rede nenhuma)
 
 # jira.xml carrega o token e nunca entra num pacote. launcher_atualizador.exe
 # nao tem funcao em modo local (ver docstring).
+#
+# Os artefatos de DEV nao podem viajar (achado em 26/08/2026 — o
+# UPDATE_EXECUTAVEIS_v1.3.4 entregue levava os tres):
+#   *.log / visualizador_log.txt -> logs da maquina de BUILD. O visualizador.log
+#     daqui tinha 35 linhas com o caminho absoluto da nossa maquina; expor a
+#     arvore de diretorios de quem constroi e' desleixo, e o log nao serve pra
+#     nada na maquina do cliente.
+#   launcher_dev/ -> copia ANTIGA do fonte do painel (main.py de 10/07). Mandar
+#     codigo-fonte desatualizado junto do exe so' cria confusao.
 IGNORAR = shutil.ignore_patterns("jira.xml", "launcher_atualizador.exe",
-                                 "__pycache__")
+                                 "__pycache__", "*.log", "visualizador_log.txt",
+                                 "launcher_dev")
+
+# UNICO arquivo de dado que viaja com o update, e por necessidade:
+# o de-para de codigos do SIG (ID -> nome do perfil) e' tabela de REFERENCIA,
+# nao extrato diario. A ENTRADA dela nunca o trouxe, e por isso a tela mostra
+# `100` / `55001` no lugar de ATD_HOTEIS_NACIONAIS / ACESSO_SISTEMA_BACKOFFICE —
+# foi a regressao reportada no 3o retorno (25/08). A correcao do motor faz o
+# catalogo PERSISTIR, mas nao ha o que persistir se o arquivo nunca chegar.
+# Vai para ENTRADA/ (nao toca DADOS/ nem INTERACOES/) e e' lido no proximo
+# processamento.
+DE_PARA_SIG_ORIGEM = RAIZ / "Arquivos_origem" / "ID_x_Perfis_SIG 19.08.xlsx"
+DE_PARA_SIG_DESTINO = "ENTRADA/MATRIZES/PERFIS_SISTEMAS/SIG/DE_PARA"
 
 
 def grava_config(config_path: Path, versao: str, raiz_valor: str):
@@ -114,6 +147,14 @@ def main():
                 arc = "EXECUTAVEIS/" + str(
                     p.relative_to(destino_execs)).replace("\\", "/")
                 zf.write(p, arc)
+        if not DE_PARA_SIG_ORIGEM.exists():
+            print(f"FALHA: de-para do SIG nao encontrado -> {DE_PARA_SIG_ORIGEM}")
+            print("       sem ele os perfis do SIG continuam aparecendo pelo codigo.")
+            shutil.rmtree(STAGING, ignore_errors=True)
+            alvo.unlink(missing_ok=True)
+            return 1
+        zf.write(DE_PARA_SIG_ORIGEM,
+                 f"{DE_PARA_SIG_DESTINO}/{DE_PARA_SIG_ORIGEM.name}")
 
     n = len(zipfile.ZipFile(alvo).namelist())
     shutil.rmtree(STAGING, ignore_errors=True)
@@ -124,6 +165,10 @@ def main():
     print("   1. Fechar o painel e o Processador, se estiverem abertos.")
     print("   2. Extrair o zip e copiar EXECUTAVEIS/ POR CIMA da pasta atual.")
     print("      NAO apagar nem mexer em DADOS/ e INTERACOES/.")
+    print("   2b. Copiar tambem a pasta ENTRADA/ do zip por cima da atual —")
+    print("       ela leva SO o de-para do SIG (ID_x_Perfis_SIG), que e' o que")
+    print("       faz os perfis do SIG voltarem a aparecer pelo NOME.")
+    print("       Nenhum outro dado dela e' tocado.")
     print("   3. Rodar o Processador.exe UMA VEZ (obrigatorio — e' ele que")
     print("      aplica as regras novas; sem isso os numeros ficam os antigos).")
     print("   4. Abrir o visualizador.exe.")
