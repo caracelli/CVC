@@ -54,15 +54,19 @@ STAGING = RAIZ / "_update_bruna_staging"
 #                      recontratado (762 -> 24), motivo_status
 #   Visualizador 0->1: os 6 ajustes do 2o retorno, abertura de chamado no Jira,
 #                      as 4 leituras de tratativa que nao falham mais em silencio
-# 1.1.1 -> 1.2.2 (26/08): a rodada do 3o retorno tocou os dois lados de novo.
-#   Processador  1->2: de-para do SIG persiste no catalogo (perfil volta a ter
-#                      NOME), motivo_status=CONTA_BLOQUEADA
-#   Visualizador 1->2: categoria sem inventar vinculo, alerta de sistema sem
-#                      extrato, snapshot que enxerga o reprocesso, pino da
-#                      Consulta, coluna Origem, Excel de Transferidos/Desligados
-# Em modo local a versao e' ROTULO (nao ha rede para o auto-update comparar) —
-# serve para ela e nos sabermos o que esta instalado.
-VERSAO = "1.2.2"
+# 1.0.0 — MANTIDA (decisao de 26/08/2026). A rodada do 3o retorno tocou os dois
+# lados (Processador: catalogo do SIG persistente, motivo_status=CONTA_BLOQUEADA;
+# Visualizador: categoria, alerta de sem extrato, snapshot do reprocesso, pino da
+# Consulta, Origem, Excel de Transferidos/Desligados) — pelo esquema
+# MAJOR.PROCESSADOR.VISUALIZADOR isso pediria 1.2.2.
+#
+# Por que NAO bumpar mesmo assim: ainda e' fase de TESTE e o pacote e' aplicado
+# POR CIMA da instalacao dela. Manter 1.0.0 = a versao inicial da Fase 1 (a
+# mesma numeracao do build_entrega_bruna.py) evita que ela veja um numero novo a
+# cada rodada de ajuste enquanto valida. Em modo local a versao e' ROTULO: a
+# <raiz> e' vazia, nao ha rede, e nenhum exe compara numero com nada — trocar ou
+# manter nao muda comportamento.
+VERSAO = "1.0.0"
 RAIZ_LOCAL = ""          # vazio = MODO LOCAL (nao toca rede nenhuma)
 
 # jira.xml carrega o token e nunca entra num pacote. launcher_atualizador.exe
