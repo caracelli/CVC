@@ -110,8 +110,11 @@ class TestVisualizadorDataLayer(unittest.TestCase):
         self.assertEqual(len(users["M1"]["divs"]), 2)
         # M2 e' TERCEIRO no rh_ativos -> vinculo "Terceiro"
         self.assertEqual(users["M2"]["divs"][0]["vinc"], "Terceiro")
-        # tercX nao esta no rh_ativos -> default "Funcionário"
-        self.assertEqual(users["tercX"]["divs"][0]["vinc"], "Funcionário")
+        # tercX nao esta no rh_ativos. Ate 25/08/2026 o default era
+        # "Funcionário" — o painel afirmava um vinculo que ninguem apurou, e a
+        # area apontou o efeito: login de franquia aparecendo como CLT. Agora a
+        # coluna diz o que se sabe: nada.
+        self.assertEqual(users["tercX"]["divs"][0]["vinc"], "Não identificado")
 
     # ---- Card 14: consolidacao multi-sistema + vinculo top-level (coluna das grids) ----
     def test_consolidacao_multisistema_e_vinculo_top(self):
@@ -124,7 +127,8 @@ class TestVisualizadorDataLayer(unittest.TestCase):
         # vinculo top-level por pessoa (fonte da coluna Vínculo nas grids)
         self.assertEqual(users["M1"]["vinc"], "Funcionário")
         self.assertEqual(users["M2"]["vinc"], "Terceiro")
-        self.assertEqual(users["tercX"]["vinc"], "Funcionário")
+        # idem no vinculo top-level (a coluna Categoria das grids)
+        self.assertEqual(users["tercX"]["vinc"], "Não identificado")
 
     def test_origem_label_por_div(self):
         b = self._base("")

@@ -111,24 +111,62 @@ TIPO_LABEL = {
 # tipo_vinculo (rh_ativos) -> rótulo da coluna "Categoria" no painel.
 # FUNCIONARIO = CLT; TERCEIRO = prestador de fornecedor (base de terceiros do
 # RH); FRANQUEADO/PRESTADOR = identidades do diretório (AD), que existem para
-# dar dono aos acessos órfãos. Default FUNCIONARIO cobre banco antigo (coluna
-# ausente) — por isso o mapa tem fallback em vez de KeyError.
+# dar dono aos acessos órfãos.
+#
+# O default NAO e' mais "Funcionário" (retorno da área, 25/08/2026): quem nao
+# casa com nenhuma identidade — nem RH, nem terceiro, nem AD — vinha rotulado
+# como CLT e a tela afirmava algo que ninguem apurou. Um login de franquia
+# (AFLV0069), sem matricula e sem CPF, aparecia como "Funcionário". Agora a
+# coluna diz o que de fato se sabe: nada.
 VINCULO_LABEL = {
     "FUNCIONARIO": "Funcionário", "TERCEIRO": "Terceiro",
     "FRANQUEADO": "Franqueado", "PRESTADOR": "Prestador",
 }
-VINCULO_PADRAO = "Funcionário"
+# Quando a matricula EXISTE no RH mas a coluna tipo_vinculo nao (banco de um
+# Processador anterior), "Funcionário" segue sendo a leitura certa — e quem
+# resolve isso e' o COALESCE(tipo_vinculo,'FUNCIONARIO') do proprio SQL, antes
+# de chegar aqui. Este default cobre so' o que nao casou com identidade nenhuma.
+VINCULO_NAO_IDENT = "Não identificado"
 
 
 def rotulo_vinculo(tv) -> str:
-    """Rótulo de categoria a partir do tipo_vinculo cru. Valor desconhecido cai
-    no padrão (nunca quebra a grid por causa de um vínculo novo no RH)."""
-    return VINCULO_LABEL.get((tv or "").strip().upper(), VINCULO_PADRAO)
+    """Rótulo de categoria a partir do tipo_vinculo cru.
+
+    Vazio (sem vinculo apurado) ou valor que o painel nao conhece viram
+    "Não identificado" — nunca quebra a grid, e nunca inventa um vinculo."""
+    return VINCULO_LABEL.get((tv or "").strip().upper(), VINCULO_NAO_IDENT)
 
 
-# origem_matriz -> rótulo da coluna "Origem"
-# MATRIZ = matrizes de perfis dos sistemas; CCO = matriz CCO; vazio = nenhuma
-ORIGEM_LABEL = {"MATRIZ": "Sistema", "CCO": "Base CCO"}
+# origem_matriz -> rótulo da coluna "Origem": de onde veio o perfil ESPERADO.
+# MATRIZ = matrizes de perfis dos sistemas; CCO = matriz CCO.
+#
+# As populacoes SEM matriz de cargo (franqueado, prestador, terceiro) e o SIG
+# nao sao validados por matriz: o esperado vem do ESPELHO — o que a maioria
+# (>=70%) dos pares tem. Ate 25/08/2026 esses casos apareciam com Origem "—",
+# e a area perguntou, com razao, "qual regra afirma que o franqueado esta no
+# perfil correto?". A tela nao dizia. Agora diz.
+# As chaves sao os valores que o motor grava em `origem_matriz`
+# (validar_acessos_sistema): `ESPELHO_<vinculo>`, com UMA excecao — terceiro sai
+# como ESPELHO_TERC, nao ESPELHO_TERCEIRO. Os dois ficam no mapa: o real e o que
+# a nomenclatura sugere, para o rotulo nao sumir se o motor for padronizado.
+ORIGEM_ESPELHO = {
+    "ESPELHO_FRANQUEADO": "Espelho — franqueados",
+    "ESPELHO_PRESTADOR":  "Espelho — prestadores",
+    "ESPELHO_TERC":       "Espelho — terceiros",
+    "ESPELHO_TERCEIRO":   "Espelho — terceiros",
+    "ESPELHO":            "Espelho — mesma área",
+}
+
+
+def rotulo_origem(org, sistema="") -> str:
+    """Rótulo da coluna Origem: de onde veio o perfil ESPERADO daquela linha."""
+    org = (org or "").strip().upper()
+    if org == "MATRIZ":
+        return "Matriz " + (sistema or "")
+    if org == "CCO":
+        return "Matriz CCO"
+    return ORIGEM_ESPELHO.get(org, "—")
+
 
 SRV = None
 _last_seen = time.time()
@@ -198,7 +236,8 @@ def _watchdog():
 
 def carregar_config():
     """Le o config unificado (EXECUTAVEIS\\CONFIG\\config.xml).
-    Devolve (rede_raiz, banco_sub, sistema, quarentena_dias, origem)."""
+    Devolve (rede_raiz, banco_sub, sistema, quarentena_dias,
+    meta_acessos_desligado, origem)."""
     rede_raiz = ""
     banco_sub = os.path.join("DADOS", "BANCO", "iam_analytics.db")
     sistema = "SYSTUR"
@@ -983,6 +1022,11 @@ SELECT
       'O perfil confere com o esperado, mas a conta esta com status pendente/'
       || 'indefinido no extrato do sistema — nao da para afirmar que o acesso '
       || 'esta ativo. Confirmar a situacao da conta no proprio sistema.'
+    WHEN 'CONTA_BLOQUEADA' THEN
+      'A pessoa JA TEM conta neste sistema (o login aparece ao lado), mas ela '
+      || 'esta BLOQUEADA/INATIVA no extrato — conta revogada nao conta como '
+      || 'acesso, por isso o resultado e "sem acesso". A acao aqui e '
+      || 'DESBLOQUEAR a conta existente, nao criar uma nova.'
     ELSE '' END                  AS motivo,
   COALESCE(v.dt_processamento,'') AS data_identificacao,
   0                              AS resolvida,
@@ -992,7 +1036,10 @@ SELECT
                 WHEN 'OK' THEN 'Aderente' ELSE '' END AS acao,
   COALESCE(v.origem_matriz,'') AS origem,
   -- login REAL do sistema (CD_LOGIN), trazido do acesso por (matricula, sistema).
-  -- Vazio em SEM_ACESSO (a pessoa ainda nao tem login — a acao e' criar).
+  -- Em SEM_ACESSO costuma vir vazio (a pessoa nao tem login — a acao e' criar),
+  -- MAS vem preenchido quando existe conta BLOQUEADA/INATIVA: a conta esta la,
+  -- so nao vale como acesso. Nesse caso motivo_status='CONTA_BLOQUEADA' explica
+  -- o login na tela, senao a grid mostra um login e jura que nao ha acesso.
   COALESCE((SELECT a.usuario FROM acessos_sistemas a
             WHERE a.matricula_vinculada = v.matricula AND a.sistema = v.sistema
             LIMIT 1), '') AS login
@@ -1066,8 +1113,42 @@ def conn_ro():
     return c
 
 
+def _snapshot_desatualizado(c) -> bool:
+    """O Processador rodou DEPOIS do snapshot que esta no banco?
+
+    `bi_divergencias` e' materializada de `validacao_acessos` + `divergencias`.
+    Ate 25/08/2026 ela so' era refeita se faltasse (ou com o argumento
+    `refresh`, que ninguem passa: o analista abre o .exe). Resultado: reprocessar
+    NAO mudava a tela — o painel seguia servindo o cenario anterior, e todo
+    ajuste de motor parecia nao ter efeito.
+
+    A comparacao e' por data: `data_identificacao` do snapshot e' copia do
+    `dt_processamento` da validacao. Se a origem tem carimbo mais novo que o
+    snapshot, o snapshot venceu. Qualquer erro aqui devolve False — nunca
+    recriar por engano e' mais seguro do que recriar num banco que nao entendemos."""
+    try:
+        alvo = c.execute(
+            "SELECT MAX(x) FROM ("
+            "  SELECT MAX(COALESCE(dt_processamento,'')) x FROM validacao_acessos"
+            "  UNION ALL"
+            "  SELECT MAX(COALESCE(data_identificacao,'')) FROM divergencias"
+            "  WHERE tipo = 'ACESSO_SEM_VINCULO_RH')").fetchone()[0] or ""
+        atual = c.execute(
+            "SELECT MAX(COALESCE(data_identificacao,'')) FROM bi_divergencias"
+        ).fetchone()[0] or ""
+    except Exception as e:
+        print(f"  [bi] nao deu para comparar o snapshot com a origem ({e!r})")
+        return False
+    if alvo and alvo > atual:
+        print(f"  bi_divergencias desatualizada (origem {alvo[:19]} > "
+              f"snapshot {atual[:19] or 'vazio'}) — refazendo")
+        return True
+    return False
+
+
 def garantir_estrutura(force=False):
-    """bi_divergencias = snapshot fixo (so cria se faltar, ou force).
+    """bi_divergencias = snapshot; refeito se faltar, se o schema mudou, se o
+    Processador rodou depois dele, ou com force.
     quarentena = sempre garante. Indices sempre garantidos.
 
     Recriar a bi_divergencias INVALIDA o cache `_BASE` — senao o painel (e os
@@ -1091,6 +1172,8 @@ def garantir_estrutura(force=False):
             cols = [r[1] for r in c.execute("PRAGMA table_info(bi_divergencias)")]
             if "origem" not in cols or "login" not in cols or "motivo" not in cols:
                 force = True  # migração de schema: coluna 'origem'/'login'/'motivo'
+            elif _snapshot_desatualizado(c):
+                force = True  # o Processador rodou depois deste snapshot
         if force or not existe:
             c.execute("DROP TABLE IF EXISTS bi_divergencias")
             c.executescript(_SQL_BI)
@@ -2218,7 +2301,10 @@ def construir_db():
     vg["chamados"] = ch
     return {"kpis": _BASE["kpis"], "acao_dist": _BASE["acao_dist"],
             "sis_dist": _BASE["sis_dist"], "meta": _BASE["meta"],
-            "users": users, "vg": vg, "aderentes": _BASE.get("aderentes", [])}
+            "users": users, "vg": vg, "aderentes": _BASE.get("aderentes", []),
+            # sistema ligado no config e sem um acesso sequer: a tela avisa em
+            # vez de deixar todo mundo como "sem mapeamento" naquele sistema
+            "sem_extrato": sistemas_sem_extrato()}
 
 
 def _montar_base():
@@ -2281,7 +2367,13 @@ def _montar_base():
                        COALESCE(r.cpf,'')   cpf,
                        COALESCE(r.email,'') email,
                        COALESCE(r.gestor,'') gestor,
-                       COALESCE(r.tipo_vinculo,'FUNCIONARIO') tipo_vinc
+                       -- LEFT JOIN que NAO casa (acesso sem dono no RH) tem de
+                       -- devolver vazio, nao 'FUNCIONARIO': o COALESCE sozinho
+                       -- nao distingue "linha existe, coluna nula" de "nao ha
+                       -- linha", e era isso que fazia um login de franquia sem
+                       -- matricula aparecer como CLT na coluna Categoria.
+                       CASE WHEN r.matricula IS NULL THEN ''
+                            ELSE COALESCE(r.tipo_vinculo,'FUNCIONARIO') END tipo_vinc
                 FROM bi_divergencias b
                 LEFT JOIN rh_ativos r ON r.matricula = b.matricula
                 {wsql}
@@ -2317,11 +2409,12 @@ def _montar_base():
                 # categoria lida do rh_ativos (tipo_vinculo): Funcionário (CLT),
                 # Terceiro (fornecedor) ou Franqueado/Prestador (diretório AD).
                 "vinc": rotulo_vinculo(r["tipo_vinc"]),
-                "o": ("Matriz " + (r["sistema"] or "")) if r["origem"] == "MATRIZ"
-                     else ("Matriz CCO" if r["origem"] == "CCO" else "—"),
+                "o": rotulo_origem(r["origem"], r["sistema"] or ""),
             })
         # Login do usuario = logins distintos dos seus acessos (96% tem 1).
-        # Vazio quando so ha SEM_ACESSO (ainda nao tem login no sistema).
+        # Vazio quando so ha SEM_ACESSO SEM conta nenhuma (ainda nao tem login).
+        # Com conta BLOQUEADA/INATIVA o login VEM — a conta existe, so nao vale
+        # como acesso; quem explica isso na linha e' motivo_status.
         # Deduplica IGNORANDO caixa: o mesmo login em sistemas diferentes pode
         # vir em caixas distintas (INTADM527 no SYSTUR, intadm527 no SIGOT) — e'
         # o mesmo login, mostra uma vez so. Logins realmente distintos (ex.:
@@ -2337,6 +2430,21 @@ def _montar_base():
             "SELECT MAX(data_identificacao) FROM bi_divergencias "
             "WHERE data_identificacao <> ''").fetchone()[0] or ""
         meta = {"referencia": _mes_ref(maxdt), "atualizacao": _fmt_dt(maxdt)}
+        # Data do ARQUIVO de RH ativos — nao e' a data do processamento. A area
+        # pediu (25/08/2026) para saber de quando e' a base de ativos ao olhar
+        # um movimento: sem isso nao da' para dizer se uma transferencia ja
+        # esta refletida no RH ou ainda vai aparecer na proxima carga.
+        try:
+            _rh = c.execute(
+                "SELECT arquivo, dt_arquivo FROM log_importacoes "
+                "WHERE tipo='RH_ATIVOS' AND status='SUCESSO' "
+                "ORDER BY dt_importacao DESC LIMIT 1").fetchone()
+            if _rh:
+                meta["rh_ativos_arquivo"] = _rh["arquivo"] or ""
+                meta["rh_ativos_em"] = _fmt_dt(_rh["dt_arquivo"] or "")
+        except Exception as e:
+            # banco antigo (sem dt_arquivo) nao pode derrubar a tela
+            print(f"  [meta] data da base de ativos indisponivel: {e!r}")
 
         # ── Visão Geral (campos adicionais para a aba pg-vg) ──────────────
         # Filtra por SISTEMA do config (mesmo escopo da grid de Inclusão).
@@ -2366,7 +2474,10 @@ def _montar_base():
                 "SELECT cv.matricula,cv.nome,cv.login,cv.cargo,cv.sistema,cv.perfil,"
                 "       cv.dt_aderente,cv.dt_pendencia,cv.dt_resolvido,cv.ticket,"
                 "       COALESCE(rh.gestor,'') gestor,"
-                "       COALESCE(rh.tipo_vinculo,'FUNCIONARIO') tipo_vinc "
+                # mesmo cuidado do SQL da Consulta: sem linha no RH, a
+                # categoria fica vazia e vira "Não identificado" na tela
+                "       CASE WHEN rh.matricula IS NULL THEN '' "
+                "            ELSE COALESCE(rh.tipo_vinculo,'FUNCIONARIO') END tipo_vinc "
                 "FROM ciclo_vida_acesso cv "
                 "LEFT JOIN rh_ativos rh ON rh.matricula = cv.matricula "
                 + cond_a.replace("dt_aderente", "cv.dt_aderente").replace("sistema =", "cv.sistema =")
@@ -3328,9 +3439,9 @@ def listar_quarentena():
         finally:
             cv.close()
     for r in lista:
-        r["vinc"] = _vinc.get(r["usuario"], VINCULO_PADRAO)
+        r["vinc"] = _vinc.get(r["usuario"], VINCULO_NAO_IDENT)
     for r in historico:
-        r["vinc"] = _vinc.get(r["usuario"], VINCULO_PADRAO)
+        r["vinc"] = _vinc.get(r["usuario"], VINCULO_NAO_IDENT)
     return {"ativas": lista, "historico": historico}
 
 
@@ -3399,6 +3510,52 @@ def listar_bases():
         if tipo not in _BASES_LABEL:
             grupos["Extratos dos Sistemas"].append(_item(tipo, tipo, r))
     return [{"grupo": g, "itens": grupos[g]} for g in _BASES_GRUPOS if grupos[g]]
+
+
+def sistemas_sem_extrato():
+    """Sistemas ATIVOS no config que nao tem UM acesso sequer na base.
+
+    Existe por causa da pergunta da area (25/08/2026): "caso algum sistema nao
+    carregue por completo, a aplicacao da algum alerta? como validar?". Nao
+    dava — e o efeito era pior do que uma tela vazia: sem extrato, TODO mundo
+    aparece como "sem mapeamento" naquele sistema, que e' indistinguivel de
+    "a matriz nao preve acesso". Foi o que aconteceu com o SIGOT.
+
+    Compara o <nome> de cada <sistema> com <ativo> != false contra os sistemas
+    presentes em acessos_sistemas. Banco novo (sem a tabela) devolve [] — ali o
+    vazio e' o estado, nao uma falha."""
+    try:
+        import xml.etree.ElementTree as _ET
+        root = _ET.parse(CONFIG_PATH).getroot()
+    except Exception as e:
+        print(f"  [alerta] nao deu para ler os sistemas do config ({e!r})")
+        return []
+    ativos = []
+    for sis in root.findall("sistemas/sistema"):
+        if (sis.findtext("ativo", "true") or "true").strip().lower() in (
+                "false", "0", "no", "nao", "n"):
+            continue
+        nome = (sis.findtext("nome", "") or sis.get("id") or "").strip()
+        if nome:
+            ativos.append(nome)
+    if not ativos:
+        return []
+    c = conn_ro()
+    try:
+        tem = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                        "AND name='acessos_sistemas'").fetchone()
+        if not tem:
+            return []                      # ainda nao processou: previsto
+        com_dado = {r[0] for r in c.execute(
+            "SELECT DISTINCT sistema FROM acessos_sistemas")}
+    except Exception as e:
+        # aqui o dado pode existir e a consulta e' que falhou — avisa, nao
+        # inventa um alerta que assustaria sem motivo
+        print(f"  [alerta] falha lendo os sistemas com acesso ({e!r})")
+        return []
+    finally:
+        c.close()
+    return [s for s in ativos if s not in com_dado]
 
 
 def retirar_quarentena(registro_id, motivo=""):
@@ -3510,8 +3667,7 @@ def resolver_pendencia(registro_id, ticket, ticket_url="", descricao="", motivo=
                 tp = r["tipo"] or ""
                 sis = r["sistema"] or ""
                 org = r["origem"] or ""
-                origem = ("Matriz " + sis if org == "MATRIZ"
-                          else "Matriz CCO" if org == "CCO" else "—")
+                origem = rotulo_origem(org, sis)
                 if tp == "EM_ANALISE":
                     ea = analise.get(sis)
                     if ea is None:
@@ -3979,7 +4135,7 @@ def listar_historico_rh():
         finally:
             cvh.close()
         for e in out:
-            e["vinc"] = _vm.get(e.get("matricula"), VINCULO_PADRAO)
+            e["vinc"] = _vm.get(e.get("matricula"), VINCULO_NAO_IDENT)
             e["gestor"] = _gm.get(e.get("matricula"), "")
             if not e.get("centro_custo"):
                 e["centro_custo"] = _ccm.get(e.get("matricula"), "")

@@ -87,6 +87,10 @@ ENTRADA_SUBDIRS = [
     "SISTEMAS/SIGOT", "SISTEMAS/SICA_RA", "SISTEMAS/SICA_ESFERA",
     "SISTEMAS/SYSTUR", "SISTEMAS/IC",
     "MATRIZES/ORGANIZACIONAL", "MATRIZES/PERFIS_SISTEMAS",
+    # de-para de codigos do SIG (ID -> nome do perfil). Sem esta pasta o
+    # cliente nao tem onde depositar o arquivo, e os perfis do SIG aparecem
+    # pelo codigo cru na tela — foi o retorno da area em 25/08/2026.
+    "MATRIZES/PERFIS_SISTEMAS/SIG/DE_PARA",
 ]
 DADOS_SUBDIRS = [
     "BANCO", "PROCESSADOS", "ERROS", "LOGS",

@@ -21,7 +21,7 @@ vm.CONFIG_PATH = str(RAIZ_APP / "EXECUTAVEIS" / "CONFIG" / "config.xml")
 vm.BASE = vm.BASE_APP
 vm.DB_PATH = vm.BANCO_LOCAL
 vm.LOG_PATH = str(RAIZ_APP / "DADOS" / "LOGS" / "visualizador_dev.log")
-vm.REDE_RAIZ, vm.BANCO_SUB, vm.SISTEMA, vm.QUAR_DIAS, vm.CONFIG_SRC = vm.carregar_config()
+vm.REDE_RAIZ, vm.BANCO_SUB, vm.SISTEMA, vm.QUAR_DIAS, vm.META_ACESSOS_DESLIG, vm.CONFIG_SRC = vm.carregar_config()
 
 os.environ["VISUALIZADOR_NOBROWSER"] = "1"
 sys.argv = ["visualizador"]

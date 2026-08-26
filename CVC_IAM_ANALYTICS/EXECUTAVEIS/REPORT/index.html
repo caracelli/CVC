@@ -898,6 +898,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .kpi-meta.risco{color:#B33A3A;}
 .kpi-meta.ok{color:#2E7D32;}
 .cs-pill.incluir{background:#EBF5FB;color:#2980B9;}
+.cs-pill.res{background:#FFF7E0;color:#8A6A00;}
 
 /* Popup flutuante da Consulta (não bloqueia a grid) */
 .cs-drawer-bg{display:none;} /* legado — overlay removido */
@@ -1083,6 +1084,11 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
     </svg>
     Arquivos importados
   </a>
+  <!-- Sistema ligado no config e sem UM acesso na base. Fica colado no link
+       dos arquivos porque e' la' que se confere qual extrato faltou. -->
+  <a id="alerta-sem-extrato" class="bases-link" role="button" tabindex="0"
+     style="display:none;margin-left:14px;color:#B33A3A;font-weight:700;"
+     onclick="abrirBases()"></a>
 </div>
 
 <nav class="nav">
@@ -1512,6 +1518,18 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
       <button class="seg"        data-view="sem_acesso" onclick="transfView(this)">Sem acesso</button>
       <button class="seg"        data-view="todos"   onclick="transfView(this)">Todos</button>
       <span class="quar-count" id="transf-count"></span>
+      <!-- de quando e' a base de ativos: sem isso nao da' para saber se o
+           movimento ja esta refletido no RH ou vem na proxima carga -->
+      <span class="quar-count" id="transf-base-rh" style="color:#6B7280;"></span>
+      <!-- filtrar por tipo de mudança sem precisar exportar (retorno da área, 25/08) -->
+      <select id="transf-campo" class="conf-busca" style="max-width:190px;" onchange="transfBuscar()"
+              title="Filtra pelo campo que mudou no movimento">
+        <option value="">Toda mudança</option>
+        <option value="cargo">Cargo</option>
+        <option value="departamento">Departamento</option>
+        <option value="centro de custo">Centro de Custo</option>
+        <option value="gestor">Gestor</option>
+      </select>
       <input id="transf-busca" class="conf-busca" placeholder="Buscar matrícula, nome, cargo, gestor, mudança…"
              oninput="transfBuscar()">
       <button class="btn-exp" style="margin-left:auto;" onclick="exportarTransferidos()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button>
@@ -2052,6 +2070,12 @@ const DESC_FILTRO = {
   'Terceiro':    'Prestador de fornecedor, da base de terceiros do RH.',
   'Franqueado':  'Identidade do diretório (AD), OU de franqueados — sem vínculo de RH.',
   'Prestador':   'Identidade do diretório (AD), OU de prestadores — sem vínculo de RH.',
+  'Não identificado': 'O acesso não casou com nenhuma identidade — nem RH, nem terceiro, nem diretório (AD). A categoria fica em branco de propósito: ninguém apurou quem é.',
+  // Origem — de onde veio o perfil ESPERADO da linha
+  'Espelho — franqueados': 'Franqueado não tem matriz de cargo: o esperado vem do ESPELHO — o que a maioria (≥70%) dos franqueados da mesma Empresa + Supervisor tem.',
+  'Espelho — prestadores': 'Prestador não tem matriz de cargo: o esperado vem do ESPELHO — o que a maioria (≥70%) dos prestadores da mesma Empresa + Supervisor tem.',
+  'Espelho — terceiros':   'Terceiro não tem matriz de cargo: o esperado vem do ESPELHO — o que a maioria (≥70%) dos terceiros da mesma Empresa + Supervisor tem.',
+  'Espelho — mesma área':  'Sistema sem matriz formal (SIG): o esperado vem do ESPELHO — o que a maioria (≥70%) dos colegas de mesmo Centro de Custo + gestor + cargo tem.',
 };
 
 function valoresFiltro(campo){
@@ -2210,9 +2234,12 @@ const TIPO_CSS = {
    ao encontrado — pelo painel era impossível saber que o motivo era o status da
    CONTA no extrato (pendente/indefinido), não o perfil. O motivo vem do motor
    (validacao_acessos.motivo_status), não é inferido aqui. */
+function motIcone(mot){
+  return mot ? `<span class="mot-info" title="${esc(mot)}">?</span>` : '';
+}
 function tipoBadge(t, tl, mot){
   const b = `<span class="badge ${TIPO_CSS[t]||''}">${tl||t}</span>`;
-  return mot ? b + `<span class="mot-info" title="${esc(mot)}">?</span>` : b;
+  return b + motIcone(mot);
 }
 function stBadge(s)      { const cls = s==='Pendente'?'b-pendente':(s==='Aderente'?'b-ok':'b-resolvida'); return `<span class="badge ${cls}">${s}</span>`; }
 /* Resumo das AÇÕES da pessoa no cabeçalho (recolhido): "Incluir (2) · Em Análise
@@ -3893,10 +3920,30 @@ async function refreshDB(){
     DB.sis_dist = d.sis_dist; DB.users = d.users;
     if (d.meta) DB.meta = d.meta;
     if (d.vg) DB.vg = d.vg;
+    DB.sem_extrato = d.sem_extrato || [];
     atualizarHeaderMeta();
+    pintarAlertaSemExtrato();
   }catch(e){ /* mantém dados atuais se falhar */ }
   agendarAutoRefresh();   // toda interacao reseta a contagem de 10s
 }
+/* Aviso de sistema sem extrato — a resposta a "como eu sei que um sistema não
+   carregou?". Sem extrato o sistema não some da tela: ele aparece como "sem
+   mapeamento" em TODO mundo, indistinguível de "a matriz não prevê acesso".
+   Foi o caso do SIGOT em agosto/2026. */
+function pintarAlertaSemExtrato(){
+  const el = document.getElementById('alerta-sem-extrato');
+  if(!el) return;
+  const s = DB.sem_extrato || [];
+  if(!s.length){ el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.textContent = '⚠ ' + (s.length === 1
+      ? '1 sistema sem extrato: ' + s[0]
+      : s.length + ' sistemas sem extrato: ' + s.join(', '));
+  el.title = 'Estes sistemas estão ligados no config mas não têm um acesso sequer '
+           + 'na base — o extrato não foi importado. Todo usuário vai aparecer como '
+           + '"sem mapeamento" neles. Clique para ver os arquivos importados.';
+}
+
 /* ── Overlay "Processando" (mínimo de exibição evita piscar) ──────────── */
 function proc(on){
   const ov = document.getElementById('overlay');
@@ -4878,7 +4925,9 @@ function deslToggle(el){
   pintarDesligados();
 }
 
+let _deslFalhou = false;   // a ultima carga de /api/desligados deu erro?
 async function renderDesligados(){
+  _deslFalhou = false;
   try{
     const r = await fetch('/api/desligados');
     const d = await r.json();
@@ -4887,7 +4936,15 @@ async function renderDesligados(){
     const k = d.kpis || {};
     const el = document.getElementById('desl-count');
     if(el) el.textContent = `${k.tratar||0} a tratar · ${k.tratados||0} tratado(s) · ${k.ok||0} OK · ${k.total||0} desligados`;
-  }catch(e){ _deslRecs = []; }
+  }catch(e){
+    // Distingue BASE VAZIA de FALHA de carga. Sem isso a aba dizia "sem
+    // desligados na base" quando o que houve foi erro no fetch — e a Consulta,
+    // que le o MESMO endpoint numa chamada separada, podia ter acendido o selo
+    // "D" da pessoa. O analista via o selo, clicava, e a aba jurava que nao ha
+    // desligado nenhum (apontamento de 25/08/2026).
+    _deslRecs = []; _deslFalhou = true;
+    console.error('[desligados] falha ao carregar:', e);
+  }
   pintarDesligados();
 }
 
@@ -4914,10 +4971,14 @@ function pintarDesligados(){
 
   let h = '';
   if(!pag.length){
+    const vazio = _deslFalhou
+      ? '<b style="color:#B33A3A;">Não foi possível carregar os desligados.</b> '
+        + 'A lista não está vazia — a leitura falhou. Recarregue a página; '
+        + 'se persistir, o log do visualizador tem o motivo.'
+      : (_deslRecs.length ? 'Nenhum desligado nesta visão.'
+                          : 'Sem desligados na base — a importação de desligados pode estar fora de escopo no config.');
     h = `<tr><td colspan="8" style="text-align:center;padding:22px;color:#6B7280;">`
-      + (_deslRecs.length ? 'Nenhum desligado nesta visão.'
-                          : 'Sem desligados na base — a importação de desligados pode estar fora de escopo no config.')
-      + `</td></tr>`;
+      + vazio + `</td></tr>`;
   }
   pag.forEach(d => {
     const acessos = d.acessos || [];
@@ -4999,6 +5060,11 @@ function pintarDesligados(){
    nível 2 (+/− do Excel = o "+N perfis" da tela), e a Situação com a mesma
    semântica de cor. */
 function exportarDesligados(){
+  /* Mesmo tratamento dado ao Excel de Transferidos em 25/08/2026: toda linha
+     se identifica sozinha. As linhas de acesso saíam com Matrícula, Nome,
+     Cargo, Departamento e CC vazios — e no primeiro filtro do Excel (por
+     sistema, por perfil) sobrava uma lista de acessos sem dono. O agrupamento
+     (+/−) continua, para quem quiser ler em árvore. */
   const cols = ['Matrícula','Nome','Cargo','Departamento','Centro de Custo',
                 'Desligamento','Sistema','Login','Perfil','Identificado em',
                 'Situação','Ticket','Motivo'];
@@ -5007,20 +5073,21 @@ function exportarDesligados(){
     const t = d.tratamento || {};
     // situação reflete o tratamento (mesmo padrão da grid): Tratado > Tratar/OK
     const situacao = d.tratado ? 'Tratado' : d.sit;
-    linhas.push([d.m, d.n, d.cargo, d.depto, d.cc, fmtDate(d.dt_deslig),
-                 '', '', '', '', situacao, t.ticket || '', t.motivo || '']);
+    const ident = () => [d.m, d.n, d.cargo, d.depto, d.cc, fmtDate(d.dt_deslig)];
+    linhas.push([...ident(), '', '', '', '', situacao, t.ticket || '', t.motivo || '']);
     niveis.push(0);
     _acessosPorSistema(d.acessos).forEach(g => {
       const res = g.lista.filter(x => x.resolvida).length;
       const selo = !res ? ''
         : (res < g.lista.length ? `Resolvido (${res}/${g.lista.length})` : 'Resolvido');
-      linhas.push(['', '', '', '', '', '', g.sis, g.login,
+      linhas.push([...ident(), g.sis, g.login,
                    g.perfis.length > 1 ? g.perfis.length + ' perfis' : (g.perfis[0] || ''),
-                   fmtDate(g.dt), selo, '', '']);
+                   fmtDate(g.dt), selo, t.ticket || '', t.motivo || '']);
       niveis.push(1);
       if(g.lista.length > 1) g.lista.forEach(a => {
-        linhas.push(['', '', '', '', '', '', '', a.login, a.perfil,
-                     fmtDate(a.dt), a.resolvida ? 'Resolvido' : '', '', '']);
+        linhas.push([...ident(), g.sis, a.login, a.perfil,
+                     fmtDate(a.dt), a.resolvida ? 'Resolvido' : '',
+                     t.ticket || '', t.motivo || '']);
         niveis.push(2);
       });
     });
@@ -5188,6 +5255,14 @@ async function renderTransferidos(){
     const d = await r.json();
     _transfRecs = d.lista || [];
     const k = d.kpis || {};
+    const elBase = document.getElementById('transf-base-rh');
+    if (elBase) {
+      const M = DB.meta || {};
+      elBase.textContent = M.rh_ativos_em
+        ? '· base de ativos: ' + M.rh_ativos_em
+          + (M.rh_ativos_arquivo ? ' (' + M.rh_ativos_arquivo + ')' : '')
+        : '';
+    }
     const el = document.getElementById('transf-count');
     if(el) el.textContent = `${k.revisar||0} a revisar · ${k.tratados||0} tratado(s) · ${k.total||0} transferidos`
           + (k.sem_acesso ? ` · ${k.sem_acesso} sem acesso` : '');
@@ -5197,7 +5272,11 @@ async function renderTransferidos(){
 
 function _transfFiltrados(){
   const q = (document.getElementById('transf-busca')?.value || '').trim().toLowerCase();
+  // campo que mudou (cargo/departamento/centro de custo/gestor) — casa com
+  // de_para[].campo, que é a mesma fonte do de/para do Excel
+  const campo = (document.getElementById('transf-campo')?.value || '').toLowerCase();
   return _transfRecs.filter(d => {
+    if(campo && !(d.de_para || []).some(p => (p.campo||'').toLowerCase() === campo)) return false;
     const tratado = !!d.tratado;
     // quem não tem acesso não é fila de trabalho: só aparece no próprio
     // segmento e em "Todos", nunca misturado com "A Revisar"/"Tratados"
@@ -5331,35 +5410,58 @@ function pintarTransferidos(){
 }
 
 function exportarTransferidos(){
-  // 'De'/'Para' entram no FIM (append não desloca índice: o formato condicional
-  // da Situação continua na coluna 10).
-  const cols = ['Matrícula','Nome','Cargo','Centro de Custo','Gestor','Mudança',
-                'Sistema','Login','Perfil','Identificado em','Situação','Ticket','Motivo',
-                'De','Para'];
+  /* Layout de LISTA, não de árvore (retorno da área, 25/08/2026).
+
+     O formato anterior era hierárquico: a linha do funcionário trazia a
+     identificação e as linhas-filhas (movimento, acessos) vinham com Nome,
+     Matrícula, Cargo, CC e Gestor VAZIOS. No Excel isso morre no primeiro
+     filtro — ao filtrar Mudança = "gestor" sobravam linhas com De/Para e
+     nenhuma pista de quem era a pessoa. Agora toda linha se identifica
+     sozinha, e o agrupamento (+/−) continua para quem quiser ler em árvore.
+
+     E o de/para virou COLUNA por campo: com uma linha por usuário dá para
+     filtrar por Gestor ou CC e trabalhar a lista inteira de uma vez, em vez
+     de abrir um a um. */
+  const CAMPOS = [['cargo','Cargo'], ['departamento','Departamento'],
+                  ['centro de custo','Centro de Custo'], ['gestor','Gestor']];
+  const cols = ['Matrícula','Nome','Cargo','Centro de Custo','Gestor','Mudança'];
+  CAMPOS.forEach(([,rot]) => cols.push(rot+' (De)', rot+' (Para)'));
+  cols.push('Identificado em','Situação','Ticket','Motivo','Sistema','Login','Perfil');
+  const C_SIT = cols.indexOf('Situação');
+
   const linhas = [], niveis = [];
   _transfFiltrados().forEach(d => {
     const t = d.tratamento || {};
-    linhas.push([d.m, d.n, d.cargo, d.cc, d.gestor, d.campos, '', '', '', '',
-                 d.tratado ? 'Tratado' : 'Revisar', t.ticket||'', t.motivo||'', '', '']);
-    niveis.push(0);
-    // o movimento vem ANTES dos acessos, uma linha por campo que mudou
-    (d.de_para || []).forEach(p => {
-      linhas.push(['','','','','', p.campo, '', '', '', d.dt_mov ? fmtDate(d.dt_mov) : '',
-                   '', '', '', p.de, p.para]);
-      niveis.push(1);
+    const sit = d.tratado ? 'Tratado' : 'Revisar';
+    // identificação repetida em TODA linha do funcionário — é o que faz o
+    // filtro do Excel continuar dizendo de quem se trata
+    const ident = () => [d.m, d.n, d.cargo, d.cc, d.gestor, d.campos];
+    const dtMov = d.dt_mov ? fmtDate(d.dt_mov) : '';
+    // de/para por campo, nas colunas fixas
+    const par = {};
+    (d.de_para || []).forEach(p => { par[(p.campo||'').toLowerCase()] = p; });
+    const depara = [];
+    CAMPOS.forEach(([chave]) => {
+      const p = par[chave];
+      depara.push(p ? p.de : '', p ? p.para : '');
     });
+
+    linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'', '', '', '']);
+    niveis.push(0);
+
     _acessosPorSistema(d.acessos).forEach(g => {
-      linhas.push(['','','','','','', g.sis, g.login,
-                   g.perfis.length > 1 ? g.perfis.length + ' perfis' : (g.perfis[0] || ''),
-                   fmtDate(g.dt), '', '', '', '', '']);
+      linhas.push([...ident(), ...depara, fmtDate(g.dt), sit, t.ticket||'', t.motivo||'',
+                   g.sis, g.login,
+                   g.perfis.length > 1 ? g.perfis.length + ' perfis' : (g.perfis[0] || '')]);
       niveis.push(1);
       if(g.lista.length > 1) g.lista.forEach(a => {
-        linhas.push(['','','','','','', '', a.login, a.perfil, fmtDate(a.dt), '', '', '', '', '']);
+        linhas.push([...ident(), ...depara, fmtDate(a.dt), sit, t.ticket||'', t.motivo||'',
+                     g.sis, a.login, a.perfil]);
         niveis.push(2);
       });
     });
   });
-  const formatos = [{col:10, regras:[
+  const formatos = [{col:C_SIT, regras:[
     {quando:'Revisar', fundo:'FFF3CD', texto:'856404'},
     {quando:'Tratado', fundo:'DFF6DD', texto:'107C10'}
   ]}];
@@ -5874,7 +5976,7 @@ let _csData = null;        // filtro de data (col 13 = Última div) — {tipo,de
 let _csPP = 50, _csPag = 1;   // paginação
 let _histMats = new Set();    // matrículas que têm histórico (p/ botão H condicional)
 let _deslMats = new Set();     // matrículas de desligados (p/ botão D condicional)
-let _csAbasFilt = null;       // funil da coluna Abas: Set de {Pendência,Aderente,Histórico,Desligado}
+let _csAbasFilt = null;       // funil da coluna Abas: Set de {Pendência,Incluir acessos,Aderente,Histórico,Desligado}
 async function _carregarHistMats(){
   try {
     const r = await fetch('/api/historico');
@@ -6086,18 +6188,13 @@ function renderConsulta(){
   const lim = users.slice(ini, ini + _csPP);
   body.innerHTML = lim.map(u => {
     // Calcula resumo: sistemas distintos + qtd divergencias + ultima data.
-    // "Incluir Acesso" NAO e' pendencia: 3 estados no pino -> pendente /
-    // incluir acessos / aderente. Um usuario so-Incluir NAO mostra "pendente".
+    // "Incluir Acesso" NAO e' pendencia — o pino tem 4 estados e mora em
+    // _csPino(); aqui fica so' o resumo da linha.
     const sistemas = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
     const nPend = u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso').length;
-    const abertos = u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.s === 'Pendente').length;
-    const temIncl = u.divs.some(d => d.a === 'Incluir Acesso');
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     const ultDt = datas.length ? datas[datas.length-1] : '';
-    let cls, lbl;
-    if (abertos > 0)      { cls = 'pend';    lbl = `${abertos} pendente${abertos>1?'s':''}`; }
-    else if (temIncl)     { cls = 'incluir'; lbl = 'Incluir acessos'; }
-    else                  { cls = 'ok';      lbl = 'Aderente'; }
+    const { cls, lbl } = _csPino(u);
     const uidEsc = esc(u.u);
     const matEsc = esc(u.m||'');
     const nomeEsc = esc(u.n||u.u||'');
@@ -6136,6 +6233,26 @@ function renderConsulta(){
   _csPager(totPag);
   _renderBadgeCatConsulta();
 }
+/* Pino de situação da linha na Consulta.
+
+   Tinha 3 estados — pendente / incluir acessos / aderente — e o "aderente" era
+   o `else`: quem tivesse pendência JÁ TRATADA caía nele. A tela mostrava
+   "Aderente" ao lado de uma coluna Pendências marcando 2 em vermelho, com os
+   dois acessos listados como não localizados. Foi o que a área apontou em
+   25/08/2026 no usuário sistêmico BRCVCSRVSYSINT: "vindo como aderente? qual
+   conceito". Aderente é quem não tem pendência nenhuma; quem teve e tratou é
+   RESOLVIDO — são coisas diferentes, e agora o pino diz qual é qual. */
+function _csPino(u){
+  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso';
+  const abertos  = u.divs.filter(d => acionavel(d) && d.s === 'Pendente').length;
+  const tratados = u.divs.filter(d => acionavel(d) && d.s !== 'Pendente').length;
+  const temIncl  = u.divs.some(d => d.a === 'Incluir Acesso');
+  if (abertos > 0) return {cls:'pend',    lbl:`${abertos} pendente${abertos>1?'s':''}`};
+  if (temIncl)     return {cls:'incluir', lbl:'Incluir acessos'};
+  if (tratados > 0) return {cls:'res',    lbl:tratados > 1 ? `${tratados} resolvidas` : 'Resolvido'};
+  return {cls:'ok', lbl:'Aderente'};
+}
+
 function _csPager(totPag){
   const pg = document.getElementById('cs-pager');
   if (!pg) return;
@@ -6250,10 +6367,21 @@ function equiparCs(){
     mk.classList.toggle('mk-filtrado', ehAbas ? !!_csAbasFilt : (c === 13 ? !!_csData : !!_csFilt[c]));
   });
 }
-// Atributos (botões) que o usuário tem na coluna Abas
+/* Atributos (botões) que o usuário tem na coluna Abas — é o que o funil dessa
+   coluna filtra.
+
+   "Pendência" aqui contava QUALQUER coisa que não fosse Aderente, e portanto
+   incluía "Incluir Acesso". Só que o botão P da mesma linha e a coluna
+   Pendências excluem o Incluir Acesso (não é pendência: é acesso que o cargo
+   prevê e a pessoa ainda não tem). O funil discordava dos dois: filtrar por
+   "Pendência" trazia gente sem botão P, e o número na coluna não fechava com a
+   lista filtrada. Agora as três regras dizem a mesma coisa, e "Incluir acessos"
+   virou uma opção própria do funil — que é como o pino da linha já mostrava. */
 function _csAbasOf(u){
   const a = [];
-  if (u.divs.some(d => d.a !== 'Aderente')) a.push('Pendência');
+  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso';
+  if (u.divs.some(acionavel)) a.push('Pendência');
+  if (u.divs.some(d => d.a === 'Incluir Acesso')) a.push('Incluir acessos');
   if (u.m && u.divs.some(d => d.a === 'Aderente')) a.push('Aderente');
   if (u.m && _histMats.has(u.m)) a.push('Histórico');
   if (u.m && _deslMats.has(u.m)) a.push('Desligado');
@@ -6261,7 +6389,7 @@ function _csAbasOf(u){
 }
 function _csAbasMenu(th){
   _gxFechar();
-  const opcoes = ['Pendência', 'Aderente', 'Histórico', 'Desligado'], sel = _csAbasFilt;
+  const opcoes = ['Pendência', 'Incluir acessos', 'Aderente', 'Histórico', 'Desligado'], sel = _csAbasFilt;
   const m = document.createElement('div');
   m.className = 'gx-menu'; m.id = 'gx-menu';
   m.innerHTML =
@@ -6373,7 +6501,8 @@ function _csAccBloco(sis, lista, pfx, comData){
     corpo += `<div class="cs-acc-stgrp"><div class="cs-acc-stlbl" style="color:${cor}">● ${esc(k)} (${nk})${dtHdr}</div>`;
     g.forEach(d => {
       const data = (comData && !umaData && d.dt) ? ` <span style="color:#8A9099">· ${fmtDH(d.dt)}</span>` : '';
-      corpo += `<div class="${pfx}-p"><span>${_csPerfilTxt(d)}${data}</span></div>`;
+      corpo += `<div class="${pfx}-p"><span>${_csPerfilTxt(d)}`
+             + `${motIcone(d.mot)}${data}</span></div>`;
     });
     corpo += `</div>`;
   });
@@ -6984,6 +7113,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Labels do header a partir das datas da base
   atualizarHeaderMeta();
+  // O DB ja vem injetado no HTML pelo servidor, entao o aviso de sistema sem
+  // extrato pode ser pintado no boot — nao espera o primeiro auto-refresh.
+  pintarAlertaSemExtrato();
 
   // Inicia o ciclo de auto-refresh por ociosidade
   agendarAutoRefresh();

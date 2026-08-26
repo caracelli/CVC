@@ -73,7 +73,12 @@ class ValidarAcessosSistema:
         self._inclusao_suprimida = 0
         # status da conta (preenchidos em _carregar_dados / executar)
         self._status_indefinido: Set[Tuple[str, str]] = set()
+        # (matricula, sistema) que TEM conta no extrato, mas revogada
+        # (BLOQUEADA/INATIVA). Nao e' acesso — mas a pessoa ja existe no
+        # sistema, e a tela precisa dizer isso (ver _sem_acesso_explicado).
+        self._conta_revogada: Set[Tuple[str, str]] = set()
         self._acessos_revogados = 0
+        self._sem_acesso_explicado = 0
         self._forcado_analise = 0
         self._espelho_sem_padrao = 0
 
@@ -164,6 +169,19 @@ class ValidarAcessosSistema:
                 r["motivo_status"] = "CONTA_INDEFINIDA"
                 self._forcado_analise += 1
 
+        # CONTA BLOQUEADA: a pessoa TEM conta no sistema, mas revogada — pela
+        # regra da area (22/07) conta bloqueada nao e' acesso, entao o resultado
+        # sai como SEM_ACESSO ("Incluir Acesso"). Sem explicar isso, a tela
+        # mostra o login dela preenchido e manda CRIAR um acesso que ja existe;
+        # a acao certa e' DESBLOQUEAR. Mesmo defeito de transparencia do
+        # CONTA_INDEFINIDA (retorno da area, 10/08 e 25/08/2026): a regra nao
+        # muda, so passa a se explicar.
+        self._sem_acesso_explicado = 0
+        for r in registros:
+            if r["status"] == StatusValidacao.SEM_ACESSO.value                     and not (r.get("perfil_atual") or "").strip()                     and (r["matricula"], r["sistema"]) in self._conta_revogada:
+                r["motivo_status"] = "CONTA_BLOQUEADA"
+                self._sem_acesso_explicado += 1
+
         # PENDENCIAS (acao): so DIVERGENTE e EM_ANALISE. SEM_ACESSO ("esperado")
         # deixou de ser pendencia (retorno Bruna): e' informativo, so na Consulta.
         _STATUS_ACAO = {
@@ -200,6 +218,12 @@ class ValidarAcessosSistema:
                 f"[status] {self._acessos_revogados} acesso(s) ignorado(s) por conta "
                 f"BLOQUEADA/INATIVA (ja revogada) e {self._forcado_analise} resultado(s) "
                 f"levado(s) a 'Em Análise' por status INDEFINIDO no extrato."
+            )
+        if self._sem_acesso_explicado:
+            logger.info(
+                f"[status] {self._sem_acesso_explicado} 'sem acesso' explicado(s) "
+                f"por CONTA BLOQUEADA (a conta existe no sistema, mas esta "
+                f"revogada — a acao e' desbloquear, nao criar)."
             )
         if self._espelho_sem_padrao:
             logger.info(
@@ -247,6 +271,7 @@ class ValidarAcessosSistema:
                 continue
             if sit_conta.sem_acesso_efetivo(a.situacao):
                 self._acessos_revogados += 1
+                self._conta_revogada.add((a.matricula_vinculada, a.sistema))
                 continue
             acessos_por_matricula[a.matricula_vinculada].append((a.sistema, a.perfil or ""))
             if sit_conta.indefinida(a.situacao):
