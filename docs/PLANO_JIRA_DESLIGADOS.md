@@ -21,7 +21,9 @@ O que o usuário faz, em uma frase: abre o desligado, escreve o parecer, clica e
 | 6 | Envelope `CHAMADO_ABERTO` gravado na resposta do POST | `abrir_chamado_desligado` |
 | 7 | Guarda de duplicata no **servidor**, lendo `.jsonl` de todos + tabela **da rede** | `chamados_abertos` |
 
-Suíte em 718 passed / 53 subtests, sem regressão.
+Suíte medida em 12/08 sobre o `33e35cb` fechado: **737 passed / 53 subtests**,
+sem regressão. (O número 718 citado antes era parcial, tirado no meio da
+construção.)
 
 ---
 

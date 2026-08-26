@@ -1,12 +1,23 @@
 # Integração Jira — Cards 25-26
 
 Levantamento feito em **10/08/2026** consultando a API do Jira ao vivo (sessão
-autenticada no portal + API token pessoal, só chamadas GET). Nenhum chamado foi
-criado. **Nenhum código foi escrito ainda** — a implementação está parada
-aguardando as respostas da Bruna (ver "Pendências" no fim).
+autenticada no portal + API token pessoal, só chamadas GET).
 
 Este documento existe para que o levantamento não se perca e para que a máquina
 de desenvolvimento tenha tudo o que foi apurado.
+
+> **Estado em 11/08/2026 — construído e validado ao vivo.** O escopo foi fechado
+> em **somente o fluxo de DESLIGADOS** (revogação) e está implementado de ponta a
+> ponta: config, cliente HTTP, endpoint, guarda de duplicata, tabela
+> `chamados_abertos`, consolidação no Processador e tela. Dois chamados de teste
+> foram criados pela API e cancelados — o formato dos 3 campos passou intacto.
+>
+> **O que impede a entrega de valor é externo:** o tipo 8819 cria chamados
+> **sem componente**, e as filas de Gestão de Acessos filtram por `component` —
+> o chamado nasce fora de toda fila, e não conseguimos carimbar o componente do
+> nosso lado (testado: `PUT /issue` devolve 404 para conta cliente). Depende de
+> quem administra o formulário. Detalhe, prova e texto do pedido em
+> [`PLANO_JIRA_DESLIGADOS.md`](PLANO_JIRA_DESLIGADOS.md).
 
 ---
 
