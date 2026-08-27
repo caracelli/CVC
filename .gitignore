@@ -117,3 +117,9 @@ jira.xml
 # (commit 346059a), e Arquivos_origem/ esta fora do versionamento.
 # Ver ORIGEM.txt ao lado do arquivo.
 Arquivos_origem/BANCO_ENTREGUE_BRUNA/
+
+# Snapshots da instalacao do cliente (scripts/coletar_instalacao_cliente.ps1).
+# Levam ENTRADA, banco e INTERACOES: CPF, nome e acesso de gente real. Se um
+# destes cair dentro do repo, um `git add .` o mandaria para o remoto — por isso
+# o padrao fica aqui, e nao so na cabeca de quem coleta.
+SNAPSHOT_CLIENTE_*/
