@@ -84,9 +84,23 @@ body{
   background:transparent;
   display:flex;gap:4px;padding:7px 18px 0;
   border-bottom:2px solid var(--navy);
+  /* Piso de seguranca: se nem os rotulos couberem (tela muito estreita ou
+     zoom alto), a barra ROLA na horizontal em vez de as abas encavalarem. */
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;
 }
+/* Barra de rolagem discreta — so aparece quando de fato falta espaco. */
+.nav::-webkit-scrollbar{height:5px;}
+.nav::-webkit-scrollbar-thumb{background:rgba(31,45,92,.28);border-radius:3px;}
+.nav::-webkit-scrollbar-track{background:transparent;}
 .tab{
-  flex:0 0 auto;min-width:172px;height:33px;
+  /* Antes: flex:0 0 auto + min-width:172px. Isso proibia encolher, e 8 abas
+     exigiam ~1440px de largura — abaixo disso elas transbordavam e
+     encavalavam (retorno da area, 27/08/2026).
+     Agora: crescem para preencher a tela larga (flex-grow), encolhem quando
+     falta espaco (flex-shrink), e o piso e' o PROPRIO ROTULO
+     (min-width:max-content) — nunca cortam o texto nem viram "Visão G...". */
+  flex:1 1 auto;min-width:max-content;max-width:172px;height:33px;
+  padding:0 12px;white-space:nowrap;
   display:flex;align-items:center;justify-content:center;
   background:rgba(255,255,255,.90);color:#5A6377;
   border-radius:8px 8px 0 0;cursor:pointer;
