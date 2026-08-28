@@ -952,8 +952,20 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   font:700 11px 'Segoe UI';color:var(--navy);margin-bottom:4px;}
 .cs-sub-acc-h .cs-sub-sis{background:var(--navy);color:#fff;
   padding:2px 8px;border-radius:4px;font-size:10px;}
+/* ALINHAMENTO DA LINHA DE ACESSO — retorno da area em 28/08/2026 (Teams):
+   "a visao aparentemente esta desalinhada" / "hoje ta com a impressao de coisas
+   soltas", com print marcando dois quadrados que ela queria juntos.
+   A causa era este bloco: com `justify-content:space-between` a badge do
+   sistema ia para a esquerda e o VALOR era colado na borda DIREITA. Como cada
+   valor tem largura diferente, cada linha comecava num x diferente — medido no
+   Edge antes da mudanca: 4 linhas comecando em x=1407, 807, 1365 e 1381,
+   amplitude de 600px. Nada alinhava verticalmente.
+   Agora sao duas colunas de largura FIXA: a badge mais larga dos 7 sistemas e'
+   IC_INTEGRADOR_CONTABIL, medida em 162px — 172px cobre com folga. Fixa (e nao
+   max-content) porque cada linha e' um grid proprio: so' largura igual em todas
+   faz as colunas baterem entre linhas. */
 .cs-sub-acc-p{font:500 11.5px 'Segoe UI';color:#3A3F4C;
-  display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  display:grid;grid-template-columns:172px minmax(0,1fr);gap:12px;align-items:start;
   padding:3px 0;border-top:1px dashed #E7EBF2;}
 .cs-sub-acc-p:first-of-type{border-top:none;}
 .cs-sub-acc-p>span:first-child{min-width:0;overflow-wrap:anywhere;line-height:1.5;}
@@ -1010,10 +1022,11 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
 .cs-drawer-bd .cs-acc-h .cs-acc-sis{background:var(--navy);color:#fff;
   padding:2px 8px;border-radius:4px;font-size:10px;}
 .cs-drawer-bd .cs-acc-p{font:500 11.5px 'Segoe UI';color:#3A3F4C;
-  display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  display:grid;grid-template-columns:172px minmax(0,1fr);gap:12px;align-items:start;
   padding:3px 0;border-top:1px dashed #E7EBF2;}
 .cs-drawer-bd .cs-acc-p:first-of-type{border-top:none;}
-.cs-drawer-bd .cs-acc-p>span:first-child{min-width:0;overflow-wrap:anywhere;line-height:1.5;}
+.cs-sub-acc-p>.h-sis,.cs-drawer-bd .cs-acc-p>.h-sis{justify-self:start;max-width:100%;}
+.cs-sub-acc-v,.cs-drawer-bd .cs-acc-v{min-width:0;overflow-wrap:anywhere;line-height:1.5;}
 .cs-drawer-bd .cs-acc-p .cs-acc-st{font-size:10.5px;font-weight:700;flex:none;white-space:nowrap;}
 .atl-btn.salvar{background:linear-gradient(180deg,var(--gold-l),var(--gold));
   border-color:var(--gold);color:var(--navy);
@@ -6629,7 +6642,21 @@ function _csDetalheCategorias(divs, pfx, comData){
       // `_csAccBloco` — funcao MORTA (ninguem a chamava) — e por isso o aviso
       // de conta BLOQUEADA nunca chegou a tela, apesar de o motor grava-lo e
       // de haver teste verde: o teste chamava a funcao morta direto.
-      const perfis = lista.map(d => _csPerfilTxt(d) + motIcone(d.mot)).join(', ');
+      // TETO POR (categoria, sistema). O teto de `_csListaPerfis` age DENTRO
+      // de uma linha; aqui o estouro vem de outro lado: um sistema pode ter
+      // dezenas de linhas (um perfil esperado por linha) e o join despejava
+      // todas. Caso real medido em 28/08: ORACLE_EBS com "Acessos esperados
+      // (51)" — 51 perfis em texto corrido, o "muita informacao" que a area
+      // reclamou. Mostra os 6 primeiros; o resto vai no title, sem perder dado.
+      const _TETO_SIS = 6;
+      const _itens = lista.map(d => _csPerfilTxt(d) + motIcone(d.mot));
+      let perfis = _itens.slice(0, _TETO_SIS).join(', ');
+      if (_itens.length > _TETO_SIS) {
+        const _resto = lista.slice(_TETO_SIS)
+          .map(d => _csPerfilTxt(d).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+        perfis += ` <span style="color:#8A9099;font-size:10.5px;" `
+                + `title="${esc(_resto.join(', '))}">+${_itens.length - _TETO_SIS} outros</span>`;
+      }
       const dt = (comData && lista[0].dt)
         ? ` <span style="color:#8A9099">· ${fmtDH(lista[0].dt)}</span>` : '';
       // Pessoa com duas identidades (mesmo CPF): diz de qual delas veio o
@@ -6637,7 +6664,11 @@ function _csDetalheCategorias(divs, pfx, comData){
       const og = [...new Set(lista.map(d => d._orig).filter(Boolean))];
       const orig = og.length
         ? ` <span style="color:#9AA3B5;font-size:10.5px;">(${og.map(esc).join(', ')})</span>` : '';
-      linhas += `<div class="${pfx}-p"><span class="h-sis">${esc(sis)}</span> ${perfis}${orig}${dt}</div>`;
+      // O valor tem de ser UM elemento so'. Com a linha em grid (ver CSS de
+      // .cs-acc-p), cada no solto viraria uma celula propria e a coluna
+      // quebraria — por isso o <span class="${pfx}-v"> envolvendo tudo.
+      linhas += `<div class="${pfx}-p"><span class="h-sis">${esc(sis)}</span>`
+             +  `<span class="${pfx}-v">${perfis}${orig}${dt}</span></div>`;
     });
     h += `<div style="margin:9px 0 4px;">`
        + `<div style="color:${cat.cor};font-weight:700;font-size:12px;">● ${cat.lbl} (${n})`
@@ -6673,8 +6704,9 @@ function _csSemMapeamento(u){
   const faltam = _sisTodos().filter(s => !tem.has(s));
   if (!faltam.length) return '';
   const linhas = faltam.map(s =>
-    `<div class="cs-sub-acc-p"><span class="h-sis">${esc(s)}</span> `
-    + `<span style="color:#8A9099;">sem perfil previsto para o cargo/centro de custo</span></div>`
+    `<div class="cs-sub-acc-p"><span class="h-sis">${esc(s)}</span>`
+    + `<span class="cs-sub-acc-v" style="color:#8A9099;">sem perfil previsto`
+    + ` para o cargo/centro de custo</span></div>`
   ).join('');
   return `<div style="margin:9px 0 4px;">`
     + `<div style="color:#7B8294;font-weight:700;font-size:12px;">● Sem mapeamento (${faltam.length})`
