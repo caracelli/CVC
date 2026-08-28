@@ -236,13 +236,27 @@ class IconeDoMotivoNaConsulta(unittest.TestCase):
         self.assertNotIn("mot-info", self._render([self._div("")]))
 
     def test_o_renderizador_testado_e_o_que_a_tela_usa(self):
-        """Guarda contra o erro de 26/08 se repetir: se `_csMontarSub` deixar de
-        chamar `_csDetalheCategorias`, este teste volta a provar nada."""
+        """Guarda contra o erro de 26/08 se repetir.
+
+        Ele ja' trabalhou: em 28/08 o detalhe saiu da expansao da linha e passou
+        a morar so' no drawer (ver test_painel_navegacao.py). O teste acusou na
+        hora que `_csMontarSub` nao renderizava mais o que era testado — que e'
+        exatamente o sintoma que deixou o "?" invisivel por dois dias.
+        Agora aponta para `csRenderDrawerBody`, o renderizador vivo. Se o
+        detalhe mudar de casa de novo, este teste TEM de ser reapontado junto."""
         html = INDEX.read_text(encoding="utf-8")
-        i = html.index("function _csMontarSub(")
-        corpo = html[i:i + 700]
+        i = html.index("function csRenderDrawerBody(")
+        j, nivel = html.index("{", i), 0
+        for k in range(j, len(html)):
+            if html[k] == "{":
+                nivel += 1
+            elif html[k] == "}":
+                nivel -= 1
+                if nivel == 0:
+                    corpo = html[i:k + 1]
+                    break
         self.assertIn("_csDetalheCategorias", corpo,
-                      "a expansao da linha nao usa mais o renderizador testado")
+                      "o drawer nao usa mais o renderizador testado")
 
 
 if __name__ == "__main__":

@@ -940,6 +940,14 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   letter-spacing:.05em;text-transform:uppercase;margin:6px 0 6px;}
 .cs-sub-acc{background:#fff;border:1px solid #E7EBF2;border-radius:6px;
   padding:8px 10px;margin-bottom:6px;}
+/* Resumo de uma linha na expansao da grade (o detalhe mora no drawer). */
+.cs-sub-resumo{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:2px 0 4px;}
+.cs-sub-resumo-n{font:500 12px 'Segoe UI';color:#3A3F4C;}
+.cs-ver-detalhe{margin-left:auto;font:700 11px Arial;color:var(--navy);
+  background:#fff;border:1px solid #C9D2E3;border-radius:7px;
+  padding:4px 11px;cursor:pointer;transition:all .15s;}
+.cs-ver-detalhe:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
 .cs-sub-acc-h{display:flex;justify-content:space-between;align-items:center;
   font:700 11px 'Segoe UI';color:var(--navy);margin-bottom:4px;}
 .cs-sub-acc-h .cs-sub-sis{background:var(--navy);color:#fff;
@@ -6589,13 +6597,13 @@ function csExpandDaLinha(ev, el){
    análise / Não localizados. Cada bloco lista os acessos por sistema. É a
    organização que ela desenhou para a visão Consulta ficar menos confusa. */
 const _CS_CATS = [
-  {k:'enc', lbl:'Acessos encontrados',    hint:'o que ele já tem (aderente)',
+  {k:'enc', lbl:'Acessos encontrados',    curto:'já tem',        hint:'o que ele já tem (aderente)',
    acoes:['Aderente'], cor:'#16A085'},
-  {k:'esp', lbl:'Acessos esperados',      hint:'não tem, mas o cargo prevê',
+  {k:'esp', lbl:'Acessos esperados',      curto:'a incluir',     hint:'não tem, mas o cargo prevê',
    acoes:['Incluir Acesso'], cor:'#2980B9'},
-  {k:'ana', lbl:'Necessário análise',     hint:'pode ter um perfil a mais / perfil divergente',
+  {k:'ana', lbl:'Necessário análise',     curto:'a analisar',    hint:'pode ter um perfil a mais / perfil divergente',
    acoes:['Em Análise','Alterar Perfil'], cor:'#E67E22'},
-  {k:'nl',  lbl:'Acessos não localizados', hint:'sistema fora da matriz / sem vínculo',
+  {k:'nl',  lbl:'Acessos não localizados', curto:'não localizados', hint:'sistema fora da matriz / sem vínculo',
    acoes:['Usuário Não Encontrado'], cor:'#8E44AD'},
 ];
 function _csCatDe(d){
@@ -6675,14 +6683,37 @@ function _csSemMapeamento(u){
     + linhas + `</div>`;
 }
 
+/* A expansao da linha e' um RESUMO de uma linha; o detalhe completo mora no
+   drawer, num lugar so'.
+
+   Retorno da area (28/08/2026): "acabou ficando muita informacao e esta
+   complicado tentar agrupar e expandir". O mapa deu razao a ela: o MESMO dado
+   aparecia em tres lugares — colunas da grid, expansao da linha e drawer — e os
+   dois ultimos chamavam a MESMA funcao (`_csDetalheCategorias`). Dois caminhos
+   para o mesmo conteudo e' o que fazia "se perder na divisao".
+
+   O que os 4 blocos por categoria mostram continua igual: eles foram pedido
+   dela no 1o retorno (29/07) e nao mudam — mudou onde moram. */
 function _csMontarSub(u){
   if (!u.divs || !u.divs.length) {
     return '<div class="cs-sub-titulo">Acessos</div>'
       + '<div style="color:#7B8294;font-style:italic;">Sem registros de acesso.</div>';
   }
-  return '<div class="cs-sub-titulo">Acessos / divergências</div>'
-    + _csDetalheCategorias(u.divs, 'cs-sub-acc', true)
-    + _csSemMapeamento(u);
+  const cont = {};
+  u.divs.forEach(d => { const k = _csCatDe(d); cont[k] = (cont[k] || 0) + 1; });
+  const partes = _CS_CATS.filter(c => cont[c.k]).map(c =>
+    `<b style="color:${c.cor};">${cont[c.k]}</b> ${c.curto}`);
+  // "sem mapeamento" e' calculado na tela (nao ha linha no banco) — entra no
+  // resumo pelo numero e no drawer pelo detalhe.
+  const temSis = new Set((u.divs || []).map(d => d.sis).filter(Boolean));
+  const nSemMap = _sisTodos().filter(s => !temSis.has(s)).length;
+  if (nSemMap) partes.push(`<b style="color:#7B8294;">${nSemMap}</b> sem mapeamento`);
+  return `<div class="cs-sub-resumo">`
+    + `<span class="cs-sub-titulo" style="margin:0;">Acessos</span>`
+    + `<span class="cs-sub-resumo-n">${partes.join(' · ')}</span>`
+    + `<button class="cs-ver-detalhe" onclick="csAbrirDrawer('${esc(u.u)}','acessos')"`
+    + ` title="Abre o detalhe completo no painel lateral">ver detalhe &rarr;</button>`
+    + `</div>`;
 }
 
 function csLimparBusca(){
@@ -6804,17 +6835,19 @@ function limparFiltroVindoConsulta(){
   _renderBadgeVindoConsulta();
 }
 
-function csAbrirDrawer(uid){
+/* `aba` opcional: o "ver detalhe" do resumo abre direto em Acessos, senao o
+   usuario teria de clicar duas vezes para ver o que a linha prometeu. */
+function csAbrirDrawer(uid, aba){
   const u = DB.users.find(x => x.u === uid);
   if (!u) return;
   _csUserAtivo = u;
-  _csTab = 'ident';
+  _csTab = aba || 'ident';
   document.getElementById('cs-drawer-nome').textContent = u.n || u.u;
   document.getElementById('cs-drawer-meta').textContent =
     `${u.m ? 'matr ' + u.m : 'sem matrícula'} · ${u.c || '—'} · ${u.cc || '—'}`;
   // Sincroniza tabs visuais
   document.querySelectorAll('.cs-drawer-tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.cstab === 'ident'));
+    t.classList.toggle('active', t.dataset.cstab === _csTab));
   csRenderDrawerBody();
   document.getElementById('cs-drawer').classList.add('show');
   // Destaca a linha ativa na grid (visual cue de quem está no popup)
@@ -6861,7 +6894,10 @@ function csRenderDrawerBody(){
     }
     // 4 blocos (retorno Bruna): Encontrados / Esperados / Análise / Não localizados
     body.innerHTML = '<div class="cs-sec">Acessos</div>'
-      + _csDetalheCategorias(u.divs, 'cs-acc', false);
+      + _csDetalheCategorias(u.divs, 'cs-acc', false)
+      // veio junto da expansao: e' a resposta ao "por que ela nao tem o IC?"
+      // (2o retorno, 10/08). Sem isto, mover o detalhe para ca' perderia o bloco.
+      + _csSemMapeamento(u);
   }
   else if (_csTab === 'hist') {
     body.innerHTML = '<div class="cs-empty">📜 Histórico de movimentações '
