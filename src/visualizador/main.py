@@ -225,7 +225,7 @@ def token_mudanca() -> str:
 
     ⚠️ Se um dia surgir um TERCEIRO escritor e ele nao entrar aqui, a tela fica
     velha sem avisar — pior que lenta. Por isso o cliente tambem faz um refresh
-    completo periodico (ver `_FORCA_A_CADA` no index.html): sinal que escape se
+    completo periodico (ver `_FORCA_APOS_MS` no index.html): sinal que escape se
     corrige sozinho em ate 1 minuto.
     """
     partes = []

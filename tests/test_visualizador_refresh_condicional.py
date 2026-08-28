@@ -129,11 +129,16 @@ class ClienteSoBaixaQuandoPrecisa(unittest.TestCase):
 
     def test_ha_rede_de_seguranca_periodica(self):
         """Sem ela, uma fonte de mudanca esquecida deixaria a tela velha PARA
-        SEMPRE. Com ela, o pior caso e' ~1 minuto."""
+        SEMPRE. Com ela, o pior caso e' ~1 minuto.
+
+        A rede nasceu contando CICLOS (`_FORCA_A_CADA`) e passou a contar TEMPO
+        em 28/08: `showPage` chama refreshDB a cada troca de aba, entao contar
+        disparava um download completo a cada 6 cliques — justo quem navega
+        rapido pagava. Ver tests/test_painel_cache_endpoints.py."""
         html = self._fonte()
-        self.assertIn("_FORCA_A_CADA", html)
+        self.assertIn("_FORCA_APOS_MS", html)
         i = html.index("async function refreshDB(")
-        self.assertIn("_FORCA_A_CADA", html[i:i + 1400],
+        self.assertIn("_FORCA_APOS_MS", html[i:i + 1400],
                       "a constante existe mas refreshDB nao a usa")
 
     def test_da_para_forcar(self):

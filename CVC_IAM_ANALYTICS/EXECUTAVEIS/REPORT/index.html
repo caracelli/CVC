@@ -3965,19 +3965,62 @@ async function recarregarAbaAtual(){
    muda, e o proximo ciclo puxa os dados. A latencia continua sendo os mesmos
    10s de antes.
 
-   REDE DE SEGURANCA (_FORCA_A_CADA): se um dia surgir uma fonte de mudanca que
+   REDE DE SEGURANCA (_FORCA_APOS_MS): se um dia surgir uma fonte de mudanca que
    o token nao cobre, a tela ficaria velha SEM AVISAR — pior que lenta. Por isso
-   um a cada 6 ciclos ignora o token e baixa mesmo assim: qualquer sinal que
-   escape se corrige sozinho em ate ~1 minuto. */
+   passado 1 minuto do ultimo download completo, o proximo ciclo ignora o token
+   e baixa mesmo assim: qualquer sinal que escape se corrige sozinho nesse
+   prazo. Por TEMPO e nao por contagem de ciclos — `showPage` chama refreshDB a
+   cada troca de aba, entao contar puniria justamente quem navega rapido
+   (medido: 6 cliques disparavam um download completo de 5,48 MB). */
 let _tokenDB = null;      // assinatura do que ja' temos em maos
-let _refreshN = 0;        // conta os ciclos, para o forcado periodico
-const _FORCA_A_CADA = 6;  // 6 x 10s = ~1 min
+let _ultimoCheio = 0;     // quando foi o ultimo download completo (ms)
+/* A rede de seguranca e' por TEMPO, nao por contagem de ciclos.
+   A primeira versao contava 1 a cada 6 refreshes — mas `showPage` chama
+   refreshDB a CADA troca de aba, entao seis cliques seguidos disparavam um
+   download completo de 5,48 MB, justamente quando a pessoa esta navegando
+   rapido e mais sente a lentidao. Medido: uma volta pelas 8 abas pagava
+   2x /api/dados = 10,96 MB so' por causa disso.
+   Por tempo, navegar nao custa nada e a garantia de ~1 min continua de pe'. */
+const _FORCA_APOS_MS = 60000;
+
+/* CACHE POR TOKEN DOS ENDPOINTS PESADOS (28/08/2026).
+
+   O refresh condicional resolveu `/api/dados`, mas nao era o unico peso — e o
+   maior nem estava nele. Medido:
+       /api/dados        5,48 MB
+       /api/desligados   7,28 MB
+       /api/historico    5,37 MB
+   `_carregarHistMats()` busca os DOIS ultimos, e e' chamado ao abrir a
+   CONSULTA — a aba que a area mais usa. Abrir a Consulta custava ~18 MB.
+   A aba Desligados sozinha custava 7,28 MB a cada visita.
+
+   Aqui a regra e' a mesma: se o token nao mudou, o conteudo tambem nao. Reusa
+   sem ir ao servidor. Nao gasta UMA requisicao a mais — aproveita o `_tokenDB`
+   que o `refreshDB` acabou de trazer (o `showPage` chama refreshDB ANTES de
+   qualquer render).
+
+   ⚠️ Guarda o TEXTO e faz JSON.parse a cada uso, de proposito. Entregar o mesmo
+   OBJETO seria mais rapido, mas o consumidor muta o que recebe — o Historico
+   escreve `r._i = i` em cada registro (ver `renderHistorico`). Hoje isso e'
+   idempotente e nao quebraria, mas depender disso obrigaria a auditar todo
+   consumidor futuro. O parse custa dezenas de ms contra ~600ms de ida ao
+   servidor; o troco compensa a garantia. */
+const _cacheAPI = new Map();   // url -> {token, texto}
+
+async function fetchAPI(url){
+  const c = _cacheAPI.get(url);
+  if (c && _tokenDB !== null && c.token === _tokenDB) return JSON.parse(c.texto);
+  const r = await fetch(url);
+  const texto = await r.text();
+  if (_tokenDB !== null) _cacheAPI.set(url, {token: _tokenDB, texto});
+  return JSON.parse(texto);
+}
 
 async function refreshDB(forcar){
   try{
-    _refreshN++;
+    const agora = Date.now();
     const podePular = !forcar && _tokenDB !== null
-                      && (_refreshN % _FORCA_A_CADA !== 0);
+                      && (agora - _ultimoCheio) < _FORCA_APOS_MS;
     if (podePular){
       try{
         const rv = await fetch('/api/versao');
@@ -3991,6 +4034,7 @@ async function refreshDB(forcar){
     const r = await fetch('/api/dados');
     const d = await r.json();
     if (d && d.token) _tokenDB = d.token;
+    _ultimoCheio = Date.now();
     DB.kpis = d.kpis; DB.acao_dist = d.acao_dist;
     DB.sis_dist = d.sis_dist; DB.users = d.users;
     if (d.meta) DB.meta = d.meta;
@@ -4761,8 +4805,7 @@ let quarData = null, quarVista = 'ativas';
 
 async function renderQuarentena(){
   try{
-    const r = await fetch('/api/quarentena');
-    quarData = await r.json();
+    quarData = await fetchAPI('/api/quarentena');
   }catch(e){ quarData = {ativas:[], historico:[]}; }
   pintarQuarentena();
 }
@@ -5004,8 +5047,7 @@ let _deslFalhou = false;   // a ultima carga de /api/desligados deu erro?
 async function renderDesligados(){
   _deslFalhou = false;
   try{
-    const r = await fetch('/api/desligados');
-    const d = await r.json();
+    const d = await fetchAPI('/api/desligados');
     _deslRecs = d.lista || [];
     _JIRA_ATIVO = !!d.jira;
     const k = d.kpis || {};
@@ -5326,8 +5368,7 @@ function transfToggle(el){
 
 async function renderTransferidos(){
   try{
-    const r = await fetch('/api/transferidos');
-    const d = await r.json();
+    const d = await fetchAPI('/api/transferidos');
     _transfRecs = d.lista || [];
     const k = d.kpis || {};
     const elBase = document.getElementById('transf-base-rh');
@@ -5775,7 +5816,7 @@ function histDet(r){
   return esc(r.campos)||'—';
 }
 async function renderHistorico(){
-  try{ const r=await fetch('/api/historico'); _histRecs=await r.json(); }
+  try{ _histRecs = await fetchAPI('/api/historico'); }
   catch(e){ _histRecs=[]; }
   _histRecs.forEach((r,i)=>r._i=i);
   pintarHistorico();
@@ -6054,13 +6095,11 @@ let _deslMats = new Set();     // matrículas de desligados (p/ botão D condici
 let _csAbasFilt = null;       // funil da coluna Abas: Set de {Pendência,Incluir acessos,Aderente,Histórico,Desligado}
 async function _carregarHistMats(){
   try {
-    const r = await fetch('/api/historico');
-    const recs = await r.json();
+    const recs = await fetchAPI('/api/historico');
     _histMats = new Set((recs || []).map(x => x.matricula).filter(Boolean));
   } catch(e) { /* mantém o cache atual */ }
   try {
-    const rd = await fetch('/api/desligados');
-    const d = await rd.json();
+    const d = await fetchAPI('/api/desligados');
     _deslMats = new Set((d.lista || []).map(x => x.m).filter(Boolean));
   } catch(e) { /* mantém o cache atual */ }
 }
