@@ -205,6 +205,56 @@ p{color:#3A3F4C;font:400 14px/1.6 Arial;margin:6px 0}
 </body></html>"""
 
 
+def token_mudanca() -> str:
+    """Assinatura BARATA do estado — responde "mudou alguma coisa?" sem SQL.
+
+    POR QUE EXISTE (28/08/2026): o painel baixava `/api/dados` INTEIRO a cada
+    troca de aba (`showPage` -> `refreshDB`) e a cada 10s (`REFRESH_MS`), mesmo
+    sem nada ter mudado. Medido: **5,5 MB** por vez (2.664 usuarios, 5.821
+    linhas). Retorno da area em 28/08: "quando a gente navega entre as abas tem
+    vezes que ele nao carrega os dados e tem que fechar e abrir de novo" / "ele
+    da umas travadas".
+
+    O dado so' muda por DOIS escritores, e sao os dois da arquitetura
+    multiusuario (docs/ARQUITETURA_MULTIUSUARIO_FASE1.md):
+      1. o Processador reescreve o banco;
+      2. um analista registra tratativa -> novo/maior `.jsonl` em INTERACOES/.
+
+    Entao a assinatura e' mtime+tamanho do banco, mais a contagem e o mtime
+    maior dos .jsonl. Tudo `os.stat` — sem abrir banco, sem montar JSON.
+
+    ⚠️ Se um dia surgir um TERCEIRO escritor e ele nao entrar aqui, a tela fica
+    velha sem avisar — pior que lenta. Por isso o cliente tambem faz um refresh
+    completo periodico (ver `_FORCA_A_CADA` no index.html): sinal que escape se
+    corrige sozinho em ate 1 minuto.
+    """
+    partes = []
+    try:
+        st = os.stat(DB_PATH)
+        partes.append(f"{int(st.st_mtime)}.{st.st_size}")
+    except OSError:
+        partes.append("sem-banco")
+    n, maior = 0, 0
+    if PASTA_INTERACOES and os.path.isdir(PASTA_INTERACOES):
+        try:
+            for nome in os.listdir(PASTA_INTERACOES):
+                if not nome.lower().endswith(".jsonl"):
+                    continue
+                try:
+                    st = os.stat(os.path.join(PASTA_INTERACOES, nome))
+                except OSError:
+                    continue
+                n += 1
+                # tamanho entra junto: append num .jsonl ja existente muda o
+                # tamanho e pode NAO mudar o mtime na granularidade do SMB.
+                maior = max(maior, int(st.st_mtime))
+                partes.append(f"{nome}:{st.st_size}")
+        except OSError:
+            pass
+    partes.append(f"i{n}.{maior}")
+    return "|".join(partes)
+
+
 def _enc(motivo):
     print(f"  [ENCERRANDO] {motivo}")
     if SRV is not None:
@@ -4438,8 +4488,22 @@ class H(BaseHTTPRequestHandler):
                     self._send(200, _PAGINA_SEM_BANCO, "text/html; charset=utf-8")
                 else:
                     self._send(200, html_injetado(), "text/html; charset=utf-8")
+            elif self.path == "/api/versao":
+                # Pergunta barata que evita o download de 5,5 MB — ver
+                # token_mudanca(). Responde em bytes, nao em megabytes.
+                self._send(200, json.dumps({"token": token_mudanca()}),
+                           "application/json; charset=utf-8")
             elif self.path == "/api/dados":
-                self._send(200, json.dumps(construir_db(), ensure_ascii=False),
+                # O token vai JUNTO com os dados: assim o cliente guarda a
+                # assinatura exata do que recebeu, sem uma segunda ida ao
+                # servidor que poderia correr com uma escrita no meio.
+                # Calculado ANTES de montar os dados de proposito — se algo
+                # mudar entre as duas linhas, o token fica "velho" e o proximo
+                # ciclo baixa de novo. Errar para o lado de baixar demais.
+                _tok = token_mudanca()
+                _dados = construir_db()
+                _dados["token"] = _tok
+                self._send(200, json.dumps(_dados, ensure_ascii=False),
                            "application/json; charset=utf-8")
             elif self.path == "/api/quarentena":
                 self._send(200, json.dumps(listar_quarentena(), ensure_ascii=False),

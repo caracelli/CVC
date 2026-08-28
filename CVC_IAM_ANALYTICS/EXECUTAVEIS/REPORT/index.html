@@ -3947,10 +3947,50 @@ async function recarregarAbaAtual(){
 }
 
 /* ── Quarentena (botão na grid → grava no SQLite via servidor) ─────────── */
-async function refreshDB(){
+/* REFRESH CONDICIONAL — retorno da area em 28/08/2026: "quando a gente navega
+   entre as abas tem vezes que ele nao carrega os dados e tem que fechar e abrir
+   de novo" / "ele da umas travadas".
+
+   O que acontecia: `showPage` faz `await refreshDB()` a CADA troca de aba, e o
+   timer refaz a cada 10s (REFRESH_MS). `refreshDB` baixava `/api/dados`
+   INCONDICIONALMENTE — 5,5 MB medidos (2.664 usuarios, 5.821 linhas) — mesmo
+   quando nada tinha mudado. E quase nunca muda: o dado so' muda quando o
+   Processador roda ou quando outro analista registra uma tratativa.
+
+   Agora pergunta antes: `/api/versao` devolve um token barato (mtime+tamanho do
+   banco + assinatura dos .jsonl de INTERACOES — ver `token_mudanca()` no
+   visualizador). Token igual ao guardado => nao baixa nada.
+
+   O MULTIUSUARIO NAO PIORA: no instante em que alguem escreve um .jsonl o token
+   muda, e o proximo ciclo puxa os dados. A latencia continua sendo os mesmos
+   10s de antes.
+
+   REDE DE SEGURANCA (_FORCA_A_CADA): se um dia surgir uma fonte de mudanca que
+   o token nao cobre, a tela ficaria velha SEM AVISAR — pior que lenta. Por isso
+   um a cada 6 ciclos ignora o token e baixa mesmo assim: qualquer sinal que
+   escape se corrige sozinho em ate ~1 minuto. */
+let _tokenDB = null;      // assinatura do que ja' temos em maos
+let _refreshN = 0;        // conta os ciclos, para o forcado periodico
+const _FORCA_A_CADA = 6;  // 6 x 10s = ~1 min
+
+async function refreshDB(forcar){
   try{
+    _refreshN++;
+    const podePular = !forcar && _tokenDB !== null
+                      && (_refreshN % _FORCA_A_CADA !== 0);
+    if (podePular){
+      try{
+        const rv = await fetch('/api/versao');
+        const dv = await rv.json();
+        if (dv && dv.token === _tokenDB){
+          agendarAutoRefresh();   // nada mudou: so' re-arma o relogio
+          return;
+        }
+      }catch(e){ /* sem token: cai no download completo, como era antes */ }
+    }
     const r = await fetch('/api/dados');
     const d = await r.json();
+    if (d && d.token) _tokenDB = d.token;
     DB.kpis = d.kpis; DB.acao_dist = d.acao_dist;
     DB.sis_dist = d.sis_dist; DB.users = d.users;
     if (d.meta) DB.meta = d.meta;
