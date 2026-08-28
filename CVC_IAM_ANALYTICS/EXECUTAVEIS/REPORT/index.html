@@ -4007,6 +4007,15 @@ const _FORCA_APOS_MS = 60000;
    servidor; o troco compensa a garantia. */
 const _cacheAPI = new Map();   // url -> {token, texto}
 
+/* Toda ESCRITA joga fora o cache. Parece exagero — bastaria o token mudar —
+   mas ha um caminho que escapa: `confirmarResolucao` tem uma via rapida em que
+   o servidor devolve `j.dados` e o cliente atualiza o `DB` DIRETO, **sem passar
+   por refreshDB**. Nessa via o `_tokenDB` fica velho, e o cache continua
+   entregando o conteudo de antes da acao dela.
+   Custa uma rebusca do que ela abrir em seguida; compra a garantia de que
+   ninguem ve a tela sem a propria acao. */
+function invalidarCacheAPI(){ _cacheAPI.clear(); }
+
 async function fetchAPI(url){
   const c = _cacheAPI.get(url);
   if (c && _tokenDB !== null && c.token === _tokenDB) return JSON.parse(c.texto);
@@ -4139,6 +4148,7 @@ async function confirmarQuarentena(){
     });
     const j = await r.json();
     if(j && j.ok){
+      invalidarCacheAPI();
       await refreshDB();
       renderMatrix(); renderSV(); aplicarKPIs();
       msg = 'Usuário ' + u + ' em quarentena até ' +
@@ -4519,6 +4529,7 @@ async function confirmarResolucao(){
     });
     const j = await r.json();
     if(j && j.ok){
+      invalidarCacheAPI();   // a via rapida abaixo NAO passa por refreshDB
       if(j.dados){
         DB.kpis = j.dados.kpis; DB.acao_dist = j.dados.acao_dist;
         DB.sis_dist = j.dados.sis_dist; DB.users = j.dados.users;
@@ -4974,6 +4985,7 @@ async function confirmarRetirada(){
     if(j && j.ok){
       quarData = j.quarentena || quarData;
       pintarQuarentena();
+      invalidarCacheAPI();
       await refreshDB(); renderMatrix(); renderSV(); aplicarKPIs();
       msg = 'Usuário retirado da quarentena.';
     } else {
