@@ -11,6 +11,11 @@ Grava no config do pacote a VERSAO abaixo e <rede><raiz>Z:\\...</raiz>.
 Uso:  cd deploy && python build_update_executaveis.py
 """
 import shutil
+import sys as _sys
+from pathlib import Path as _Path
+# roda tanto de dentro de deploy/ quanto da raiz do repo
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+import _staging
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
@@ -45,8 +50,7 @@ def grava_config(config_path: Path, versao: str, raiz_valor: str):
 
 def main():
     print("=== Build UPDATE (somente EXECUTAVEIS/) ===")
-    if STAGING.exists():
-        shutil.rmtree(STAGING, ignore_errors=True)
+    _staging.limpar(STAGING)   # ver deploy/_staging.py — ignore_errors mentia
     destino_execs = STAGING / "EXECUTAVEIS"
     # copia a pasta EXECUTAVEIS inteira (exes + launcher + REPORT + CONFIG + py)
     #

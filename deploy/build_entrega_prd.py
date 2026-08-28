@@ -22,6 +22,11 @@ Uso:
     python build_entrega_prd.py
 """
 import shutil
+import sys as _sys
+from pathlib import Path as _Path
+# roda tanto de dentro de deploy/ quanto da raiz do repo
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+import _staging
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
@@ -193,8 +198,7 @@ http://127.0.0.1:8800/.
 def main():
     print("=== Build ENTREGA PRODUCAO (CVC_IAM_ANALYTICS limpo, v%s) ===" % VERSAO)
     checar_prerequisitos()
-    if STAGING.exists():
-        shutil.rmtree(STAGING, ignore_errors=True)
+    _staging.limpar(STAGING)   # ver deploy/_staging.py — ignore_errors mentia
     STAGING.mkdir(parents=True, exist_ok=True)
     ENTREGA.mkdir(parents=True, exist_ok=True)
 
