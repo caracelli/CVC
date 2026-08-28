@@ -1027,6 +1027,11 @@ SELECT
       || 'esta BLOQUEADA/INATIVA no extrato — conta revogada nao conta como '
       || 'acesso, por isso o resultado e "sem acesso". A acao aqui e '
       || 'DESBLOQUEAR a conta existente, nao criar uma nova.'
+    WHEN 'PERFIL_EXCESSIVO' THEN
+      'A pessoa TEM o perfil que o cargo preve, e alem dele outros que a matriz '
+      || 'nao explica (os "a mais" listados ao lado). Ate 28/08/2026 esses '
+      || 'extras nao apareciam: a linha mostrava so o perfil esperado. Avaliar '
+      || 'se o acesso a mais se justifica; se nao, revogar o excedente.'
     ELSE '' END                  AS motivo,
   COALESCE(v.dt_processamento,'') AS data_identificacao,
   0                              AS resolvida,

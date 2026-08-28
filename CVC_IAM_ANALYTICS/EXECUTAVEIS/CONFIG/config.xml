@@ -76,6 +76,21 @@
         </diretorio_ad>
     </rh>
 
+    <!-- Regras de validacao que a area pode ligar/desligar sem mexer no codigo. -->
+    <validacao>
+        <!-- PERFIL EXCESSIVO: pessoa que tem o perfil esperado MAIS outros que a
+             matriz nao preve. O excesso SEMPRE aparece na Consulta (a linha
+             mostra "N a mais: ..." e um "?" explicando). Esta flag decide se ele
+             tambem COBRA acao: com true, a linha deixa de ser "Aderente" e vira
+             "Em Analise".
+             Medido em 28/08/2026 nos 7 sistemas: 196 casos, 2.153 perfis extras
+             (ORACLE_EBS 148 - SYSTUR 47 - IC 1). Ligar transforma esses 196 em
+             pendencia de uma vez; por isso o default e' false. -->
+        <perfil_excessivo>
+            <gera_pendencia>false</gera_pendencia>
+        </perfil_excessivo>
+    </validacao>
+
     <sistemas>
         <sistema id="SIGOT">
             <nome>SIGOT</nome>

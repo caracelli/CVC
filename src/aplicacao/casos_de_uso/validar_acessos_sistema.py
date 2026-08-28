@@ -62,8 +62,17 @@ class ValidarAcessosSistema:
     # pendencia. Trocar o valor + reprocessar ajusta o rigor (0 desliga a regra).
     _LIMIAR_INCLUSAO = 0.30
 
-    def __init__(self, conexao: ConexaoBancoDados):
+    def __init__(self, conexao: ConexaoBancoDados,
+                 excesso_gera_pendencia: bool = False):
         self._conexao = conexao
+        # PERFIL EXCESSIVO — ver _gerar_registros_sistema. Ligado, o excesso
+        # deixa de ser informativo e vira pendencia (Em Analise). Default OFF:
+        # a decisao (A "pelo menos o esperado" x B "exatamente o esperado") e'
+        # de negocio e ainda nao foi tomada. Com OFF o excesso JA APARECE na
+        # tela — so nao cobra acao.
+        self._excesso_gera_pendencia = bool(excesso_gera_pendencia)
+        self._excesso_casos = 0
+        self._excesso_perfis = 0
         # regra temporaria de provavel desligamento (sobrescritos no fluxo real)
         self._aderentes_anteriores: Set[Tuple[str, str]] = set()
         self._prov_deslig = 0
@@ -86,6 +95,8 @@ class ValidarAcessosSistema:
         ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco = self._carregar_dados()
         self._prov_deslig = 0   # contador da regra temporaria de provavel desligamento
         self._inclusao_suprimida = 0
+        self._excesso_casos = 0
+        self._excesso_perfis = 0
         self._espelho_sem_padrao = 0
         self._calc_adocao_cargo(ativos, acessos_por_matricula)   # B1
 
@@ -230,6 +241,15 @@ class ValidarAcessosSistema:
                 f"[espelho] {self._espelho_sem_padrao} acesso(s) de "
                 f"terceiro/franqueado/prestador sem grupo-espelho com padrao — "
                 f"NAO viraram pendencia (sem par comparavel para dizer o esperado)."
+            )
+        if self._excesso_casos:
+            _modo = ("como PENDENCIA (Em Analise)" if self._excesso_gera_pendencia
+                     else "so' INFORMATIVO (segue Aderente) — ligar em "
+                          "validacao/perfil_excessivo/gera_pendencia p/ cobrar")
+            logger.info(
+                f"[excesso] {self._excesso_casos} caso(s) com perfil ALEM do "
+                f"esperado, somando {self._excesso_perfis} perfil(is) extra(s); "
+                f"{_modo}."
             )
         if self._inclusao_suprimida:
             logger.info(
@@ -415,14 +435,57 @@ class ValidarAcessosSistema:
         aderentes = [(p, m, o) for p, m, o in perfis if _adere(p)]
         if aderentes:
             p_ok, m_ok, o_ok = aderentes[0]
-            return [base | {
+
+            # PERFIL EXCESSIVO — acesso que a pessoa TEM e que NENHUM perfil
+            # esperado explica.
+            #
+            # Ate 28/08/2026 esta linha gravava `perfil_atual = p_ok` e pronto:
+            # quem tinha o perfil esperado MAIS dez outros aparecia na tela como
+            # "Aderente / perfil X" e os dez sumiam. Nao era so' falta de
+            # pendencia — a tela AFIRMAVA o que a pessoa tem, e afirmava errado.
+            # Medido nos 7 sistemas (ENTRADA 05/08): 196 pares (pessoa, sistema)
+            # escondendo 2.153 perfis (ORACLE_EBS 148 · SYSTUR 47 · IC 1). Caso
+            # real: matricula 1590, esperado 'CVC - HELP DESK DE DESPESAS COM
+            # INTERNET', tem 10 a mais — entre eles 'CVC AP BRASIL MASTER'.
+            #
+            # Pedido da area no 1o retorno (29/07): "Acessos necessario analise
+            # — acessos onde ele pode ter mais um perfil". `PERFIL_EXCESSIVO` ja'
+            # existia no enum e no Excel desde sempre, sem nunca ser gerado.
+            #
+            # Duas coisas separadas, de proposito:
+            #   VER    (sempre) - o extra entra em perfil_atual e a linha ganha
+            #                     motivo_status='PERFIL_EXCESSIVO'. A Consulta
+            #                     ja' renderiza a diferenca ("2 a mais: X, Y").
+            #   COBRAR (flag)   - so' com excesso_gera_pendencia=True o status
+            #                     vira EM_ANALISE. Ligar isso muda o numero de
+            #                     pendencias que a area ve; e' decisao dela.
+            #
+            # Dedup por _chave, igual a lista de esperados acima: a matriz e o
+            # extrato grafam o mesmo perfil de dois jeitos ('IC_CONSULTA' x
+            # 'IC CONSULTA') e sem isso o mesmo acesso contaria como dois extras.
+            esperados_k = {_chave(p) for p, _, _ in perfis}
+            _ext: Dict[str, str] = {}
+            for a in sorted(acessos_atuais):
+                k = _chave(a)
+                if k not in esperados_k and k not in _ext:
+                    _ext[k] = a
+            extras = list(_ext.values())
+
+            reg = base | {
                 "sistema": sistema_valor,
                 "perfil_esperado": p_ok,
-                "perfil_atual": p_ok,
+                "perfil_atual": ", ".join([p_ok] + extras),
                 "acesso_manual": bool(m_ok),
                 "status": StatusValidacao.OK.value,
                 "origem_matriz": o_ok,
-            }]
+            }
+            if extras:
+                self._excesso_casos += 1
+                self._excesso_perfis += len(extras)
+                reg["motivo_status"] = "PERFIL_EXCESSIVO"
+                if self._excesso_gera_pendencia:
+                    reg["status"] = StatusValidacao.EM_ANALISE.value
+            return [reg]
 
         # REGRA TEMPORARIA (sai na fase de desligados): a pessoa JA foi aderente
         # neste sistema (tinha o acesso) e agora esta SEM NENHUM acesso ->

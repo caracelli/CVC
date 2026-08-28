@@ -320,7 +320,10 @@ def _executar(caminho_config: Path) -> int:
         AnalisarDivergencias(conexao=conexao).executar()
 
         # Validação de acessos (inclusão/alteração) — grava na tabela validacao_acessos
-        ValidarAcessosSistema(conexao=conexao).executar()
+        ValidarAcessosSistema(
+            conexao=conexao,
+            excesso_gera_pendencia=cfg.validacao_excesso_gera_pendencia,
+        ).executar()
 
         # Card 23 — revalidacao POS-TRANSFERENCIA. Depois do AnalisarDivergencias
         # (que grava a tabela `transferidos` com o de/para) e da validacao, para

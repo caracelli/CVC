@@ -43,6 +43,11 @@ class Configuracao:
     # terceiros ficam fora. Default True preserva o comportamento legado.
     rh_processar_desligados: bool
     rh_processar_terceiros: bool
+    # PERFIL EXCESSIVO (perfil ALEM do que a matriz preve). O excesso SEMPRE
+    # aparece na tela; esta flag decide se ele tambem COBRA acao (vira Em
+    # Analise). Default False: sao 196 casos medidos e transformar isso em
+    # pendencia de uma vez e' decisao da area, nao do motor.
+    validacao_excesso_gera_pendencia: bool
     # Diretorio AD (franqueados/prestadores/desligados) — identidades p/ dar dono
     # aos orfaos. Aceita VARIOS <caminho>: desde 05/08/2026 o cliente entrega os
     # exports em pastas separadas por populacao (SISTEMAS/AD_FRANQUEADOS,
@@ -131,6 +136,8 @@ class LeitorConfig:
             rh_desligados_caminho=root.findtext("rh/desligados/caminho", ""),
             rh_processar_desligados=_bool("rh/desligados/processar"),
             rh_processar_terceiros=_bool("rh/ativos/processar_terceiros"),
+            validacao_excesso_gera_pendencia=_bool(
+                "validacao/perfil_excessivo/gera_pendencia", "false"),
             rh_diretorio_ad_caminho=(_ad_caminhos(root) or ["ENTRADA/RH/AD"])[0],
             rh_diretorio_ad_caminhos=_ad_caminhos(root) or ["ENTRADA/RH/AD"],
             rh_processar_diretorio_ad=_bool("rh/diretorio_ad/processar"),
