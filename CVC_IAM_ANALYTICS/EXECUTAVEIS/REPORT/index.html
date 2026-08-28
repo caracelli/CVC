@@ -1305,7 +1305,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
       </div>
       <div class="kpi" style="background:#F5EEF8;border:1px solid #D7BDE2;--kpi-bar:#7D3C98;">
         <div class="kpi-val" style="color:#7D3C98;">4.957</div>
-        <div class="kpi-lbl" style="color:#7D3C98;">Usuários Não Encontrados</div>
+        <div class="kpi-lbl" style="color:#7D3C98;">Usuários sem vínculo no RH</div>
       </div>
       <div class="kpi" style="background:#EAFAF1;border:1px solid #A9DFBF;--kpi-bar:#1E8449;">
         <div class="kpi-val" style="color:#1E8449;">6.358</div>
@@ -6458,20 +6458,35 @@ function toggleCsExpand(uid){
   if (btn) { btn.classList.add('aberto'); btn.textContent = '+'; }
 }
 
-/* Texto do perfil no detalhe da Consulta: traz o PERFIL ESPERADO (o que o
-   cargo/matriz preve) junto do que a pessoa TEM hoje (encontrado). HTML ja
-   escapado. Aderente = tem == esperado. */
+/* Texto do perfil no detalhe da Consulta.
+
+   REGRA (retorno da area, 28/08/2026 — "porque dois esperados: o perfil que
+   tem ali e' o que e' esperado ou liberado?"): o rotulo existe para
+   DISTINGUIR, nao para decorar.
+
+   Antes, toda linha vinha prefixada. So que quem chama esta funcao JA diz a
+   que categoria a linha pertence — `_csDetalheCategorias` poe o cabecalho
+   "● Acessos esperados (N) — nao tem, mas o cargo preve", e `_csAccBloco`
+   agrupa por acao ("● Incluir Acesso (N)"). Resultado: dentro de um bloco
+   chamado "Acessos esperados" cada linha repetia "Esperado:", e o leitor
+   ficava sem saber se aquele perfil era o que a pessoa TEM ou o que DEVERIA
+   ter. Pior: no bloco "encontrados", quando encontrado == esperado, a linha
+   vinha em verde SEM rotulo nenhum — a mesma informacao ora rotulada, ora nao.
+
+   Agora: UM valor na linha -> sem prefixo (o bloco ja disse o que e').
+   DOIS valores na linha (o caso "Alterar Perfil") -> os dois prefixos ficam,
+   porque ai eles separam duas coisas diferentes, que e' para isso que servem.
+   HTML ja escapado. */
 function _csPerfilTxt(d){
   // Perfil pode ser uma LISTA separada por virgula (ex.: SIG matricial, ~40
   // perfis). Quebra em linhas pra nao virar uma linha gigante que vaza.
   const br = v => String(v).split(',').map(s => esc(s.trim())).filter(Boolean).join('<br>');
   const pe = (d.pe || '').trim(), pp = (d.pp || '').trim();
-  if (pe && pp) {
-    if (pe === pp) return '<span style="color:#1E7B43">' + br(pe) + '</span>';
-    return 'Encontrado: ' + br(pe) + '<br>Esperado: <b>' + br(pp) + '</b>';
-  }
-  if (pp) return 'Esperado: <b>' + br(pp) + '</b>';
-  if (pe) return 'Encontrado: ' + br(pe);
+  if (pe && pp && pe !== pp)
+    return 'Tem hoje: ' + br(pe) + '<br>Deveria ter: <b>' + br(pp) + '</b>';
+  if (pe && pp) return '<span style="color:#1E7B43">' + br(pe) + '</span>';
+  if (pp) return '<b>' + br(pp) + '</b>';
+  if (pe) return br(pe);
   return '—';
 }
 
@@ -7048,11 +7063,21 @@ function mkChart(id, labels, data, alpha){
   });
 }
 
-/* ── KPIs data-driven (lidos do DB injetado pelo servidor) ────────────── */
+/* ── KPIs data-driven (lidos do DB injetado pelo servidor) ─────────────
+
+   A CHAVE E' O TEXTO DO ROTULO do card (`KPI_MAP[lbl.textContent.trim()]` em
+   `aplicarKPIs`). Renomear o rotulo sem renomear a chave nao quebra nada
+   visivelmente: o card simplesmente para de receber valor, calado. Amarrado
+   em tests/test_painel_rotulos.py.
+
+   'Aderente' e 'Incluir Acesso' sairam daqui em 28/08/2026: eram chaves
+   MORTAS. Os cards deles terminam em "↗" (o texto real e' "Aderente ↗"), que
+   nunca casou com a chave — quem os preenche e' o trecho por id no fim de
+   `aplicarKPIs` (`kpi-aderente`, `kpi-incluir`). Chave morta num mapa indexado
+   por rotulo engana: sugere que trocar o rotulo basta. */
 const KPI_MAP = {
-  'Incluir Acesso':'sem_acesso', 'Alterar Perfil':'divergente',
-  'Em Análise':'em_analise', 'Usuários Não Encontrados':'nao_mapeado',
-  'Aderente':'ok',
+  'Alterar Perfil':'divergente',
+  'Em Análise':'em_analise', 'Usuários sem vínculo no RH':'nao_mapeado',
   'Total c/ Ação':'total'
 };
 // Mapeia a ACAO da divergencia (campo d.a) para a chave do KPI.
