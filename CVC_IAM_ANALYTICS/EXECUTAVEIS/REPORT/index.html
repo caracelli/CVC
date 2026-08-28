@@ -6477,16 +6477,72 @@ function toggleCsExpand(uid){
    DOIS valores na linha (o caso "Alterar Perfil") -> os dois prefixos ficam,
    porque ai eles separam duas coisas diferentes, que e' para isso que servem.
    HTML ja escapado. */
+/* Lista de perfis com teto. Medido na base de 28/08: 5.062 linhas mostram UM
+   perfil e 520 mostram 21 ou mais — e essas sao quase todas do SIG, que e'
+   matricial (mediana 39 perfis por linha, maximo 141). O mesmo layout que
+   serve para 1 perfil vira paredao com 39. Mostra os primeiros e resume o
+   resto; a lista inteira fica no title. */
+function _csListaPerfis(arr, teto){
+  teto = teto || 6;
+  const todos = arr.map(s => String(s).trim()).filter(Boolean);
+  if (!todos.length) return '—';
+  const vis = todos.slice(0, teto).map(esc).join('<br>');
+  if (todos.length <= teto) return vis;
+  return vis + `<br><span style="color:#8A9099;font-size:10.5px;" `
+             + `title="${esc(todos.join(', '))}">+${todos.length - teto} outros</span>`;
+}
+
+/* Compara o que a pessoa TEM com o que a matriz PREVE e devolve a DIFERENCA.
+   Normaliza caixa/espaco para nao acusar diferenca que e' so' de grafia. */
+function _csDelta(pe, pp){
+  const lista = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
+  const norm  = s => s.toUpperCase().replace(/\s+/g, ' ');
+  const tem = lista(pe), dev = lista(pp);
+  const sTem = new Set(tem.map(norm)), sDev = new Set(dev.map(norm));
+  return {tem, dev,
+          faltam: dev.filter(x => !sTem.has(norm(x))),
+          aMais:  tem.filter(x => !sDev.has(norm(x)))};
+}
+
+/* Texto do perfil no detalhe da Consulta.
+
+   REGRA 1 (retorno de 28/08 — "porque dois esperados?"): o rotulo existe para
+   DISTINGUIR, nao para decorar. UM valor na linha -> sem prefixo, porque o
+   bloco que a contem ja diz o que e'.
+
+   REGRA 2 (retorno de 28/08 — "ele se perde na parte da divisao: as vezes traz
+   a lista de perfis tipo esperado, ai lista tudo, encontrado, e lista os
+   encontrados em outra coluna"): quando ha os DOIS lados, mostrar a
+   DIFERENCA, nao as duas listas inteiras. Pedir que ela compare 39 contra 38
+   de cabeca era o defeito; o que ela precisa e' o que FALTA e o que esta A
+   MAIS, que e' o acionavel. As listas cheias continuam acessiveis no title.
+
+   Valvula de seguranca: se a diferenca der VAZIA dos dois lados mas os textos
+   diferirem, e' divergencia so' de grafia — ai mostra as duas listas, porque
+   esconder seria mentir sobre o motivo de a linha estar ali.
+   HTML ja escapado. */
 function _csPerfilTxt(d){
-  // Perfil pode ser uma LISTA separada por virgula (ex.: SIG matricial, ~40
-  // perfis). Quebra em linhas pra nao virar uma linha gigante que vaza.
-  const br = v => String(v).split(',').map(s => esc(s.trim())).filter(Boolean).join('<br>');
   const pe = (d.pe || '').trim(), pp = (d.pp || '').trim();
-  if (pe && pp && pe !== pp)
-    return 'Tem hoje: ' + br(pe) + '<br>Deveria ter: <b>' + br(pp) + '</b>';
-  if (pe && pp) return '<span style="color:#1E7B43">' + br(pe) + '</span>';
-  if (pp) return '<b>' + br(pp) + '</b>';
-  if (pe) return br(pe);
+  if (pe && pp && pe !== pp) {
+    const {tem, dev, faltam, aMais} = _csDelta(pe, pp);
+    if (faltam.length || aMais.length) {
+      const partes = [];
+      if (faltam.length)
+        partes.push(`<span style="color:#2980B9;font-weight:700;">Falta${faltam.length>1?'m':''} `
+                  + `${faltam.length}:</span> ` + _csListaPerfis(faltam));
+      if (aMais.length)
+        partes.push(`<span style="color:#B9770E;font-weight:700;">${aMais.length} a mais:</span> `
+                  + _csListaPerfis(aMais));
+      return partes.join('<br>');
+    }
+    // mesma lista, grafia diferente — mostrar os dois lados e' o honesto
+    return 'Tem hoje: ' + _csListaPerfis(tem)
+         + '<br>Deveria ter: <b>' + _csListaPerfis(dev) + '</b>';
+  }
+  const um = s => _csListaPerfis(String(s).split(','));
+  if (pe && pp) return '<span style="color:#1E7B43">' + um(pe) + '</span>';
+  if (pp) return '<b>' + um(pp) + '</b>';
+  if (pe) return um(pe);
   return '—';
 }
 

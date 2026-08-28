@@ -179,6 +179,8 @@ class IconeDoMotivoNaConsulta(unittest.TestCase):
         let _csAccSeq = 0;
         {_funcao('motIcone')}
         {_funcao('_csCorAcao')}
+        {_funcao('_csListaPerfis')}
+        {_funcao('_csDelta')}
         {_funcao('_csPerfilTxt')}
         {_funcao('_csAccBloco')}
         console.log(_csAccBloco('SIG', {json.dumps(divs)}, 'cs-acc', false));

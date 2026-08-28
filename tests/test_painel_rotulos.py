@@ -65,6 +65,8 @@ class RotuloSoQuandoDistingue(unittest.TestCase):
         js = f"""
         const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
                                   .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        {_funcao('_csListaPerfis')}
+        {_funcao('_csDelta')}
         {_funcao('_csPerfilTxt')}
         console.log(_csPerfilTxt({json.dumps({"pe": pe, "pp": pp})}));
         """
@@ -97,12 +99,18 @@ class RotuloSoQuandoDistingue(unittest.TestCase):
         self.assertNotIn("Encontrado", h)
 
     def test_dois_valores_MANTEM_os_rotulos(self):
-        """Aqui o rotulo trabalha: separa o que ela tem do que deveria ter."""
+        """Aqui o rotulo trabalha: separa coisas diferentes.
+
+        Desde o ajuste de volume (28/08, ver test_painel_volume_perfis.py) o
+        caso de dois lados mostra o DELTA — "Falta N" / "N a mais" — em vez das
+        duas listas. Continuam sendo dois rotulos que distinguem, que e' o que
+        esta regra cobra. O par "Tem hoje/Deveria ter" sobrou para a valvula
+        de grafia, coberta la'."""
         h = self._txt("ATD_LAZER", "GERENCIA_GERAL")
-        self.assertIn("Tem hoje", h)
-        self.assertIn("Deveria ter", h)
-        self.assertLess(h.index("Tem hoje"), h.index("Deveria ter"),
-                        "o que ela tem vem primeiro")
+        self.assertIn("Falta 1", h)
+        self.assertIn("1 a mais", h)
+        self.assertIn("GERENCIA_GERAL", h)
+        self.assertIn("ATD_LAZER", h)
 
     def test_nao_usa_mais_a_palavra_ambigua(self):
         """'Encontrado' significava duas coisas na tela; some da linha."""
