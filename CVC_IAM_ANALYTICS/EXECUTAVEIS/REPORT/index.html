@@ -6466,8 +6466,8 @@ function toggleCsExpand(uid){
 
    Antes, toda linha vinha prefixada. So que quem chama esta funcao JA diz a
    que categoria a linha pertence — `_csDetalheCategorias` poe o cabecalho
-   "● Acessos esperados (N) — nao tem, mas o cargo preve", e `_csAccBloco`
-   agrupa por acao ("● Incluir Acesso (N)"). Resultado: dentro de um bloco
+   "● Acessos esperados (N) — nao tem, mas o cargo preve". Resultado: dentro
+   de um bloco
    chamado "Acessos esperados" cada linha repetia "Esperado:", e o leitor
    ficava sem saber se aquele perfil era o que a pessoa TEM ou o que DEVERIA
    ter. Pior: no bloco "encontrados", quando encontrado == esperado, a linha
@@ -6560,62 +6560,6 @@ function _csCorAcao(a){
    agrupa por STATUS/ação (Incluir/Alterar/Em Análise/Usuário Não Encontrado/Aderente) com
    rótulo colorido + contagem. Sistema com muitos perfis (ex.: SIG) nasce
    RECOLHIDO; poucos perfis já vêm abertos. */
-function _csAccBloco(sis, lista, pfx, comData){
-  const cp = v => String(v || '').split(',').filter(x => x.trim()).length;
-  const nP = d => Math.max(cp(d.pe), cp(d.pp), 1);
-  const nProf = lista.reduce((s, d) => s + nP(d), 0);
-  const sisBadge = (pfx === 'cs-sub-acc') ? 'cs-sub-sis' : 'cs-acc-sis';
-  // Agrupa por ação/status, na ordem "acionável primeiro, aderente por último".
-  const grupos = {};
-  lista.forEach(d => { const k = d.a || d.tl || d.t || '—'; (grupos[k] = grupos[k] || []).push(d); });
-  const ordem = ['Incluir Acesso', 'Alterar Perfil', 'Em Análise', 'Usuário Não Encontrado', 'Aderente'];
-  const chaves = Object.keys(grupos).sort((a, b) => {
-    const ia = ordem.indexOf(a), ib = ordem.indexOf(b);
-    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-  });
-  let corpo = '';
-  chaves.forEach(k => {
-    const g = grupos[k], cor = _csCorAcao(k);
-    const nk = g.reduce((s, d) => s + nP(d), 0);
-    // Data no CABEÇALHO do grupo quando todos compartilham a mesma; senão,
-    // por linha (grupos com datas diferentes — raro).
-    const datas = comData ? [...new Set(g.map(d => d.dt).filter(Boolean))] : [];
-    const umaData = datas.length === 1;
-    const dtHdr = umaData
-      ? ` <span style="color:#8A9099;font-weight:600">· ${fmtDH(datas[0])}</span>` : '';
-    corpo += `<div class="cs-acc-stgrp"><div class="cs-acc-stlbl" style="color:${cor}">● ${esc(k)} (${nk})${dtHdr}</div>`;
-    g.forEach(d => {
-      const data = (comData && !umaData && d.dt) ? ` <span style="color:#8A9099">· ${fmtDH(d.dt)}</span>` : '';
-      corpo += `<div class="${pfx}-p"><span>${_csPerfilTxt(d)}`
-             + `${motIcone(d.mot)}${data}</span></div>`;
-    });
-    corpo += `</div>`;
-  });
-  const colapsar = nProf > 4;
-  const id = 'csacc' + (++_csAccSeq);
-  const toggle = colapsar
-    ? `<span class="cs-acc-toggle" data-n="${nProf}" onclick="csAccToggle('${id}',this)">▸ ver ${nProf} perfis</span>`
-    : '';
-  const body = `<div class="cs-acc-body" id="${id}"${colapsar ? ' style="display:none"' : ''}>${corpo}</div>`;
-  // Selo de reabertura no cabeçalho do sistema: "reaberta" se ha pendencia atual
-  // num ciclo>1; senão o nº de ciclos quando já houve reabertura no passado.
-  const _maxc = lista.reduce((m, d) => Math.max(m, d.ciclos || 1), 1);
-  const _reab = lista.some(d => d.reab);
-  const reabBadge = _reab
-    ? ` <span class="h-reab" title="Pendência reaberta: era aderente e voltou a divergir neste sistema (ciclo ${_maxc})">reaberta</span>`
-    : (_maxc > 1 ? ` <span class="h-ciclo" title="${_maxc} ciclos (reaberturas) neste sistema">${_maxc} ciclos</span>` : '');
-  return `<div class="${pfx}">`
-    + `<div class="${pfx}-h"><span>${esc(sis)}${reabBadge}</span>`
-    + `<span class="${sisBadge}">${nProf} ${nProf > 1 ? 'perfis' : 'perfil'}</span></div>`
-    + toggle + body + `</div>`;
-}
-function csAccToggle(id, el){
-  const b = document.getElementById(id); if (!b) return;
-  const open = b.style.display !== 'none';
-  b.style.display = open ? 'none' : '';
-  el.textContent = open ? ('▸ ver ' + el.dataset.n + ' perfis') : '▾ recolher';
-}
-
 /* Colunas de perfil da grade da Consulta (Encontrado/Esperado): perfis
    DISTINTOS do campo (uniao de todos os sistemas), resumidos (2 + "+N") com
    tooltip do total. campo = 'pe' (encontrado/atual) ou 'pp' (esperado). */
@@ -6673,7 +6617,11 @@ function _csDetalheCategorias(divs, pfx, comData){
     const n = Object.values(porSis).reduce((s, l) => s + l.length, 0);
     let linhas = '';
     Object.entries(porSis).forEach(([sis, lista]) => {
-      const perfis = lista.map(d => _csPerfilTxt(d)).join(', ');
+      // O "?" do motivo tem de sair AQUI. Ate 28/08/2026 ele estava so' em
+      // `_csAccBloco` — funcao MORTA (ninguem a chamava) — e por isso o aviso
+      // de conta BLOQUEADA nunca chegou a tela, apesar de o motor grava-lo e
+      // de haver teste verde: o teste chamava a funcao morta direto.
+      const perfis = lista.map(d => _csPerfilTxt(d) + motIcone(d.mot)).join(', ');
       const dt = (comData && lista[0].dt)
         ? ` <span style="color:#8A9099">· ${fmtDH(lista[0].dt)}</span>` : '';
       // Pessoa com duas identidades (mesmo CPF): diz de qual delas veio o

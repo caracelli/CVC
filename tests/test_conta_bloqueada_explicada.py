@@ -163,35 +163,56 @@ def _funcao(nome):
     raise AssertionError(f"função {nome} não fecha")
 
 
+def _const(nome):
+    """Extrai uma const de array/objeto do index.html (ex.: _CS_CATS)."""
+    html = INDEX.read_text(encoding="utf-8")
+    i = html.index(f"const {nome} = ")
+    j = html.index("[", i)
+    nivel = 0
+    for k in range(j, len(html)):
+        if html[k] == "[":
+            nivel += 1
+        elif html[k] == "]":
+            nivel -= 1
+            if nivel == 0:
+                return html[i:k + 2]
+    raise AssertionError(f"const {nome} não fecha")
+
+
 @unittest.skipUnless(NODE, "Node não disponível nesta máquina")
 class IconeDoMotivoNaConsulta(unittest.TestCase):
-    """O "?" existia SO na grid de Pendencias (`tipoBadge`). Mas "Incluir
-    Acesso" nao e' pendencia — por decisao da propria area e' informativo e
-    aparece SO na Consulta. Ou seja: sem este ajuste o motivo da conta
-    bloqueada nasceria invisivel, exatamente no unico lugar onde esses 81
-    casos sao vistos."""
+    """O "?" tem de sair no renderizador que RODA.
+
+    Historia deste teste, que vale mais que ele: na primeira versao (26/08) ele
+    exercitava `_csAccBloco` e passava verde — so' que `_csAccBloco` era CODIGO
+    MORTO, ninguem a chamava. O "?" da conta bloqueada nunca chegou na tela, com
+    teste verde o tempo todo, porque o teste chamava a funcao morta direto.
+    Descoberto em 28/08 ao mapear a navegacao a pedido da area.
+
+    Agora ele exercita `_csDetalheCategorias`, que e' o que `_csMontarSub` (a
+    expansao da linha) e o drawer realmente usam. Se alguem trocar o
+    renderizador de novo, este teste tem de ser reapontado JUNTO — ou volta a
+    provar coisa nenhuma."""
 
     def _render(self, divs):
         js = f"""
         const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
                                   .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         const fmtDH = s => s;
-        let _csAccSeq = 0;
+        {_const('_CS_CATS')}
         {_funcao('motIcone')}
-        {_funcao('_csCorAcao')}
+        {_funcao('_csCatDe')}
         {_funcao('_csListaPerfis')}
         {_funcao('_csDelta')}
         {_funcao('_csPerfilTxt')}
-        {_funcao('_csAccBloco')}
-        console.log(_csAccBloco('SIG', {json.dumps(divs)}, 'cs-acc', false));
+        {_funcao('_csDetalheCategorias')}
+        console.log(_csDetalheCategorias({json.dumps(divs)}, 'cs-sub-acc', false));
         """
         with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False,
                                          encoding="utf-8") as f:
             f.write(js)
             caminho = f.name
         try:
-            # o HTML gerado tem "▸"/"●": sem encoding explicito o Windows
-            # tenta cp1252 na saida do Node e a leitura estoura
             r = subprocess.run([NODE, caminho], capture_output=True, text=True,
                                encoding="utf-8", errors="replace")
             self.assertEqual(r.returncode, 0, r.stderr)
@@ -212,8 +233,16 @@ class IconeDoMotivoNaConsulta(unittest.TestCase):
     def test_linha_sem_motivo_nao_ganha_icone(self):
         """A esmagadora maioria das linhas nao tem motivo: um "?" em todas
         viraria ruido e ninguem mais leria nenhum."""
-        html = self._render([self._div("")])
-        self.assertNotIn("mot-info", html)
+        self.assertNotIn("mot-info", self._render([self._div("")]))
+
+    def test_o_renderizador_testado_e_o_que_a_tela_usa(self):
+        """Guarda contra o erro de 26/08 se repetir: se `_csMontarSub` deixar de
+        chamar `_csDetalheCategorias`, este teste volta a provar nada."""
+        html = INDEX.read_text(encoding="utf-8")
+        i = html.index("function _csMontarSub(")
+        corpo = html[i:i + 700]
+        self.assertIn("_csDetalheCategorias", corpo,
+                      "a expansao da linha nao usa mais o renderizador testado")
 
 
 if __name__ == "__main__":
