@@ -22,6 +22,7 @@ _COLUNAS = [
 
 _LABEL_TIPOS = {
     "ACESSO_DESLIGADO":     "Acesso Desligado",
+    "ACESSO_CONTA_SERVICO": "Conta de Serviço",
     "PERFIL_INVALIDO":      "Perfil Invalido",
     "ACESSO_SEM_VINCULO_RH": "Sem Vinculo RH",
     "ACESSO_TRANSFERIDO":   "Acesso Transferido",

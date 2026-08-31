@@ -12,7 +12,10 @@ from infraestrutura.repositorios.repositorio_transferido_sqlite import Repositor
 
 class AnalisarDivergencias:
 
-    def __init__(self, conexao: ConexaoBancoDados):
+    def __init__(self, conexao: ConexaoBancoDados, prefixos_conta_servico=None):
+        # Prefixos de login de CONTA DE SERVICO (config validacao/conta_servico).
+        # Vazio = regra desligada.
+        self._prefixos_conta_servico = prefixos_conta_servico or []
         self._repo_func = RepositorioFuncionarioSqlite(conexao)
         self._repo_acesso = RepositorioAcessoSqlite(conexao)
         self._repo_matriz = RepositorioMatrizSqlite(conexao)
@@ -34,7 +37,8 @@ class AnalisarDivergencias:
         # da saida da regra. A tabela guarda o movimento; a regra guarda o acesso.
         self._repo_transf.salvar_lote(transferidos)
 
-        servico = ServicoAnaliseDivergencias(perfis_esperados)
+        servico = ServicoAnaliseDivergencias(
+            perfis_esperados, prefixos_conta_servico=self._prefixos_conta_servico)
         divergencias = servico.analisar(
             acessos=acessos,
             ativos=ativos,
@@ -61,6 +65,25 @@ class AnalisarDivergencias:
             logger.info(
                 f"[desligados] {_login_dif} acesso(s) APONTADO(S): a pessoa esta "
                 f"ativa, mas com login DIFERENTE (identidade antiga viva)."
+            )
+
+        # CONTA DE SERVICO: robo que casou com desligado pelo e-mail de quem o
+        # criou. Saiu da revogacao (tipo proprio), mas NAO sumiu — e' consultavel.
+        _servico = getattr(servico, "contas_servico", 0)
+        if _servico:
+            logger.info(
+                f"[desligados] {_servico} acesso(s) reclassificado(s) como CONTA "
+                f"DE SERVICO (prefixo {self._prefixos_conta_servico}): fora da "
+                f"lista de revogacao, visiveis na categoria propria."
+            )
+        # Conferencia da premissa: prefixo e nome discordaram. Zero na base
+        # medida; acima de zero e' pedido de revisao da lista de prefixos.
+        _dif = getattr(servico, "divergiu_do_nome", 0)
+        if _dif:
+            logger.warning(
+                f"[desligados] {_dif} caso(s) em que o PREFIXO e o NOME "
+                f"discordam sobre ser conta de servico — revisar "
+                f"validacao/conta_servico/prefixos_login no config.xml."
             )
 
         por_tipo = {}

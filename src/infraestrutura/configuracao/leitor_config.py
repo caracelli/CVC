@@ -48,6 +48,12 @@ class Configuracao:
     # Analise). Default False: sao 196 casos medidos e transformar isso em
     # pendencia de uma vez e' decisao da area, nao do motor.
     validacao_excesso_gera_pendencia: bool
+    # CONTA DE SERVICO (robo/automacao) nos desligados. Prefixos de LOGIN; o
+    # acesso deixa de entrar na lista de revogacao e passa a um tipo proprio,
+    # consultavel. Vazio = regra desligada (comportamento anterior).
+    # Medido em 31/08/2026: o prefixo SIST pega 297 das 432 linhas, com zero
+    # falso positivo e zero robo fora do prefixo.
+    conta_servico_prefixos: List[str]
     # Diretorio AD (franqueados/prestadores/desligados) — identidades p/ dar dono
     # aos orfaos. Aceita VARIOS <caminho>: desde 05/08/2026 o cliente entrega os
     # exports em pastas separadas por populacao (SISTEMAS/AD_FRANQUEADOS,
@@ -79,6 +85,23 @@ def _ad_caminhos(root) -> List[str]:
     if no is None:
         return []
     return [c.text.strip() for c in no.findall("caminho") if (c.text or "").strip()]
+
+
+def _conta_servico_prefixos(root) -> List[str]:
+    """Prefixos de login de CONTA DE SERVICO, de <validacao><conta_servico>.
+
+    Aceita lista separada por virgula em <prefixos_login> (um so' prefixo e' o
+    caso comum: `SIST`). A chave <excluir_de_desligados> desliga a regra sem
+    apagar a lista — util para a area voltar atras sem perder o que configurou.
+    Ausente ou vazio = regra desligada, exatamente o comportamento anterior."""
+    no = root.find("validacao/conta_servico")
+    if no is None:
+        return []
+    ligado = (no.findtext("excluir_de_desligados", "true") or "").strip().lower()
+    if ligado not in ("true", "1", "sim"):
+        return []
+    bruto = no.findtext("prefixos_login", "") or ""
+    return [p.strip() for p in bruto.split(",") if p.strip()]
 
 
 class LeitorConfig:
@@ -138,6 +161,7 @@ class LeitorConfig:
             rh_processar_terceiros=_bool("rh/ativos/processar_terceiros"),
             validacao_excesso_gera_pendencia=_bool(
                 "validacao/perfil_excessivo/gera_pendencia", "false"),
+            conta_servico_prefixos=_conta_servico_prefixos(root),
             rh_diretorio_ad_caminho=(_ad_caminhos(root) or ["ENTRADA/RH/AD"])[0],
             rh_diretorio_ad_caminhos=_ad_caminhos(root) or ["ENTRADA/RH/AD"],
             rh_processar_diretorio_ad=_bool("rh/diretorio_ad/processar"),

@@ -83,12 +83,41 @@
              mostra "N a mais: ..." e um "?" explicando). Esta flag decide se ele
              tambem COBRA acao: com true, a linha deixa de ser "Aderente" e vira
              "Em Analise".
-             Medido em 28/08/2026 nos 7 sistemas: 196 casos, 2.153 perfis extras
-             (ORACLE_EBS 148 - SYSTUR 47 - IC 1). Ligar transforma esses 196 em
-             pendencia de uma vez; por isso o default e' false. -->
+             Medido em 28/08/2026 nos 7 sistemas: 130 casos, 186 perfis extras
+             (ORACLE_EBS 96 - SYSTUR 33 - IC 1). Ligar transforma esses 130 em
+             pendencia de uma vez; por isso o default e' false.
+             (A medida anterior, 196/2.153, estava errada: comparava cada acesso
+             contra a UNICA string perfil_esperado da linha, e nao contra o
+             conjunto esperado inteiro, que na CCO vem de cc+gestor.) -->
         <perfil_excessivo>
             <gera_pendencia>false</gera_pendencia>
         </perfil_excessivo>
+
+        <!-- CONTA DE SERVICO nos DESLIGADOS (retorno da area, 28 e 31/08/2026):
+             "porque ta vindo uns usuarios sistemicos nos desligados".
+             O robo e' cadastrado com o e-mail de quem o criou; quando essa
+             pessoa e' desligada, o robo aparece como acesso a revogar. Revogar
+             derruba producao.
+
+             O acesso com um destes prefixos de LOGIN deixa de entrar na lista de
+             revogacao e passa a uma categoria propria — ele NAO some: some da
+             cobranca, continua consultavel, para que uma classificacao errada
+             apareca em vez de se esconder.
+
+             Medido em 31/08/2026 nas 432 linhas de ACESSO_DESLIGADO (E2E dos 7
+             sistemas): `SIST` pega 297 (69%). Zero falso positivo (nenhum SIST*
+             parece pessoa: ROBO MARITIMO, AUTOMACAO RPA SOLO, PROJETO JENKINS,
+             ROBO AEREO GRUPOS, ROBO POS TRAVEL B2B, ROBO REEMBOLSO AO CLIENTE...)
+             e zero robo fora do prefixo.
+
+             PARA MANTER: acrescente prefixos separados por virgula quando a CVC
+             criar contas de servico com outra nomenclatura. Reprocessar basta —
+             nao precisa de executavel novo. Para desligar a regra sem perder a
+             lista, use <excluir_de_desligados>false</excluir_de_desligados>. -->
+        <conta_servico>
+            <prefixos_login>SIST</prefixos_login>
+            <excluir_de_desligados>true</excluir_de_desligados>
+        </conta_servico>
     </validacao>
 
     <sistemas>

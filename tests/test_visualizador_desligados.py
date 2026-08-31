@@ -27,11 +27,12 @@ def _criar_db(db, desligados, divergencias):
         " cargo_descricao TEXT, departamento TEXT, centro_custo_codigo TEXT,"
         " centro_custo_nome TEXT, data_desligamento TEXT, email TEXT, empresa TEXT);"
         "CREATE TABLE divergencias (tipo TEXT, sistema TEXT, usuario TEXT,"
+        " nome_usuario TEXT,"
         " matricula TEXT, perfil_encontrado TEXT, data_identificacao TEXT,"
         " resolvida INTEGER);"
     )
     c.executemany("INSERT INTO rh_desligados VALUES (?,?,?,?,?,?,?,?,?,?)", desligados)
-    c.executemany("INSERT INTO divergencias VALUES (?,?,?,?,?,?,?)", divergencias)
+    c.executemany("INSERT INTO divergencias VALUES (?,?,?,?,?,?,?,?)", divergencias)
     c.commit()
     c.close()
 
@@ -41,8 +42,16 @@ def _deslig(mat, nome, dt="2026-06-01"):
             "x@cvc.com.br", "CVC")
 
 
-def _div_deslig(mat, sistema, login="lg", perfil="P1", resolvida=0):
-    return ("ACESSO_DESLIGADO", sistema, login, mat, perfil, "2026-06-10", resolvida)
+def _div_deslig(mat, sistema, login="lg", perfil="P1", resolvida=0, nome="N"):
+    return ("ACESSO_DESLIGADO", sistema, login, nome, mat, perfil,
+            "2026-06-10", resolvida)
+
+
+def _div_servico(mat, sistema, login="SIST0230", perfil="P1",
+                 nome="USUARIO SISTEMICO MONITORAMENTO ROTEIROS"):
+    """Linha que o motor reclassificou como conta de servico (robo)."""
+    return ("ACESSO_CONTA_SERVICO", sistema, login, nome, mat, perfil,
+            "2026-06-10", 0)
 
 
 class _Base(unittest.TestCase):
@@ -92,7 +101,9 @@ class TestSituacaoDesligado(_Base):
         r = self._rodar(
             [_deslig("100", "ANA"), _deslig("200", "BIA"), _deslig("300", "CID")],
             [_div_deslig("100", "SYSTUR")])
-        self.assertEqual(r["kpis"], {"tratar": 1, "tratados": 0, "ok": 2, "total": 3})
+        self.assertEqual(r["kpis"],
+                         {"tratar": 1, "tratados": 0, "ok": 2, "total": 3,
+                          "servico": 0})
 
 
 class TestAcessoSemRh(_Base):
@@ -121,7 +132,8 @@ class TestEscopoESchema(_Base):
 
     def test_outros_tipos_de_divergencia_nao_contam(self):
         r = self._rodar([_deslig("100", "ANA")],
-                        [("DIVERGENTE", "SYSTUR", "lg", "100", "P1", "2026-06-10", 0)])
+                        [("DIVERGENTE", "SYSTUR", "lg", "N", "100", "P1",
+                          "2026-06-10", 0)])
         self.assertEqual(r["lista"][0]["sit"], "OK")
 
     def test_banco_sem_as_tabelas_nao_derruba_a_aba(self):
@@ -207,6 +219,52 @@ class TestFoldingTratamento(unittest.TestCase):
         self.assertEqual(row[1], "Acesso Indevido")
         # a pasta foi resetada (rename atomico) — a interacao so sobrevive no banco
         self.assertFalse(os.listdir(pasta))
+
+
+class TestContaServicoNaAba(_Base):
+    """A conta de servico sai da COBRANCA e continua na TELA.
+
+    Retorno da area (28 e 31/08/2026): o robo cadastrado com o e-mail de quem o
+    criou aparecia como acesso a revogar de uma pessoa desligada. O motor passou
+    a reclassifica-lo (ACESSO_CONTA_SERVICO); a aba precisa refletir as duas
+    metades da decisao — fora do "Tratar", dentro da conferencia.
+    """
+
+    def test_robo_nao_entra_no_tratar(self):
+        r = self._rodar([_deslig("100", "KEITI")],
+                        [_div_servico("100", "SYSTUR")])
+        self.assertEqual(r["kpis"]["tratar"], 0)
+        self.assertEqual(r["lista"][0]["sit"], "OK")
+
+    def test_robo_aparece_na_categoria_propria(self):
+        """Sumir seria esconder uma classificacao errada — o ponto da decisao."""
+        r = self._rodar([_deslig("100", "KEITI")],
+                        [_div_servico("100", "SYSTUR", login="SIST0230")])
+        self.assertEqual(r["kpis"]["servico"], 1)
+        self.assertEqual(len(r["servico"]), 1)
+        a = r["servico"][0]
+        self.assertEqual(a["login"], "SIST0230")
+        self.assertEqual(a["m"], "100")
+        # o NOME e' o que deixa a conferencia possivel a olho: "USUARIO
+        # SISTEMICO MONITORAMENTO ROTEIROS" diz sozinho que nao e' gente.
+        self.assertIn("SISTEMICO", a["n"])
+
+    def test_pessoa_e_robo_convivem_sem_se_contaminar(self):
+        r = self._rodar(
+            [_deslig("100", "KEITI"), _deslig("200", "RAFAELA")],
+            [_div_servico("100", "SYSTUR"),
+             _div_deslig("200", "SYSTUR", login="corpc90000395")])
+        self.assertEqual(r["kpis"]["tratar"], 1)      # so' a pessoa
+        self.assertEqual(r["kpis"]["servico"], 1)     # so' o robo
+        tratar = [d for d in r["lista"] if d["sit"] == "Tratar"]
+        self.assertEqual([d["m"] for d in tratar], ["200"])
+
+    def test_escopo_de_sistema_vale_para_a_categoria(self):
+        """Como as demais grids, respeita o <sistema> do config."""
+        r = self._rodar([_deslig("100", "KEITI")],
+                        [_div_servico("100", "SIGOT")], sistema="SYSTUR")
+        self.assertEqual(r["kpis"]["servico"], 0)
+        self.assertEqual(r["servico"], [])
 
 
 if __name__ == "__main__":

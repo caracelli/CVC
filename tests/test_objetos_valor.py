@@ -33,7 +33,10 @@ class TestEnumsContrato(unittest.TestCase):
              "ACESSO_TRANSFERIDO": "ACESSO_TRANSFERIDO",
              "PERFIL_INVALIDO": "PERFIL_INVALIDO",
              "PERFIL_EXCESSIVO": "PERFIL_EXCESSIVO",
-             "ACESSO_SEM_VINCULO_RH": "ACESSO_SEM_VINCULO_RH"})
+             "ACESSO_SEM_VINCULO_RH": "ACESSO_SEM_VINCULO_RH",
+             # conta de servico (robo) que casou com desligado pelo e-mail de
+             # quem a criou — retorno da area 28 e 31/08/2026
+             "ACESSO_CONTA_SERVICO": "ACESSO_CONTA_SERVICO"})
 
     def test_status_validacao(self):
         self.assertEqual(

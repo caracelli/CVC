@@ -317,7 +317,10 @@ def _executar(caminho_config: Path) -> int:
         VincularAcessosRh(conexao=conexao).executar()
 
         # Card 8 — Analisar divergencias
-        AnalisarDivergencias(conexao=conexao).executar()
+        AnalisarDivergencias(
+            conexao=conexao,
+            prefixos_conta_servico=cfg.conta_servico_prefixos,
+        ).executar()
 
         # Validação de acessos (inclusão/alteração) — grava na tabela validacao_acessos
         ValidarAcessosSistema(

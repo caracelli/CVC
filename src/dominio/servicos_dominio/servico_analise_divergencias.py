@@ -13,8 +13,11 @@ from ..regras.regra_perfil_invalido import RegraPerfilInvalido
 
 class ServicoAnaliseDivergencias:
 
-    def __init__(self, perfis_esperados: List[PerfilEsperado]):
-        self._regra_desligado = RegraAcessoDesligado()
+    def __init__(self, perfis_esperados: List[PerfilEsperado],
+                 prefixos_conta_servico=None):
+        # prefixos_conta_servico vem do config (validacao/conta_servico); vazio
+        # mantem o comportamento anterior. Ver RegraAcessoDesligado.
+        self._regra_desligado = RegraAcessoDesligado(prefixos_conta_servico)
         self._regra_transferido = RegraAcessoTransferido()
         self._regra_sem_vinculo = RegraAcessoSemVinculo()
         self._regra_perfil = RegraPerfilInvalido(perfis_esperados)
@@ -34,6 +37,8 @@ class ServicoAnaliseDivergencias:
         # repassa os contadores da regra para o caso de uso logar
         self.recontratados_suprimidos = self._regra_desligado.recontratados_suprimidos
         self.login_diferente_apontado = self._regra_desligado.login_diferente_apontado
+        self.contas_servico = self._regra_desligado.contas_servico
+        self.divergiu_do_nome = self._regra_desligado.divergiu_do_nome
         divergencias.extend(self._regra_transferido.verificar(acessos, transferidos))
         divergencias.extend(self._regra_sem_vinculo.verificar(acessos))
         divergencias.extend(self._regra_perfil.verificar(acessos, ativos))

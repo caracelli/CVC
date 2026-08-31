@@ -1511,6 +1511,8 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
     <div class="quar-toolbar">
       <button class="seg active" data-view="tratar" onclick="deslView(this)">Com Acesso / Tratar</button>
       <button class="seg"        data-view="ok"     onclick="deslView(this)">Aderente / OK</button>
+      <button class="seg"        data-view="servico" onclick="deslView(this)"
+              title="Contas de serviço (robôs/automações) que casaram com uma pessoa desligada pelo e-mail de quem as cadastrou. Não entram na revogação — ficam aqui para conferência.">Contas de serviço</button>
       <button class="seg"        data-view="todos"  onclick="deslView(this)">Todos</button>
       <span class="quar-count" id="desl-count"></span>
       <input id="desl-busca" class="conf-busca" placeholder="Buscar matrícula, nome, cargo, sistema…"
@@ -5061,10 +5063,27 @@ async function renderDesligados(){
   try{
     const d = await fetchAPI('/api/desligados');
     _deslRecs = d.lista || [];
+    /* CONTA DE SERVIÇO — o motor as separou num tipo próprio, então elas NÃO
+       vêm em `lista` (é isso que as tira da revogação). Aqui viram registros
+       com sit='Serviço' para caírem na MESMA grid: a linha mostra a quem o robô
+       ficou vinculado e qual é o login dele — que é o que a área precisa ver
+       para conferir a classificação. Agrupadas por matrícula, como as demais. */
+    const porMat = {};
+    (d.servico || []).forEach(a => {
+      const k = a.m || ('(sem matrícula) ' + a.login);
+      (porMat[k] = porMat[k] || {m: a.m || '', n: a.n || '', acessos: []})
+        .acessos.push({sis: a.sis, login: a.login, perfil: a.perfil, dt: a.dt});
+    });
+    Object.values(porMat).forEach(r => _deslRecs.push({
+      m: r.m, n: r.n, cpf: '', cargo: '', depto: '', cc: '', dt_deslig: '',
+      email: '', empresa: '', acessos: r.acessos, sit: 'Serviço',
+    }));
     _JIRA_ATIVO = !!d.jira;
     const k = d.kpis || {};
     const el = document.getElementById('desl-count');
-    if(el) el.textContent = `${k.tratar||0} a tratar · ${k.tratados||0} tratado(s) · ${k.ok||0} OK · ${k.total||0} desligados`;
+    if(el) el.textContent = `${k.tratar||0} a tratar · ${k.tratados||0} tratado(s) · ${k.ok||0} OK`
+      + (k.servico ? ` · ${k.servico} conta(s) de serviço` : '')
+      + ` · ${k.total||0} desligados`;
   }catch(e){
     // Distingue BASE VAZIA de FALHA de carga. Sem isso a aba dizia "sem
     // desligados na base" quando o que houve foi erro no fetch — e a Consulta,
@@ -5080,8 +5099,12 @@ async function renderDesligados(){
 function _deslFiltrados(){
   const q = (document.getElementById('desl-busca')?.value || '').trim().toLowerCase();
   return _deslRecs.filter(d => {
-    if(_deslView === 'tratar' && d.sit !== 'Tratar') return false;
-    if(_deslView === 'ok'     && d.sit !== 'OK')     return false;
+    if(_deslView === 'tratar'  && d.sit !== 'Tratar')  return false;
+    if(_deslView === 'ok'      && d.sit !== 'OK')     return false;
+    if(_deslView === 'servico' && d.sit !== 'Serviço') return false;
+    // "Todos" mostra tudo, inclusive as de serviço — mas elas nunca entram nas
+    // views de cobrança acima, que é o ponto da regra.
+    if((_deslView === 'tratar' || _deslView === 'ok') && d.sit === 'Serviço') return false;
     if(!q) return true;
     const alvo = [d.m, d.n, d.cargo, d.depto, d.cc,
                   (d.acessos||[]).map(a => a.sis + ' ' + a.login + ' ' + a.perfil).join(' ')
@@ -5118,7 +5141,12 @@ function pintarDesligados(){
            title="Clique para ver os acessos ainda ativos">${acessos.length} ${acessos.length===1?'acesso':'acessos'} ${aberto?'▾':'▸'}</span>`;
     // Situação + ação (mesmo padrão da Pendências: botão p/ tratar, lupa p/ ver).
     let sit;
-    if(d.sit === 'OK'){
+    if(d.sit === 'Serviço'){
+      sit = `<span class="badge b-aguard" title="Conta de serviço (robô/automação). `
+          + `Ficou vinculada a esta pessoa porque foi cadastrada com o e-mail dela. `
+          + `Não é acesso a revogar — revogar derruba a automação em produção.">`
+          + `🤖 Conta de serviço</span>`;
+    } else if(d.sit === 'OK'){
       sit = `<span class="badge b-ok">OK</span>`;
     } else if(d.tratado){
       const tk = (d.tratamento && d.tratamento.ticket) ? ' ('+esc(d.tratamento.ticket)+')' : '';

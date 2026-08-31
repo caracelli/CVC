@@ -105,6 +105,7 @@ TIPO_LABEL = {
     "SEM_ACESSO": "Sem Acesso", "DIVERGENTE": "Divergente",
     "EM_ANALISE": "Em Análise", "ACESSO_SEM_VINCULO_RH": "Sem Vínculo RH",
     "ACESSO_DESLIGADO": "Acesso Desligado", "PERFIL_INVALIDO": "Perfil Inválido",
+    "ACESSO_CONTA_SERVICO": "Conta de Serviço",
     "OK": "Aderente",
 }
 
@@ -3081,6 +3082,31 @@ def listar_desligados():
         if ch and not d.get("tratado"):
             d["chamado"] = ch
 
+    # CONTA DE SERVICO — robo que casou com um desligado pelo e-mail de quem o
+    # criou (retorno da area, 28 e 31/08/2026). O motor ja' os separou num tipo
+    # PROPRIO (ACESSO_CONTA_SERVICO), entao eles nao entram no "Tratar" acima:
+    # a lista de revogacao nao os cobra mais. Aqui eles sao LIDOS de volta para
+    # a tela, porque sumir seria esconder uma eventual classificacao errada.
+    servico = []
+    c2 = conn_ro()
+    try:
+        for r in c2.execute(
+                "SELECT matricula, sistema, usuario, nome_usuario, "
+                "       perfil_encontrado, data_identificacao "
+                "FROM divergencias WHERE tipo='ACESSO_CONTA_SERVICO'"
+                + (" AND sistema = ?" if SISTEMA else ""),
+                [SISTEMA] if SISTEMA else []):
+            servico.append({
+                "m": r["matricula"] or "", "sis": r["sistema"] or "",
+                "login": r["usuario"] or "", "n": r["nome_usuario"] or "",
+                "perfil": r["perfil_encontrado"] or "",
+                "dt": r["data_identificacao"] or "",
+            })
+    except Exception as e:
+        print(f"  [deslig] contas de servico indisponiveis: {e!r}")
+    finally:
+        c2.close()
+
     # KPIs: "Tratar" = com acesso e AINDA nao tratado; "tratado" e' categoria a
     # parte (encaminhado). "OK" segue = sem acesso.
     tratar = sum(1 for d in out if d["sit"] == "Tratar" and not d.get("tratado"))
@@ -3089,7 +3115,9 @@ def listar_desligados():
     # `jira` diz a tela se o botao "Abrir chamado" pode habilitar. Vem do
     # servidor porque so ele sabe se ha credencial — o front nunca ve o token.
     return {"lista": out, "kpis": {"tratar": tratar, "tratados": tratados,
-                                   "ok": ok, "total": len(out)},
+                                   "ok": ok, "total": len(out),
+                                   "servico": len(servico)},
+            "servico": servico,
             "jira": jira_habilitado()}
 
 
@@ -4255,7 +4283,8 @@ def _vg_secoes(de="", ate=""):
     mot = motivos_tratados(de, ate)
     TL = {'ACESSO_SEM_VINCULO_RH': 'Sem Vínculo RH', 'DIVERGENTE': 'Alterar Perfil',
           'EM_ANALISE': 'Em Análise', 'SEM_ACESSO': 'Incluir Acesso',
-          'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido'}
+          'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
+          'ACESSO_CONTA_SERVICO': 'Conta de Serviço'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
           'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
     pct = lambda n, t: (round(100 * n / t, 1) if t else 0)
@@ -4321,7 +4350,8 @@ def _vg_analiticos(de="", ate=""):
     auditar quais informações foram usadas. Uma aba por fonte de dados."""
     TL = {'ACESSO_SEM_VINCULO_RH': 'Sem Vínculo RH', 'DIVERGENTE': 'Alterar Perfil',
           'EM_ANALISE': 'Em Análise', 'SEM_ACESSO': 'Incluir Acesso', 'OK': 'Aderente',
-          'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido'}
+          'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
+          'ACESSO_CONTA_SERVICO': 'Conta de Serviço'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
           'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
     d19 = lambda s: (str(s) if s else "")[:19]
