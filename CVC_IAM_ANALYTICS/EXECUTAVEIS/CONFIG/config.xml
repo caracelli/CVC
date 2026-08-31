@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+﻿<?xml version='1.0' encoding='UTF-8'?>
 <configuracao>
     <versao>1.0.0</versao>
     <cliente>CVC</cliente>
@@ -114,6 +114,27 @@
              criar contas de servico com outra nomenclatura. Reprocessar basta —
              nao precisa de executavel novo. Para desligar a regra sem perder a
              lista, use <excluir_de_desligados>false</excluir_de_desligados>. -->
+        <!-- CONTA PENDENTE: acesso cujo status no extrato nao diz se a conta
+             esta ativa ('P'/pendente ou vazio). Ate 31/08 isso virava "Em
+             Analise" com uma explicacao no "?".
+
+             Retorno da area (31/08/2026), textual: "Considerar apenas os
+             acessos ativos: se a pessoa estiver com acesso nesse status,
+             inativo, bloqueado ou P, e ela poder ter o acesso, trazer como a
+             incluir e o perfil que pode ser liberado para ela." Ela mandou o
+             print do proprio "?" perguntando "os perfis estao iguais, nao
+             deveria estar aderente?" — explicar nao bastou, ela quer outro
+             desfecho.
+
+             Com true, a linha vira "Incluir Acesso" mostrando o perfil
+             LIBERAVEL. Bloqueado/inativo ja se comportavam assim
+             (CONTA_BLOQUEADA); isto fecha o 'P'.
+             Medido em 31/08 no E2E dos 7 sistemas: 11 linhas mudam.
+             False volta ao comportamento de 10/08, sem build novo. -->
+        <conta_pendente>
+            <vira_inclusao>true</vira_inclusao>
+        </conta_pendente>
+
         <conta_servico>
             <prefixos_login>SIST</prefixos_login>
             <excluir_de_desligados>true</excluir_de_desligados>

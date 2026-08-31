@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import traceback
 from pathlib import Path
@@ -326,6 +326,7 @@ def _executar(caminho_config: Path) -> int:
         ValidarAcessosSistema(
             conexao=conexao,
             excesso_gera_pendencia=cfg.validacao_excesso_gera_pendencia,
+            pendente_vira_inclusao=cfg.validacao_pendente_vira_inclusao,
         ).executar()
 
         # Card 23 — revalidacao POS-TRANSFERENCIA. Depois do AnalisarDivergencias

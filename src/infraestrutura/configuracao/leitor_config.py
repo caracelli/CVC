@@ -1,4 +1,4 @@
-import xml.etree.ElementTree as ET
+﻿import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict
@@ -54,6 +54,10 @@ class Configuracao:
     # Medido em 31/08/2026: o prefixo SIST pega 297 das 432 linhas, com zero
     # falso positivo e zero robo fora do prefixo.
     conta_servico_prefixos: List[str]
+    # Conta com status indefinido ('P'/vazio): True faz a linha sair como
+    # "Incluir Acesso" com o perfil liberavel, em vez de "Em Analise"
+    # (pedido da area em 31/08/2026 — 11 linhas medidas).
+    validacao_pendente_vira_inclusao: bool
     # Diretorio AD (franqueados/prestadores/desligados) — identidades p/ dar dono
     # aos orfaos. Aceita VARIOS <caminho>: desde 05/08/2026 o cliente entrega os
     # exports em pastas separadas por populacao (SISTEMAS/AD_FRANQUEADOS,
@@ -162,6 +166,8 @@ class LeitorConfig:
             validacao_excesso_gera_pendencia=_bool(
                 "validacao/perfil_excessivo/gera_pendencia", "false"),
             conta_servico_prefixos=_conta_servico_prefixos(root),
+            validacao_pendente_vira_inclusao=_bool(
+                "validacao/conta_pendente/vira_inclusao", "false"),
             rh_diretorio_ad_caminho=(_ad_caminhos(root) or ["ENTRADA/RH/AD"])[0],
             rh_diretorio_ad_caminhos=_ad_caminhos(root) or ["ENTRADA/RH/AD"],
             rh_processar_diretorio_ad=_bool("rh/diretorio_ad/processar"),

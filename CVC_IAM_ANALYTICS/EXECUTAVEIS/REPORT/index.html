@@ -476,6 +476,11 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .b-em-analise  {background:#FFF3CD;color:#856404;}
 .b-pendente    {background:#FDE7E9;color:#A4262C;}
 .b-resolvida   {background:#DFF6DD;color:#107C10;}
+/* "+N outros" — e' um controle, entao tem de parecer um: cursor, sublinhado
+   pontilhado e realce no hover. Antes era texto cinza inerte. */
+.cs-mais{color:#2980B9;font-size:10.5px;cursor:pointer;
+         border-bottom:1px dotted #2980B9;user-select:none;}
+.cs-mais:hover{color:#1F5F8B;border-bottom-style:solid;}
 .b-ok          {background:#D5F5E3;color:#0E6B47;}
 /* "?" ao lado do tipo: existe SO quando o status precisa de explicacao (hoje,
    conta pendente/indefinida no extrato). Discreto de proposito — a esmagadora
@@ -6622,14 +6627,50 @@ function toggleCsExpand(uid){
    matricial (mediana 39 perfis por linha, maximo 141). O mesmo layout que
    serve para 1 perfil vira paredao com 39. Mostra os primeiros e resume o
    resto; a lista inteira fica no title. */
+/* Abre/fecha o resto de uma lista cortada pelo teto.
+
+   Retorno da area (31/08, "Testes 1.docx"): "Neste caso aqui tem mais 7 perfis;
+   ao clicar no +7 nao teria como expandir os demais perfis?". Antes o resto so'
+   existia no `title` — informacao que existe mas nao se alcanca com o mouse em
+   uma grid com scroll.
+
+   stopPropagation e' obrigatorio: estes trechos vivem DENTRO da linha da
+   Consulta, que tem o proprio clique de expandir/recolher. Sem isso, abrir os
+   perfis fecharia a linha. */
+function csMaisPerfis(el, ev){
+  if (ev) ev.stopPropagation();
+  // O resto e' construido no CLIQUE, nao pre-renderizado escondido: o caso real
+  // tem 131 perfis numa linha, e deixar 131 nos ocultos por linha desfaria o
+  // trabalho de volume feito em 28/08. O texto vive no data-resto ate ser
+  // pedido — como o title vivia, mas alcancavel.
+  let resto = el.nextElementSibling;
+  if (!resto || !resto.classList.contains('cs-resto')) {
+    resto = document.createElement('span');
+    resto.className = 'cs-resto';
+    const sep = el.dataset.sep || '<br>';
+    resto.innerHTML = sep + (el.dataset.resto || '').split('\u0001').join(sep);
+    el.after(resto);
+    el.textContent = '− menos';
+    return;
+  }
+  const aberto = resto.style.display !== 'none';
+  resto.style.display = aberto ? 'none' : '';
+  el.textContent = aberto ? el.dataset.rotulo : '− menos';
+}
+
 function _csListaPerfis(arr, teto){
   teto = teto || 6;
   const todos = arr.map(s => String(s).trim()).filter(Boolean);
   if (!todos.length) return '—';
   const vis = todos.slice(0, teto).map(esc).join('<br>');
   if (todos.length <= teto) return vis;
-  return vis + `<br><span style="color:#8A9099;font-size:10.5px;" `
-             + `title="${esc(todos.join(', '))}">+${todos.length - teto} outros</span>`;
+  const resto = todos.slice(teto);
+  const rot = `+${resto.length} outros`;
+  return vis
+       + `<br><span class="cs-mais" data-rotulo="${esc(rot)}" `
+       + `data-resto="${esc(resto.join('\u0001'))}" `
+       + `onclick="csMaisPerfis(this, event)" `
+       + `title="Clique para ver os ${resto.length} restantes">${esc(rot)}</span>`;
 }
 
 /* Compara o que a pessoa TEM com o que a matriz PREVE e devolve a DIFERENCA.
@@ -6667,6 +6708,22 @@ function _csPerfilTxt(d){
     const {tem, dev, faltam, aMais} = _csDelta(pe, pp);
     if (faltam.length || aMais.length) {
       const partes = [];
+      /* O QUE ELA JA TEM VEM PRIMEIRO — retorno de 31/08 ("Testes 1.docx"):
+         "No SIG tem a informacao que faltam 2 perfis, mas entao ela nao possui
+         nenhum? Se faltam dois, algum ela possui, nao deveria vir em acessos
+         encontrados?". Estava certa: a versao anterior mostrava SO' o delta e
+         descartava `tem`, entao o que a pessoa possui hoje nao aparecia em
+         lugar nenhum da tela. Mostrar a diferenca (regra 2 abaixo) nao pode
+         custar a informacao de posse — sao perguntas diferentes: "o que ela
+         tem" e "o que falta mudar". */
+      const emComum = tem.filter(x => !aMais.some(y => y === x));
+      if (emComum.length)
+        // teto 3, e nao 6: aqui a pergunta dela e' "ela possui algum?" — o
+        // NUMERO responde. Listar os 131 em comum recriaria o paredao que ela
+        // reclamou em 28/08; os demais ficam a um clique.
+        partes.push(`<span style="color:#1E7B43;font-weight:700;">Tem `
+                  + `${emComum.length}:</span> `
+                  + `<span style="color:#1E7B43;">${_csListaPerfis(emComum, 3)}</span>`);
       if (faltam.length)
         partes.push(`<span style="color:#2980B9;font-weight:700;">Falta${faltam.length>1?'m':''} `
                   + `${faltam.length}:</span> ` + _csListaPerfis(faltam));
@@ -6766,15 +6823,21 @@ function _csDetalheCategorias(divs, pfx, comData){
       // dezenas de linhas (um perfil esperado por linha) e o join despejava
       // todas. Caso real medido em 28/08: ORACLE_EBS com "Acessos esperados
       // (51)" — 51 perfis em texto corrido, o "muita informacao" que a area
-      // reclamou. Mostra os 6 primeiros; o resto vai no title, sem perder dado.
+      // reclamou. Mostra os 6 primeiros; o resto abre no clique (31/08 — ela
+      // pediu: "ao clicar no +7 nao teria como expandir os demais perfis?").
       const _TETO_SIS = 6;
       const _itens = lista.map(d => _csPerfilTxt(d) + motIcone(d.mot));
       let perfis = _itens.slice(0, _TETO_SIS).join(', ');
       if (_itens.length > _TETO_SIS) {
         const _resto = lista.slice(_TETO_SIS)
           .map(d => _csPerfilTxt(d).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
-        perfis += ` <span style="color:#8A9099;font-size:10.5px;" `
-                + `title="${esc(_resto.join(', '))}">+${_itens.length - _TETO_SIS} outros</span>`;
+        // clicavel, pelo mesmo motivo do `_csListaPerfis`: o resto tem de
+        // ser alcancavel, nao so' existir no title (retorno de 31/08).
+        const _rot = `+${_itens.length - _TETO_SIS} outros`;
+        perfis += ` <span class="cs-mais" data-rotulo="${esc(_rot)}" `
+                + `data-sep=", " data-resto="${esc(_resto.join('\u0001'))}" `
+                + `onclick="csMaisPerfis(this, event)" `
+                + `title="Clique para ver os ${_resto.length} restantes">${esc(_rot)}</span>`;
       }
       const dt = (comData && lista[0].dt)
         ? ` <span style="color:#8A9099">· ${fmtDH(lista[0].dt)}</span>` : '';
@@ -7066,29 +7129,62 @@ function _csLinha(k, v){
        + `<span class="cs-v">${esc(v)}</span></div>`;
 }
 
+/* Exportacao da Consulta.
+
+   Retorno da area (31/08, "Testes 1.docx"): "Ao extrair uma base na consulta vem
+   os perfis mas nao tem como saber qual perfil e' de qual sistema". Estava
+   certo: a versao anterior jogava os perfis de TODOS os sistemas em dois
+   conjuntos unicos, e o print dela mostra uma celula com 20+ perfis de 7
+   sistemas. Na tela o sistema esta na badge; no Excel se perdia.
+
+   Agora o arquivo espelha a grid, como manda a regra de exportacao do projeto:
+   a linha da PESSOA (nivel 0) seguida de uma linha por SISTEMA (nivel 1), com
+   coluna Sistema propria. Assim ela filtra por sistema no Excel, que era o que
+   ela queria fazer e nao conseguia. */
 function csExportar(){
   const users = _csFiltrarUsers();
   const cols = ['Matrícula','Nome','Login','CPF','Categoria','Gestor','Cargo','Departamento',
-                'Centro de Custo','Sistemas','Pendências','Última divergência','Status',
+                'Centro de Custo','Sistema','Sistemas','Pendências','Última divergência','Status',
                 'Perfil Encontrado','Perfil Esperado','E-mail'];
-  const rows = users.map(u => {
-    const sis = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
-    const pend = u.divs.filter(d => d.s === 'Pendente').length;
-    const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
-    const ultDt = datas.length ? fmtDH(datas[datas.length-1]) : '';
+  const rows = [], niveis = [];
+  const _perfis = ds => {
     const esp = new Set(), enc = new Set();
-    u.divs.forEach(d => {
+    ds.forEach(d => {
       String(d.pp || '').split(',').forEach(p => { p = p.trim(); if (p) esp.add(p); });
       String(d.pe || '').split(',').forEach(p => { p = p.trim(); if (p) enc.add(p); });
     });
-    return [u.m||'', u.n, u.login||'', u.cpf||'', u.vinc||'', u.gestor||'', u.c||'', u.d||'', u.cc||'',
-            sis, u.divs.length, ultDt,
-            pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'Aderente',
-            [...enc].sort().join(', '), [...esp].sort().join(', '), u.email||''];
+    return [[...enc].sort().join(', '), [...esp].sort().join(', ')];
+  };
+  users.forEach(u => {
+    const porSis = {};
+    u.divs.forEach(d => (porSis[d.sis || '—'] = porSis[d.sis || '—'] || []).push(d));
+    const nSis = Object.keys(porSis).length;
+    const pend = u.divs.filter(d => d.s === 'Pendente').length;
+    const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
+    const ultDt = datas.length ? fmtDH(datas[datas.length-1]) : '';
+    const [encTudo, espTudo] = _perfis(u.divs);
+    // nivel 0 — a pessoa (o resumo que a grid mostra fechada)
+    rows.push([u.m||'', u.n, u.login||'', u.cpf||'', u.vinc||'', u.gestor||'', u.c||'', u.d||'', u.cc||'',
+               '', nSis, u.divs.length, ultDt,
+               pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'Aderente',
+               encTudo, espTudo, u.email||'']);
+    niveis.push(0);
+    // nivel 1 — uma linha por sistema, que e' o que faltava
+    Object.keys(porSis).sort().forEach(sis => {
+      const ds = porSis[sis];
+      const [enc, esp] = _perfis(ds);
+      const p = ds.filter(d => d.s === 'Pendente').length;
+      const dt = ds.map(d => d.dt).filter(Boolean).sort();
+      rows.push(['', '', '', '', '', '', '', '', '',
+                 sis, '', ds.length, dt.length ? fmtDH(dt[dt.length-1]) : '',
+                 p > 0 ? `${p} pendente${p>1?'s':''}` : 'Aderente',
+                 enc, esp, '']);
+      niveis.push(1);
+    });
   });
   fetch('/api/exportar', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({arquivo:'consulta', colunas:cols, linhas:rows})
+    body: JSON.stringify({arquivo:'consulta', colunas:cols, linhas:rows, niveis:niveis})
   }).then(r => r.blob()).then(b => {
     const url = URL.createObjectURL(b);
     const a = document.createElement('a');

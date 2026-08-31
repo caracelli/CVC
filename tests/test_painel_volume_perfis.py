@@ -119,8 +119,14 @@ class VolumeDePerfis(unittest.TestCase):
         self.assertIn("3 a mais", h)
         self.assertIn("P131", h)
         self.assertIn("P133", h)
-        self.assertLessEqual(self._n_linhas(h), 4,
-                             "265 perfis tem de virar no maximo 4 linhas")
+        # Eram 4 ate 31/08. Passaram a 8 DE PROPOSITO: o retorno daquele dia
+        # ("se faltam dois, algum ela possui — nao deveria vir em acessos
+        # encontrados?") cobrou de volta o lado do que a pessoa TEM, que a
+        # versao anterior descartava. O paredao segue barrado — 265 perfis
+        # cabem em 8 linhas, com o resto a um clique.
+        self.assertLessEqual(self._n_linhas(h), 8,
+                             "265 perfis tem de caber em 8 linhas")
+        self.assertIn("Tem 131", h, "o que ela JA TEM nao pode sumir da tela")
 
     def test_diz_o_que_FALTA(self):
         h = self._html("A, B", "A, B, C, D")

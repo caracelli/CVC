@@ -63,8 +63,14 @@ class ValidarAcessosSistema:
     _LIMIAR_INCLUSAO = 0.30
 
     def __init__(self, conexao: ConexaoBancoDados,
-                 excesso_gera_pendencia: bool = False):
+                 excesso_gera_pendencia: bool = False,
+                 pendente_vira_inclusao: bool = False):
         self._conexao = conexao
+        # CONTA PENDENTE ('P'/vazio no extrato): False = "Em Analise" (o
+        # comportamento de 10/08), True = "Incluir Acesso" com o perfil
+        # liberavel (pedido da area em 31/08). E' flag porque muda o DESFECHO
+        # de uma pendencia — voltar atras nao pode exigir build novo.
+        self._pendente_vira_inclusao = bool(pendente_vira_inclusao)
         # PERFIL EXCESSIVO — ver _gerar_registros_sistema. Ligado, o excesso
         # deixa de ser informativo e vira pendencia (Em Analise). Default OFF:
         # a decisao (A "pelo menos o esperado" x B "exatamente o esperado") e'
@@ -172,12 +178,31 @@ class ValidarAcessosSistema:
         for r in registros:
             if r["status"] in (StatusValidacao.OK.value, StatusValidacao.DIVERGENTE.value) \
                     and (r["matricula"], r["sistema"]) in self._status_indefinido:
-                r["status"] = StatusValidacao.EM_ANALISE.value
-                # Guarda o PORQUE: sem isso a tela mostra uma linha com perfil
-                # esperado == encontrado marcada como pendencia e o analista nao
-                # tem como saber que o motivo e' o status da conta no extrato
-                # (retorno da area, 10/08/2026).
-                r["motivo_status"] = "CONTA_INDEFINIDA"
+                if self._pendente_vira_inclusao:
+                    # RETORNO DA AREA (31/08/2026, "Testes 1.docx"), textual:
+                    #   "Considerar apenas os acessos ativos: se a pessoa
+                    #    estiver com acesso nesse status, inativo, bloqueado ou
+                    #    P, e ela poder ter o acesso, trazer como a incluir e o
+                    #    perfil que pode ser liberado para ela."
+                    # O print que ela mandou junto e' exatamente o "?" do
+                    # CONTA_INDEFINIDA, com a pergunta "os perfis estao iguais,
+                    # nao deveria estar aderente?". Explicar nao bastou: ela
+                    # quer OUTRO DESFECHO. Bloqueado/inativo ja saiam como
+                    # "Incluir Acesso" (CONTA_BLOQUEADA); faltava o 'P'.
+                    # Medido em 31/08 no E2E dos 7 sistemas: 11 linhas.
+                    r["status"] = StatusValidacao.SEM_ACESSO.value
+                    # O perfil LIBERAVEL e' o esperado. O que ela tem hoje sai
+                    # do campo porque a conta nao esta ativa — afirmar posse
+                    # seria o mesmo defeito do perfil excessivo ao contrario.
+                    r["perfil_atual"] = ""
+                    r["motivo_status"] = "CONTA_PENDENTE"
+                else:
+                    r["status"] = StatusValidacao.EM_ANALISE.value
+                    # Guarda o PORQUE: sem isso a tela mostra uma linha com perfil
+                    # esperado == encontrado marcada como pendencia e o analista nao
+                    # tem como saber que o motivo e' o status da conta no extrato
+                    # (retorno da area, 10/08/2026).
+                    r["motivo_status"] = "CONTA_INDEFINIDA"
                 self._forcado_analise += 1
 
         # CONTA BLOQUEADA: a pessoa TEM conta no sistema, mas revogada — pela

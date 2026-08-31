@@ -1078,6 +1078,11 @@ SELECT
       || 'esta BLOQUEADA/INATIVA no extrato — conta revogada nao conta como '
       || 'acesso, por isso o resultado e "sem acesso". A acao aqui e '
       || 'DESBLOQUEAR a conta existente, nao criar uma nova.'
+    WHEN 'CONTA_PENDENTE' THEN
+      'A conta desta pessoa aparece no extrato com status PENDENTE (ou sem '
+      || 'status), entao ela nao conta como acesso ativo. Pela regra da area '
+      || '(31/08/2026) o caso vira INCLUSAO: o perfil ao lado e o que pode ser '
+      || 'liberado para ela. Ate 31/08 isto saia como "Em Analise".'
     WHEN 'PERFIL_EXCESSIVO' THEN
       'A pessoa TEM o perfil que o cargo preve, e alem dele outros que a matriz '
       || 'nao explica (os "a mais" listados ao lado). Ate 28/08/2026 esses '

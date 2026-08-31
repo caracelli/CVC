@@ -89,7 +89,11 @@ class VolumePorSistema(unittest.TestCase):
         i = html.index("function _csDetalheCategorias(")
         corpo = html[i:i + 3000]
         self.assertIn("_TETO_SIS", corpo)
-        self.assertIn("outros</span>", corpo)
+        # o indicador do resto continua existindo; desde 31/08 ele e' um
+        # CONTROLE (abre no clique) e nao mais um texto solto, entao a assercao
+        # olha o que importa: ha "+N outros" e ele chama o expansor.
+        self.assertIn("outros`", corpo)
+        self.assertIn("csMaisPerfis", corpo)
 
     def test_o_resto_nao_se_perde(self):
         """Cortar sem guardar seria esconder dado da auditoria — o excedente
