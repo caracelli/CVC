@@ -43,19 +43,28 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
         },
     ),
 
+    # O SICA_RA ja chegou em DOIS layouts e os dois sao importados:
+    #  - 30/04: relatorio ';' com 4 linhas de preambulo (cabecalho na 5a),
+    #    'Nome'/'CPF'/'Grupo'/'Status', CPF mascarado '39328XXX';
+    #  - 01/09: dump da tabela, ',' e cabecalho na 1a linha,
+    #    'User-Name'/'Description'/'grupo'/'ustatus', CPF '42182XXXXX1'.
+    # A linha do cabecalho e o separador sao LOCALIZADOS (ler_tabela) a partir
+    # destes nomes; o skiprows abaixo e' so o palpite do layout antigo.
     Sistema.SICA_RA: ConfigLeitorSistema(
         sistema=Sistema.SICA_RA,
         skiprows=4,
         colunas={
-            "usuario":       "Usuario",
-            "nome":          "Nome",
-            "cpf":           "CPF",
-            "email":         "E-mail",
-            "perfil":        "Grupo",
-            "situacao":      "Status",
-            "data_criacao":  "Data de Criaçăo",
-            "ultimo_acesso": "Ultimo Acesso",
-            "filial":        "Filial",
+            "usuario":       ("Usuario", "usuario"),
+            "nome":          ("Nome", "User-Name"),
+            # No dump o CPF mascarado vem em 'Description'. extrair_cpf_parcial
+            # pega os 5 primeiros digitos nos dois formatos.
+            "cpf":           ("CPF", "Description"),
+            "email":         ("E-mail", "email"),
+            "perfil":        ("Grupo", "grupo"),
+            "situacao":      ("Status", "ustatus"),
+            "data_criacao":  ("Data de Criaçăo", "Create_date"),
+            "ultimo_acesso": ("Ultimo Acesso", "Last_login"),
+            "filial":        ("Filial", "filial"),
         },
         mapa_situacao={"ATIVO": "ATIVO", "INATIVO": "INATIVO", "BLOQUEADO": "BLOQUEADO"},
     ),

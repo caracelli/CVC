@@ -5,7 +5,7 @@ from typing import List, Optional
 
 import pandas as pd
 
-from .leitor_base import LeitorArquivoBase, ler_tabela
+from .leitor_base import LeitorArquivoBase, ler_tabela, normalizar_nome_coluna
 from .configs_sistemas import ConfigLeitorSistema
 from dominio.entidades.perfil_acesso import PerfilAcesso
 from dominio.servicos_dominio.servico_padronizacao import ServicoPadronizacao
@@ -25,13 +25,40 @@ def _parse_data(valor: Optional[str]) -> Optional[date]:
     return None
 
 
+# Milissegundo separado por ':' em vez de '.' -> '07:37:04:853'. O dump direto
+# do SICA_RA (01/09) escreve assim; o relatorio antigo usava virgula.
+_RE_MS = re.compile(r"(\d{1,2}:\d{2}:\d{2})[:,](\d{1,6})")
+# Fuso solto no fim, com ou sem espaco: ' - 03:00' / '-03:00' -> '-0300'.
+# Data que ja comeca por ano (ISO): 2026-03-27.
+_RE_ISO = re.compile(r"\s*\d{4}-\d{2}-\d{2}")
+_RE_FUSO = re.compile(r"\s*([+-])\s*(\d{2}):?(\d{2})\s*$")
+
+
+def _limpar_timestamp(valor: str) -> str:
+    """Formas de escrever a MESMA hora que ja chegaram do cliente:
+    '30/04/2026 07:37:04,853-03:00' (relatorio SICA_RA de 30/04) e
+    '2026-03-27 12:16:39:165 - 03:00' (dump SICA_RA de 01/09). Sem isto a
+    segunda vira None e o ultimo acesso se perde em silencio - eram 86% das
+    linhas do extrato de 01/09."""
+    s = str(valor).strip()
+    s = _RE_MS.sub(r"\1.\2", s)
+    s = _RE_FUSO.sub(r"\1\2\3", s)
+    return s
+
+
 def _parse_datetime(valor: Optional[str]) -> Optional[datetime]:
     if not valor or str(valor).strip() in ("", "nan"):
         return None
-    try:
-        return pd.to_datetime(str(valor).strip(), dayfirst=True)
-    except Exception:
-        return None
+    limpo = _limpar_timestamp(valor)
+    for tentativa in (limpo, str(valor).strip()):
+        # ISO (2026-03-27...) ja e' ano-mes-dia: dayfirst nao se aplica e o
+        # pandas avisa. Data brasileira (30/04/2026) precisa de dayfirst.
+        dia_primeiro = not _RE_ISO.match(tentativa)
+        try:
+            return pd.to_datetime(tentativa, dayfirst=dia_primeiro)
+        except Exception:
+            continue
+    return None
 
 
 def chave_data_arquivo(nome: str) -> tuple:
@@ -72,22 +99,40 @@ class LeitorSistema(LeitorArquivoBase):
         df = ler_tabela(
             arquivo, dtype=str, skiprows=self._cfg.skiprows,
             encoding=encoding, separador=self._cfg.separador,
+            colunas_esperadas=list(self._cfg.colunas.values()),
         )
         # o cabecalho pode vir com BOM e com espacos de preenchimento
         df.columns = [str(c).replace(_BOM, "").strip() for c in df.columns]
         return df
 
-    def _valor(self, row: pd.Series, chave: str) -> str:
+    @staticmethod
+    def _mapa_colunas(colunas) -> dict:
+        """nome canonico -> nome real da coluna no arquivo. Primeira ocorrencia
+        vence (colunas repetidas viram Grupo, Grupo.1... e nao colidem)."""
+        mapa = {}
+        for c in colunas:
+            mapa.setdefault(normalizar_nome_coluna(c), c)
+        return mapa
+
+    def _valor(self, row: pd.Series, chave: str, mapa: dict = None) -> str:
         # O config aceita UM nome de coluna ou VARIOS (tupla/lista de aliases):
         # o mesmo extrato muda de layout entre exports (o IC ja veio com a coluna
         # de status como 'ST_HABILITACAO' no XLSX e como 'S' no texto de largura
-        # fixa). Usa o primeiro alias presente na linha.
+        # fixa; o SICA_RA trocou 'Grupo'/'Status' por 'grupo'/'ustatus' no dump
+        # de 01/09). Usa o primeiro alias presente na linha.
+        #
+        # A comparacao e' CANONICA (sem acento, sem caixa, sem espaco duplo):
+        # 'E-mail' e 'E-MAIL' sao a mesma coluna, e o mojibake 'Data de Criaçăo'
+        # encontra 'Data de Criação'. So o que muda de PALAVRA precisa de alias.
         col = self._cfg.colunas.get(chave)
         if not col:
             return ""
+        if mapa is None:
+            mapa = self._mapa_colunas(row.index)
         for nome in ((col,) if isinstance(col, str) else tuple(col)):
-            if nome in row.index:
-                val = row[nome]
+            real = mapa.get(normalizar_nome_coluna(nome))
+            if real is not None and real in row.index:
+                val = row[real]
                 return "" if pd.isna(val) else str(val).strip()
         return ""
 
@@ -98,11 +143,23 @@ class LeitorSistema(LeitorArquivoBase):
     def _cols_perfil(self, df: pd.DataFrame) -> List[str]:
         """Despivot: todas as colunas de perfil repetidas. O cabecalho repete
         a coluna de perfil (ex.: Grupo, Grupo.1, Grupo.2...) — pandas sufixa com
-        '.N'. Retorna a coluna base + as sufixadas, na ordem do arquivo."""
+        '.N'. Retorna a coluna base + as sufixadas, na ordem do arquivo.
+
+        Aceita perfil declarado como ALIAS (tupla) e casa o nome em forma
+        canonica, igual ao _valor — senao o despivot para de achar a coluna
+        assim que o export troca a caixa do cabecalho."""
         base = self._cfg.colunas.get("perfil")
         if not base:
             return []
-        return [c for c in df.columns if c == base or c.startswith(base + ".")]
+        alvos = {normalizar_nome_coluna(n)
+                 for n in ((base,) if isinstance(base, str) else tuple(base))}
+        out = []
+        for c in df.columns:
+            canon = normalizar_nome_coluna(c)
+            raiz = canon.rsplit(".", 1)[0] if re.fullmatch(r".+\.\d+", canon) else canon
+            if raiz in alvos:
+                out.append(c)
+        return out
 
     def ler_um(self, arquivo: Path) -> List[PerfilAcesso]:
         """Le UM arquivo de extrato e devolve a lista de acessos."""
@@ -111,23 +168,24 @@ class LeitorSistema(LeitorArquivoBase):
         else:
             enc = self.detectar_encoding(arquivo) if arquivo.suffix.lower() == ".csv" else "utf-8"
         df = self._ler_df(arquivo, enc).dropna(how="all")
+        mapa = self._mapa_colunas(df.columns)
         cols_perfil = self._cols_perfil(df) if self._cfg.despivot else None
 
         perfis: List[PerfilAcesso] = []
         for _, row in df.iterrows():
-            usuario = self._valor(row, "usuario").strip()
+            usuario = self._valor(row, chave="usuario", mapa=mapa).strip()
             if not usuario:
                 continue
             comuns = dict(
                 usuario=usuario,
-                nome_usuario=self._pad.normalizar_nome(self._valor(row, "nome")),
+                nome_usuario=self._pad.normalizar_nome(self._valor(row, chave="nome", mapa=mapa)),
                 sistema=self._cfg.sistema,
-                situacao=self._normalizar_situacao(self._valor(row, "situacao")),
-                data_criacao=_parse_data(self._valor(row, "data_criacao")),
-                ultimo_acesso=_parse_datetime(self._valor(row, "ultimo_acesso")),
+                situacao=self._normalizar_situacao(self._valor(row, chave="situacao", mapa=mapa)),
+                data_criacao=_parse_data(self._valor(row, chave="data_criacao", mapa=mapa)),
+                ultimo_acesso=_parse_datetime(self._valor(row, chave="ultimo_acesso", mapa=mapa)),
                 matricula_vinculada=None,
-                cpf=self._pad.normalizar_cpf(self._valor(row, "cpf")),
-                email=(self._valor(row, "email") or None),
+                cpf=self._pad.normalizar_cpf(self._valor(row, chave="cpf", mapa=mapa)),
+                email=(self._valor(row, chave="email", mapa=mapa) or None),
             )
             if cols_perfil is not None:
                 # um acesso por grupo preenchido (sem repetir o mesmo grupo)
@@ -140,5 +198,5 @@ class LeitorSistema(LeitorArquivoBase):
                         perfis.append(PerfilAcesso(perfil=v, **comuns))
                 # sem nenhum grupo -> usuario sem acesso no sistema (nao emite)
             else:
-                perfis.append(PerfilAcesso(perfil=self._valor(row, "perfil"), **comuns))
+                perfis.append(PerfilAcesso(perfil=self._valor(row, chave="perfil", mapa=mapa), **comuns))
         return perfis
