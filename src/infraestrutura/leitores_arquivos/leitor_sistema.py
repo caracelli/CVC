@@ -87,10 +87,31 @@ class LeitorSistema(LeitorArquivoBase):
         self._cfg = config
         self._pad = ServicoPadronizacao()
 
+    @staticmethod
+    def _chave_ordem(arquivo: Path) -> tuple:
+        """Data do arquivo para ordenar a importacao. Do NOME quando ele traz
+        uma data; senao da DATA DE MODIFICACAO.
+
+        O fallback existe porque a importacao e' SNAPSHOT (substituir_sistema)
+        e o extrato e' CUMULATIVO: vale o ULTIMO arquivo lido. Sem data no
+        nome, a chave era (0,0,0,0,0) e o arquivo ia para o INICIO da fila —
+        o mais novo era sobrescrito pelo mais velho, calado. Aconteceria com
+        o 'sicara 1.csv' de 01/09 ao lado do relatorio de 30/04: o painel
+        terminaria com a foto de abril."""
+        do_nome = chave_data_arquivo(arquivo.name)
+        if do_nome != (0, 0, 0, 0, 0):
+            return do_nome
+        try:
+            m = datetime.fromtimestamp(arquivo.stat().st_mtime)
+        except OSError:
+            return do_nome
+        return (m.year, m.month, m.day, m.hour, m.minute)
+
     def listar_ordenado(self, pasta: str) -> List[Path]:
         """Varre a pasta (recursivo) e devolve os arquivos ordenados pela
-        data embutida no nome — do mais antigo para o mais recente."""
-        return sorted(self.listar_arquivos(pasta), key=lambda f: chave_data_arquivo(f.name))
+        data embutida no nome — ou, na falta dela, pela data de modificacao —
+        do mais antigo para o mais recente."""
+        return sorted(self.listar_arquivos(pasta), key=self._chave_ordem)
 
     def _ler_df(self, arquivo: Path, encoding: str) -> pd.DataFrame:
         # XLSX (1a aba) ou CSV. O separador do sistema vem do config (explicito,

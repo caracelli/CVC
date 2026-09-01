@@ -6,7 +6,7 @@ import os
 import sys
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -99,15 +99,35 @@ class TestOrdenacaoEParsingData(unittest.TestCase):
         self.assertEqual(chave_data_arquivo("sem_data.csv"), (0, 0, 0, 0, 0))
 
     def test_listar_ordenado_por_data_no_nome(self):
+        """Entre arquivos COM data no nome a ordem e' a do nome."""
         tmp = tempfile.mkdtemp(prefix="cvc_ord_")
-        for nome in ["x_30_04_2026_10-30.csv", "sem_data.csv",
+        for nome in ["x_30_04_2026_10-30.csv",
                      "SICA_30_04_2026.csv", "rel_30_04.csv"]:
             (Path(tmp) / nome).write_text("x", encoding="utf-8")
         ordenados = [p.name for p in LeitorSistema(_cfg_systur()).listar_ordenado(tmp)]
         self.assertEqual(ordenados, [
-            "sem_data.csv", "rel_30_04.csv",
-            "SICA_30_04_2026.csv", "x_30_04_2026_10-30.csv",
+            "rel_30_04.csv", "SICA_30_04_2026.csv", "x_30_04_2026_10-30.csv",
         ])
+
+    def test_arquivo_sem_data_no_nome_ordena_pela_modificacao(self):
+        """MUDANCA (01/09/2026): sem data no nome, vale a data de MODIFICACAO.
+
+        Antes a chave era (0,0,0,0,0) e o arquivo ia para o INICIO da fila.
+        Como a importacao e' snapshot (substituir_sistema) e o extrato e'
+        CUMULATIVO, quem chega por ultimo manda — entao o arquivo novo sem
+        data no nome era sobrescrito pelo antigo, em silencio. Foi o caso do
+        'sicara 1.csv' (SICA_RA, 01/09) ao lado do relatorio de 30/04."""
+        import os
+        import time
+        tmp = tempfile.mkdtemp(prefix="cvc_ord2_")
+        antigo = Path(tmp) / "rel_30_04_2026.csv"
+        antigo.write_text("x", encoding="utf-8")
+        novo = Path(tmp) / "sem_data.csv"
+        novo.write_text("x", encoding="utf-8")
+        t = time.mktime(datetime(2026, 9, 1, 14, 38).timetuple())
+        os.utime(novo, (t, t))
+        ordenados = [p.name for p in LeitorSistema(_cfg_systur()).listar_ordenado(tmp)]
+        self.assertEqual(ordenados[-1], "sem_data.csv")
 
     def test_parse_data(self):
         self.assertEqual(_parse_data("01/02/2026"), date(2026, 2, 1))

@@ -285,3 +285,53 @@ class TestSemRegressaoNosDemaisSistemas(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestOrdemComExtratoCumulativo(unittest.TestCase):
+    """O extrato do SICA_RA e' CUMULATIVO e a importacao e' SNAPSHOT
+    (substituir_sistema): vale o ULTIMO arquivo da fila. Arquivo sem data no
+    nome ia para o INICIO — o dump novo era sobrescrito pelo relatorio velho
+    em silencio, e o painel terminava com a foto de abril."""
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="cvc_ord_")
+        self._leitor = LeitorSistema(CONFIGS_SISTEMAS[Sistema.SICA_RA])
+
+    def _com_mtime(self, nome, linhas, quando):
+        import os
+        import time
+        p = _escrever(self._tmp, nome, linhas)
+        t = time.mktime(quando.timetuple())
+        os.utime(p, (t, t))
+        return p
+
+    def test_sem_data_no_nome_usa_a_data_de_modificacao(self):
+        from datetime import datetime as dt
+        self._com_mtime("SICA_RA_30_04.csv",
+                        PREAMBULO + [HDR_RELATORIO] + LIN_RELATORIO,
+                        dt(2026, 4, 30, 10, 0))
+        self._com_mtime("sicara 1.csv", [HDR_DUMP] + LIN_DUMP,
+                        dt(2026, 9, 1, 14, 38))
+        ordem = [p.name for p in self._leitor.listar_ordenado(self._tmp)]
+        self.assertEqual(ordem[-1], "sicara 1.csv",
+                         "o mais novo tem de ser o ULTIMO a importar")
+
+    def test_data_no_nome_continua_mandando(self):
+        from datetime import datetime as dt
+        # mtime invertido de proposito: o nome vence
+        self._com_mtime("SICA_RA_01_09_2026.csv", [HDR_DUMP] + LIN_DUMP,
+                        dt(2020, 1, 1, 0, 0))
+        self._com_mtime("SICA_RA_30_04_2026.csv",
+                        PREAMBULO + [HDR_RELATORIO] + LIN_RELATORIO,
+                        dt(2026, 12, 31, 0, 0))
+        ordem = [p.name for p in self._leitor.listar_ordenado(self._tmp)]
+        self.assertEqual(ordem, ["SICA_RA_30_04_2026.csv", "SICA_RA_01_09_2026.csv"])
+
+    def test_conta_inativa_do_cumulativo_nao_e_acesso_efetivo(self):
+        """O cumulativo traz a conta morta junto. Ela entra no banco, mas
+        situacao_conta ja a tira de toda regra — nao vira acesso vivo."""
+        from dominio.objetos_valor import situacao_conta
+        ps = self._leitor.ler_um(_escrever(
+            self._tmp, "cum.csv", [HDR_DUMP] + LIN_DUMP))
+        viva = [p for p in ps if situacao_conta.conta_ativa(p.situacao)]
+        self.assertEqual([p.usuario for p in viva], ["anabello"])
