@@ -58,6 +58,11 @@ class Configuracao:
     # "Incluir Acesso" com o perfil liberavel, em vez de "Em Analise"
     # (pedido da area em 31/08/2026 — 11 linhas medidas).
     validacao_pendente_vira_inclusao: bool
+    # FRANQUEADO por MATRIZ propria (cargo x tipo de loja x tipo de atendimento),
+    # pedido da area em 31/08/2026. False = franqueado segue so' no espelho,
+    # como antes. A matriz e' um arquivo do cliente: sem ele a regra fica
+    # inerte mesmo com a flag ligada.
+    validacao_franqueado_matriz: bool
     # Diretorio AD (franqueados/prestadores/desligados) — identidades p/ dar dono
     # aos orfaos. Aceita VARIOS <caminho>: desde 05/08/2026 o cliente entrega os
     # exports em pastas separadas por populacao (SISTEMAS/AD_FRANQUEADOS,
@@ -168,6 +173,8 @@ class LeitorConfig:
             conta_servico_prefixos=_conta_servico_prefixos(root),
             validacao_pendente_vira_inclusao=_bool(
                 "validacao/conta_pendente/vira_inclusao", "false"),
+            validacao_franqueado_matriz=_bool(
+                "validacao/franqueado/matriz_propria", "false"),
             rh_diretorio_ad_caminho=(_ad_caminhos(root) or ["ENTRADA/RH/AD"])[0],
             rh_diretorio_ad_caminhos=_ad_caminhos(root) or ["ENTRADA/RH/AD"],
             rh_processar_diretorio_ad=_bool("rh/diretorio_ad/processar"),

@@ -22,6 +22,7 @@ from aplicacao.casos_de_uso.vincular_acessos_rh import VincularAcessosRh
 from aplicacao.casos_de_uso.analisar_divergencias import AnalisarDivergencias
 from aplicacao.casos_de_uso.gerar_saidas import GerarSaidas
 from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
+from infraestrutura.leitores_arquivos.leitor_matriz_franqueado import LeitorMatrizFranqueado
 from aplicacao.casos_de_uso.revalidar_transferidos import RevalidarTransferidos
 from aplicacao.casos_de_uso.registrar_ciclo_vida import RegistrarCicloVida
 from aplicacao.casos_de_uso.registrar_ciclo_historico import RegistrarCicloHistorico
@@ -322,11 +323,23 @@ def _executar(caminho_config: Path) -> int:
             prefixos_conta_servico=cfg.conta_servico_prefixos,
         ).executar()
 
+        # Matriz do FRANQUEADO (cargo x tipo de loja): vive na mesma pasta das
+        # outras matrizes e e' reconhecida pelo cabecalho. Falta do arquivo NAO
+        # quebra o processamento — a regra so' fica inerte.
+        regras_franq = []
+        if cfg.validacao_franqueado_matriz and cfg.matrizes_perfis_caminho:
+            try:
+                regras_franq, _lidos = LeitorMatrizFranqueado().ler(
+                    str(app_raiz / cfg.matrizes_perfis_caminho))
+            except Exception as e:
+                logger.warning(f"Matriz de franqueado nao carregada: {e!r}")
+
         # Validação de acessos (inclusão/alteração) — grava na tabela validacao_acessos
         ValidarAcessosSistema(
             conexao=conexao,
             excesso_gera_pendencia=cfg.validacao_excesso_gera_pendencia,
             pendente_vira_inclusao=cfg.validacao_pendente_vira_inclusao,
+            matriz_franqueado=regras_franq,
         ).executar()
 
         # Card 23 — revalidacao POS-TRANSFERENCIA. Depois do AnalisarDivergencias

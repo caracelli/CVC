@@ -135,6 +135,25 @@
             <vira_inclusao>true</vira_inclusao>
         </conta_pendente>
 
+        <!-- FRANQUEADO por MATRIZ propria (cargo x tipo de atendimento x tipo
+             de loja) — pedido da area em 31/08/2026: "para franqueado nao tem
+             a questao de espelho".
+             A matriz ("MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS") fica junto
+             das outras, em MATRIZES/PERFIS_SISTEMAS, e e reconhecida pelo
+             cabecalho (TIPO DE LOJA / TIPO DE ATENDIMENTO).
+             Ela valida ADERENCIA — "o cargo justifica o perfil que a pessoa
+             TEM?" — e NAO gera inclusao: TIPO DE LOJA e TIPO DE ATENDIMENTO
+             nao existem no cadastro (medido em 01/09: local_trabalho e filial
+             100% vazios), entao nao da para dizer QUAL perfil a pessoa deveria
+             ter. Quem nao tem acesso, ou tem perfil fora da matriz, continua
+             no espelho.
+             Os 3 perfis do bloco "Perfis Excecoes" da planilha NAO viram
+             esperado: saem como Em Analise citando a Governanca de SI.
+             false = franqueado segue so no espelho, como antes de 02/09. -->
+        <franqueado>
+            <matriz_propria>true</matriz_propria>
+        </franqueado>
+
         <conta_servico>
             <prefixos_login>SIST</prefixos_login>
             <excluir_de_desligados>true</excluir_de_desligados>

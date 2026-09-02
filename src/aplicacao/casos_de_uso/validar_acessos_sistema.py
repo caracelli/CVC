@@ -11,6 +11,13 @@ from dominio.objetos_valor.status_validacao import StatusValidacao
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.schema import AcessoSistema, RhAtivo
 from infraestrutura.repositorios.repositorio_matriz_sqlite import RepositorioMatrizSqlite
+from infraestrutura.leitores_arquivos.leitor_base import (
+    normalizar_nome_coluna as _nnc,
+)
+from infraestrutura.leitores_arquivos.leitor_matriz_franqueado import (
+    cargos_por_perfil, perfis_de_excecao,
+)
+from dominio.servicos_dominio.servico_depara_cargo import derivar_depara
 
 
 def _norm(s: str) -> str:
@@ -62,10 +69,24 @@ class ValidarAcessosSistema:
     # pendencia. Trocar o valor + reprocessar ajusta o rigor (0 desliga a regra).
     _LIMIAR_INCLUSAO = 0.30
 
+    # Consistencia minima para aceitar uma equivalencia de cargo derivada do
+    # uso (VENDEDOR == ATENDENTE). Mesmo 70% do espelho do SIG/terceiros.
+    _FRANQ_LIMIAR_DEPARA = 0.70
+
     def __init__(self, conexao: ConexaoBancoDados,
                  excesso_gera_pendencia: bool = False,
-                 pendente_vira_inclusao: bool = False):
+                 pendente_vira_inclusao: bool = False,
+                 matriz_franqueado=None):
         self._conexao = conexao
+        # Regras da matriz do franqueado (lista de RegraFranqueado). Vazio/None
+        # = regra desligada e o franqueado segue so' no espelho, como antes de
+        # 02/09 — a matriz e' um ARQUIVO do cliente, entao a ausencia dele nao
+        # pode quebrar o processamento.
+        self._matriz_franqueado = matriz_franqueado or []
+        self._franq_aderentes = 0
+        self._franq_divergentes = 0
+        self._franq_excecao = 0
+        self._franq_depara = {}
         # CONTA PENDENTE ('P'/vazio no extrato): False = "Em Analise" (o
         # comportamento de 10/08), True = "Incluir Acesso" com o perfil
         # liberavel (pedido da area em 31/08). E' flag porque muda o DESFECHO
@@ -101,6 +122,7 @@ class ValidarAcessosSistema:
         ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco = self._carregar_dados()
         self._prov_deslig = 0   # contador da regra temporaria de provavel desligamento
         self._inclusao_suprimida = 0
+        self._franq_aderentes = self._franq_divergentes = self._franq_excecao = 0
         self._excesso_casos = 0
         self._excesso_perfis = 0
         self._espelho_sem_padrao = 0
@@ -164,11 +186,19 @@ class ValidarAcessosSistema:
         # SIG: validacao por ESPELHO dinamico (so CLT; terceiros vao no proprio)
         registros.extend(self._validar_sig_espelho(
             ativos, acessos_por_matricula, sistemas_com_dados))
+        # FRANQUEADO: matriz propria (cargo x tipo de loja) ANTES do espelho.
+        # Ela so' resolve quem TEM perfil conhecido da matriz; o resto continua
+        # no espelho, e `franq_tratadas` evita dois registros para o mesmo
+        # (matricula, SYSTUR).
+        regs_franq, franq_tratadas = self._validar_franqueado_matriz(
+            ativos, acessos_por_matricula, sistemas_com_dados)
+        registros.extend(regs_franq)
         # Populacoes SEM matriz de cargo (terceiro/franqueado/prestador):
         # ESPELHO em TODOS os sistemas, cada uma espelhando com os SEUS pares.
         for _vinculo in sorted(_VINCULOS_ESPELHO):
             registros.extend(self._validar_espelho_vinculo(
-                ativos, acessos_por_matricula, sistemas_com_dados, _vinculo))
+                ativos, acessos_por_matricula, sistemas_com_dados, _vinculo,
+                pular=(franq_tratadas if _vinculo == "FRANQUEADO" else None)))
 
         # STATUS INDEFINIDO (extrato nao diz se a conta esta ativa: vazio ou
         # 'P'/pendente): NAO se assume ativo — o resultado daquele (matricula,
@@ -202,7 +232,18 @@ class ValidarAcessosSistema:
                     # esperado == encontrado marcada como pendencia e o analista nao
                     # tem como saber que o motivo e' o status da conta no extrato
                     # (retorno da area, 10/08/2026).
-                    r["motivo_status"] = "CONTA_INDEFINIDA"
+                    # PRESERVA o motivo que a regra ja tinha escrito. Sem isso,
+                    # um franqueado com perfil que o cargo NAO autoriza — ou com
+                    # perfil de excecao da Governanca — perde o achado e vira
+                    # so' "CONTA_INDEFINIDA" na tela. Medido em 02/09 na base do
+                    # cliente: o extrato SYSTUR de abril nao traz status, e os
+                    # 4.843 resultados de franqueado saiam todos com o motivo
+                    # trocado. O status continua sendo o da regra da area (nao
+                    # se assume conta ativa); o que muda e' so' nao apagar o
+                    # porque.
+                    _antes = (r.get("motivo_status") or "").strip()
+                    r["motivo_status"] = (
+                        f"CONTA_INDEFINIDA | {_antes}" if _antes else "CONTA_INDEFINIDA")
                 self._forcado_analise += 1
 
         # CONTA BLOQUEADA: a pessoa TEM conta no sistema, mas revogada — pela
@@ -276,6 +317,22 @@ class ValidarAcessosSistema:
                 f"esperado, somando {self._excesso_perfis} perfil(is) extra(s); "
                 f"{_modo}."
             )
+        if self._franq_aderentes or self._franq_divergentes or self._franq_excecao:
+            logger.info(
+                f"[franqueado] matriz de lojas: {self._franq_aderentes} aderente(s), "
+                f"{self._franq_divergentes} perfil(is) que o cargo NAO autoriza, "
+                f"{self._franq_excecao} perfil(is) de EXCECAO (dependem de aval da "
+                f"Governanca de SI). A matriz valida ADERENCIA — nao gera inclusao, "
+                f"porque o tipo de loja nao existe no cadastro."
+            )
+            if self._franq_depara:
+                _amostra = sorted(self._franq_depara.values(),
+                                  key=lambda e: -e.acessos)[:5]
+                logger.info(
+                    f"[franqueado] {len(self._franq_depara)} equivalencia(s) de cargo "
+                    f"derivada(s) do uso (>={self._FRANQ_LIMIAR_DEPARA:.0%}): "
+                    + "; ".join(e.descricao() for e in _amostra)
+                )
         if self._inclusao_suprimida:
             logger.info(
                 f"[B1] {self._inclusao_suprimida} inclusao(oes) suprimida(s): cargo com "
@@ -688,6 +745,135 @@ class ValidarAcessosSistema:
         return regs
 
     # ------------------------------------------------------------------
+    # FRANQUEADO — MATRIZ PROPRIA (cargo x tipo de atendimento x tipo de loja)
+    # Pedido da area em 31/08: "para franqueado nao tem a questao de espelho".
+    # ------------------------------------------------------------------
+    # A matriz casa por CARGO + TIPO DE LOJA + TIPO DE ATENDIMENTO, e as duas
+    # ultimas NAO EXISTEM no cadastro. Medido em 01/09/2026:
+    # `rh_ativos.local_trabalho` 100% vazio (13.059 linhas) e
+    # `acessos_sistemas.filial` do SYSTUR 100% vazio (6.754). `departamento`
+    # traz o nome da loja ("6400 - SUZANO SHOPPING"), nao o tipo.
+    #
+    # Mas o NOME DO PERFIL codifica as duas: ATEND_PUBLIC_LJT_GERENTE_VC =
+    # ATENDimento PUBLICo + Loja Terceirizada. Logo a regra so' fecha AO
+    # CONTRARIO: nao da' para dizer, do cadastro, QUAL perfil a pessoa deveria
+    # ter; da' para dizer, do perfil que ela TEM, se o CARGO dela o justifica.
+    #
+    # Consequencia deliberada: para franqueado esta regra valida ADERENCIA e
+    # NAO gera INCLUSAO. Franqueado sem acesso, ou com perfil fora da matriz,
+    # continua no espelho (_validar_espelho_vinculo) — por isso este metodo
+    # devolve tambem as matriculas que tratou, para o espelho nao duplicar.
+    _FRANQ_SISTEMA = Sistema.SYSTUR.value
+
+    def _reg_franq(self, func, perfil_esperado: str, perfil_atual: str,
+                   status: StatusValidacao, motivo: str) -> Dict:
+        return self._registro_base(func) | {
+            "sistema": self._FRANQ_SISTEMA,
+            "perfil_esperado": perfil_esperado,
+            "perfil_atual": perfil_atual,
+            "acesso_manual": False,
+            "status": status.value,
+            "motivo_status": motivo,
+            "origem_matriz": "MATRIZ_FRANQUEADO",
+        }
+
+    def _validar_franqueado_matriz(
+        self,
+        ativos: List["RhAtivo"],
+        acessos_por_matricula: Dict[str, List[Tuple[str, str]]],
+        sistemas_com_dados: Set[str],
+    ) -> Tuple[List[Dict], Set[str]]:
+        """Valida o franqueado pela matriz de lojas. Devolve (registros,
+        matriculas tratadas) — as tratadas saem do espelho no SYSTUR."""
+        regras = self._matriz_franqueado or []
+        if not regras or self._FRANQ_SISTEMA not in sistemas_com_dados:
+            return [], set()
+
+        cpp = cargos_por_perfil(regras)
+        excecoes = perfis_de_excecao(regras)
+        if not cpp:
+            return [], set()
+
+        # perfis que a matriz autoriza para cada cargo (para mostrar na
+        # divergencia o que o cargo DARIA direito, em todas as combinacoes)
+        perfis_do_cargo: Dict[str, Set[str]] = defaultdict(set)
+        for r in regras:
+            if not r.excecao:
+                perfis_do_cargo[_nnc(r.cargo)].add(r.perfil)
+
+        franqueados = [
+            f for f in ativos
+            if (getattr(f, "tipo_vinculo", "") or "").upper() == "FRANQUEADO"
+            and _norm(f.situacao or "") in ("", "ATIVO")
+        ]
+        if not franqueados:
+            return [], set()
+
+        # o que cada franqueado TEM no SYSTUR
+        tem: Dict[str, Set[str]] = {}
+        for f in franqueados:
+            ps = {p for sis, p in acessos_por_matricula.get(f.matricula, ())
+                  if sis == self._FRANQ_SISTEMA and p}
+            if ps:
+                tem[f.matricula] = ps
+
+        # DE-PARA de cargo, derivado do uso destes mesmos acessos
+        cargo_de: Dict[str, str] = {f.matricula: _nnc(f.cargo_descricao or "")
+                                    for f in franqueados}
+        pares = [(cargo_de.get(m, ""), _nnc(p))
+                 for m, ps in tem.items() for p in ps]
+        self._franq_depara = derivar_depara(
+            pares, cpp, limiar=self._FRANQ_LIMIAR_DEPARA)
+
+        regs: List[Dict] = []
+        tratadas: Set[str] = set()
+        for f in franqueados:
+            u = tem.get(f.matricula)
+            if not u:
+                continue          # sem acesso: a matriz nao prescreve — vai p/ o espelho
+            cargo_rh = cargo_de.get(f.matricula, "")
+            equiv = self._franq_depara.get(cargo_rh)
+            cargo_efetivo = equiv.cargo_matriz if equiv else cargo_rh
+
+            de_excecao = sorted(p for p in u if _nnc(p) in excecoes)
+            da_matriz = [p for p in u if _nnc(p) in cpp]
+            if not de_excecao and not da_matriz:
+                continue          # nenhum perfil conhecido: deixa com o espelho
+
+            tratadas.add(f.matricula)
+            nota_depara = ("; " + equiv.descricao()) if equiv else ""
+
+            if de_excecao:
+                # Nao e' "errado": e' liberacao que EXIGE aval formal. Vira
+                # analise para a area conferir se a aprovacao existe.
+                self._franq_excecao += len(de_excecao)
+                regs.append(self._reg_franq(
+                    f, "", ", ".join(sorted(u)), StatusValidacao.EM_ANALISE,
+                    "PERFIL_EXCECAO_GOVERNANCA: %s - a matriz so' libera com "
+                    "aprovacao da area de Governanca de Seguranca da Informacao%s"
+                    % (", ".join(de_excecao), nota_depara)))
+                continue
+
+            nao_autorizados = sorted(
+                p for p in da_matriz if cargo_efetivo not in cpp[_nnc(p)])
+            if nao_autorizados:
+                self._franq_divergentes += len(nao_autorizados)
+                autoriza = ", ".join(sorted(perfis_do_cargo.get(cargo_efetivo, ()))) or "(nenhum)"
+                regs.append(self._reg_franq(
+                    f, autoriza, ", ".join(sorted(u)), StatusValidacao.DIVERGENTE,
+                    "CARGO_NAO_AUTORIZA_PERFIL: o cargo '%s' nao consta na matriz "
+                    "para %s%s" % (f.cargo_descricao or "(vazio)",
+                                   ", ".join(nao_autorizados), nota_depara)))
+            else:
+                self._franq_aderentes += 1
+                regs.append(self._reg_franq(
+                    f, ", ".join(sorted(da_matriz)), ", ".join(sorted(u)),
+                    StatusValidacao.OK,
+                    "MATRIZ_FRANQUEADO: o cargo '%s' autoriza o perfil%s"
+                    % (f.cargo_descricao or "(vazio)", nota_depara)))
+        return regs, tratadas
+
+    # ------------------------------------------------------------------
     # TERCEIROS — ESPELHO por (Empresa+Supervisor), em TODOS os sistemas
     # (decidido com a usuaria 24/06/2026). Terceiros nao tem CC/cargo/gestor;
     # espelham entre TERCEIROS (nao com CLT). Supervisor = coluna `departamento`.
@@ -720,6 +906,7 @@ class ValidarAcessosSistema:
         acessos_por_matricula: Dict[str, List[Tuple[str, str]]],
         sistemas_com_dados: Set[str],
         vinculo: str,
+        pular: Set[str] = None,
     ) -> List[Dict]:
         """Populacao SEM matriz de cargo (terceiro/franqueado/prestador) validada
         por ESPELHO, aplicado a CADA sistema: agrupa pelos pares da MESMA
@@ -750,6 +937,10 @@ class ValidarAcessosSistema:
         def k_wide(f):
             return tuple(_campo(f, c) for c in campos_wide)
 
+        # (matricula, sistema) ja resolvido por outra regra — no SYSTUR o
+        # franqueado pode ter sido tratado pela matriz de lojas.
+        pular = pular or set()
+
         regs: List[Dict] = []
         for sistema in sorted(sistemas_com_dados):
             # perfis desse sistema por terceiro
@@ -777,6 +968,8 @@ class ValidarAcessosSistema:
                 return {p for p, c in cont.items() if c / n >= self._TERC_LIMIAR_ESPELHO}
 
             for f in terceiros:
+                if sistema == self._FRANQ_SISTEMA and f.matricula in pular:
+                    continue
                 u = perfis_s.get(f.matricula, set())
                 usa = bool(u)
                 if len(full[k_full(f)]) >= 2:
