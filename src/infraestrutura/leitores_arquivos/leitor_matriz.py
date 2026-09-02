@@ -5,6 +5,7 @@ import pandas as pd
 from loguru import logger
 
 from .leitor_base import LeitorArquivoBase, ler_tabela
+from .leitor_matriz_franqueado import eh_matriz_franqueado
 from dominio.entidades.perfil_esperado import PerfilEsperado
 from dominio.objetos_valor.sistema import Sistema
 
@@ -135,6 +136,19 @@ class LeitorMatrizPerfis(LeitorArquivoBase):
                 col_cargo = _resolver_col_cargo(list(df.columns))
                 col_perfil = _resolver_col_perfil(list(df.columns))
                 total_antes = len(perfis)
+
+                # A matriz do FRANQUEADO mora na mesma pasta e casa por
+                # cargo x tipo de atendimento x tipo de loja — nao tem centro de
+                # custo. Ela e' de outro leitor (LeitorMatrizFranqueado): deixa
+                # passar sem tocar. Sem isto o arquivo ia para ERROS na fase de
+                # importacao e a regra do franqueado, que roda depois, nao
+                # achava mais nada — a matriz sumia da ENTRADA no 1o processo.
+                if eh_matriz_franqueado(list(df.columns)):
+                    logger.debug(
+                        f"Matriz Perfis: '{arquivo.name}' e' a matriz do "
+                        f"franqueado — lida pelo leitor proprio."
+                    )
+                    continue
 
                 if not col_cc or not col_perfil:
                     logger.warning(

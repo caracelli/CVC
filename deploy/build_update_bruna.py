@@ -100,6 +100,15 @@ IGNORAR = shutil.ignore_patterns("jira.xml", "launcher_atualizador.exe",
 DE_PARA_SIG_ORIGEM = RAIZ / "Arquivos_origem" / "ID_x_Perfis_SIG 19.08.xlsx"
 DE_PARA_SIG_DESTINO = "ENTRADA/MATRIZES/PERFIS_SISTEMAS/SIG/DE_PARA"
 
+# SEGUNDO arquivo de dado que viaja, pelo mesmo motivo: e' MATRIZ, nao extrato.
+# A propria area mandou esta planilha em 31/08 ao pedir a regra do franqueado
+# ("existe uma matriz para franqueado"), entao ela nao esta na ENTRADA dela.
+# Sem o arquivo a regra fica INERTE E CALADA — o painel abriria igual ao de
+# ontem e pareceria que o pedido nao foi atendido.
+MATRIZ_FRANQ_ORIGEM = (RAIZ / "Arquivos_origem"
+                       / "MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS.xlsx")
+MATRIZ_FRANQ_DESTINO = "ENTRADA/MATRIZES/PERFIS_SISTEMAS"
+
 
 def grava_config(config_path: Path, versao: str, raiz_valor: str):
     tree = ET.parse(config_path)
@@ -163,6 +172,15 @@ def main():
             return 1
         zf.write(DE_PARA_SIG_ORIGEM,
                  f"{DE_PARA_SIG_DESTINO}/{DE_PARA_SIG_ORIGEM.name}")
+        if not MATRIZ_FRANQ_ORIGEM.exists():
+            print(f"FALHA: matriz do franqueado nao encontrada -> {MATRIZ_FRANQ_ORIGEM}")
+            print("       sem ela a regra do franqueado fica inerte e o pacote")
+            print("       chega parecendo que o pedido de 31/08 nao foi atendido.")
+            shutil.rmtree(STAGING, ignore_errors=True)
+            alvo.unlink(missing_ok=True)
+            return 1
+        zf.write(MATRIZ_FRANQ_ORIGEM,
+                 f"{MATRIZ_FRANQ_DESTINO}/{MATRIZ_FRANQ_ORIGEM.name}")
 
     n = len(zipfile.ZipFile(alvo).namelist())
     shutil.rmtree(STAGING, ignore_errors=True)

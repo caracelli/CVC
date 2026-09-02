@@ -337,3 +337,41 @@ class TestMotivoSobrevive(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestConvivenciaComOLeitorDeMatrizes(unittest.TestCase):
+    """A matriz do franqueado mora na MESMA pasta das matrizes de sistema.
+
+    O leitor geral exige centro de custo; sem tratamento ele mandava o arquivo
+    para ERROS na fase de IMPORTACAO — e a regra do franqueado, que roda depois,
+    nao achava mais nada. A matriz sumia da ENTRADA no primeiro processamento e
+    a regra ficava inerte para sempre, calada.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="cvc_conviv_")
+        _planilha(self._tmp)
+        wb = openpyxl.Workbook(); ws = wb.active
+        ws.append(["CCUSTO", "CARGO", "PERFIL ACESSO"])
+        ws.append(["100", "ANALISTA", "P1"])
+        wb.save(Path(self._tmp) / "MATRIZ DE PERFIL DE ACESSO SYSTUR.xlsx")
+
+    def test_leitor_geral_nao_move_a_matriz_do_franqueado_para_erros(self):
+        from infraestrutura.leitores_arquivos.leitor_matriz import LeitorMatrizPerfis
+        from dominio.objetos_valor.sistema import Sistema
+        perfis, _ = LeitorMatrizPerfis().ler(self._tmp, {Sistema.SYSTUR})
+        self.assertEqual([p.perfil for p in perfis], ["P1"])
+        self.assertFalse((Path(self._tmp) / "ERROS").exists(),
+                         "a matriz do franqueado foi mandada para ERROS")
+        self.assertTrue(
+            (Path(self._tmp) / "MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS.xlsx").exists(),
+            "a matriz do franqueado sumiu da pasta")
+
+    def test_os_dois_leitores_leem_o_que_e_deles(self):
+        from infraestrutura.leitores_arquivos.leitor_matriz import LeitorMatrizPerfis
+        from dominio.objetos_valor.sistema import Sistema
+        perfis, _ = LeitorMatrizPerfis().ler(self._tmp, {Sistema.SYSTUR})
+        regras, lidos = LeitorMatrizFranqueado().ler(self._tmp)
+        self.assertEqual([p.perfil for p in perfis], ["P1"])
+        self.assertEqual(lidos, ["MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS.xlsx"])
+        self.assertEqual(len(regras), len(LINHAS) + len(EXCECOES))
