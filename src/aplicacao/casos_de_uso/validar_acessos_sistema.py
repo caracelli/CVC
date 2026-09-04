@@ -781,12 +781,17 @@ class ValidarAcessosSistema:
     def _avisar_franqueado_fora_da_matriz(self, ativos, acessos_por_matricula):
         """Franqueado com acesso num sistema que a matriz NAO cobre.
 
-        A matriz e' "SYSTUR - LOJAS": ela so' fala do SYSTUR. Como o franqueado
-        saiu do espelho, um acesso dele em qualquer outro sistema deixa de ser
-        validado por qualquer regra — e sumiria da tela em silencio. Medido em
-        04/09 na base do cliente: ZERO (os 4.857 acessos de franqueado sao
-        todos SYSTUR). Se um dia deixar de ser zero, este aviso e' o que impede
-        a descoberta de vir pelo cliente.
+        A area respondeu em 04/09/2026, fechando a pergunta: **franqueado so'
+        pode ter acesso ao SYSTUR — por isso existe so' essa matriz, e nao vai
+        haver caso fora dela.** Ou seja: isto NAO e' uma lacuna a preencher com
+        outras matrizes, e nao precisa virar pendencia no painel.
+
+        O aviso fica como verificacao de invariante, nada mais. Como o
+        franqueado saiu do espelho, um acesso dele fora do SYSTUR nao seria
+        julgado por caminho nenhum; se a premissa um dia falhar, isto e' o que
+        impede o caso de sumir calado. Medido em 04/09 na base do cliente:
+        ZERO — os 4.857 acessos de franqueado sao todos SYSTUR, exatamente como
+        ela disse.
         """
         fora = defaultdict(int)
         for f in ativos:
@@ -800,8 +805,9 @@ class ValidarAcessosSistema:
             logger.warning(
                 f"[franqueado] {sum(fora.values())} acesso(s) de franqueado em "
                 f"sistema(s) que a matriz NAO cobre ({detalhe}). Como o "
-                f"franqueado saiu do espelho, esses acessos ficam SEM validacao "
-                f"— e' preciso uma matriz para esses sistemas."
+                f"franqueado saiu do espelho, esses acessos ficam SEM validacao. "
+                f"A area afirmou em 04/09 que isso NAO acontece — se apareceu, "
+                f"a premissa mudou e precisa ser levada a ela."
             )
 
     def _reg_franq(self, func, perfil_esperado: str, perfil_atual: str,
