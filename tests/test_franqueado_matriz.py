@@ -279,21 +279,27 @@ class TestValidacaoPelaMatriz(unittest.TestCase):
         rows = _cenario("VENDEDOR", ["ATEND_PUBLIC_LJT_GERENTE_VC"], colegas=colegas)
         self.assertEqual(rows[0][0], "DIVERGENTE")
 
-    def test_sem_acesso_nao_vira_inclusao(self):
+    def test_sem_acesso_nao_gera_registro_nenhum(self):
         """A matriz nao fecha para frente: sem TIPO DE LOJA nao da' para dizer
-        QUAL perfil conceder. Franqueado sem acesso nao sai da matriz."""
-        rows = _cenario("GERENTE", [])
-        self.assertEqual([r for r in rows if r[1] == "MATRIZ_FRANQUEADO"], [])
+        QUAL perfil conceder. E o espelho, que antes preenchia esse vazio com o
+        palpite dos colegas, saiu (04/09). Entao franqueado sem acesso nao
+        aparece — nem pela matriz, nem por espelho."""
+        colegas = [("GERENTE", ["ATEND_PUBLIC_LJT_GERENTE_VC"]) for _ in range(4)]
+        rows = _cenario("GERENTE", [], colegas=colegas)
+        self.assertEqual(rows, [])
 
-    def test_perfil_fora_da_matriz_fica_com_o_espelho(self):
+    def test_perfil_fora_da_matriz_nao_gera_registro(self):
+        """Antes caia no espelho; agora nao gera nada. Perfil que a matriz nao
+        conhece nao pode ser julgado por ela, e inventar esperado a partir dos
+        colegas e' justamente o que a area vetou."""
         colegas = [("GERENTE", ["OUTRO_PERFIL"]) for _ in range(4)]
         rows = _cenario("GERENTE", ["OUTRO_PERFIL"], colegas=colegas)
-        self.assertEqual([r for r in rows if r[1] == "MATRIZ_FRANQUEADO"], [])
+        self.assertEqual(rows, [])
 
-    def test_nao_gera_registro_duplicado_com_o_espelho(self):
+    def test_um_unico_registro_pela_matriz(self):
         colegas = [("GERENTE", ["ATEND_PUBLIC_LJT_GERENTE_VC"]) for _ in range(4)]
         rows = _cenario("GERENTE", ["ATEND_PUBLIC_LJT_GERENTE_VC"], colegas=colegas)
-        self.assertEqual(len(rows), 1, "matriz e espelho gravaram os dois")
+        self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0][1], "MATRIZ_FRANQUEADO")
 
     def test_regra_desligada_mantem_o_comportamento_antigo(self):
@@ -375,3 +381,82 @@ class TestConvivenciaComOLeitorDeMatrizes(unittest.TestCase):
         self.assertEqual([p.perfil for p in perfis], ["P1"])
         self.assertEqual(lidos, ["MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS.xlsx"])
         self.assertEqual(len(regras), len(LINHAS) + len(EXCECOES))
+
+
+class TestFranqueadoSaiDoEspelho(unittest.TestCase):
+    """"E' para nao ter esse espelho de franqueados" (area, 04/09/2026).
+
+    Ela mandou um print com linhas de franqueado marcadas "Espelho —
+    franqueados" e perfil esperado vindo dos colegas, e perguntou: se a regra
+    do franqueado e' a matriz, isso nao deveria existir. Nao deveria mesmo.
+
+    Antes deste ajuste sobravam 260 linhas de ESPELHO_FRANQUEADO na base do
+    cliente — todas de franqueado SEM acesso, onde a matriz nao consegue dizer
+    qual perfil conceder e o espelho preenchia com palpite. Agora: zero.
+    """
+
+    def _com_populacao(self, vinculo):
+        tmp = tempfile.mkdtemp(prefix="cvc_semespelho_")
+        regras = LeitorMatrizFranqueado().ler_um(_planilha(tmp))
+        cx = ConexaoBancoDados(os.path.join(tmp, "d.db"))
+        cx.inicializar()
+        s = cx.sessao()
+        # 4 pessoas do mesmo grupo, 3 com acesso: o espelho tem padrao e a 4a
+        # (sem acesso) receberia "Incluir Acesso" pelo palpite dos colegas.
+        for i in range(1, 5):
+            s.add(RhAtivo(matricula="M%d" % i, nome="P%d" % i, cpf="%011d" % i,
+                          cargo_descricao="GERENTE", situacao="ATIVO",
+                          tipo_vinculo=vinculo, empresa="ACME",
+                          gestor="CHEFE", departamento="CHEFE"))
+            if i < 4:
+                s.add(AcessoSistema(sistema=SYS, usuario="u%d" % i,
+                                    perfil="ATEND_PUBLIC_LJT_GERENTE_VC",
+                                    matricula_vinculada="M%d" % i, situacao="ATIVO"))
+        s.commit(); s.close()
+        ValidarAcessosSistema(cx, matriz_franqueado=regras).executar()
+        s = cx.sessao()
+        origens = [r.origem_matriz for r in s.query(ValidacaoAcessoModel).all()]
+        sem_acesso = [r.matricula for r in s.query(ValidacaoAcessoModel)
+                      .filter_by(status="SEM_ACESSO").all()]
+        s.close()
+        return origens, sem_acesso
+
+    def test_franqueado_nao_produz_mais_espelho(self):
+        origens, sem_acesso = self._com_populacao("FRANQUEADO")
+        self.assertNotIn("ESPELHO_FRANQUEADO", origens)
+        self.assertEqual(set(origens), {"MATRIZ_FRANQUEADO"})
+        # a 4a pessoa (sem acesso) nao recebe mais sugestao de inclusao
+        self.assertEqual(sem_acesso, [])
+
+    def test_terceiro_e_prestador_seguem_no_espelho(self):
+        """O veto e' do FRANQUEADO. Terceiro e prestador nao tem matriz e
+        continuam dependendo do espelho — tirar deles seria apaga-los."""
+        for vinculo, origem in (("TERCEIRO", "ESPELHO_TERC"),
+                                ("PRESTADOR", "ESPELHO_PRESTADOR")):
+            with self.subTest(vinculo=vinculo):
+                origens, sem_acesso = self._com_populacao(vinculo)
+                self.assertIn(origem, origens)
+                self.assertEqual(sem_acesso, ["M4"])
+
+    def test_sem_a_matriz_o_franqueado_volta_ao_espelho(self):
+        """Desligar a regra (arquivo ausente ou flag false) devolve o
+        comportamento anterior — a ausencia da matriz nao pode apagar o
+        franqueado do painel."""
+        tmp = tempfile.mkdtemp(prefix="cvc_semmatriz_")
+        cx = ConexaoBancoDados(os.path.join(tmp, "d.db"))
+        cx.inicializar()
+        s = cx.sessao()
+        for i in range(1, 5):
+            s.add(RhAtivo(matricula="M%d" % i, nome="P%d" % i, cpf="%011d" % i,
+                          cargo_descricao="GERENTE", situacao="ATIVO",
+                          tipo_vinculo="FRANQUEADO", empresa="ACME", gestor="CHEFE"))
+            if i < 4:
+                s.add(AcessoSistema(sistema=SYS, usuario="u%d" % i,
+                                    perfil="ATEND_PUBLIC_LJT_GERENTE_VC",
+                                    matricula_vinculada="M%d" % i, situacao="ATIVO"))
+        s.commit(); s.close()
+        ValidarAcessosSistema(cx, matriz_franqueado=None).executar()
+        s = cx.sessao()
+        origens = {r.origem_matriz for r in s.query(ValidacaoAcessoModel).all()}
+        s.close()
+        self.assertIn("ESPELHO_FRANQUEADO", origens)

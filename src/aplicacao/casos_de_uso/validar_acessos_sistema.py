@@ -186,19 +186,31 @@ class ValidarAcessosSistema:
         # SIG: validacao por ESPELHO dinamico (so CLT; terceiros vao no proprio)
         registros.extend(self._validar_sig_espelho(
             ativos, acessos_por_matricula, sistemas_com_dados))
-        # FRANQUEADO: matriz propria (cargo x tipo de loja) ANTES do espelho.
-        # Ela so' resolve quem TEM perfil conhecido da matriz; o resto continua
-        # no espelho, e `franq_tratadas` evita dois registros para o mesmo
-        # (matricula, SYSTUR).
-        regs_franq, franq_tratadas = self._validar_franqueado_matriz(
+        # FRANQUEADO: matriz propria (cargo x tipo de loja).
+        regs_franq = self._validar_franqueado_matriz(
             ativos, acessos_por_matricula, sistemas_com_dados)
         registros.extend(regs_franq)
-        # Populacoes SEM matriz de cargo (terceiro/franqueado/prestador):
-        # ESPELHO em TODOS os sistemas, cada uma espelhando com os SEUS pares.
-        for _vinculo in sorted(_VINCULOS_ESPELHO):
+
+        # Populacoes SEM matriz de cargo validadas por ESPELHO em TODOS os
+        # sistemas, cada uma espelhando com os SEUS pares.
+        #
+        # FRANQUEADO SAI DO ESPELHO quando a matriz esta carregada. A area foi
+        # explicita, duas vezes: em 31/08, "para franqueado nao tem a questao de
+        # espelho"; e em 04/09, vendo linhas de franqueado com origem
+        # "Espelho - franqueados", "e' para nao ter esse espelho de
+        # franqueados". Antes disso o espelho ainda respondia pelo franqueado
+        # SEM acesso — 260 linhas em que o perfil sugerido saia do palpite dos
+        # colegas, exatamente o que ela nao quer para essa populacao.
+        # Consequencia aceita: franqueado sem acesso deixa de receber sugestao
+        # de inclusao. A matriz nao pode substitui-la (sem TIPO DE LOJA nao da'
+        # para dizer QUAL perfil conceder), e inventar era o problema.
+        vinculos_espelho = sorted(_VINCULOS_ESPELHO)
+        if self._matriz_franqueado:
+            vinculos_espelho = [v for v in vinculos_espelho if v != "FRANQUEADO"]
+            self._avisar_franqueado_fora_da_matriz(ativos, acessos_por_matricula)
+        for _vinculo in vinculos_espelho:
             registros.extend(self._validar_espelho_vinculo(
-                ativos, acessos_por_matricula, sistemas_com_dados, _vinculo,
-                pular=(franq_tratadas if _vinculo == "FRANQUEADO" else None)))
+                ativos, acessos_por_matricula, sistemas_com_dados, _vinculo))
 
         # STATUS INDEFINIDO (extrato nao diz se a conta esta ativa: vazio ou
         # 'P'/pendente): NAO se assume ativo — o resultado daquele (matricula,
@@ -323,7 +335,8 @@ class ValidarAcessosSistema:
                 f"{self._franq_divergentes} perfil(is) que o cargo NAO autoriza, "
                 f"{self._franq_excecao} perfil(is) de EXCECAO (dependem de aval da "
                 f"Governanca de SI). A matriz valida ADERENCIA — nao gera inclusao, "
-                f"porque o tipo de loja nao existe no cadastro."
+                f"porque o tipo de loja nao existe no cadastro. Franqueado NAO "
+                f"passa pelo espelho (pedido da area em 31/08 e 04/09)."
             )
             if self._franq_depara:
                 _amostra = sorted(self._franq_depara.values(),
@@ -765,6 +778,32 @@ class ValidarAcessosSistema:
     # devolve tambem as matriculas que tratou, para o espelho nao duplicar.
     _FRANQ_SISTEMA = Sistema.SYSTUR.value
 
+    def _avisar_franqueado_fora_da_matriz(self, ativos, acessos_por_matricula):
+        """Franqueado com acesso num sistema que a matriz NAO cobre.
+
+        A matriz e' "SYSTUR - LOJAS": ela so' fala do SYSTUR. Como o franqueado
+        saiu do espelho, um acesso dele em qualquer outro sistema deixa de ser
+        validado por qualquer regra — e sumiria da tela em silencio. Medido em
+        04/09 na base do cliente: ZERO (os 4.857 acessos de franqueado sao
+        todos SYSTUR). Se um dia deixar de ser zero, este aviso e' o que impede
+        a descoberta de vir pelo cliente.
+        """
+        fora = defaultdict(int)
+        for f in ativos:
+            if (getattr(f, "tipo_vinculo", "") or "").upper() != "FRANQUEADO":
+                continue
+            for sis, p in acessos_por_matricula.get(f.matricula, ()):
+                if sis != self._FRANQ_SISTEMA and p:
+                    fora[sis] += 1
+        if fora:
+            detalhe = ", ".join(f"{s}: {n}" for s, n in sorted(fora.items()))
+            logger.warning(
+                f"[franqueado] {sum(fora.values())} acesso(s) de franqueado em "
+                f"sistema(s) que a matriz NAO cobre ({detalhe}). Como o "
+                f"franqueado saiu do espelho, esses acessos ficam SEM validacao "
+                f"— e' preciso uma matriz para esses sistemas."
+            )
+
     def _reg_franq(self, func, perfil_esperado: str, perfil_atual: str,
                    status: StatusValidacao, motivo: str) -> Dict:
         return self._registro_base(func) | {
@@ -782,17 +821,21 @@ class ValidarAcessosSistema:
         ativos: List["RhAtivo"],
         acessos_por_matricula: Dict[str, List[Tuple[str, str]]],
         sistemas_com_dados: Set[str],
-    ) -> Tuple[List[Dict], Set[str]]:
-        """Valida o franqueado pela matriz de lojas. Devolve (registros,
-        matriculas tratadas) — as tratadas saem do espelho no SYSTUR."""
+    ) -> List[Dict]:
+        """Valida o franqueado pela matriz de lojas.
+
+        Com a matriz carregada o franqueado NAO passa mais pelo espelho (ver
+        executar()), entao quem nao tem acesso, ou so' tem perfil fora da
+        matriz, simplesmente nao gera registro — em vez de receber um perfil
+        esperado inventado a partir dos colegas."""
         regras = self._matriz_franqueado or []
         if not regras or self._FRANQ_SISTEMA not in sistemas_com_dados:
-            return [], set()
+            return []
 
         cpp = cargos_por_perfil(regras)
         excecoes = perfis_de_excecao(regras)
         if not cpp:
-            return [], set()
+            return []
 
         # perfis que a matriz autoriza para cada cargo (para mostrar na
         # divergencia o que o cargo DARIA direito, em todas as combinacoes)
@@ -807,7 +850,7 @@ class ValidarAcessosSistema:
             and _norm(f.situacao or "") in ("", "ATIVO")
         ]
         if not franqueados:
-            return [], set()
+            return []
 
         # o que cada franqueado TEM no SYSTUR
         tem: Dict[str, Set[str]] = {}
@@ -826,7 +869,6 @@ class ValidarAcessosSistema:
             pares, cpp, limiar=self._FRANQ_LIMIAR_DEPARA)
 
         regs: List[Dict] = []
-        tratadas: Set[str] = set()
         for f in franqueados:
             u = tem.get(f.matricula)
             if not u:
@@ -840,7 +882,6 @@ class ValidarAcessosSistema:
             if not de_excecao and not da_matriz:
                 continue          # nenhum perfil conhecido: deixa com o espelho
 
-            tratadas.add(f.matricula)
             nota_depara = ("; " + equiv.descricao()) if equiv else ""
 
             if de_excecao:
@@ -871,7 +912,7 @@ class ValidarAcessosSistema:
                     StatusValidacao.OK,
                     "MATRIZ_FRANQUEADO: o cargo '%s' autoriza o perfil%s"
                     % (f.cargo_descricao or "(vazio)", nota_depara)))
-        return regs, tratadas
+        return regs
 
     # ------------------------------------------------------------------
     # TERCEIROS — ESPELHO por (Empresa+Supervisor), em TODOS os sistemas
@@ -906,7 +947,6 @@ class ValidarAcessosSistema:
         acessos_por_matricula: Dict[str, List[Tuple[str, str]]],
         sistemas_com_dados: Set[str],
         vinculo: str,
-        pular: Set[str] = None,
     ) -> List[Dict]:
         """Populacao SEM matriz de cargo (terceiro/franqueado/prestador) validada
         por ESPELHO, aplicado a CADA sistema: agrupa pelos pares da MESMA
@@ -937,10 +977,6 @@ class ValidarAcessosSistema:
         def k_wide(f):
             return tuple(_campo(f, c) for c in campos_wide)
 
-        # (matricula, sistema) ja resolvido por outra regra — no SYSTUR o
-        # franqueado pode ter sido tratado pela matriz de lojas.
-        pular = pular or set()
-
         regs: List[Dict] = []
         for sistema in sorted(sistemas_com_dados):
             # perfis desse sistema por terceiro
@@ -968,8 +1004,6 @@ class ValidarAcessosSistema:
                 return {p for p, c in cont.items() if c / n >= self._TERC_LIMIAR_ESPELHO}
 
             for f in terceiros:
-                if sistema == self._FRANQ_SISTEMA and f.matricula in pular:
-                    continue
                 u = perfis_s.get(f.matricula, set())
                 usa = bool(u)
                 if len(full[k_full(f)]) >= 2:
