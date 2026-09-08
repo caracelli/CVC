@@ -220,7 +220,17 @@ class ValidarAcessosSistema:
         for r in registros:
             if r["status"] in (StatusValidacao.OK.value, StatusValidacao.DIVERGENTE.value) \
                     and (r["matricula"], r["sistema"]) in self._status_indefinido:
-                if self._pendente_vira_inclusao:
+                # FRANQUEADO nunca toma o ramo "vira inclusao" — achado da
+                # auditoria de 08/09: com `pendente_vira_inclusao=True` (o
+                # valor de producao desde 31/08) o ramo abaixo LIMPA
+                # perfil_atual e escreve um motivo generico, apagando o
+                # veredito da matriz (CARGO_NAO_AUTORIZA_PERFIL e' escalada de
+                # privilegio real; virar "Incluir Acesso" faz a tela sugerir
+                # CONCEDER um perfil que a pessoa ja tem indevidamente). O
+                # comentario que dizia "medido em 02/09" so' era verdade se o
+                # teste rodou com a flag desligada — nesta config (true) o
+                # ramo nunca tinha sido combinado com o franqueado antes.
+                if self._pendente_vira_inclusao and r.get("origem_matriz") != "MATRIZ_FRANQUEADO":
                     # RETORNO DA AREA (31/08/2026, "Testes 1.docx"), textual:
                     #   "Considerar apenas os acessos ativos: se a pessoa
                     #    estiver com acesso nesse status, inativo, bloqueado ou

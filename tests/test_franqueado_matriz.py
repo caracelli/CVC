@@ -340,6 +340,64 @@ class TestMotivoSobrevive(unittest.TestCase):
         self.assertIn("CONTA_INDEFINIDA", r.motivo_status)
         self.assertIn("CARGO_NAO_AUTORIZA_PERFIL", r.motivo_status)
 
+    def test_nao_soma_com_pendente_vira_inclusao_ligado(self):
+        """Achado da auditoria de 08/09: `pendente_vira_inclusao=True` e' o
+        valor de PRODUCAO desde 31/08 (ver test_ligado_no_config_real_do_projeto
+        em test_conta_pendente_vira_inclusao.py) — mas o teste acima da
+        preservacao do motivo nunca passou essa flag, entao a combinacao real
+        nunca foi testada. Com a flag ligada e sem o guard, o ramo generico
+        LIMPA perfil_atual e escreve so' "CONTA_PENDENTE" — a escalada de
+        privilegio (CARGO_NAO_AUTORIZA_PERFIL) some da tela, e um ATENDENTE com
+        perfil de GERENTE aparece so' como "Incluir Acesso" (como se faltasse o
+        acesso, quando na verdade ela JA TEM um que o cargo nao autoriza)."""
+        tmp = tempfile.mkdtemp(prefix="cvc_franq_ind2_")
+        regras = LeitorMatrizFranqueado().ler_um(_planilha(tmp))
+        cx = ConexaoBancoDados(os.path.join(tmp, "d.db"))
+        cx.inicializar()
+        s = cx.sessao()
+        s.add(RhAtivo(matricula="M1", nome="ANA", cpf="11111111111",
+                      cargo_descricao="ATENDENTE", situacao="ATIVO",
+                      tipo_vinculo="FRANQUEADO", empresa="F", gestor="C"))
+        s.add(AcessoSistema(sistema=SYS, usuario="ana",
+                            perfil="ATEND_PUBLIC_LJT_GERENTE_VC",
+                            matricula_vinculada="M1", situacao=""))   # sem status
+        s.commit(); s.close()
+        ValidarAcessosSistema(cx, matriz_franqueado=regras,
+                              pendente_vira_inclusao=True).executar()
+        s = cx.sessao()
+        r = s.query(ValidacaoAcessoModel).filter_by(matricula="M1").one()
+        s.close()
+        self.assertEqual(r.status, "EM_ANALISE")
+        self.assertIn("CARGO_NAO_AUTORIZA_PERFIL", r.motivo_status)
+        self.assertNotEqual(r.motivo_status, "CONTA_PENDENTE")
+
+    def test_pendente_vira_inclusao_continua_valendo_p_outros_sistemas(self):
+        """O guard e' SO' para franqueado — SYSTUR fora da matriz, SIGOT etc.
+        continuam indo para "Incluir Acesso" como o retorno de 31/08 pediu."""
+        tmp = tempfile.mkdtemp(prefix="cvc_pend_outro_sis_")
+        cx = ConexaoBancoDados(os.path.join(tmp, "d.db"))
+        cx.inicializar()
+        s = cx.sessao()
+        from infraestrutura.banco_dados.schema import PerfilEsperadoModel
+        s.add(RhAtivo(matricula="M1", nome="ROSE", cpf="11111111111",
+                      cargo_codigo="CG", cargo_descricao="ANALISTA",
+                      centro_custo_codigo="100", situacao="ATIVO"))
+        s.add(PerfilEsperadoModel(cargo_codigo="100", cargo_descricao="ANALISTA",
+                                  sistema="SIGOT", perfil="P1"))
+        s.add(RhAtivo(matricula="M2", nome="BIA", cpf="22222222222",
+                      cargo_codigo="CG", cargo_descricao="ANALISTA",
+                      centro_custo_codigo="100", situacao="ATIVO"))
+        s.add(AcessoSistema(sistema="SIGOT", usuario="u2", perfil="P1",
+                            matricula_vinculada="M2", situacao="ATIVO"))
+        s.add(AcessoSistema(sistema="SIGOT", usuario="rose", perfil="P1",
+                            matricula_vinculada="M1", situacao=""))
+        s.commit(); s.close()
+        ValidarAcessosSistema(cx, pendente_vira_inclusao=True).executar()
+        s = cx.sessao()
+        r = s.query(ValidacaoAcessoModel).filter_by(matricula="M1").one()
+        s.close()
+        self.assertEqual((r.status, r.motivo_status), ("SEM_ACESSO", "CONTA_PENDENTE"))
+
 
 if __name__ == "__main__":
     unittest.main()
