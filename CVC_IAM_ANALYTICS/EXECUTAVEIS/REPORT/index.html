@@ -6166,6 +6166,39 @@ function _csChaveCpf(u){
   return (p.length === 11 && new Set(p).size > 1) ? p : null;
 }
 
+// Conectores que nao contam como identificador de nome (nao desambiguam
+// ninguem — "DE"/"DA"/"DOS" aparecem em milhares de nomes diferentes).
+const _CS_NOME_STOP = new Set(['de','da','do','das','dos','e']);
+
+/* Duas pessoas so' sao "a mesma" se o CPF bate E o nome tem pelo menos um
+   token real em comum (fora os conectores). Existe CPF que NAO desambigua —
+   mascarado, placeholder, codigo de terceiro reaproveitado como CPF (~17% dos
+   codigos de terceiro nao sao CPF valido, ver leitor de terceiros) — e aí o
+   mesmo numero cai em gente DIFERENTE. Medido na base real: de 681 CPFs com
+   2+ identidades, 8 tem nomes SEM NENHUM token em comum (ex.: "REYNALDO
+   BLANCO" e "LUIS FERNANDO ESCAMILLA RUIZ" no mesmo CPF) — fundir esses
+   colocaria o acesso de uma pessoa sob o nome/vinculo de outra, o que e' pior
+   que a duplicidade original. Variantes de acento/apelido/nome composto
+   (ex.: "JAQUELINE MOROSINI BARRETO" x "JAQUELINE BARRETO") sempre share pelo
+   menos 1 token e continuam fundindo normalmente. */
+function _csNomesCompativeis(a, b){
+  const ta = new Set(_csNorm(a).split(' ').filter(t => t && !_CS_NOME_STOP.has(t)));
+  const tb = _csNorm(b).split(' ').filter(t => t && !_CS_NOME_STOP.has(t));
+  if (!ta.size || !tb.length) return false;
+  return tb.some(t => ta.has(t));
+}
+
+/* Agrupa por nome DENTRO de quem já compartilha o CPF — cada cluster e' uma
+   pessoa de verdade; um CPF ruim vira 2+ clusters (nao funde). */
+function _csAgruparPorNome(g){
+  const clusters = [];
+  g.forEach(u => {
+    const c = clusters.find(cl => _csNomesCompativeis(cl[0].n, u.n));
+    if (c) c.push(u); else clusters.push([u]);
+  });
+  return clusters;
+}
+
 /* A MESMA PESSOA aparecia duas vezes na Consulta (retorno da área, 10/08:
    "se é a mesma pessoa por que trás separado?"). Acontece quando ela existe em
    duas origens — ex.: prestador no diretório AD (PREST-*) e terceiro na base de
@@ -6186,28 +6219,30 @@ function _csUnificarPorCpf(users){
   });
   const fundidos = [];
   grupos.forEach(g => {
-    if (g.length === 1) { fundidos.push(g[0]); return; }
-    // principal = quem tem mais acessos (desempate: FUNCIONARIO na frente)
-    const ord = g.slice().sort((a,b) =>
-      (b.divs||[]).length - (a.divs||[]).length ||
-      ((b.vinc==='Funcionário')-(a.vinc==='Funcionário')));
-    const p = ord[0];
-    const uni = (campo) => {
-      const vs = [];
-      ord.forEach(x => String(x[campo]||'').split(/\s*[,·]\s*/).forEach(v => {
-        v = v.trim(); if (v && !vs.includes(v)) vs.push(v);
-      }));
-      return vs.join(' · ');
-    };
-    const pri = (campo) => (ord.find(x => String(x[campo]||'').trim()) || {})[campo] || '';
-    fundidos.push({...p,
-      n: ord.map(x=>x.n||'').sort((a,b)=>b.length-a.length)[0] || p.n,
-      m: uni('m'), login: uni('login'), vinc: uni('vinc'),
-      c: pri('c'), d: pri('d'), cc: pri('cc'), gestor: pri('gestor'),
-      email: pri('email'),
-      // cada acesso lembra de qual identidade veio
-      divs: ord.flatMap(x => (x.divs||[]).map(dv => ({...dv, _orig: x.m || x.u}))),
-      _ids: ord.map(x => x.m || x.u),
+    _csAgruparPorNome(g).forEach(cl => {
+      if (cl.length === 1) { fundidos.push(cl[0]); return; }
+      // principal = quem tem mais acessos (desempate: FUNCIONARIO na frente)
+      const ord = cl.slice().sort((a,b) =>
+        (b.divs||[]).length - (a.divs||[]).length ||
+        ((b.vinc==='Funcionário')-(a.vinc==='Funcionário')));
+      const p = ord[0];
+      const uni = (campo) => {
+        const vs = [];
+        ord.forEach(x => String(x[campo]||'').split(/\s*[,·]\s*/).forEach(v => {
+          v = v.trim(); if (v && !vs.includes(v)) vs.push(v);
+        }));
+        return vs.join(' · ');
+      };
+      const pri = (campo) => (ord.find(x => String(x[campo]||'').trim()) || {})[campo] || '';
+      fundidos.push({...p,
+        n: ord.map(x=>x.n||'').sort((a,b)=>b.length-a.length)[0] || p.n,
+        m: uni('m'), login: uni('login'), vinc: uni('vinc'),
+        c: pri('c'), d: pri('d'), cc: pri('cc'), gestor: pri('gestor'),
+        email: pri('email'),
+        // cada acesso lembra de qual identidade veio
+        divs: ord.flatMap(x => (x.divs||[]).map(dv => ({...dv, _orig: x.m || x.u}))),
+        _ids: ord.map(x => x.m || x.u),
+      });
     });
   });
   return soltos.concat(fundidos);
