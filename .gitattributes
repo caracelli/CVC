@@ -2,3 +2,4 @@
 # Regra: limpar os zips antigos e gerar os novos a cada release, para nao
 # acumular versoes grandes no LFS.
 ENTREGA/*.zip filter=lfs diff=lfs merge=lfs -text
+ENTREGA/UPDATE_BRUNA_v1.0.0/UPDATE_BRUNA_v1.0.0.zip filter=lfs diff=lfs merge=lfs -text
