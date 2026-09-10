@@ -2136,10 +2136,12 @@ function montarFiltros(){
     let vals;
     if (f.id === 'status') vals = ['Pendente', 'Resolvido'];
     else { vals = valoresFiltro(f.campo);
-           // Aderente e Incluir Acesso (tipo "Sem Acesso") nao sao pendencias:
-           // fora dos slicers de Ação/Tipo da aba Pendências.
+           // Aderente, Incluir Acesso (tipo "Sem Acesso") e Sem Expectativa
+           // (tipo/acao do NAO_MAPEADO) nao sao pendencias: fora dos slicers de
+           // Ação/Tipo da aba Pendências.
            if (f.id === 'tipo' || f.id === 'acao')
-             vals = vals.filter(v => v !== 'Aderente' && v !== 'Incluir Acesso' && v !== 'Sem Acesso'); }
+             vals = vals.filter(v => v !== 'Aderente' && v !== 'Incluir Acesso'
+                                   && v !== 'Sem Acesso' && v !== 'Sem Expectativa'); }
     filtroSel[f.id] = new Set(vals);
     filtroVals[f.id] = vals.slice();
     const comInfo = (f.id === 'acao' || f.id === 'status' || f.id === 'tipo');
@@ -2203,15 +2205,18 @@ function filtroTodos(fid, btn){
 function _usersPendBase(){
   return DB.users
     .map(u => ({...u, divs: u.divs.filter(d =>
-        d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && divPassa(d))}))
+        d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa'
+        && divPassa(d))}))
     .filter(u => u.divs.length > 0);
 }
 
 function divPassa(d){
-  // Aderente e Incluir Acesso (SEM_ACESSO) NÃO são pendências: não aparecem na
-  // aba Pendências nem são filtráveis por Ação/Status/Tipo; na Consulta devem
-  // sempre passar. Filtram só por Categoria e Sistema.
-  const ad = d.a === 'Aderente' || d.a === 'Incluir Acesso';
+  // Aderente, Incluir Acesso (SEM_ACESSO) e Sem Expectativa (NAO_MAPEADO, achado
+  // de 09/09 — pessoa sem nenhum sistema com adesao relevante ao cargo) NÃO são
+  // pendências: não aparecem na aba Pendências nem são filtráveis por
+  // Ação/Status/Tipo; na Consulta devem sempre passar. Filtram só por Categoria
+  // e Sistema.
+  const ad = d.a === 'Aderente' || d.a === 'Incluir Acesso' || d.a === 'Sem Expectativa';
   return (!filtroSel.vinculo || filtroSel.vinculo.has(d.vinc)) &&
          (ad || !filtroSel.acao    || filtroSel.acao.has(d.a))    &&
          (ad || !filtroSel.status  || filtroSel.status.has(d.s))  &&
@@ -2269,7 +2274,8 @@ const TIPO_CSS = {
   'SEM_ACESSO':            'b-sem-acesso',
   'ACESSO_SEM_VINCULO_RH': 'b-sem-vinculo',
   'DIVERGENTE':            'b-divergente',
-  'EM_ANALISE':            'b-em-analise'
+  'EM_ANALISE':            'b-em-analise',
+  'NAO_MAPEADO':           'b-sem-acesso'
 };
 /* Badge do tipo + o PORQUÊ, quando o tipo não se explica sozinho.
    Retorno da área (10/08): havia linhas "Em Análise" com perfil esperado IGUAL
@@ -4233,7 +4239,7 @@ function abrirResolver(uid, sistema, perfil){
   _resSistema = sistema || '';
   _resPerfil  = (_resSistema && perfil) ? perfil : '';
   // pendências alvo: o acesso (perfil), o sistema, ou todas
-  const abertas = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso';
+  const abertas = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa';
   const alvo = _resPerfil
     ? u.divs.filter(d => d.sis === _resSistema && _perfChave(d) === _resPerfil && abertas(d))
     : _resSistema
@@ -6385,7 +6391,7 @@ function renderConsulta(){
     // "Incluir Acesso" NAO e' pendencia — o pino tem 4 estados e mora em
     // _csPino(); aqui fica so' o resumo da linha.
     const sistemas = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
-    const nPend = u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso').length;
+    const nPend = u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa').length;
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     const ultDt = datas.length ? datas[datas.length-1] : '';
     const { cls, lbl } = _csPino(u);
@@ -6394,7 +6400,7 @@ function renderConsulta(){
     const nomeEsc = esc(u.n||u.u||'');
     // Botão H só funciona se existir matrícula (chave do Histórico)
     // Botões A/P/H só aparecem se houver dado correspondente
-    const temPend = u.divs.some(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso');
+    const temPend = u.divs.some(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa');
     const temAder = !!u.m && u.divs.some(d => d.a === 'Aderente');
     const temHist = !!u.m && _histMats.has(u.m);
     const temDesl = !!u.m && _deslMats.has(u.m);
@@ -6437,7 +6443,7 @@ function renderConsulta(){
    conceito". Aderente é quem não tem pendência nenhuma; quem teve e tratou é
    RESOLVIDO — são coisas diferentes, e agora o pino diz qual é qual. */
 function _csPino(u){
-  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso';
+  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa';
   const abertos  = u.divs.filter(d => acionavel(d) && d.s === 'Pendente').length;
   const tratados = u.divs.filter(d => acionavel(d) && d.s !== 'Pendente').length;
   const temIncl  = u.divs.some(d => d.a === 'Incluir Acesso');
@@ -6573,7 +6579,7 @@ function equiparCs(){
    virou uma opção própria do funil — que é como o pino da linha já mostrava. */
 function _csAbasOf(u){
   const a = [];
-  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso';
+  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa';
   if (u.divs.some(acionavel)) a.push('Pendência');
   if (u.divs.some(d => d.a === 'Incluir Acesso')) a.push('Incluir acessos');
   if (u.m && u.divs.some(d => d.a === 'Aderente')) a.push('Aderente');
@@ -6832,6 +6838,13 @@ const _CS_CATS = [
 ];
 function _csCatDe(d){
   const a = d.a || d.tl || '';
+  // Sem Expectativa (NAO_MAPEADO, achado de 09/09): nao e' um acesso de
+  // verdade (sistema/perfil vem vazio) — e' so' o que garante a pessoa existir
+  // em DB.users quando nenhum sistema tem expectativa relevante pro cargo. O
+  // bloco "Sem mapeamento" (_csSemMapeamento/nSemMap, calculado na tela) ja'
+  // cobre essa explicacao; sem este `null` ela cairia em "Necessario analise"
+  // como se fosse pendencia de verdade.
+  if (a === 'Sem Expectativa') return null;
   for (const c of _CS_CATS) if (c.acoes.includes(a)) return c.k;
   return 'ana';   // desconhecido -> cai em análise (nunca some da tela)
 }

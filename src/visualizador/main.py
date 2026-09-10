@@ -107,6 +107,7 @@ TIPO_LABEL = {
     "ACESSO_DESLIGADO": "Acesso Desligado", "PERFIL_INVALIDO": "Perfil Inválido",
     "ACESSO_CONTA_SERVICO": "Conta de Serviço",
     "OK": "Aderente",
+    "NAO_MAPEADO": "Sem Expectativa",
 }
 
 # tipo_vinculo (rh_ativos) -> rótulo da coluna "Categoria" no painel.
@@ -1088,13 +1089,19 @@ SELECT
       || 'nao explica (os "a mais" listados ao lado). Ate 28/08/2026 esses '
       || 'extras nao apareciam: a linha mostrava so o perfil esperado. Avaliar '
       || 'se o acesso a mais se justifica; se nao, revogar o excedente.'
+    WHEN 'SEM_EXPECTATIVA_RELEVANTE' THEN
+      'O cargo nao tem mapeamento na matriz/CCO, ou tem mas a adesao real do '
+      || 'cargo a todo sistema mapeado fica abaixo do limiar de 30% (sinal '
+      || 'fraco demais para afirmar que falta acesso). Informativo, nao e '
+      || 'pendencia — a pessoa aparece aqui so para nao sumir da Consulta.'
     ELSE '' END                  AS motivo,
   COALESCE(v.dt_processamento,'') AS data_identificacao,
   0                              AS resolvida,
   CASE v.status WHEN 'SEM_ACESSO' THEN 'Incluir Acesso'
                 WHEN 'DIVERGENTE' THEN 'Alterar Perfil'
                 WHEN 'EM_ANALISE' THEN 'Em Análise'
-                WHEN 'OK' THEN 'Aderente' ELSE '' END AS acao,
+                WHEN 'OK' THEN 'Aderente'
+                WHEN 'NAO_MAPEADO' THEN 'Sem Expectativa' ELSE '' END AS acao,
   COALESCE(v.origem_matriz,'') AS origem,
   -- login REAL do sistema (CD_LOGIN), trazido do acesso por (matricula, sistema).
   -- Em SEM_ACESSO costuma vir vazio (a pessoa nao tem login — a acao e' criar),
@@ -2397,13 +2404,14 @@ def _montar_base():
             "ok": cont("OK"),                       # conforme — nao e' pendencia
         }
         # total de PENDENCIAS = PESSOAS distintas a tratar (resolvida=0). Exclui OK
-        # (aderente) E SEM_ACESSO — este ultimo deixou de ser pendencia (retorno
-        # Bruna): "sem acesso" e' informativo (so na Consulta), nao entra na
-        # contagem de pendencias. NAO e' a soma dos cards (multi-sistema conta 1x).
+        # (aderente), SEM_ACESSO (retorno Bruna: "sem acesso" e' informativo, so
+        # na Consulta) e NAO_MAPEADO (achado de 09/09: idem, sem isso a pessoa
+        # sumia da Consulta inteira — ver comentario em validar_acessos_sistema).
+        # NAO e' a soma dos cards (multi-sistema conta 1x).
         kpis["total"] = c.execute(
             f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias {whereS} "
             f"{'AND' if whereS else 'WHERE'} resolvida=0 AND tipo<>'OK' "
-            f"AND tipo<>'SEM_ACESSO'",
+            f"AND tipo<>'SEM_ACESSO' AND tipo<>'NAO_MAPEADO'",
             argS).fetchone()[0]
         acao_dist = {r["acao"]: r["n"] for r in c.execute(
             f"SELECT acao, COUNT(DISTINCT usuario) n FROM bi_divergencias {whereS} "
@@ -2465,7 +2473,12 @@ def _montar_base():
                 # como aviso na linha. Vazio na esmagadora maioria das linhas.
                 "mot": r["motivo"] or "",
                 "dt": r["data_identificacao"] or "",
-                "s": ("Aderente" if tp == "OK"
+                # NAO_MAPEADO entra junto com OK: informativo, nunca "Pendente"
+                # (achado da revisao do fix de 10/09 — sem isso, a coluna
+                # Status da Consulta e o export csExportar() mostravam "1
+                # pendente" pra quem so' tinha a linha Sem Expectativa,
+                # contradizendo o pino da mesma linha, que ja' mostra Aderente).
+                "s": ("Aderente" if tp in ("OK", "NAO_MAPEADO")
                       else "Resolvido" if r["resolvida"] else "Pendente"),
                 # categoria lida do rh_ativos (tipo_vinculo): Funcionário (CLT),
                 # Terceiro (fornecedor) ou Franqueado/Prestador (diretório AD).
@@ -2638,10 +2651,12 @@ def _calcular_visao_geral(c, sistema=""):
     # REGRA: conta USUARIOS distintos (nao acessos), igual aos cards do topo.
     try:
         # "Incluir Acesso" (SEM_ACESSO) NAO e' pendencia: fica FORA de "Pendencias
-        # Abertas" e ganha contagem propria (out["incluir"]).
+        # Abertas" e ganha contagem propria (out["incluir"]). NAO_MAPEADO (sem
+        # expectativa relevante) idem — ver kpis["total"] acima.
         out["pendentes"] = c.execute(
             f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias "
-            f"WHERE resolvida=0 AND tipo<>'OK' AND tipo<>'SEM_ACESSO'{whereS}",
+            f"WHERE resolvida=0 AND tipo<>'OK' AND tipo<>'SEM_ACESSO' "
+            f"AND tipo<>'NAO_MAPEADO'{whereS}",
             argS).fetchone()[0]
         out["incluir"] = c.execute(
             f"SELECT COUNT(DISTINCT usuario) FROM bi_divergencias WHERE tipo='SEM_ACESSO'{whereS}",
@@ -2704,11 +2719,16 @@ def _calcular_visao_geral(c, sistema=""):
     # da fonte unificada (bi_divergencias), excluindo OK (aderente nao e' divergencia).
     # Defensivo: banco sem bi_divergencias (ex.: chamada direta em teste) degrada
     # so este bloco, sem derrubar a Visao Geral inteira.
+    # NAO_MAPEADO fica fora dos dois: e' informativo, sem sistema (sistema=''),
+    # e em volume grande (achado de 10/09) — sem excluir, cria um bucket com
+    # rotulo VAZIO em "Concentracao por Sistema" e dilui a % de toda divergencia
+    # real no donut. SEM_ACESSO continua entrando (comportamento pre-existente,
+    # nao mexido aqui).
     try:
         out["div_tipos"] = {r[0]: r[1] for r in c.execute(
             "SELECT tipo, COUNT(DISTINCT usuario) FROM bi_divergencias "
-            "WHERE tipo<>'OK'" + (" AND sistema = ?" if sistema else "")
-            + " GROUP BY tipo", argS)}
+            "WHERE tipo<>'OK' AND tipo<>'NAO_MAPEADO'"
+            + (" AND sistema = ?" if sistema else "") + " GROUP BY tipo", argS)}
     except Exception:
         out["div_tipos"] = {}
     # Concentração por sistema. RESPEITA o escopo configurado (visualizador/sistema):
@@ -2718,8 +2738,8 @@ def _calcular_visao_geral(c, sistema=""):
     try:
         out["div_sistemas"] = {r[0]: r[1] for r in c.execute(
             "SELECT sistema, COUNT(DISTINCT usuario) FROM bi_divergencias "
-            "WHERE tipo<>'OK'" + (" AND sistema = ?" if sistema else "")
-            + " GROUP BY sistema ORDER BY 2 DESC", argS)}
+            "WHERE tipo<>'OK' AND tipo<>'NAO_MAPEADO'"
+            + (" AND sistema = ?" if sistema else "") + " GROUP BY sistema ORDER BY 2 DESC", argS)}
     except Exception:
         out["div_sistemas"] = {}
 
@@ -4289,7 +4309,7 @@ def _vg_secoes(de="", ate=""):
     TL = {'ACESSO_SEM_VINCULO_RH': 'Sem Vínculo RH', 'DIVERGENTE': 'Alterar Perfil',
           'EM_ANALISE': 'Em Análise', 'SEM_ACESSO': 'Incluir Acesso',
           'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
-          'ACESSO_CONTA_SERVICO': 'Conta de Serviço'}
+          'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Sem Expectativa'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
           'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
     pct = lambda n, t: (round(100 * n / t, 1) if t else 0)
@@ -4356,7 +4376,7 @@ def _vg_analiticos(de="", ate=""):
     TL = {'ACESSO_SEM_VINCULO_RH': 'Sem Vínculo RH', 'DIVERGENTE': 'Alterar Perfil',
           'EM_ANALISE': 'Em Análise', 'SEM_ACESSO': 'Incluir Acesso', 'OK': 'Aderente',
           'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
-          'ACESSO_CONTA_SERVICO': 'Conta de Serviço'}
+          'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Sem Expectativa'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
           'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
     d19 = lambda s: (str(s) if s else "")[:19]
@@ -4390,7 +4410,7 @@ def _vg_analiticos(de="", ate=""):
         A = []
         for r in c.execute("SELECT usuario,nome_usuario,sistema,tipo,acao,data_identificacao "
                            "FROM bi_divergencias WHERE resolvida=0 AND tipo<>'OK' "
-                           "AND data_identificacao<>''" + whereAnd, argS):
+                           "AND tipo<>'NAO_MAPEADO' AND data_identificacao<>''" + whereAnd, argS):
             try:
                 dias = (hoje - _dt.fromisoformat(str(r["data_identificacao"])[:19])).days
             except Exception:

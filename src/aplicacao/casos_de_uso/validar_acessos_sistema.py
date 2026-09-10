@@ -164,14 +164,29 @@ class ValidarAcessosSistema:
                     _vistos_sp.add((sistema_valor, perfil_esperado))
                     perfis_sis[sistema_valor].append((perfil_esperado, False, "CCO"))
 
+            _prov_deslig_antes = self._prov_deslig
             for sistema_valor, perfis_comb in perfis_sis.items():
                 regs_func.extend(self._gerar_registros_sistema(
                     func, sistema_valor, perfis_comb,
                     acessos_por_matricula, sistemas_com_dados,
                 ))
+            # A regra TEMPORARIA de provavel desligamento (linha ~600, retorna
+            # [] quando a pessoa JA foi aderente e zerou o acesso) tem dono
+            # proprio — "sai na fase de desligados" — e o teste
+            # test_provavel_desligamento.py trava que ela produz ZERO linha,
+            # nao um NAO_MAPEADO informativo. Sem este flag, o fallback abaixo
+            # "vazaria" um NAO_MAPEADO por cima da regra de desligamento.
+            _foi_provavel_desligamento = self._prov_deslig > _prov_deslig_antes
 
-            # Sem nenhum mapeamento em nenhuma matriz
-            if not regs_func:
+            # Sem nenhum mapeamento em nenhuma matriz — OU mapeamento existe mas
+            # toda expectativa foi suprimida pela B1 (adesao < 30% em todo
+            # sistema aplicavel). Achado de 09/09 (retorno da Bruna, "gente
+            # ativa some da Consulta"): ate aqui, NAO_MAPEADO nunca era salvo
+            # (fora de _STATUS_SALVOS), entao a pessoa ficava com ZERO linha em
+            # QUALQUER lugar do painel — nem Consulta, nem Pendencias. Medido na
+            # base dela: 6.747 de 13.638 ativos (49%) sem nenhuma linha. Agora
+            # e' salvo como informativo (nao vira pendencia — ver _STATUS_INFO).
+            if not regs_func and not _foi_provavel_desligamento:
                 regs_func.append(self._registro_base(func) | {
                     "sistema": "",
                     "perfil_esperado": "",
@@ -179,6 +194,7 @@ class ValidarAcessosSistema:
                     "acesso_manual": False,
                     "status": StatusValidacao.NAO_MAPEADO.value,
                     "origem_matriz": "",
+                    "motivo_status": "SEM_EXPECTATIVA_RELEVANTE",
                 })
 
             registros.extend(regs_func)
@@ -288,8 +304,13 @@ class ValidarAcessosSistema:
             StatusValidacao.EM_ANALISE.value,
         }
         # Informativos (salvos, aparecem na Consulta, NAO contam pendencia):
-        # OK (encontrados/aderentes) e SEM_ACESSO (esperados).
-        _STATUS_INFO = {StatusValidacao.OK.value, StatusValidacao.SEM_ACESSO.value}
+        # OK (encontrados/aderentes), SEM_ACESSO (esperados) e NAO_MAPEADO (sem
+        # expectativa relevante — ver comentario acima, achado de 09/09).
+        _STATUS_INFO = {
+            StatusValidacao.OK.value,
+            StatusValidacao.SEM_ACESSO.value,
+            StatusValidacao.NAO_MAPEADO.value,
+        }
         _STATUS_SALVOS = _STATUS_ACAO | _STATUS_INFO
         registros_salvos = [r for r in registros if r["status"] in _STATUS_SALVOS]
         for r in registros_salvos:

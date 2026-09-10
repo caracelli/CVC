@@ -10,7 +10,11 @@ Cobre, ponta a ponta:
   - DIVERGENTE    -> gravado, com perfil_atual e situacao_acao=PENDENTE
   - SEM_ACESSO    -> gravado
   - EM_ANALISE    -> gravado, 1 linha por perfil possivel
-  - NAO_MAPEADO   -> nao gera pendencia (nao e' gravado)
+  - NAO_MAPEADO   -> gravado como informativo (situacao_acao=OK), nao gera
+    pendencia. Ate 09/09/2026 nao era gravado (fora de _STATUS_SALVOS) — achado
+    do retorno da Bruna: pessoa ativa ficava com ZERO linha em QUALQUER lugar
+    do painel (nem Consulta), inclusive quando a supressao vinha da B1 (cargo
+    mapeado, mas toda adesao < 30%).
   - APROXIMACAO de perfil escopada ao IC ('IC_CONSULTA' == 'IC CONSULTA')
     versus casamento EXATO do SYSTUR ('P_1' != 'P 1').
 
@@ -134,15 +138,24 @@ class TestRegrasValidacaoSimulada(unittest.TestCase):
         self.assertTrue(all(x.status == "EM_ANALISE" for x in r))
         self.assertEqual({x.perfil_esperado for x in r}, {"IC CONSULTA", "IC APROVADOR"})
 
-    def test_nao_mapeado_nao_gera_pendencia(self):
-        # funcionario sem nenhum perfil esperado em nenhuma matriz
-        self.assertEqual(self.regs("5"), [])
+    def test_nao_mapeado_e_informativo_nao_gera_pendencia(self):
+        # funcionario sem nenhum perfil esperado em nenhuma matriz: gravado
+        # (aparece na Consulta), mas informativo — nao e' pendencia.
+        r = self.regs("5")
+        self.assertEqual([x.status for x in r], ["NAO_MAPEADO"])
+        self.assertEqual(r[0].situacao_acao, "OK")
+        self.assertEqual(r[0].motivo_status, "SEM_EXPECTATIVA_RELEVANTE")
 
     # ---------------- B1: gate de inclusao por adesao do cargo ----------------
     def test_b1_inclusao_suprimida_cargo_baixa_adesao(self):
-        # ESTAGIARIO: matriz manda IC, mas 0/3 do cargo tem -> Inclusao SUPRIMIDA
+        # ESTAGIARIO: matriz manda IC, mas 0/3 do cargo tem -> Inclusao
+        # SUPRIMIDA. Nao vira SEM_ACESSO, mas tambem nao pode sumir do painel:
+        # grava NAO_MAPEADO informativo (achado do retorno da Bruna, 09/09).
         for mat in ("10", "11", "12"):
-            self.assertEqual(self.regs(mat), [], f"mat {mat} nao deveria gerar Inclusao")
+            r = self.regs(mat)
+            self.assertEqual([x.status for x in r], ["NAO_MAPEADO"],
+                             f"mat {mat} deveria gravar NAO_MAPEADO informativo")
+            self.assertEqual(r[0].situacao_acao, "OK")
 
     def test_b1_inclusao_mantida_cargo_alta_adesao(self):
         # ANALISTA: 2/3 tem IC (adesao 67% >= 30%) -> a Inclusao que falta e' MANTIDA
