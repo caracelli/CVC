@@ -890,6 +890,8 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
   color:#5C2D91;border-color:#C3B3E0;}
 .cs-aba-btn.d:hover{filter:brightness(1.04);
   box-shadow:0 2px 6px rgba(92,45,145,.25);}
+/* desligado sem acesso ativo: consta, mas não há nada a remover */
+.cs-aba-btn.d.ok{background:#F3F1F7;color:#9A8DB5;border-color:#DDD6EA;}
 .cs-aba-btn:active{transform:translateY(1px);}
 .cs-aba-btn[disabled]{opacity:.42;cursor:not-allowed;pointer-events:none;}
 .cs-vazio{text-align:center;padding:38px 18px;color:#7B8294;
@@ -4034,8 +4036,18 @@ async function fetchAPI(url){
   if (c && _tokenDB !== null && c.token === _tokenDB) return JSON.parse(c.texto);
   const r = await fetch(url);
   const texto = await r.text();
+  // ERRO NAO ENTRA NO CACHE. O servidor devolve 500 com um JSON valido
+  // ({"erro": ...}); antes isso era cacheado como se fosse dado, e a aba ficava
+  // vazia em toda volta ate o banco mudar de token — o "troca de aba perde os
+  // dados, precisa fechar e abrir" da area ("Testes 2.pdf", 09/09/2026).
+  if (!r.ok) {
+    let msg = '';
+    try { msg = JSON.parse(texto).erro || ''; } catch(e) { /* corpo nao-JSON */ }
+    throw new Error('HTTP ' + r.status + ' em ' + url + (msg ? ' — ' + msg : ''));
+  }
+  const obj = JSON.parse(texto);   // so' cacheia o que de fato parseou
   if (_tokenDB !== null) _cacheAPI.set(url, {token: _tokenDB, texto});
-  return JSON.parse(texto);
+  return obj;
 }
 
 async function refreshDB(forcar){
@@ -5417,7 +5429,9 @@ function transfToggle(el){
   pintarTransferidos();
 }
 
+let _transfFalhou = false;   // a ultima carga de /api/transferidos deu erro?
 async function renderTransferidos(){
+  _transfFalhou = false;
   try{
     const d = await fetchAPI('/api/transferidos');
     _transfRecs = d.lista || [];
@@ -5433,7 +5447,13 @@ async function renderTransferidos(){
     const el = document.getElementById('transf-count');
     if(el) el.textContent = `${k.revisar||0} a revisar · ${k.tratados||0} tratado(s) · ${k.total||0} transferidos`
           + (k.sem_acesso ? ` · ${k.sem_acesso} sem acesso` : '');
-  }catch(e){ _transfRecs = []; }
+  }catch(e){
+    // Mesma trava da Desligados: sem ela a falha de carga aparecia como
+    // "Nenhuma transferência detectada" — a aba "perdia os dados" sem dizer
+    // por que ("Testes 2.pdf", 09/09/2026).
+    _transfRecs = []; _transfFalhou = true;
+    console.error('[transferidos] falha ao carregar:', e);
+  }
   pintarTransferidos();
 }
 
@@ -5470,7 +5490,11 @@ function pintarTransferidos(){
   let h = '';
   if(!pag.length){
     h = `<tr><td colspan="9" style="text-align:center;padding:22px;color:#6B7280;">`
-      + (_transfRecs.length ? 'Nenhum transferido nesta visão.'
+      + (_transfFalhou
+          ? '<b style="color:#B33A3A;">Não foi possível carregar os transferidos.</b> '
+            + 'A lista não está vazia — a leitura falhou. Troque de aba e volte, ou '
+            + 'recarregue a página; se persistir, o log do visualizador tem o motivo.'
+          : _transfRecs.length ? 'Nenhum transferido nesta visão.'
                             : 'Nenhuma transferência detectada — depende de duas cargas de RH (antes × depois) com mudança de cargo/CC/departamento/gestor.')
       + `</td></tr>`;
   }
@@ -6143,6 +6167,7 @@ let _csData = null;        // filtro de data (col 13 = Última div) — {tipo,de
 let _csPP = 50, _csPag = 1;   // paginação
 let _histMats = new Set();    // matrículas que têm histórico (p/ botão H condicional)
 let _deslMats = new Set();     // matrículas de desligados (p/ botão D condicional)
+let _deslSit = new Map();      // matrícula -> 'Tratar' | 'Tratado' | 'OK' (texto do botão D)
 let _csAbasFilt = null;       // funil da coluna Abas: Set de {Pendência,Incluir acessos,Aderente,Histórico,Desligado}
 async function _carregarHistMats(){
   try {
@@ -6152,6 +6177,8 @@ async function _carregarHistMats(){
   try {
     const d = await fetchAPI('/api/desligados');
     _deslMats = new Set((d.lista || []).map(x => x.m).filter(Boolean));
+    _deslSit = new Map((d.lista || []).filter(x => x.m)
+      .map(x => [x.m, x.tratado ? 'Tratado' : x.sit]));
   } catch(e) { /* mantém o cache atual */ }
 }
 
@@ -6391,7 +6418,9 @@ function renderConsulta(){
     // "Incluir Acesso" NAO e' pendencia — o pino tem 4 estados e mora em
     // _csPino(); aqui fica so' o resumo da linha.
     const sistemas = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
-    const nPend = u.divs.filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa').length;
+    // conta o acesso ambíguo UMA vez (como a coluna Qtd da Pendências), não uma
+    // vez por perfil candidato
+    const nPend = _divsDisplayA(u.divs).filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa').length;
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     const ultDt = datas.length ? datas[datas.length-1] : '';
     const { cls, lbl } = _csPino(u);
@@ -6407,7 +6436,15 @@ function renderConsulta(){
     const btnP = temPend ? `<span class="cs-aba-btn p" onclick="csIrParaPend('${matEsc}','${uidEsc}','${nomeEsc}')" title="Ir para Pendências filtrando por ${nomeEsc}">P</span>` : '';
     const btnH = temHist ? `<span class="cs-aba-btn h" onclick="csIrParaHist('${matEsc}','${nomeEsc}')" title="Ir para Histórico filtrando por ${nomeEsc}">H</span>` : '';
     const btnA = temAder ? `<span class="cs-aba-btn a" onclick="csIrParaAderente('${matEsc}','${nomeEsc}')" title="Ir para Aderentes filtrando por ${nomeEsc}">A</span>` : '';
-    const btnD = temDesl ? `<span class="cs-aba-btn d" onclick="csIrParaDesligado('${matEsc}','${nomeEsc}')" title="Ir para Desligados filtrando por ${nomeEsc}">D</span>` : '';
+    // "D" = a matrícula consta em Desligados — o que NÃO quer dizer que haja
+    // algo a remover. Sem acesso ativo o desligado entra como "OK", e a área
+    // clicava no D e não achava nada ("Testes 2.pdf", 09/09: "ele filtra mas
+    // não tem nada a remover"). O botão agora diz qual é o caso e apaga no OK.
+    const dSit = temDesl ? _deslSit.get(u.m) : '';
+    const dTit = dSit === 'OK'      ? 'consta em Desligados, mas sem acesso ativo — nada a remover'
+               : dSit === 'Tratado' ? 'consta em Desligados; acesso já encaminhado para tratamento'
+               :                      'consta em Desligados com acesso ativo a revogar';
+    const btnD = temDesl ? `<span class="cs-aba-btn d${dSit === 'OK' ? ' ok' : ''}" onclick="csIrParaDesligado('${matEsc}','${nomeEsc}')" title="${nomeEsc} ${dTit}. Clique para abrir em Desligados.">D</span>` : '';
     return `<tr data-uid="${uidEsc}">
       <td class="cs-expand-btn" onclick="toggleCsExpand('${uidEsc}')" title="Expandir/recolher detalhes">+</td>
       <td style="text-align:center;"><span class="cs-aba-btns">${btnP}${btnH}${btnA}${btnD}</span></td>
@@ -6745,6 +6782,18 @@ function _csDelta(pe, pp){
    HTML ja escapado. */
 function _csPerfilTxt(d){
   const pe = (d.pe || '').trim(), pp = (d.pp || '').trim();
+  /* "Em Análise" AMBÍGUO, já consolidado por `_divsDisplayA` (a mesma regra da
+     Pendências): o acesso encontrado casa com N perfis do cargo. Retorno de
+     09/09 ("Testes 2.pdf"): no SYSTUR a pessoa só pode ter UM perfil, e a
+     Consulta listava cada candidato como uma linha — lia como "faltam 5".
+     É UM acesso, com N opções possíveis; o delta (regra 2) não se aplica. */
+  const ops = (d.opcoes && d.opcoes.length > 1) ? _perfDedup(d.opcoes).map(_perfNome) : [];
+  if (ops.length > 1) {
+    return (pe ? '<span style="color:#B9770E;font-weight:700;">Tem hoje:</span> '
+                 + _csListaPerfis(pe.split(',')) + '<br>' : '')
+         + `<span style="color:#856404;font-weight:700;">Esperado: 1 de ${ops.length} opções:</span> `
+         + _csListaPerfis(ops);
+  }
   if (pe && pp && pe !== pp) {
     const {tem, dev, faltam, aMais} = _csDelta(pe, pp);
     if (faltam.length || aMais.length) {
@@ -6962,7 +7011,8 @@ function _csMontarSub(u){
       + '<div style="color:#7B8294;font-style:italic;">Sem registros de acesso.</div>';
   }
   const cont = {};
-  u.divs.forEach(d => { const k = _csCatDe(d); cont[k] = (cont[k] || 0) + 1; });
+  // conta como o drawer mostra: ambíguo consolidado (ver _divsDisplayA)
+  _divsDisplayA(u.divs).forEach(d => { const k = _csCatDe(d); cont[k] = (cont[k] || 0) + 1; });
   const partes = _CS_CATS.filter(c => cont[c.k]).map(c =>
     `<b style="color:${c.cor};">${cont[c.k]}</b> ${c.curto}`);
   // "sem mapeamento" e' calculado na tela (nao ha linha no banco) — entra no
@@ -7155,8 +7205,10 @@ function csRenderDrawerBody(){
       return;
     }
     // 4 blocos (retorno Bruna): Encontrados / Esperados / Análise / Não localizados
+    // _divsDisplayA: "Em Análise" ambíguo vira UMA linha com as opções, igual
+    // na Pendências — sem isso a Consulta mostrava N linhas para o mesmo acesso.
     body.innerHTML = '<div class="cs-sec">Acessos</div>'
-      + _csDetalheCategorias(u.divs, 'cs-acc', false)
+      + _csDetalheCategorias(_divsDisplayA(u.divs), 'cs-acc', false)
       // veio junto da expansao: e' a resposta ao "por que ela nao tem o IC?"
       // (2o retorno, 10/08). Sem isto, mover o detalhe para ca' perderia o bloco.
       + _csSemMapeamento(u);
