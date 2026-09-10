@@ -109,6 +109,13 @@ class TransferidosDizQueFalhou(unittest.TestCase):
         self.assertNotIn("catch(e){ _transfRecs = []; }", corpo,
                          "voltou a engolir o erro calado")
 
+    def test_falha_nao_deixa_o_contador_da_carga_anterior(self):
+        """Print do "Testes 2.pdf": "69 a revisar" em cima de uma grid vazia."""
+        corpo = _funcao("renderTransferidos")
+        i = corpo.index("_transfFalhou = true")
+        self.assertIn("transf-count", corpo[i:], "o catch tem de limpar o contador")
+        self.assertIn("números indisponíveis", corpo[i:])
+
     def test_grid_vazia_distingue_falha_de_base_vazia(self):
         corpo = _funcao("pintarTransferidos")
         self.assertIn("_transfFalhou", corpo)

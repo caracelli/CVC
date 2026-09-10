@@ -5452,6 +5452,10 @@ async function renderTransferidos(){
     // "Nenhuma transferência detectada" — a aba "perdia os dados" sem dizer
     // por que ("Testes 2.pdf", 09/09/2026).
     _transfRecs = []; _transfFalhou = true;
+    // o contador e' da carga ANTERIOR: deixa-lo na tela dizia "69 a revisar"
+    // em cima de uma grid vazia (print do "Testes 2.pdf", 09/09/2026)
+    const elC = document.getElementById('transf-count');
+    if (elC) elC.textContent = 'leitura falhou — números indisponíveis';
     console.error('[transferidos] falha ao carregar:', e);
   }
   pintarTransferidos();

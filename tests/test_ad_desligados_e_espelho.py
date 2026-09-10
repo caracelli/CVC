@@ -171,6 +171,51 @@ class TestEspelhoFranqueadoPrestador(unittest.TestCase):
         ValidarAcessosSistema(cx).executar()
         self.assertEqual(self._status(cx, "PREST-1"), [])
 
+    # ── Grafia do perfil ("Testes 2.pdf", 09/09/2026) ──────────────────────
+    # Caso real: PREST-corpp138004 no SICA_RA tinha 'gestao de acessos' e os
+    # pares 'GESTAO DE ACESSOS' — a linha caia em Em Analise ("esses acessos
+    # estao iguais, porque esta vindo como analise?").
+
+    def _perfis(self, cx, matricula):
+        s = cx.sessao()
+        r = s.query(ValidacaoAcessoModel).filter_by(matricula=matricula).one()
+        s.close()
+        return r.perfil_atual, r.perfil_esperado
+
+    def test_mesmo_perfil_em_outra_caixa_e_aderente(self):
+        cx = self._cx("PRESTADOR")
+        self._add(cx, "PRESTADOR", "PREST-9", perfil="p_padrao")
+        ValidarAcessosSistema(cx).executar()
+        self.assertEqual([s for s, _ in self._status(cx, "PREST-9")], ["OK"])
+        # a tela mostra a grafia de cada lado — normalizar e' so' para comparar
+        self.assertEqual(self._perfis(cx, "PREST-9"), ("p_padrao", "P_PADRAO"))
+
+    def test_espaco_sobrando_tambem_casa(self):
+        cx = self._cx("PRESTADOR")
+        self._add(cx, "PRESTADOR", "PREST-9", perfil="  P_PADRAO ")
+        ValidarAcessosSistema(cx).executar()
+        self.assertEqual([s for s, _ in self._status(cx, "PREST-9")], ["OK"])
+
+    def test_duas_grafias_nao_dividem_o_espelho(self):
+        """2 pares com 'P_X' e 2 com 'p_x': separados, cada grafia tinha 50%
+        (< 70%) e o grupo ficava SEM padrao; juntos, sao 100%."""
+        tmp = tempfile.mkdtemp(prefix="cvc_esp_")
+        cx = ConexaoBancoDados(os.path.join(tmp, "d.db"))
+        cx.inicializar()
+        s = cx.sessao()
+        for i, perfil in enumerate(("P_X", "P_X", "p_x", "p_x"), 1):
+            s.add(RhAtivo(matricula=f"PREST-{i}", nome=f"P{i}",
+                          cpf=f"5556667778{i}", situacao="ATIVO",
+                          tipo_vinculo="PRESTADOR", empresa="ACME", gestor="CHEFE",
+                          departamento="OPS", centro_custo_codigo=""))
+            s.add(AcessoSistema(sistema=SYS, usuario=f"x{i}", perfil=perfil,
+                                matricula_vinculada=f"PREST-{i}", situacao="ATIVO"))
+        s.commit(); s.close()
+        ValidarAcessosSistema(cx).executar()
+        for i in (1, 2, 3, 4):
+            self.assertEqual([st for st, _ in self._status(cx, f"PREST-{i}")], ["OK"],
+                             f"PREST-{i} deveria ser aderente ao padrao unificado")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

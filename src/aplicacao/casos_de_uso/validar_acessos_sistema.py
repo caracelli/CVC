@@ -1016,12 +1016,21 @@ class ValidarAcessosSistema:
 
         regs: List[Dict] = []
         for sistema in sorted(sistemas_com_dados):
-            # perfis desse sistema por terceiro
-            perfis_s: Dict[str, Set[str]] = defaultdict(set)
+            # perfis desse sistema por terceiro, chaveados pela forma NORMALIZADA
+            # (_norm: caixa, acento, espaco). Retorno da area em 09/09 ("Testes
+            # 2.pdf"): 'gestao de acessos' x 'GESTAO DE ACESSOS' caia em Em
+            # Analise como se fossem perfis diferentes — e ainda dividia a
+            # contagem do espelho entre as duas grafias. O texto ORIGINAL segue
+            # para a tela: o da propria pessoa no atual, o primeiro visto no grupo
+            # no esperado.
+            perfis_s: Dict[str, Dict[str, str]] = defaultdict(dict)
+            rotulo: Dict[str, str] = {}
             for f in terceiros:
                 for sis, p in acessos_por_matricula.get(f.matricula, ()):
                     if sis == sistema and p:
-                        perfis_s[f.matricula].add(p)
+                        k = _norm(p)
+                        perfis_s[f.matricula].setdefault(k, p)
+                        rotulo.setdefault(k, p)
             # grupos de terceiros que USAM esse sistema (definem o espelho)
             full: Dict[Tuple, List[str]] = defaultdict(list)
             wide: Dict[Tuple, List[str]] = defaultdict(list)
@@ -1041,7 +1050,9 @@ class ValidarAcessosSistema:
                 return {p for p, c in cont.items() if c / n >= self._TERC_LIMIAR_ESPELHO}
 
             for f in terceiros:
-                u = perfis_s.get(f.matricula, set())
+                u_map = perfis_s.get(f.matricula, {})
+                u = set(u_map)                       # chaves normalizadas
+                atual_str = ", ".join(sorted(u_map.values()))   # grafia dela
                 usa = bool(u)
                 if len(full[k_full(f)]) >= 2:
                     grupo = full[k_full(f)]
@@ -1054,7 +1065,7 @@ class ValidarAcessosSistema:
                     if usa:
                         self._espelho_sem_padrao += 1
                         if self._ESPELHO_SEM_PADRAO_GERA_PENDENCIA:
-                            regs.append(self._reg_terc(f, sistema, "", ", ".join(sorted(u)),
+                            regs.append(self._reg_terc(f, sistema, "", atual_str,
                                                        StatusValidacao.EM_ANALISE, origem))
                     continue
                 esp = espelho(grupo)
@@ -1063,20 +1074,20 @@ class ValidarAcessosSistema:
                     if usa:
                         self._espelho_sem_padrao += 1
                         if self._ESPELHO_SEM_PADRAO_GERA_PENDENCIA:
-                            regs.append(self._reg_terc(f, sistema, "", ", ".join(sorted(u)),
+                            regs.append(self._reg_terc(f, sistema, "", atual_str,
                                                        StatusValidacao.EM_ANALISE, origem))
                     continue
-                esp_str = ", ".join(sorted(esp))
+                esp_str = ", ".join(sorted(rotulo[k] for k in esp))
                 if not u:
                     regs.append(self._reg_terc(f, sistema, esp_str, "",
                                                StatusValidacao.SEM_ACESSO, origem))  # Incluir
                 elif u - esp:
-                    regs.append(self._reg_terc(f, sistema, esp_str, ", ".join(sorted(u)),
+                    regs.append(self._reg_terc(f, sistema, esp_str, atual_str,
                                                StatusValidacao.EM_ANALISE, origem))    # Excesso
                 elif esp - u:
-                    regs.append(self._reg_terc(f, sistema, esp_str, ", ".join(sorted(u)),
+                    regs.append(self._reg_terc(f, sistema, esp_str, atual_str,
                                                StatusValidacao.DIVERGENTE, origem))    # Alterar
                 else:
-                    regs.append(self._reg_terc(f, sistema, esp_str, ", ".join(sorted(u)),
+                    regs.append(self._reg_terc(f, sistema, esp_str, atual_str,
                                                StatusValidacao.OK, origem))            # Aderente
         return regs
