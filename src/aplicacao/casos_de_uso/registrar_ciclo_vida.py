@@ -70,20 +70,36 @@ class RegistrarCicloVida:
 
             # 3) RESOLVIDO — do ticket Jira (tabela resolucoes, ja dobrada).
             #    First-wins na data e no ticket.
+            #
+            #    A tratativa tem 3 granularidades (chave montada pelo painel):
+            #      'mat'               a PESSOA inteira
+            #      'mat##SIS'          so aquele SISTEMA
+            #      'mat##SIS##PERFIL'  so aquele ACESSO
+            #    Ate 11/09/2026 so' a 1a casava aqui: tratativa por sistema ou por
+            #    acesso aparecia "Resolvido" na Pendencias, mas nunca chegava ao
+            #    Historico nem ao tempo medio (que leem ESTA tabela). O ciclo e'
+            #    por (matricula, sistema), entao as tres alimentam o mesmo ciclo;
+            #    havendo mais de uma, vale a MAIS ANTIGA (primeira tratativa).
+            #    Prefixo por substr, nao LIKE: '_' e' coringa no LIKE e os
+            #    sistemas tem underscore (SICA_RA, IC_INTEGRADOR_CONTABIL).
             tem_res = sessao.execute(text(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='resolucoes'"
             )).fetchone()
             if tem_res:
-                sessao.execute(text("""
-                    UPDATE ciclo_vida_acesso
+                casa = """(r.registro_id = c2.matricula
+                           OR r.registro_id = c2.matricula || '##' || c2.sistema
+                           OR substr(r.registro_id, 1,
+                                     length(c2.matricula || '##' || c2.sistema || '##'))
+                              = c2.matricula || '##' || c2.sistema || '##')"""
+                sessao.execute(text(f"""
+                    UPDATE ciclo_vida_acesso AS c2
                     SET dt_resolvido = COALESCE(dt_resolvido,
-                            (SELECT r.resolvido_em FROM resolucoes r
-                             WHERE r.registro_id = ciclo_vida_acesso.matricula)),
+                            (SELECT MIN(r.resolvido_em) FROM resolucoes r WHERE {casa})),
                         ticket = COALESCE(ticket,
-                            (SELECT r.ticket FROM resolucoes r
-                             WHERE r.registro_id = ciclo_vida_acesso.matricula)),
+                            (SELECT r.ticket FROM resolucoes r WHERE {casa}
+                             ORDER BY r.resolvido_em LIMIT 1)),
                         dt_atualizacao = :agora
-                    WHERE matricula IN (SELECT registro_id FROM resolucoes)
+                    WHERE EXISTS (SELECT 1 FROM resolucoes r WHERE {casa})
                 """), {"agora": agora})
 
             n = sessao.execute(text("SELECT COUNT(*) FROM ciclo_vida_acesso")).fetchone()[0]

@@ -165,6 +165,67 @@ class TestCicloVida(unittest.TestCase):
         self.assertEqual(_fmt_duracao(0), "0min")
         self.assertEqual(_fmt_duracao(None), "—")
 
+    # ── Tratativa por SISTEMA e por ACESSO (11/09/2026) ────────────────────
+    # A chave da resolucao tem 3 formas: 'mat', 'mat##SIS', 'mat##SIS##PERFIL'.
+    # So' a 1a chegava ao ciclo — as outras duas apareciam "Resolvido" na
+    # Pendencias e sumiam do Historico e do tempo medio.
+
+    def _pend(self, sistema="SYSTUR"):
+        c = sqlite3.connect(self.db)
+        c.execute("DELETE FROM validacao_acessos")
+        c.execute(
+            """INSERT INTO validacao_acessos
+               (matricula,nome,sistema,perfil_esperado,perfil_atual,status,situacao_acao,dt_processamento)
+               VALUES ('M1','NOME',?,'P1','','SEM_ACESSO','PENDENTE','2026-01-01')""", (sistema,))
+        c.commit(); c.close()
+        RegistrarCicloVida(self.cx).executar(agora="2026-01-01 09:00:00")
+
+    def _res(self, registro_id, ticket, em):
+        c = sqlite3.connect(self.db)
+        c.execute("INSERT OR REPLACE INTO resolucoes (registro_id,ticket,resolvido_em) "
+                  "VALUES (?,?,?)", (registro_id, ticket, em))
+        c.commit(); c.close()
+
+    def _ciclo(self, sistema="SYSTUR"):
+        RegistrarCicloVida(self.cx).executar(agora="2026-01-09 09:00:00")
+        c = sqlite3.connect(self.db); c.row_factory = sqlite3.Row
+        r = c.execute("SELECT dt_resolvido, ticket FROM ciclo_vida_acesso "
+                      "WHERE matricula='M1' AND sistema=?", (sistema,)).fetchone()
+        c.close()
+        return dict(r)
+
+    def test_tratativa_por_sistema_chega_ao_ciclo(self):
+        self._pend()
+        self._res("M1##SYSTUR", "JIRA-2", "2026-01-02 10:00:00")
+        self.assertEqual(self._ciclo(), {"dt_resolvido": "2026-01-02 10:00:00",
+                                         "ticket": "JIRA-2"})
+
+    def test_tratativa_por_acesso_chega_ao_ciclo(self):
+        self._pend()
+        self._res("M1##SYSTUR##P1", "JIRA-3", "2026-01-02 11:00:00")
+        self.assertEqual(self._ciclo()["dt_resolvido"], "2026-01-02 11:00:00")
+
+    def test_tratativa_de_outro_sistema_nao_contamina(self):
+        self._pend()
+        self._res("M1##SIGOT", "JIRA-4", "2026-01-02 10:00:00")
+        self._res("M1##SIGOT##P1", "JIRA-5", "2026-01-02 10:00:00")
+        self.assertIsNone(self._ciclo()["dt_resolvido"])
+
+    def test_underscore_nao_e_coringa_nem_prefixo_de_matricula(self):
+        """'SICA_RA' no LIKE casaria 'SICAXRA'; e 'M1' nao pode casar 'M10'."""
+        self._pend("SICA_RA")
+        self._res("M1##SICAXRA##P1", "JIRA-6", "2026-01-02 10:00:00")
+        self._res("M10", "JIRA-7", "2026-01-02 10:00:00")
+        self._res("M10##SICA_RA", "JIRA-8", "2026-01-02 10:00:00")
+        self.assertIsNone(self._ciclo("SICA_RA")["dt_resolvido"])
+
+    def test_havendo_varias_vale_a_mais_antiga(self):
+        self._pend()
+        self._res("M1##SYSTUR##P1", "JIRA-TARDE", "2026-01-04 10:00:00")
+        self._res("M1##SYSTUR", "JIRA-CEDO", "2026-01-02 10:00:00")
+        self.assertEqual(self._ciclo(), {"dt_resolvido": "2026-01-02 10:00:00",
+                                         "ticket": "JIRA-CEDO"})
+
     def test_aderente_puro_nao_tem_pendencia(self):
         # quem ja nasce OK (nunca foi pendencia) -> sem dt_pendencia (sem tempo)
         _set_validacao(self.db, "OK")
