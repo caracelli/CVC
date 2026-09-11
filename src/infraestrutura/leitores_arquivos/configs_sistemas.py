@@ -14,7 +14,9 @@ class ConfigLeitorSistema:
     separador: str = ";"
     # Forca o encoding do CSV (ignora a deteccao automatica). Use quando o
     # chardet erra — ex.: SIGOT e' cp1252 mas e' detectado como cp1250.
-    encoding: Optional[str] = None
+    # Aceita uma TUPLA em ordem de tentativa: vale a primeira que decodifica o
+    # arquivo inteiro sem erro (ver LeitorSistema._primeiro_encoding_valido).
+    encoding: Optional[Union[str, Sequence[str]]] = None
     # Extrato com BLOCOS de perfil repetidos na mesma linha (cabecalho repete
     # ...;Grupo;... varias vezes -> pandas gera Grupo, Grupo.1, Grupo.2...).
     # Com despivot=True cada grupo preenchido vira um acesso.
@@ -111,23 +113,35 @@ CONFIGS_SISTEMAS: Dict[Sistema, ConfigLeitorSistema] = {
                        "D": "DESLIGADO", "P": "PENDENTE"},
     ),
 
+    # SICA_ESFERA — PREPARADO para o modelo do SICA_RA (confirmado pelo cliente
+    # em 11/09/2026: os extratos de SICA ainda nao recebidos vem no mesmo
+    # layout do dump do SICA_RA de 01/09). Aceita os DOIS:
+    #  - relatorio atual (SICA_ESFERA_24_06 / _15_08): ';', 4 linhas de
+    #    preambulo, login em 'ID', estabelecimento em 'Estab';
+    #  - dump no modelo do RA: ',', cabecalho na 1a linha, 'usuario'/
+    #    'User-Name'/'Description'/'grupo'/'ustatus'.
+    # Sem os aliases, o dump seria lido com ZERO acesso e sem erro — o mesmo
+    # silencio que o SICA_RA teve antes de 13d58db.
     Sistema.SICA_ESFERA: ConfigLeitorSistema(
         sistema=Sistema.SICA_ESFERA,
-        skiprows=4,                  # 4 linhas de cabecalho de relatorio; header na 5a
-        encoding="cp1252",           # arquivo real e' cp1252 (acentos: Criacao/Alcada)
-        # Layout real do extrato (SICA_ESFERA_24_06.csv): login = 'ID',
-        # estabelecimento = 'Estab', sem acento em 'Data de Criacao'. CPF mascarado
-        # (vinculacao por e-mail/CPF-parcial+nome).
+        skiprows=4,                  # palpite do relatorio; o cabecalho e' LOCALIZADO
+        # O relatorio e' cp1252 (e o chardet erra: diz cp1250); o dump do RA e'
+        # UTF-8. cp1252 fixo leria o dump sem erro mas com acento quebrado
+        # ('Ã§'), entao: UTF-8 se o arquivo inteiro decodifica, senao cp1252.
+        # Medido nos arquivos reais: os dois relatorios FALHAM em UTF-8 (byte
+        # 184/180) e o dump do RA decodifica limpo.
+        encoding=("utf-8", "cp1252"),
         colunas={
-            "usuario":       "ID",
-            "nome":          "Nome",
-            "cpf":           "CPF",
-            "email":         "E-mail",
-            "perfil":        "Grupo",
-            "situacao":      "Status",
-            "data_criacao":  "Data de Criacao",
-            "ultimo_acesso": "Ultimo Acesso",
-            "filial":        "Estab",
+            "usuario":       ("ID", "usuario"),
+            "nome":          ("Nome", "User-Name"),
+            # no dump o CPF mascarado vem em 'Description' ('42182XXXXX1')
+            "cpf":           ("CPF", "Description"),
+            "email":         ("E-mail", "email"),
+            "perfil":        ("Grupo", "grupo"),
+            "situacao":      ("Status", "ustatus"),
+            "data_criacao":  ("Data de Criacao", "Create_date"),
+            "ultimo_acesso": ("Ultimo Acesso", "Last_login"),
+            "filial":        ("Estab", "filial"),
         },
         mapa_situacao={"ATIVO": "ATIVO", "INATIVO": "INATIVO", "BLOQUEADO": "BLOQUEADO"},
     ),

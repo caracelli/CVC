@@ -182,9 +182,31 @@ class LeitorSistema(LeitorArquivoBase):
                 out.append(c)
         return out
 
+    @staticmethod
+    def _primeiro_encoding_valido(arquivo: Path, candidatos) -> str:
+        """Primeiro encoding da lista que decodifica o arquivo INTEIRO sem erro.
+
+        Decodificacao estrita, e do arquivo todo — nao amostra: o acento pode
+        estar so' no fim (o SIG de 15/07 tinha o 1o acento no byte 78.344).
+        XLSX nao passa por aqui de verdade (o encoding e' ignorado), mas ler os
+        bytes nao faz mal. Nenhum candidato serve -> o ultimo, que e' o
+        permissivo da lista (cp1252 decodifica quase tudo)."""
+        if arquivo.suffix.lower() != ".csv":
+            return candidatos[0]
+        bruto = arquivo.read_bytes()
+        for enc in candidatos:
+            try:
+                bruto.decode(enc)
+                return enc
+            except (UnicodeDecodeError, LookupError):
+                continue
+        return candidatos[-1]
+
     def ler_um(self, arquivo: Path) -> List[PerfilAcesso]:
         """Le UM arquivo de extrato e devolve a lista de acessos."""
-        if self._cfg.encoding:
+        if isinstance(self._cfg.encoding, (tuple, list)):
+            enc = self._primeiro_encoding_valido(arquivo, self._cfg.encoding)
+        elif self._cfg.encoding:
             enc = self._cfg.encoding
         else:
             enc = self.detectar_encoding(arquivo) if arquivo.suffix.lower() == ".csv" else "utf-8"

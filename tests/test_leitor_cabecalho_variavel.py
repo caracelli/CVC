@@ -136,6 +136,66 @@ class TestSicaRaDoisLayouts(unittest.TestCase):
         self.assertEqual(extrair_cpf_parcial(b[0].cpf), "39328")
 
 
+class TestSicaEsferaNoModeloDoRa(unittest.TestCase):
+    """Cliente confirmou em 11/09/2026: os extratos de SICA que ainda nao
+    chegaram vem no MESMO modelo do dump do SICA_RA. O SICA_ESFERA tem de ler
+    esse layout sem perder o relatorio que ja' importa hoje."""
+
+    # relatorio real do SICA_ESFERA (24/06 e 15/08): cp1252, 'Alçada' no
+    # cabecalho, valores com padding de largura fixa
+    HDR_ESFERA = ("ID;Data de Criacao;Nome;CPF;Esp;E-mail;Estab;Padrao;Grupo;Sup;"
+                  "Ger;Impressora;Adm;Fin;Cml;Nivel;Alçada;Ultimo Acesso;"
+                  "Expiracao;Status;")
+    LIN_ESFERA = [
+        "asac246                  ;21/07/2026 14:16:11,068-03:00;VANESSA TOLEDO"
+        " DA HORA                  ;33885XXX;S       ;vanessahora@cvccorp.com.br"
+        "      ;SAO;Sim;GRUPO ESFERA;N;N;N;N;N;N;1;0;30/07/2026 10:00:00,000-03:00;"
+        "31/12/2026 00:00:00,000-03:00;Ativo;",
+    ]
+    PRE_ESFERA = ["", "                           Planilha de Usuarios: T",
+                  "15/08/26;Relacao de Usuarios;", ""]
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="cvc_esf_")
+        self._leitor = LeitorSistema(CONFIGS_SISTEMAS[Sistema.SICA_ESFERA])
+
+    def test_dump_no_modelo_do_ra(self):
+        p = _escrever(self._tmp, "sica_esfera_dump.csv", [HDR_DUMP] + LIN_DUMP)
+        ps = self._leitor.ler_um(p)
+        self.assertEqual(len(ps), 2, "o dump no modelo do RA leu ZERO acesso")
+        self.assertEqual(ps[0].usuario, "anabello")
+        self.assertEqual(ps[0].nome_usuario, "ANA CAROLINE JARDIM BELLO")
+        self.assertEqual(ps[0].perfil, "POS FAT ESFERA")
+        self.assertEqual(ps[0].email, "ana.bello@cvccorp.com.br")
+        self.assertEqual({x.usuario: x.situacao for x in ps},
+                         {"anabello": "ATIVO", "brunasilva": "INATIVO"})
+
+    def test_dump_utf8_nao_quebra_acento(self):
+        """cp1252 fixo leria 'CONCEIÇÃO' como 'CONCEIÃ‡ÃƒO' — sem erro nenhum."""
+        lin = LIN_DUMP[0].replace("ANA CAROLINE JARDIM BELLO", "MARIA DA CONCEIÇÃO")
+        p = _escrever(self._tmp, "acento.csv", [HDR_DUMP, lin], encoding="utf-8")
+        self.assertEqual(self._leitor.ler_um(p)[0].nome_usuario, "MARIA DA CONCEIÇÃO")
+
+    def test_cpf_mascarado_do_dump_da_o_parcial(self):
+        from dominio.servicos_dominio.servico_vinculacao_multi_chave import (
+            extrair_cpf_parcial,
+        )
+        ps = self._leitor.ler_um(_escrever(self._tmp, "cpf.csv", [HDR_DUMP] + LIN_DUMP))
+        self.assertEqual(extrair_cpf_parcial(ps[0].cpf), "39328")
+
+    def test_relatorio_atual_em_cp1252_continua(self):
+        """O layout que a Bruna ja' manda nao pode regredir."""
+        p = _escrever(self._tmp, "SICA_EFERA_15_08.csv",
+                      self.PRE_ESFERA + [self.HDR_ESFERA] + self.LIN_ESFERA,
+                      encoding="cp1252")
+        ps = self._leitor.ler_um(p)
+        self.assertEqual(len(ps), 1)
+        self.assertEqual(ps[0].usuario, "asac246")
+        self.assertEqual(ps[0].perfil, "GRUPO ESFERA")
+        self.assertEqual(ps[0].situacao, "ATIVO")
+        self.assertEqual(ps[0].cpf, "33885XXX")
+
+
 class TestCabecalhoEmQualquerLinha(unittest.TestCase):
 
     def setUp(self):
