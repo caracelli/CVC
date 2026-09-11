@@ -26,6 +26,11 @@ MARCADORES = [
     "ver detalhe",           # 7fd20e6 navegacao no drawer
     "172px",                 # 214e506 alinhamento em duas colunas
     "_csSemMapeamento",      # 2o doc: "nao mapeado" x "mapeado e nao tem"
+    # retorno "Testes 2.pdf" (09/09) — 44a96e6 / 2170898
+    "_transfFalhou",         # Transferidos diz que a leitura falhou
+    "números indisponíveis", # ...e nao deixa o contador da carga anterior
+    "_deslSit",              # botao D diz o caso
+    "_divsDisplayA(u.divs)", # SYSTUR na Consulta = mesma leitura da Pendencias
 ]
 
 # (marcador, em qual exe deve estar)
@@ -34,6 +39,11 @@ DENTRO_DOS_EXES = [
     ("launcher/launcher_processador.exe", b"perfil_excessivo"),
     ("launcher/launcher_visualizador.exe", b"token_mudanca"),
     ("launcher/launcher_visualizador.exe", b"/api/versao"),
+    # rodada de 10-11/09
+    ("launcher/launcher_processador.exe", b"SEM_EXPECTATIVA_RELEVANTE"),  # 3442a62
+    ("launcher/launcher_processador.exe", b"_primeiro_encoding_valido"),  # f5d588c
+    ("launcher/launcher_processador.exe", b"rotulo"),                     # 2170898
+    ("launcher/launcher_visualizador.exe", b"Sem Expectativa"),           # 3442a62
 ]
 
 

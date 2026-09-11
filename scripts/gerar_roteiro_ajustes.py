@@ -84,7 +84,8 @@ def nota(doc, txt):
 
 
 def regra(doc, cod, titulo, decide, criterio, conferir, esperado,
-          tipo_esperado="INVARIANTE", prioritaria=False):
+          tipo_esperado="INVARIANTE", prioritaria=False,
+          rot_medido="Medido na base de referência (o seu pode diferir)"):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(11)
     p.paragraph_format.space_after = Pt(2)
@@ -94,9 +95,9 @@ def regra(doc, cod, titulo, decide, criterio, conferir, esperado,
     r.font.color.rgb = AZUL
     _MD.append(f"\n### {'★ ' if prioritaria else ''}{cod} {titulo}\n")
 
+    # rot_medido tem de comecar com "Medido": a cor da celula depende disso
     rot_esperado = ("Deve mostrar (vale em qualquer base)"
-                    if tipo_esperado == "INVARIANTE"
-                    else "Medido na base de referência (o seu pode diferir)")
+                    if tipo_esperado == "INVARIANTE" else rot_medido)
     linhas = [
         ("O que decide", decide),
         ("Critério", criterio),
