@@ -10,18 +10,18 @@ Ele responde, ponto a ponto, o documento de testes que você mandou em 09/09 (�
 
 Igual ao roteiro de 08/09: cada ajuste tem “Como conferir” e o valor esperado, e a última linha pergunta se a regra está CERTA. As marcadas com ★ são as que mais aparecem na tela.
 
-> Os números “medidos” deste documento vêm da SUA base: o pacote de 08/09 trouxe o banco e os arquivos de entrada da sua máquina, e reprocessamos aqui com a versão nova. Se você depositou arquivos novos depois de 08/09, os seus números podem diferir um pouco.
+> Este pacote já leva o banco PROCESSADO — você não precisa rodar o Processador. É a SUA base (a que veio do pacote de 08/09), reprocessada aqui com a versão nova; os números “medidos” deste documento são os que você vai ver. Arquivos que você tenha depositado na ENTRADA depois de 08/09 não estão nele — entram na próxima vez que o Processador rodar.
 
 
 ## Antes de tudo: o que fazer, nesta ordem
 
-O mesmo procedimento de 08/09. O passo 3 continua obrigatório: as correções agem na fase de ANÁLISE, e sem rodar o Processador a tela continua com os números da rodada anterior.
+Desta vez NÃO é preciso rodar o Processador: o banco já vai processado dentro do pacote. Por isso ele SUBSTITUI o banco atual — faça o backup do passo 2 antes de qualquer coisa.
 
 1. Feche o painel e o Processador, se estiverem abertos.
-2. Extraia o pacote e copie EXECUTAVEIS/ por cima da pasta atual. NÃO apague nem mexa em DADOS/ e INTERACOES/ — é onde ficam o banco e as tratativas que você já registrou.
-2b. Copie também a pasta ENTRADA/ do pacote por cima da atual. Ela leva só os dois arquivos de referência de sempre (o de-para do SIG e a matriz do franqueado). Nenhum dado seu é substituído.
-3. Rode o Processador.exe UMA VEZ. Obrigatório.
-4. Abra o visualizador.exe.
+2. BACKUP (obrigatório): copie as pastas DADOS\BANCO e INTERACOES para outro lugar. Se algo não sair como esperado, é só devolvê-las.
+3. Extraia o pacote na pasta principal da instalação — a que contém DADOS, ENTRADA e EXECUTAVEIS — e aceite substituir os arquivos. Ele traz EXECUTAVEIS, ENTRADA (os dois arquivos de referência de sempre) e DADOS\BANCO (o banco novo).
+3b. NÃO apague nem mexa na pasta INTERACOES: o pacote não a traz, e é nela que estão as tratativas que você registrou desde 08/09 — elas continuam aparecendo no painel.
+4. Abra o visualizador.exe. Não rode o Processador.
 
 ## 1. O que você apontou e foi corrigido
 
@@ -92,8 +92,8 @@ Se o cargo não tem nenhum acesso esperado, ele aparece na Consulta como “Sem 
 
 - **O que decide:** Se toda tratativa aparece no Histórico e no tempo médio.
 - **Critério:** Achado ao revisar a sua dúvida. A tratativa pode ser dada para a pessoa inteira, para um sistema ou para um acesso. Só a primeira chegava ao Histórico e ao tempo médio da Visão Geral; as outras duas apareciam Resolvido na Pendências e não entravam lá. Agora as três entram.
-- **Como conferir:** Trate uma pendência só de um sistema → rode o Processador → Histórico da pessoa.
-- **Deve mostrar (vale em qualquer base):** O marco “Pendência resolvida” aparece no sistema tratado, com o ticket e a data da tratativa.
+- **Como conferir:** Trate uma pendência só de um sistema → na próxima vez que o Processador rodar → Histórico da pessoa.
+- **Deve mostrar (vale em qualquer base):** O marco “Pendência resolvida” aparece no sistema tratado, com o ticket e a data da tratativa. (Na Pendências o Resolvido aparece na hora; o Histórico é atualizado quando o Processador roda.)
 - **A regra está correta? Se não, qual deveria ser?:** ______
 
 
