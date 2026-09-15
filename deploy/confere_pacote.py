@@ -44,6 +44,9 @@ DENTRO_DOS_EXES = [
     ("launcher/launcher_processador.exe", b"_primeiro_encoding_valido"),  # f5d588c
     ("launcher/launcher_processador.exe", b"rotulo"),                     # 2170898
     ("launcher/launcher_visualizador.exe", b"mapeamento localizado"),     # 15/09 (era "Sem Expectativa", 3442a62)
+    # 15/09: o SEM_EXPECTATIVA_RELEVANTE acima ja existia antes — so' um nome
+    # NOVO prova que o motor do "Não Mapeado para todos" esta no exe
+    ("launcher/launcher_processador.exe", b"_registro_nao_mapeado"),      # 8348175
 ]
 
 
