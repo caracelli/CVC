@@ -2138,12 +2138,12 @@ function montarFiltros(){
     let vals;
     if (f.id === 'status') vals = ['Pendente', 'Resolvido'];
     else { vals = valoresFiltro(f.campo);
-           // Aderente, Incluir Acesso (tipo "Sem Acesso") e Sem Expectativa
+           // Aderente, Incluir Acesso (tipo "Sem Acesso") e Não Mapeado
            // (tipo/acao do NAO_MAPEADO) nao sao pendencias: fora dos slicers de
            // Ação/Tipo da aba Pendências.
            if (f.id === 'tipo' || f.id === 'acao')
              vals = vals.filter(v => v !== 'Aderente' && v !== 'Incluir Acesso'
-                                   && v !== 'Sem Acesso' && v !== 'Sem Expectativa'); }
+                                   && v !== 'Sem Acesso' && v !== 'Não Mapeado'); }
     filtroSel[f.id] = new Set(vals);
     filtroVals[f.id] = vals.slice();
     const comInfo = (f.id === 'acao' || f.id === 'status' || f.id === 'tipo');
@@ -2207,23 +2207,30 @@ function filtroTodos(fid, btn){
 function _usersPendBase(){
   return DB.users
     .map(u => ({...u, divs: u.divs.filter(d =>
-        d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa'
+        d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Não Mapeado'
         && divPassa(d))}))
     .filter(u => u.divs.length > 0);
 }
 
 function divPassa(d){
-  // Aderente, Incluir Acesso (SEM_ACESSO) e Sem Expectativa (NAO_MAPEADO, achado
+  // Aderente, Incluir Acesso (SEM_ACESSO) e Não Mapeado (NAO_MAPEADO, achado
   // de 09/09 — pessoa sem nenhum sistema com adesao relevante ao cargo) NÃO são
   // pendências: não aparecem na aba Pendências nem são filtráveis por
   // Ação/Status/Tipo; na Consulta devem sempre passar. Filtram só por Categoria
   // e Sistema.
-  const ad = d.a === 'Aderente' || d.a === 'Incluir Acesso' || d.a === 'Sem Expectativa';
+  const ad = d.a === 'Aderente' || d.a === 'Incluir Acesso' || d.a === 'Não Mapeado';
+  // Linha SEM sistema (a do Não Mapeado): o slicer de Sistema so' lista valores
+  // nao vazios (valoresFiltro), entao '' nunca esta no Set e a pessoa sumia da
+  // Consulta mesmo com tudo marcado — retorno da Bruna, 15/09: 20 de 23 nomes
+  // "ativos que nao vem na aplicacao" eram isso. Passa enquanto o filtro de
+  // Sistema nao restringe; isolando um sistema, quem nao tem sistema sai.
+  const semSis = !d.sis && (!filtroVals.sistema
+                            || filtroSel.sistema.size >= filtroVals.sistema.length);
   return (!filtroSel.vinculo || filtroSel.vinculo.has(d.vinc)) &&
          (ad || !filtroSel.acao    || filtroSel.acao.has(d.a))    &&
          (ad || !filtroSel.status  || filtroSel.status.has(d.s))  &&
          (ad || !filtroSel.tipo    || filtroSel.tipo.has(d.tl))   &&
-         (!filtroSel.sistema || filtroSel.sistema.has(d.sis));
+         (!filtroSel.sistema || filtroSel.sistema.has(d.sis) || semSis);
 }
 
 async function aplicarFiltro(){
@@ -4251,7 +4258,7 @@ function abrirResolver(uid, sistema, perfil){
   _resSistema = sistema || '';
   _resPerfil  = (_resSistema && perfil) ? perfil : '';
   // pendências alvo: o acesso (perfil), o sistema, ou todas
-  const abertas = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa';
+  const abertas = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Não Mapeado';
   const alvo = _resPerfil
     ? u.divs.filter(d => d.sis === _resSistema && _perfChave(d) === _resPerfil && abertas(d))
     : _resSistema
@@ -6424,7 +6431,7 @@ function renderConsulta(){
     const sistemas = new Set(u.divs.map(d => d.sis).filter(Boolean)).size;
     // conta o acesso ambíguo UMA vez (como a coluna Qtd da Pendências), não uma
     // vez por perfil candidato
-    const nPend = _divsDisplayA(u.divs).filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa').length;
+    const nPend = _divsDisplayA(u.divs).filter(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Não Mapeado').length;
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     const ultDt = datas.length ? datas[datas.length-1] : '';
     const { cls, lbl } = _csPino(u);
@@ -6433,7 +6440,7 @@ function renderConsulta(){
     const nomeEsc = esc(u.n||u.u||'');
     // Botão H só funciona se existir matrícula (chave do Histórico)
     // Botões A/P/H só aparecem se houver dado correspondente
-    const temPend = u.divs.some(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa');
+    const temPend = u.divs.some(d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Não Mapeado');
     const temAder = !!u.m && u.divs.some(d => d.a === 'Aderente');
     const temHist = !!u.m && _histMats.has(u.m);
     const temDesl = !!u.m && _deslMats.has(u.m);
@@ -6484,7 +6491,7 @@ function renderConsulta(){
    conceito". Aderente é quem não tem pendência nenhuma; quem teve e tratou é
    RESOLVIDO — são coisas diferentes, e agora o pino diz qual é qual. */
 function _csPino(u){
-  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa';
+  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Não Mapeado';
   const abertos  = u.divs.filter(d => acionavel(d) && d.s === 'Pendente').length;
   const tratados = u.divs.filter(d => acionavel(d) && d.s !== 'Pendente').length;
   const temIncl  = u.divs.some(d => d.a === 'Incluir Acesso');
@@ -6620,7 +6627,7 @@ function equiparCs(){
    virou uma opção própria do funil — que é como o pino da linha já mostrava. */
 function _csAbasOf(u){
   const a = [];
-  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Sem Expectativa';
+  const acionavel = d => d.a !== 'Aderente' && d.a !== 'Incluir Acesso' && d.a !== 'Não Mapeado';
   if (u.divs.some(acionavel)) a.push('Pendência');
   if (u.divs.some(d => d.a === 'Incluir Acesso')) a.push('Incluir acessos');
   if (u.m && u.divs.some(d => d.a === 'Aderente')) a.push('Aderente');
@@ -6891,13 +6898,14 @@ const _CS_CATS = [
 ];
 function _csCatDe(d){
   const a = d.a || d.tl || '';
-  // Sem Expectativa (NAO_MAPEADO, achado de 09/09): nao e' um acesso de
+  // Não Mapeado (NAO_MAPEADO, achado de 09/09; rotulo "Sem Expectativa" ate'
+  // 15/09): nao e' um acesso de
   // verdade (sistema/perfil vem vazio) — e' so' o que garante a pessoa existir
   // em DB.users quando nenhum sistema tem expectativa relevante pro cargo. O
   // bloco "Sem mapeamento" (_csSemMapeamento/nSemMap, calculado na tela) ja'
   // cobre essa explicacao; sem este `null` ela cairia em "Necessario analise"
   // como se fosse pendencia de verdade.
-  if (a === 'Sem Expectativa') return null;
+  if (a === 'Não Mapeado') return null;
   for (const c of _CS_CATS) if (c.acoes.includes(a)) return c.k;
   return 'ana';   // desconhecido -> cai em análise (nunca some da tela)
 }

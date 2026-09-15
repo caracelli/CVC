@@ -107,7 +107,7 @@ TIPO_LABEL = {
     "ACESSO_DESLIGADO": "Acesso Desligado", "PERFIL_INVALIDO": "Perfil Inválido",
     "ACESSO_CONTA_SERVICO": "Conta de Serviço",
     "OK": "Aderente",
-    "NAO_MAPEADO": "Sem Expectativa",
+    "NAO_MAPEADO": "Não Mapeado",
 }
 
 # tipo_vinculo (rh_ativos) -> rótulo da coluna "Categoria" no painel.
@@ -1089,11 +1089,11 @@ SELECT
       || 'nao explica (os "a mais" listados ao lado). Ate 28/08/2026 esses '
       || 'extras nao apareciam: a linha mostrava so o perfil esperado. Avaliar '
       || 'se o acesso a mais se justifica; se nao, revogar o excedente.'
+    -- Texto pedido pela area (Bruna, 15/09), o mesmo usado por eles. Cobre os
+    -- dois caminhos do motor: sem linha na matriz/CCO, ou com linha mas toda
+    -- inclusao cortada pelo limiar de 30% (decisao do usuario: um rotulo so').
     WHEN 'SEM_EXPECTATIVA_RELEVANTE' THEN
-      'O cargo nao tem mapeamento na matriz/CCO, ou tem mas a adesao real do '
-      || 'cargo a todo sistema mapeado fica abaixo do limiar de 30% (sinal '
-      || 'fraco demais para afirmar que falta acesso). Informativo, nao e '
-      || 'pendencia — a pessoa aparece aqui so para nao sumir da Consulta.'
+      'Não tem mapeamento localizado para o centro de custo.'
     ELSE '' END                  AS motivo,
   COALESCE(v.dt_processamento,'') AS data_identificacao,
   0                              AS resolvida,
@@ -1101,7 +1101,7 @@ SELECT
                 WHEN 'DIVERGENTE' THEN 'Alterar Perfil'
                 WHEN 'EM_ANALISE' THEN 'Em Análise'
                 WHEN 'OK' THEN 'Aderente'
-                WHEN 'NAO_MAPEADO' THEN 'Sem Expectativa' ELSE '' END AS acao,
+                WHEN 'NAO_MAPEADO' THEN 'Não Mapeado' ELSE '' END AS acao,
   COALESCE(v.origem_matriz,'') AS origem,
   -- login REAL do sistema (CD_LOGIN), trazido do acesso por (matricula, sistema).
   -- Em SEM_ACESSO costuma vir vazio (a pessoa nao tem login — a acao e' criar),
@@ -1240,6 +1240,12 @@ def garantir_estrutura(force=False):
             cols = [r[1] for r in c.execute("PRAGMA table_info(bi_divergencias)")]
             if "origem" not in cols or "login" not in cols or "motivo" not in cols:
                 force = True  # migração de schema: coluna 'origem'/'login'/'motivo'
+            elif c.execute("SELECT 1 FROM bi_divergencias WHERE tipo='NAO_MAPEADO' "
+                           "AND acao<>'Não Mapeado' LIMIT 1").fetchone():
+                # Rotulo mudou (15/09: "Sem Expectativa" -> "Não Mapeado"). O
+                # snapshot so' se refaz quando o Processador roda de novo; sem
+                # isto, o banco que a area ja' tem seguiria com o texto antigo.
+                force = True
             elif _snapshot_desatualizado(c):
                 force = True  # o Processador rodou depois deste snapshot
         if force or not existe:
@@ -2476,7 +2482,7 @@ def _montar_base():
                 # NAO_MAPEADO entra junto com OK: informativo, nunca "Pendente"
                 # (achado da revisao do fix de 10/09 — sem isso, a coluna
                 # Status da Consulta e o export csExportar() mostravam "1
-                # pendente" pra quem so' tinha a linha Sem Expectativa,
+                # pendente" pra quem so' tinha a linha Não Mapeado,
                 # contradizendo o pino da mesma linha, que ja' mostra Aderente).
                 "s": ("Aderente" if tp in ("OK", "NAO_MAPEADO")
                       else "Resolvido" if r["resolvida"] else "Pendente"),
@@ -4309,7 +4315,7 @@ def _vg_secoes(de="", ate=""):
     TL = {'ACESSO_SEM_VINCULO_RH': 'Sem Vínculo RH', 'DIVERGENTE': 'Alterar Perfil',
           'EM_ANALISE': 'Em Análise', 'SEM_ACESSO': 'Incluir Acesso',
           'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
-          'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Sem Expectativa'}
+          'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Não Mapeado'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
           'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
     pct = lambda n, t: (round(100 * n / t, 1) if t else 0)
@@ -4376,7 +4382,7 @@ def _vg_analiticos(de="", ate=""):
     TL = {'ACESSO_SEM_VINCULO_RH': 'Sem Vínculo RH', 'DIVERGENTE': 'Alterar Perfil',
           'EM_ANALISE': 'Em Análise', 'SEM_ACESSO': 'Incluir Acesso', 'OK': 'Aderente',
           'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
-          'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Sem Expectativa'}
+          'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Não Mapeado'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
           'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
     d19 = lambda s: (str(s) if s else "")[:19]

@@ -11,7 +11,7 @@ _STATUS_LABEL = {
     "SEM_ACESSO":  "Incluir Acesso",
     "DIVERGENTE":  "Alterar Perfil",
     "EM_ANALISE":  "Em Análise",
-    "NAO_MAPEADO": "Usuário Não Encontrado",
+    "NAO_MAPEADO": "Não Mapeado",   # mesmo rotulo do painel (15/09)
     "OK":          "Aderente",
 }
 

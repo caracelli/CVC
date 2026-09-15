@@ -43,7 +43,7 @@ DENTRO_DOS_EXES = [
     ("launcher/launcher_processador.exe", b"SEM_EXPECTATIVA_RELEVANTE"),  # 3442a62
     ("launcher/launcher_processador.exe", b"_primeiro_encoding_valido"),  # f5d588c
     ("launcher/launcher_processador.exe", b"rotulo"),                     # 2170898
-    ("launcher/launcher_visualizador.exe", b"Sem Expectativa"),           # 3442a62
+    ("launcher/launcher_visualizador.exe", b"mapeamento localizado"),     # 15/09 (era "Sem Expectativa", 3442a62)
 ]
 
 
