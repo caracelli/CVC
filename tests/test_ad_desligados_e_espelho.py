@@ -166,13 +166,10 @@ class TestEspelhoFranqueadoPrestador(unittest.TestCase):
 
     def test_nao_espelha_entre_populacoes_diferentes(self):
         # prestador sozinho no grupo de franqueados: sem par -> nao vira Inclusao
-        # nem herda o esperado dos franqueados. Desde 15/09 ("Não Mapeado vale
-        # para todos") ele nao some: fica so' com a linha informativa, sem
-        # origem de espelho.
         cx = self._cx("FRANQUEADO")
         self._add(cx, "PRESTADOR", "PREST-1")
         ValidarAcessosSistema(cx).executar()
-        self.assertEqual(self._status(cx, "PREST-1"), [("NAO_MAPEADO", "")])
+        self.assertEqual(self._status(cx, "PREST-1"), [])
 
     # ── Grafia do perfil ("Testes 2.pdf", 09/09/2026) ──────────────────────
     # Caso real: PREST-corpp138004 no SICA_RA tinha 'gestao de acessos' e os

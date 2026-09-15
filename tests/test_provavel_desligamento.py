@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """Regra TEMPORARIA de provavel desligamento (sai na fase de desligados):
 quem JA foi aderente num sistema (tinha o acesso) e agora esta SEM NENHUM acesso
-nao gera pendencia — sinal forte de desligamento sem o arquivo de desligados.
-Ate 15/09 a pessoa ficava com ZERO linha e sumia do painel; a area listou dois
-casos entre os "ativos que nao vem na aplicacao" e o usuario decidiu mostra-los
-como NAO_MAPEADO (informativo). Quem NUNCA foi aderente (novo) continua
-SEM_ACESSO; quem TEM acesso (perfil errado) continua DIVERGENTE.
+e' retirado da validacao (nao gera pendencia) — sinal forte de desligamento sem
+o arquivo de desligados. Quem NUNCA foi aderente (novo) continua SEM_ACESSO;
+quem TEM acesso (perfil errado) continua DIVERGENTE.
 """
 import os
 import sys
@@ -51,14 +49,12 @@ class TestProvavelDesligamento(unittest.TestCase):
         s.close()
         return rows
 
-    def test_foi_aderente_e_zero_acesso_vira_nao_mapeado(self):
-        self.assertEqual(self._run(foi_aderente=True, tem_acesso=False), ["NAO_MAPEADO"])
+    def test_foi_aderente_e_zero_acesso_e_retirado(self):
+        self.assertEqual(self._run(foi_aderente=True, tem_acesso=False), [])
 
-    def test_em_analise_zero_acesso_e_aderente_tambem_vira_nao_mapeado(self):
-        # 2 perfis esperados + 0 acesso -> seria EM_ANALISE; mas foi aderente ->
-        # sem pendencia, so' a linha informativa
-        self.assertEqual(self._run(foi_aderente=True, tem_acesso=False, n_perfis=2),
-                         ["NAO_MAPEADO"])
+    def test_em_analise_zero_acesso_e_aderente_tambem_retira(self):
+        # 2 perfis esperados + 0 acesso -> seria EM_ANALISE; mas foi aderente -> retira
+        self.assertEqual(self._run(foi_aderente=True, tem_acesso=False, n_perfis=2), [])
 
     def test_nunca_foi_aderente_continua_sem_acesso(self):
         # novo funcionario (nunca aderente) sem acesso -> pendencia REAL

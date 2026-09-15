@@ -117,6 +117,10 @@ class ValidarAcessosSistema:
         self._sem_acesso_explicado = 0
         self._forcado_analise = 0
         self._espelho_sem_padrao = 0
+        # matriculas que SUMIRAM do arquivo de ativos mais recente (ver
+        # _calc_desatualizados) — nao recebem a linha NAO_MAPEADO
+        self._desatualizados: Set[str] = set()
+        self._nao_map_desatualizado = 0
 
     def executar(self):
         ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco = self._carregar_dados()
@@ -127,6 +131,8 @@ class ValidarAcessosSistema:
         self._excesso_perfis = 0
         self._espelho_sem_padrao = 0
         self._calc_adocao_cargo(ativos, acessos_por_matricula)   # B1
+        self._desatualizados = self._calc_desatualizados(ativos)
+        self._nao_map_desatualizado = 0
 
         registros: List[Dict] = []
         for func in ativos:
@@ -164,26 +170,44 @@ class ValidarAcessosSistema:
                     _vistos_sp.add((sistema_valor, perfil_esperado))
                     perfis_sis[sistema_valor].append((perfil_esperado, False, "CCO"))
 
+            _prov_deslig_antes = self._prov_deslig
             for sistema_valor, perfis_comb in perfis_sis.items():
                 regs_func.extend(self._gerar_registros_sistema(
                     func, sistema_valor, perfis_comb,
                     acessos_por_matricula, sistemas_com_dados,
                 ))
+            # A regra TEMPORARIA de provavel desligamento (linha ~600, retorna
+            # [] quando a pessoa JA foi aderente e zerou o acesso) tem dono
+            # proprio — "sai na fase de desligados" — e o teste
+            # test_provavel_desligamento.py trava que ela produz ZERO linha,
+            # nao um NAO_MAPEADO informativo. Sem este flag, o fallback abaixo
+            # "vazaria" um NAO_MAPEADO por cima da regra de desligamento.
+            _foi_provavel_desligamento = self._prov_deslig > _prov_deslig_antes
 
             # Sem nenhum mapeamento em nenhuma matriz — OU mapeamento existe mas
             # toda expectativa foi suprimida pela B1 (adesao < 30% em todo
-            # sistema aplicavel) — OU pela regra TEMPORARIA de provavel
-            # desligamento. Achado de 09/09 (retorno da Bruna, "gente
+            # sistema aplicavel). Achado de 09/09 (retorno da Bruna, "gente
             # ativa some da Consulta"): ate aqui, NAO_MAPEADO nunca era salvo
             # (fora de _STATUS_SALVOS), entao a pessoa ficava com ZERO linha em
             # QUALQUER lugar do painel — nem Consulta, nem Pendencias. Medido na
             # base dela: 6.747 de 13.638 ativos (49%) sem nenhuma linha. Agora
             # e' salvo como informativo (nao vira pendencia — ver _STATUS_INFO).
-            # O provavel desligamento ficava de fora (zero linha) ate 15/09: a
-            # area listou dois deles (ADMILSON, SILVIA) entre os "ativos que nao
-            # vem na aplicacao", e o usuario decidiu mostra-los como Não Mapeado.
-            if not regs_func:
-                regs_func.append(self._registro_nao_mapeado(func))
+            # Quem SUMIU do arquivo de ativos mais recente nao ganha a linha
+            # (usuario, 15/09: "todo mundo que sumiu") — senao um desligado que
+            # ficou acumulado na rh_ativos apareceria como ativo sem mapeamento.
+            if (not regs_func and not _foi_provavel_desligamento
+                    and func.matricula in self._desatualizados):
+                self._nao_map_desatualizado += 1
+            elif not regs_func and not _foi_provavel_desligamento:
+                regs_func.append(self._registro_base(func) | {
+                    "sistema": "",
+                    "perfil_esperado": "",
+                    "perfil_atual": "",
+                    "acesso_manual": False,
+                    "status": StatusValidacao.NAO_MAPEADO.value,
+                    "origem_matriz": "",
+                    "motivo_status": "SEM_EXPECTATIVA_RELEVANTE",
+                })
 
             registros.extend(regs_func)
 
@@ -215,25 +239,6 @@ class ValidarAcessosSistema:
         for _vinculo in vinculos_espelho:
             registros.extend(self._validar_espelho_vinculo(
                 ativos, acessos_por_matricula, sistemas_com_dados, _vinculo))
-
-        # NAO MAPEADO VALE PARA TODOS (usuario, 15/09/2026: "a regra serve para
-        # todos"). Terceiro/prestador que termina sem NENHUMA linha — sem conta,
-        # ou com conta mas sem grupo-espelho com padrao — sumia do painel como o
-        # CLT antes de 09/09; ganha a mesma linha informativa. FRANQUEADO fica
-        # de fora de proposito: sem acesso ele nao recebe linha desde 04/09
-        # (789268c, "e' para nao ter esse espelho de franqueados"), e o usuario
-        # mandou manter esse ajuste (15/09).
-        _com_linha = {r["matricula"] for r in registros}
-        _nao_map_vinculo = 0
-        for func in ativos:
-            if ((getattr(func, "tipo_vinculo", "") or "").upper() in ("TERCEIRO", "PRESTADOR")
-                    and func.matricula not in _com_linha):
-                registros.append(self._registro_nao_mapeado(func))
-                _com_linha.add(func.matricula)
-                _nao_map_vinculo += 1
-        if _nao_map_vinculo:
-            logger.info(f"[nao mapeado] {_nao_map_vinculo} terceiro(s)/prestador(es) "
-                        f"sem nenhuma linha gravado(s) como Não Mapeado (informativo).")
 
         # STATUS INDEFINIDO (extrato nao diz se a conta esta ativa: vazio ou
         # 'P'/pendente): NAO se assume ativo — o resultado daquele (matricula,
@@ -338,8 +343,7 @@ class ValidarAcessosSistema:
         if self._prov_deslig:
             logger.info(
                 f"[regra temporaria] {self._prov_deslig} caso(s) 'foi aderente + 0 "
-                f"acesso' tratado(s) como provavel DESLIGAMENTO: nao gera pendencia; "
-                f"sem outra linha, a pessoa aparece como Não Mapeado (15/09)."
+                f"acesso' retirado(s) como provavel DESLIGAMENTO (sai na fase de desligados)."
             )
         if self._acessos_revogados or self._forcado_analise:
             logger.info(
@@ -385,6 +389,12 @@ class ValidarAcessosSistema:
                     f"derivada(s) do uso (>={self._FRANQ_LIMIAR_DEPARA:.0%}): "
                     + "; ".join(e.descricao() for e in _amostra)
                 )
+        if self._nao_map_desatualizado:
+            logger.info(
+                f"[nao mapeado] {self._nao_map_desatualizado} pessoa(s) sem expectativa "
+                f"que SUMIRAM do arquivo de ativos mais recente — sem linha "
+                f"(nao aparecem como ativo)."
+            )
         if self._inclusao_suprimida:
             logger.info(
                 f"[B1] {self._inclusao_suprimida} inclusao(oes) suprimida(s): cargo com "
@@ -457,6 +467,47 @@ class ValidarAcessosSistema:
     # ------------------------------------------------------------------
     # B1 — adesao de acesso por (sistema, cargo)
     # ------------------------------------------------------------------
+    # Abaixo desta fracao, o "arquivo mais recente" nao parece a base inteira
+    # (export parcial/incremental) — ai' ninguem e' dado como sumido.
+    _COBERTURA_MIN_ULTIMO_ARQUIVO = 0.5
+
+    def _calc_desatualizados(self, ativos) -> Set[str]:
+        """Matriculas que SUMIRAM do arquivo de ativos mais recente da sua
+        populacao (CLT, terceiro, prestador...).
+
+        A rh_ativos ACUMULA de proposito (merge, bc7af3e: "delete+insert
+        apagaria os ausentes"), entao quem saiu da base continua gravado com o
+        arquivo antigo em `arquivo_origem`. Medido em 15/09: os 79 CLT nessa
+        situacao estavam TODOS na base de desligados. Decisao do usuario
+        (15/09): quem sumiu nao recebe a linha NAO_MAPEADO.
+
+        "Mais recente" = o `arquivo_origem` da linha com maior `dt_importacao`
+        do vinculo. Sem data ou sem arquivo de origem, nao ha como saber:
+        ninguem some. Se o mais recente cobre menos da metade da populacao,
+        tambem ninguem some (e o log avisa) — protege contra um export parcial
+        esconder metade das pessoas."""
+        por_vinc: Dict[str, List] = defaultdict(list)
+        for f in ativos:
+            por_vinc[(getattr(f, "tipo_vinculo", "") or "FUNCIONARIO").upper()].append(f)
+        fora: Set[str] = set()
+        for vinc, fs in por_vinc.items():
+            datados = [f for f in fs if getattr(f, "dt_importacao", None)]
+            if not datados:
+                continue
+            ultimo = max(datados, key=lambda f: f.dt_importacao).arquivo_origem
+            if not ultimo:
+                continue
+            sumiram = [f for f in fs
+                       if getattr(f, "arquivo_origem", None) and f.arquivo_origem != ultimo]
+            if len(fs) - len(sumiram) < len(fs) * self._COBERTURA_MIN_ULTIMO_ARQUIVO:
+                logger.warning(
+                    f"[ativos] {vinc}: o arquivo mais recente ('{ultimo}') cobre so' "
+                    f"{len(fs) - len(sumiram)} de {len(fs)} — parece parcial; "
+                    f"ninguem foi dado como fora da base.")
+                continue
+            fora.update(f.matricula for f in sumiram)
+        return fora
+
     def _calc_adocao_cargo(self, ativos, acessos_por_matricula):
         """Por (sistema, cargo): quantos funcionarios do cargo REALMENTE tem
         acesso no sistema (numerador) vs total do cargo (denominador). Usado
@@ -484,19 +535,6 @@ class ValidarAcessosSistema:
         if tot < 2:          # cargo sem pares suficientes: nao da pra inferir ruido
             return 1.0
         return len(self._tem_cargo_sis.get((sistema, cargo_norm), ())) / tot
-
-    def _registro_nao_mapeado(self, func: RhAtivo) -> Dict:
-        """Linha informativa de quem nao tem expectativa de acesso — o painel
-        mostra "Não Mapeado"; nunca e' pendencia (ver _STATUS_INFO)."""
-        return self._registro_base(func) | {
-            "sistema": "",
-            "perfil_esperado": "",
-            "perfil_atual": "",
-            "acesso_manual": False,
-            "status": StatusValidacao.NAO_MAPEADO.value,
-            "origem_matriz": "",
-            "motivo_status": "SEM_EXPECTATIVA_RELEVANTE",
-        }
 
     def _registro_base(self, func: RhAtivo) -> Dict:
         return {
@@ -638,9 +676,7 @@ class ValidarAcessosSistema:
         # neste sistema (tinha o acesso) e agora esta SEM NENHUM acesso ->
         # provavel DESLIGAMENTO. Nao gera pendencia. Se tiver sido engano, o
         # acesso e' reincluido no sistema e ela reaparece como Aderente no
-        # proximo extrato (auto-corrige). Conta para o log auditavel. Desde
-        # 15/09, se nao sobrar nenhuma outra linha, a pessoa entra como
-        # Não Mapeado (fallback em executar) em vez de sumir do painel.
+        # proximo extrato (auto-corrige). Conta para o log auditavel.
         if not acessos_atuais and (func.matricula, sistema_valor) in self._aderentes_anteriores:
             self._prov_deslig += 1
             return []
