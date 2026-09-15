@@ -1,0 +1,85 @@
+Oiii tudo bem?
+ 
+Duas duvidas? 
+Se eu quiser atualizar as bases local eu consigo tbm?
+ 
+só colocar as bases na entrada e reprocessar ?
+ 
+Outro ponto tem usuários ativos que segue não vindo na aplicação
+ 
+Exemplos:
+ 
+PATRICIA MARAGNA FAGUNDES HAKOMARU
+GRAZIELE DE SOUZA MUNHOZ
+LUCIANO NOGUEIRA DE ABREU
+ELIS OLIVEIRA DE LIMA
+ADMILSON COELHO MARTINS
+ANDREA CRISTINA SOAVE DE CARVALHO
+MARCELO DE CASTRO DIAS
+MARIA JOSE PEIXOTO
+MARCELO GHELYS COTA
+ALINE FIGUEIRA
+FABIO LAGUNA PEREIRA
+SILVIA CAROLINA FREIRE FERNANDES
+DAFANI MOTARELI
+VANDO ALCANTARA ANICETO
+GISLAINE CRISTINA GOMES GISSI DA SILVA ANDRADE
+JOYCE OLIVEIRA DA COSTA
+RAINNYRO VILLARROEL ALVES
+FABIOLA BRONZATTI LOPES
+DANIELA BRONZATTI LOPES
+FERNANDA BARADEL GARCIA
+ALEXANDRE PEREIRA DE GODOI
+PRISCILA OLIVEIRA CAMPOS
+FABIANA DE ANDRADE CARNEIRO
+ 
+ 
+aqui ele não deveria estar lendo a base de ativos:
+ 
+Bom dia
+ 
+Vamos por partes,kkk
+ 
+consegue sim só copiar a pasta da rede por cima da sua, só não esquece que a da rede está sem processar desde a ultima versão que colocamos na rede
+ 
+vai demorar para processar
+ 
+esses usuários provavelmente não tem a base de desligados atualizada
+ 
+eu só copiei as bases da rede e processei mas algumas como o caso dos desligados ainda são manuais né?
+ 
+o certo seria colocar todas as bases atualizadas e processar
+ 
+então mais na base de desligados, só vão ter casos de desligados, e os ativos carregam por onde?
+ 
+da base de ativos e do AD
+ 
+mais porque não aqui não aparece nenhuma base de funcionários ativos?
+BRUNA SOLER DOS SANTOS FERNANDES
+aqui ele não deveria estar lendo a base de ativos: 📷
+ 
+Não tinha base na hora que processei, o ideal é rodar um do zero com todas as bases atualizadas, fui repondo arquivos para os ajustes
+ 
+vou extrair as bases lá e colocar pode ser 
+ 
+pode sim, me avisa assim que colocar que copio exatamente o que está lá e rodo o processador
+ 
+Coloquei os arquivos lá 
+Base dos sistemas SICAS e SIGOT
+Base das matrizes 
+Base RH e Base desligado 
+ 
+beleza, vou copiar local aqui e processar
+ 
+ai me avisa
+ 
+por favor 
+ 
+aviso sim
+ 
+BRUNA SOLER DOS SANTOS FERNANDES
+Exemplos:      PATRICIA MARAGNA FAGUNDES HAKOMARU   GRAZIELE DE SOUZA MUNHOZ   LUCIANO NOGUEIRA DE ABREU   ELIS OLIVEIRA DE LIMA   ADMILSON COELHO MARTINS   ANDREA CRISTINA SOAVE DE CARVALHO   MARCEL…
+rodei e ainda não aparecem
+ 
+deixa eu ver em qual arquivo eles estão
+ 
