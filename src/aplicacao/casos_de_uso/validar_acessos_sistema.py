@@ -343,7 +343,8 @@ class ValidarAcessosSistema:
         if self._prov_deslig:
             logger.info(
                 f"[regra temporaria] {self._prov_deslig} caso(s) 'foi aderente + 0 "
-                f"acesso' retirado(s) como provavel DESLIGAMENTO (sai na fase de desligados)."
+                f"acesso' + FORA do arquivo de ativos mais recente retirado(s) como "
+                f"provavel DESLIGAMENTO (sai na fase de desligados)."
             )
         if self._acessos_revogados or self._forcado_analise:
             logger.info(
@@ -677,7 +678,19 @@ class ValidarAcessosSistema:
         # provavel DESLIGAMENTO. Nao gera pendencia. Se tiver sido engano, o
         # acesso e' reincluido no sistema e ela reaparece como Aderente no
         # proximo extrato (auto-corrige). Conta para o log auditavel.
-        if not acessos_atuais and (func.matricula, sistema_valor) in self._aderentes_anteriores:
+        #
+        # PRECISA TAMBEM TER SUMIDO do arquivo de ativos mais recente (usuario,
+        # 15/09/2026: "se estao ativos e' porque ainda tem acesso, pode seguir
+        # normalmente"). A regra nasceu em 12/06, quando NAO havia base de
+        # desligados, e "perdeu o acesso" era a unica pista. Hoje ha' duas
+        # melhores: a base de desligados e a presenca no arquivo de ativos.
+        # Sem isso a regra escondia gente ATIVA: a area listou ADMILSON (1152) e
+        # SILVIA (7550) entre os "ativos que nao vem na aplicacao" — ambos no RH
+        # de 15/09, fora dos desligados e com conta Oracle ATIVA, mas sem o
+        # SYSTUR que tinham em julho. O certo para eles e' "Incluir Acesso".
+        if (not acessos_atuais
+                and (func.matricula, sistema_valor) in self._aderentes_anteriores
+                and func.matricula in self._desatualizados):
             self._prov_deslig += 1
             return []
 
