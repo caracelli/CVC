@@ -48,6 +48,10 @@ DENTRO_DOS_EXES = [
     # NOVO prova que o motor desta rodada esta no exe (quem sumiu dos ativos
     # nao ganha Não Mapeado)
     ("launcher/launcher_processador.exe", b"_calc_desatualizados"),
+    # 18/09: a funcao da matriz CCO gravada na validacao (o que faz a lista
+    # "Funcoes previstas" aparecer na Consulta depois do reprocessamento)
+    ("launcher/launcher_processador.exe", b"funcao_por_sp"),
+    ("launcher/launcher_visualizador.exe", b"Sem perfis mapeados"),
 ]
 
 
