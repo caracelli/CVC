@@ -62,7 +62,11 @@ def _node(js):
 
 
 _BASE_JS = ("const esc = s => String(s == null ? '' : s);\n"
-            "const fmtDate = s => String(s || '');\n")
+            "const fmtDate = s => String(s || '');\n"
+            # `_perfisCel` usa este contador global ao dobrar a lista em "+N
+            # perfis" (mais de 4 no mesmo sistema). Sem ele o teste só exercita
+            # o caminho curto — foi o que a bateria na base real pegou em 18/09.
+            "let _grpSeq = 0;\n")
 
 REG = {
     "m": "90000416", "n": "FILIPE NOGUEIRA", "cargo": "ANALISTA CONTABIL PL",
@@ -118,6 +122,16 @@ class TresBlocosNaTela(unittest.TestCase):
         self.assertIn("mantêm", html)
         self.assertIn("sobraram da anterior", html)
         self.assertIn("faltando na nova", html)
+
+    def test_muitos_perfis_no_mesmo_sistema(self):
+        """Mais de 4 perfis no mesmo sistema dobra a lista em "+N perfis" — na
+        base do cliente isso é comum (o FILIPE tem 21 acessos só no Oracle)."""
+        reg = dict(REG, acessos=[
+            {"sis": "ORACLE_EBS", "login": "CORPC1", "perfil": f"CVC GL PERFIL {i}",
+             "dt": "2026-09-15"} for i in range(6)])
+        html = self._detalhe(reg)
+        self.assertIn("perfis", html)
+        self.assertIn("acessos que o colaborador tem (6)", html)
 
     def test_sem_diferenca_diz_validado(self):
         """"Se a pessoa não tiver alterações... trazer ok apenas para validação"."""
