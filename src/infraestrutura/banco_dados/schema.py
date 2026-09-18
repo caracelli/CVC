@@ -213,6 +213,12 @@ class ValidacaoAcessoModel(Base):
     # encontrado marcado como pendencia e ninguem entende o motivo.
     motivo_status = Column(String)
     origem_matriz = Column(String)
+    # FUNCAO da matriz CCO que originou este perfil esperado (vazio quando o
+    # esperado veio da matriz por CARGO, que nao tem funcao). Pedido da area
+    # (17/09/2026): na tela, agrupar o esperado por funcao e poder expandir
+    # para ver os acessos de cada uma — sem isto a Consulta lista perfis soltos
+    # e a analista nao sabe de qual funcao cada um veio.
+    funcao = Column(String)
     dt_processamento = Column(DateTime, default=datetime.now)
 
 

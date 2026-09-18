@@ -146,7 +146,10 @@ class CategoriaVemDoSqlSemInventar(unittest.TestCase):
                 " usuario TEXT, nome_usuario TEXT, matricula TEXT,"
                 " perfil_encontrado TEXT, perfil_esperado TEXT, descricao TEXT,"
                 " motivo TEXT, data_identificacao TEXT, resolvida INTEGER,"
-                " acao TEXT, origem TEXT, login TEXT);")
+                # `funcao` entrou em 18/09 (funcao da matriz CCO). Este fixture
+                # imita o snapshot real: quando o SQL da Consulta ganha coluna,
+                # ele acompanha — senao o teste falha por schema, nao por regra.
+                " acao TEXT, origem TEXT, login TEXT, funcao TEXT);")
             # uma pessoa do RH e um acesso orfao (login de franquia, sem RH)
             cols = [r[1] for r in c.execute("PRAGMA table_info(rh_ativos)")]
             base = {"matricula": "34532779", "nome": "MICHELE COSTA",

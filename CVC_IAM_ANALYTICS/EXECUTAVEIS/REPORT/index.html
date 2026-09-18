@@ -72,6 +72,31 @@ body{
 .bases-tbl .bd{color:#3A4156;text-align:right;white-space:nowrap;width:160px;
   font-variant-numeric:tabular-nums;}
 .bases-tbl .bl{width:34px;text-align:right;}
+/* contador "lidas no arquivo x carregadas na aplicação" (pedido da área, 18/09) */
+.bases-tbl .bq{display:block;font:400 11px Arial;color:#6B7280;margin-top:2px;}
+.bases-tbl .bq b{font-weight:700;color:#3A4156;}
+.bases-tbl .bq-ok{color:#1F7A4D;font-weight:700;}
+.bases-tbl .bq-dif{color:#B45309;font-weight:700;}
+/* pino "Sem perfis mapeados" (retorno da área, 17/09): informativo, cinza —
+   não pode usar o verde de Aderente nem o vermelho de pendência. */
+.cs-pill.nmap{background:#EEF0F4;color:#5B6472;border:1px solid #D7DCE5;}
+/* alerta de mais de um perfil no SYSTUR (retorno da área, 17/09). Informativo:
+   o excesso sempre APARECE, cobrar é decisão da área (config gera_pendencia). */
+.alerta-sis{display:inline-block;background:#FFF4E5;color:#8A4B08;border:1px solid #F0C48A;
+  border-radius:6px;padding:1px 7px;font:700 11px Arial;margin-bottom:3px;}
+/* funções da matriz CCO no drawer da Consulta (retorno da área, 17/09) */
+.cs-fun-cap{color:#7B8294;font-size:11.5px;margin:2px 0 6px;}
+.cs-fun{border:1px solid #E8EBF2;border-radius:8px;margin-bottom:6px;background:#FCFDFF;}
+.cs-fun>summary{display:flex;align-items:center;gap:10px;justify-content:space-between;
+  cursor:pointer;padding:7px 10px;font-size:12.5px;list-style:none;}
+.cs-fun>summary::-webkit-details-marker{display:none;}
+.cs-fun>summary::before{content:'+';color:#1F2D5C;font-weight:700;margin-right:2px;}
+.cs-fun[open]>summary::before{content:'−';}
+.cs-fun[open]>summary{border-bottom:1px solid #EEF1F7;}
+.cs-fun-n{color:#1F2D5C;font-weight:700;flex:1;}
+.cs-fun-l{display:flex;align-items:center;gap:10px;padding:5px 10px 5px 26px;font-size:12px;
+  border-top:1px solid #F4F6FA;}
+.cs-fun-p{flex:1;color:#3A4156;word-break:break-word;}
 .bases-lupa{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
   border:1px solid #E2E7F0;border-radius:6px;background:#fff;cursor:pointer;color:#5A6376;
   transition:.15s;}
@@ -2298,7 +2323,7 @@ function tipoBadge(t, tl, mot){
   const b = `<span class="badge ${TIPO_CSS[t]||''}">${tl||t}</span>`;
   return b + motIcone(mot);
 }
-function stBadge(s)      { const cls = s==='Pendente'?'b-pendente':(s==='Aderente'?'b-ok':'b-resolvida'); return `<span class="badge ${cls}">${s}</span>`; }
+function stBadge(s)      { const cls = s==='Pendente'?'b-pendente':(s==='Aderente'?'b-ok':(s==='Sem perfis mapeados'?'b-sem-acesso':'b-resolvida')); return `<span class="badge ${cls}">${s}</span>`; }
 /* Resumo das AÇÕES da pessoa no cabeçalho (recolhido): "Incluir (2) · Em Análise
    (1)" — igual ao Histórico, some com o engano de mostrar só a 1ª. null quando há
    uma só ação (aí o badge normal serve). */
@@ -4745,6 +4770,33 @@ function toggleBacc(gi){
   b.hidden = !b.hidden;
   tg.textContent = b.hidden ? '+' : '−';
 }
+/* "lidas no arquivo x carregadas na aplicação" (pedido da área, 18/09/2026:
+   "li a base e tem 45 linhas, na aplicação ele faz ou não a referência às
+   mesmas 45?"). Aparece em TODAS as bases, inclusive quando bate — é isso que
+   dá a confirmação que ela quer. Bases que ACUMULAM (RH e diretório AD, ver
+   _BASES_ORIGEM no main.py) não são comparáveis 1:1: ali a tela diz
+   "acumulado" em vez de apontar uma diferença que é do desenho. */
+function _basesContador(it){
+  const lidas = (it.registros === '' || it.registros == null) ? null : Number(it.registros);
+  const app   = (it.na_app  === '' || it.na_app  == null) ? null : Number(it.na_app);
+  if(lidas === null && app === null) return '';
+  const fmt = n => n === null ? '—' : n.toLocaleString('pt-BR');
+  let fim = '';
+  if(it.acumula){
+    fim = '<span class="bq-ok" title="Esta base é incremental: o banco guarda '
+        + 'as cargas anteriores, então o total é maior que o do arquivo — não é erro.">'
+        + 'acumulado</span>';
+  } else if(lidas !== null && app !== null){
+    const d = app - lidas;
+    fim = d === 0
+      ? '<span class="bq-ok" title="Todas as linhas do arquivo estão na aplicação.">confere</span>'
+      : '<span class="bq-dif" title="Diferença entre o arquivo e o que ficou na '
+        + 'aplicação — normalmente duplicidade no arquivo ou linha inválida.">'
+        + (d > 0 ? '+' : '') + d.toLocaleString('pt-BR') + '</span>';
+  }
+  return '<span class="bq">arquivo <b>' + fmt(lidas) + '</b> · aplicação <b>'
+       + fmt(app) + '</b>' + (fim ? ' · ' + fim : '') + '</span>';
+}
 function _modalBases(gs, erro){
   _basesItens = {};
   let corpo;
@@ -4764,7 +4816,7 @@ function _modalBases(gs, erro){
       let linhas = '';
       g.itens.forEach(it => {
         _basesItens[it.tipo] = it;
-        linhas += '<tr><td class="bn">' + esc(it.base) + '</td>'
+        linhas += '<tr><td class="bn">' + esc(it.base) + _basesContador(it) + '</td>'
                 + '<td class="bd">' + _dtArqHtml(it) + '</td>'
                 + '<td class="bl"><button class="bases-lupa" title="Ver o arquivo processado" '
                 + 'onclick="verBase(\'' + it.tipo + '\')">' + QUAR_LUPA + '</button></td></tr>';
@@ -4799,7 +4851,14 @@ function verBase(tipo){
     + _dtArqHtml(it) + '</div></div>'
     + '<div class="vw-row"><div class="vw-lbl">Processado em</div><div>'
     + (it.dt_importacao ? fmtDH(it.dt_importacao) : '—') + '</div></div>'
-    + '<div class="vw-row"><div class="vw-lbl">Registros importados</div><div>' + reg + '</div></div>'
+    + '<div class="vw-row"><div class="vw-lbl">Registros lidos no arquivo</div><div>' + reg + '</div></div>'
+    + '<div class="vw-row"><div class="vw-lbl">Registros na aplicação</div><div>'
+    + ((it.na_app === '' || it.na_app == null) ? '—' : Number(it.na_app).toLocaleString('pt-BR'))
+    + (it.acumula
+        ? ' <span style="color:#6B7280;">(base incremental: o banco guarda as cargas '
+          + 'anteriores, então o total é maior que o do arquivo)</span>'
+        : '')
+    + '</div></div>'
     + '</div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="abrirBases()">‹ Voltar</button>'
@@ -5490,6 +5549,96 @@ function _transfFiltrados(){
   });
 }
 
+/* Transferidos: o detalhe em TRÊS BLOCOS (retorno da área, 17/09/2026).
+
+   "Essa visualização está muito confusa. Quando o usuário é transferido
+   precisamos ter uma foto: o que ele tem de acesso; o que, cruzando com as
+   matrizes, ele pode ter segundo os novos cargos, gestores e cc; e os acessos
+   que precisa alterar — a diferença. Qual a matriz de acessos (cco ou sistema),
+   qual a função? Se a pessoa não tiver alterações para ser realizadas, pode
+   colocar que foi validado que os acessos da nova área já estão aderentes e
+   trazer ok apenas para validação."
+
+   NADA do que já existia saiu: a linha de contadores da revalidação (Card 23) e
+   a lista por sistema continuam, com a mesma marcação. O que muda é a LEITURA —
+   cada bloco responde a uma pergunta dela, na ordem em que pediu, e o caso sem
+   diferença passa a dizer isso em vez de mostrar só a lista crua. */
+function _transfChave(s, p){
+  return String(s||'').trim().toUpperCase() + '|' + String(p||'').trim().toUpperCase();
+}
+function _transfTit(n, txt, extra){
+  return `<tr class="sub"><td></td><td></td><td colspan="7">`
+       + `<span class="mov-tit">${n} · ${txt}</span>${extra||''}</td></tr>`;
+}
+/* Um acesso do bloco 2/3: sistema · perfil, com a função da CCO quando existe
+   (é a resposta ao "qual a matriz, qual a função?"). */
+function _transfItem(sis, perfil, fun, estado, cor){
+  return `<span class="rev-perf">${esc(sis||'—')} · ${esc(perfil||'—')}`
+       + (fun ? ` <small style="color:#6B7280;">(${esc(fun)})</small>` : '')
+       + ` <b style="color:${cor};">${estado}</b></span>`;
+}
+function _transfDetalhe(d, acessos, sobrou){
+  const falta = d.falta || [], rv = d.reval;
+  const sobrouSet = new Set(sobrou.map(s => _transfChave(s.sis, s.perfil)));
+  let h = '';
+  // contadores da revalidação — igual ao que já estava
+  if(rv && (sobrou.length || falta.length)){
+    const par = d.pares ? ` <small style="color:#6B7280;">(equipe de ${d.pares[0]} → ${d.pares[1]} pessoas)</small>` : '';
+    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
+      + `<span class="mov-tit">revalidação pós-transferência</span>`
+      + `<span class="rev-kpi rev-k-mantem">${rv.MANTEM||0} mantêm</span>`
+      + `<span class="rev-kpi rev-k-sobrou">${rv.SOBROU||0} sobraram da anterior</span>`
+      + `<span class="rev-kpi rev-k-exc">${rv.EXCESSO||0} fora do padrão</span>`
+      + `<span class="rev-kpi rev-k-falta">${rv.FALTA||0} faltando na nova</span>${par}`
+      + `</td></tr>`;
+  }
+  // 1 · o que a pessoa TEM hoje (lista por sistema, marcação inalterada)
+  const grupos = _acessosPorSistema(acessos);
+  if(grupos.length){
+    h += _transfTit(1, `acessos que o colaborador tem (${acessos.length})`);
+    grupos.forEach(g => {
+      h += `<tr class="sub">
+        <td></td><td></td>
+        <td colspan="2"><span class="h-sis">${esc(g.sis)}</span>
+            ${g.lista.length > 1 ? `<small style="color:#6B7280;"> ${g.lista.length} acessos</small>` : ''}
+            ${g.login?`<small style="color:#4B5563;"> login: ${esc(g.login)}</small>`:''}</td>
+        <td colspan="3">${_perfisCel(g.perfis)}</td>
+        <td colspan="2">${fmtDate(g.dt)}</td>
+      </tr>`;
+    });
+  }
+  // 2 · o que a NOVA área prevê: o que ele mantém + o que a equipe tem e ele não
+  const mantem = [];
+  acessos.forEach(a => {
+    if(!sobrouSet.has(_transfChave(a.sis, a.perfil))) mantem.push(a);
+  });
+  if(mantem.length || falta.length){
+    h += _transfTit(2, `acessos que deveria ter na nova área (${mantem.length + falta.length})`);
+    h += `<tr class="sub"><td></td><td></td><td colspan="7"><div class="rev-lista rev-info">`
+      + mantem.map(a => _transfItem(a.sis, a.perfil, '', 'tem', '#1E7B43')).join('')
+      + falta.map(f => _transfItem(f.sis, f.perfil, f.fun, 'falta', '#2980B9')).join('')
+      + `</div></td></tr>`;
+  }
+  // 3 · a DIFERENÇA — o acionável
+  if(sobrou.length || falta.length){
+    h += _transfTit(3, `o que precisa alterar (${sobrou.length + falta.length})`);
+    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
+      + (sobrou.length ? `<div class="rev-lista"><b>Revogar — era padrão na função/equipe anterior:</b> `
+          + sobrou.map(s => _transfItem(s.sis, s.perfil, s.fun, 'revogar', '#B33A3A')).join('') + `</div>` : '')
+      + (falta.length ? `<div class="rev-lista rev-info"><b>Incluir — a nova função/equipe tem e esta pessoa não:</b> `
+          + falta.map(f => _transfItem(f.sis, f.perfil, f.fun, 'incluir', '#2980B9')).join('')
+          + ` <i>(a inclusão já aparece nas pendências)</i></div>` : '')
+      + `</td></tr>`;
+  } else if(rv){
+    // "se a pessoa não tiver alterações... trazer ok apenas para validação"
+    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
+      + `<div class="rev-lista rev-info"><span class="badge b-ok">OK</span> `
+      + `<b>Validado:</b> os acessos da nova área já estão aderentes — nada a alterar.`
+      + `</div></td></tr>`;
+  }
+  return h;
+}
+
 function pintarTransferidos(){
   const body = document.getElementById('transf-body');
   if(!body) return;
@@ -5568,34 +5717,8 @@ function pintarTransferidos(){
               + `<span class="mov-para">${esc(p.para)||'(vazio)'}</span></span>`).join('')
           + `</td></tr>`;
       }
-      // Card 23 — o veredito da revalidação vem logo depois do movimento e
-      // antes da lista crua de acessos: é o que diz onde olhar.
-      const rv = d.reval, falta = d.falta || [];
-      if(rv && (sobrou.length || falta.length)){
-        const par = d.pares ? ` <small style="color:#6B7280;">(equipe de ${d.pares[0]} → ${d.pares[1]} pessoas)</small>` : '';
-        h += `<tr class="sub"><td></td><td></td><td colspan="7">`
-          + `<span class="mov-tit">revalidação pós-transferência</span>`
-          + `<span class="rev-kpi rev-k-mantem">${rv.MANTEM||0} mantêm</span>`
-          + `<span class="rev-kpi rev-k-sobrou">${rv.SOBROU||0} sobraram da anterior</span>`
-          + `<span class="rev-kpi rev-k-exc">${rv.EXCESSO||0} fora do padrão</span>`
-          + `<span class="rev-kpi rev-k-falta">${rv.FALTA||0} faltando na nova</span>${par}`
-          + (sobrou.length ? `<div class="rev-lista"><b>Sobraram da função/equipe anterior — candidatos a revogar:</b> `
-              + sobrou.map(s => `<span class="rev-perf">${esc(s.sis)} · ${esc(s.perfil)}</span>`).join('') + `</div>` : '')
-          + (falta.length ? `<div class="rev-lista rev-info"><b>A nova função/equipe tem e esta pessoa não:</b> `
-              + falta.map(s => `<span class="rev-perf">${esc(s.sis)} · ${esc(s.perfil)}</span>`).join('')
-              + ` <i>(informativo — a inclusão já aparece nas pendências)</i></div>` : '')
-          + `</td></tr>`;
-      }
-      _acessosPorSistema(acessos).forEach(g => {
-        h += `<tr class="sub">
-          <td></td><td></td>
-          <td colspan="2"><span class="h-sis">${esc(g.sis)}</span>
-              ${g.lista.length > 1 ? `<small style="color:#6B7280;"> ${g.lista.length} acessos</small>` : ''}
-              ${g.login?`<small style="color:#4B5563;"> login: ${esc(g.login)}</small>`:''}</td>
-          <td colspan="3">${_perfisCel(g.perfis)}</td>
-          <td colspan="2">${fmtDate(g.dt)}</td>
-        </tr>`;
-      });
+      // Card 23 + os 3 blocos do retorno de 17/09 — ver _transfDetalhe.
+      h += _transfDetalhe(d, acessos, sobrou);
     }
   });
   body.innerHTML = h;
@@ -5629,6 +5752,12 @@ function exportarTransferidos(){
   const cols = ['Matrícula','Nome','Cargo','Centro de Custo','Gestor','Mudança'];
   CAMPOS.forEach(([,rot]) => cols.push(rot+' (De)', rot+' (Para)'));
   cols.push('Identificado em','Situação','Ticket','Motivo','Sistema','Login','Perfil');
+  /* Retorno da área (17/09): "a informação que vem na planilha vem mais confusa
+     que na visualização". A planilha listava só o que a pessoa TEM, sem dizer o
+     que manter, revogar ou incluir — a leitura que a tela agora dá em 3 blocos.
+     Duas colunas ao FIM (as anteriores não mudam de posição, para não quebrar
+     filtro salvo de quem já usa a planilha) e as linhas do que falta incluir. */
+  cols.push('Situação do acesso','Função (CCO)');
   const C_SIT = cols.indexOf('Situação');
 
   const linhas = [], niveis = [];
@@ -5648,19 +5777,39 @@ function exportarTransferidos(){
       depara.push(p ? p.de : '', p ? p.para : '');
     });
 
-    linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'', '', '', '']);
+    // mesma regra da tela: o que sobrou da função/equipe anterior é candidato a
+    // revogar; o resto do que ela tem, mantém.
+    // A chave é calculada AQUI DENTRO, e não pelo _transfChave da tela, de
+    // propósito: os testes do export exercitam esta função isolada no node, e
+    // depender de um ajudante externo quebraria todos eles de uma vez.
+    const _chave = (s, p) => String(s||'').trim().toUpperCase() + '|'
+                           + String(p||'').trim().toUpperCase();
+    const sobrouSet = new Set((d.sobrou || []).map(s => _chave(s.sis, s.perfil)));
+    const sitAcesso = (sis, perfil) =>
+      sobrouSet.has(_chave(sis, perfil)) ? 'sobrou (revogar)' : 'mantém';
+
+    linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'', '', '', '', '', '']);
     niveis.push(0);
 
     _acessosPorSistema(d.acessos).forEach(g => {
+      const umPerfil = g.perfis.length === 1 ? (g.perfis[0] || '') : '';
       linhas.push([...ident(), ...depara, fmtDate(g.dt), sit, t.ticket||'', t.motivo||'',
                    g.sis, g.login,
-                   g.perfis.length > 1 ? g.perfis.length + ' perfis' : (g.perfis[0] || '')]);
+                   g.perfis.length > 1 ? g.perfis.length + ' perfis' : umPerfil,
+                   umPerfil ? sitAcesso(g.sis, umPerfil) : '', '']);
       niveis.push(1);
       if(g.lista.length > 1) g.lista.forEach(a => {
         linhas.push([...ident(), ...depara, fmtDate(a.dt), sit, t.ticket||'', t.motivo||'',
-                     g.sis, a.login, a.perfil]);
+                     g.sis, a.login, a.perfil, sitAcesso(g.sis, a.perfil), '']);
         niveis.push(2);
       });
+    });
+    // o que a nova função/equipe tem e a pessoa não: na tela é o bloco 3; sem
+    // isto a planilha continuava contando só metade da história
+    (d.falta || []).forEach(f => {
+      linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'',
+                   f.sis || '', '', f.perfil || '', 'falta (incluir)', f.fun || '']);
+      niveis.push(1);
     });
   });
   const formatos = [{col:C_SIT, regras:[
@@ -6495,9 +6644,16 @@ function _csPino(u){
   const abertos  = u.divs.filter(d => acionavel(d) && d.s === 'Pendente').length;
   const tratados = u.divs.filter(d => acionavel(d) && d.s !== 'Pendente').length;
   const temIncl  = u.divs.some(d => d.a === 'Incluir Acesso');
+  const temOk    = u.divs.some(d => d.a === 'Aderente');
   if (abertos > 0) return {cls:'pend',    lbl:`${abertos} pendente${abertos>1?'s':''}`};
   if (temIncl)     return {cls:'incluir', lbl:'Incluir acessos'};
   if (tratados > 0) return {cls:'res',    lbl:tratados > 1 ? `${tratados} resolvidas` : 'Resolvido'};
+  /* Sem NENHUM acesso aderente, "Aderente" seria o `else` de novo — o mesmo
+     defeito que a área apontou em 25/08, agora do outro lado: quem não tem
+     expectativa em sistema nenhum aparecia conforme. Retorno de 17/09/2026:
+     "trazer um status: sem perfis mapeados e não como aderente". Aderência é
+     POR SISTEMA; sem um único OK não há o que declarar conforme. */
+  if (!temOk)      return {cls:'nmap',    lbl:'Sem perfis mapeados'};
   return {cls:'ok', lbl:'Aderente'};
 }
 
@@ -6534,7 +6690,12 @@ function _csDisp(c, u){
     return fmtDate(datas[datas.length-1]) || '—';   // só data (dia)
   }
   if (c === 14) {
-    return u.divs.some(d => d.s === 'Pendente') ? 'Pendente' : 'Aderente';
+    // Mesma escada do pino (_csPino) — se divergirem, o funil oferece um valor
+    // que a coluna não mostra, que foi o defeito corrigido em 06/08.
+    if (u.divs.some(d => d.s === 'Pendente')) return 'Pendente';
+    if (u.divs.some(d => d.a === 'Aderente')) return 'Aderente';
+    if (u.divs.some(d => d.a === 'Incluir Acesso')) return 'Incluir acessos';
+    return 'Sem perfis mapeados';
   }
   return '—';
 }
@@ -6793,6 +6954,23 @@ function _csDelta(pe, pp){
    HTML ja escapado. */
 function _csPerfilTxt(d){
   const pe = (d.pe || '').trim(), pp = (d.pp || '').trim();
+  /* ALERTA do SYSTUR (retorno da área, 17/09/2026, cenário de teste 1): "todos
+     colaboradores do systur que tiver mais de um perfil deve vir com alerta:
+     Usuário com mais de um acesso. Obs.: usuários do systur não podem ter mais
+     de um perfil". Segue a decisão de 28/08 sobre perfil excessivo — VER
+     sempre, COBRAR só com a flag do config: o aviso aparece, mas NÃO cria
+     pendência; ligar `validacao/perfil_excessivo/gera_pendencia` é decisão da
+     área. Conta SEM helper externo de propósito: esta função é exercitada
+     isolada no node pelos testes do painel.
+     Medido em 18/09 na base do cliente: 68 pessoas no SYSTUR com mais de um
+     perfil (62 com dois, 1 com três e 5 com 42 — estas com cara de conta
+     técnica, a confirmar com a área). */
+  const _atuais = new Set((pe.split(',').map(s => s.trim().toUpperCase())).filter(Boolean));
+  const alerta = (d.sis === 'SYSTUR' && _atuais.size > 1)
+    ? '<span class="alerta-sis" title="No SYSTUR a pessoa só pode ter um perfil. '
+      + 'Os perfis a mais estão listados abaixo. É um aviso: não vira pendência.">'
+      + '⚠ Usuário com mais de um acesso</span><br>'
+    : '';
   /* "Em Análise" AMBÍGUO, já consolidado por `_divsDisplayA` (a mesma regra da
      Pendências): o acesso encontrado casa com N perfis do cargo. Retorno de
      09/09 ("Testes 2.pdf"): no SYSTUR a pessoa só pode ter UM perfil, e a
@@ -6800,7 +6978,8 @@ function _csPerfilTxt(d){
      É UM acesso, com N opções possíveis; o delta (regra 2) não se aplica. */
   const ops = (d.opcoes && d.opcoes.length > 1) ? _perfDedup(d.opcoes).map(_perfNome) : [];
   if (ops.length > 1) {
-    return (pe ? '<span style="color:#B9770E;font-weight:700;">Tem hoje:</span> '
+    return alerta
+         + (pe ? '<span style="color:#B9770E;font-weight:700;">Tem hoje:</span> '
                  + _csListaPerfis(pe.split(',')) + '<br>' : '')
          + `<span style="color:#856404;font-weight:700;">Esperado: 1 de ${ops.length} opções:</span> `
          + _csListaPerfis(ops);
@@ -6831,16 +7010,16 @@ function _csPerfilTxt(d){
       if (aMais.length)
         partes.push(`<span style="color:#B9770E;font-weight:700;">${aMais.length} a mais:</span> `
                   + _csListaPerfis(aMais));
-      return partes.join('<br>');
+      return alerta + partes.join('<br>');
     }
     // mesma lista, grafia diferente — mostrar os dois lados e' o honesto
-    return 'Tem hoje: ' + _csListaPerfis(tem)
+    return alerta + 'Tem hoje: ' + _csListaPerfis(tem)
          + '<br>Deveria ter: <b>' + _csListaPerfis(dev) + '</b>';
   }
   const um = s => _csListaPerfis(String(s).split(','));
-  if (pe && pp) return '<span style="color:#1E7B43">' + um(pe) + '</span>';
-  if (pp) return '<b>' + um(pp) + '</b>';
-  if (pe) return um(pe);
+  if (pe && pp) return alerta + '<span style="color:#1E7B43">' + um(pe) + '</span>';
+  if (pp) return alerta + '<b>' + um(pp) + '</b>';
+  if (pe) return alerta + um(pe);
   return '—';
 }
 
@@ -6981,6 +7160,62 @@ function _sisTodos(){
   (DB.users||[]).forEach(u => (u.divs||[]).forEach(d => { if (d.sis) s.add(d.sis); }));
   _sisUniverso = Array.from(s).sort(); _sisUniversoN = n;
   return _sisUniverso;
+}
+
+/* FUNÇÕES DA MATRIZ CCO (retorno da área, 17/09/2026).
+
+   Na CCO o acesso não é pedido perfil a perfil: o centro de custo + gestor dá
+   à pessoa um conjunto de FUNÇÕES, e cada função é formada por vários perfis em
+   vários sistemas. A tela mostrava só os perfis soltos, agrupados por sistema —
+   ela olhava "CVC AP BRASIL Consulta" sem saber de qual função aquilo veio.
+   O pedido, com o exemplo dela (CC 01.06.04.01, gestora HELEN): "Ai precisaria
+   ter uma lista nessa visualização em baixo: Funções disponíveis e uma
+   possibilidade de expandir e ver os acessos".
+
+   Decisões tomadas aqui, cada uma com precedente no projeto:
+   - Só aparece quando HÁ função, ou seja, esperado vindo da CCO. A matriz por
+     CARGO não tem função (a coluna nem existe no arquivo), e inventar um rótulo
+     ali seria pior que não mostrar.
+   - Função COMPLETA continua na lista, marcada. Precedente de 31/08: "se faltam
+     dois, algum ela possui, não deveria vir em acessos encontrados?" — esconder
+     o que ela já tem foi exatamente a reclamação.
+   - Ordem: o que falta primeiro, depois alfabética. Precedente de 28/08: mostrar
+     o ACIONÁVEL antes, em vez de mandar a analista comparar listas.
+   - Recolhido por padrão (<details>), porque o mesmo retorno de 28/08 foi
+     "acabou ficando muita informação". Medido em 18/09: no máximo 8 funções por
+     pessoa na base do cliente. */
+function _csFuncoesCco(divs){
+  const porFun = {};
+  (divs || []).forEach(d => { if (d.fun) (porFun[d.fun] = porFun[d.fun] || []).push(d); });
+  const nomes = Object.keys(porFun);
+  if (!nomes.length) return '';
+  const info = nomes.map(f => {
+    const ds = porFun[f];
+    const tem = ds.filter(d => d.a === 'Aderente').length;
+    return {f: f, ds: ds, tem: tem, total: ds.length, faltam: ds.length - tem};
+  }).sort((a, b) => (b.faltam - a.faltam) || a.f.localeCompare(b.f, 'pt-BR'));
+  const corpo = info.map(i => {
+    const resumo = i.faltam === 0
+      ? '<span style="color:#1E7B43;font-weight:700;">completa</span>'
+      : (i.tem
+          ? `<span style="color:#B9770E;font-weight:700;">tem ${i.tem} de ${i.total}</span>`
+          : `<span style="color:#2980B9;font-weight:700;">falta${i.faltam > 1 ? 'm' : ''} ${i.faltam}</span>`);
+    const linhas = i.ds.map(d => {
+      const est = d.a === 'Aderente'
+        ? '<span style="color:#1E7B43;font-weight:700;">tem</span>'
+        : (d.a === 'Incluir Acesso'
+            ? '<span style="color:#2980B9;font-weight:700;">falta</span>'
+            : `<span style="color:#B9770E;font-weight:700;">${esc(d.a || 'a revisar')}</span>`);
+      const perfil = esc(d.pp || d.pe || '—');
+      return `<div class="cs-fun-l"><span class="h-sis">${esc(d.sis || '—')}</span>`
+           + `<span class="cs-fun-p">${perfil}</span>${est}</div>`;
+    }).join('');
+    return `<details class="cs-fun"><summary><span class="cs-fun-n">${esc(i.f)}</span>`
+         + `${resumo}</summary>${linhas}</details>`;
+  }).join('');
+  return `<div class="cs-sec">Funções previstas (${info.length})</div>`
+       + `<div class="cs-fun-cap">Vêm do Mapeamento CCO pelo centro de custo e gestor. `
+       + `Clique para ver os acessos que formam cada função.</div>` + corpo;
 }
 
 /* "Por que ela não tem o IC?" (retorno da área, 10/08). Antes, o sistema em que
@@ -7223,7 +7458,10 @@ function csRenderDrawerBody(){
       + _csDetalheCategorias(_divsDisplayA(u.divs), 'cs-acc', false)
       // veio junto da expansao: e' a resposta ao "por que ela nao tem o IC?"
       // (2o retorno, 10/08). Sem isto, mover o detalhe para ca' perderia o bloco.
-      + _csSemMapeamento(u);
+      + _csSemMapeamento(u)
+      // "precisaria ter uma lista nessa visualizacao EM BAIXO: funcoes
+      // disponiveis e uma possibilidade de expandir e ver os acessos" (17/09)
+      + _csFuncoesCco(u.divs);
   }
   else if (_csTab === 'hist') {
     body.innerHTML = '<div class="cs-empty">📜 Histórico de movimentações '

@@ -153,6 +153,11 @@ class ConexaoBancoDados:
                 "ALTER TABLE validacao_acessos ADD COLUMN situacao_acao TEXT DEFAULT 'PENDENTE'"))
             conn.commit()
             logger.info("Migration: validacao_acessos.situacao_acao adicionada.")
+        # Funcao da matriz CCO (pedido da area, 17/09/2026) — ver schema.py.
+        if "funcao" not in cols:
+            conn.execute(text("ALTER TABLE validacao_acessos ADD COLUMN funcao TEXT"))
+            conn.commit()
+            logger.info("Migration: validacao_acessos.funcao adicionada.")
         # POR QUE esta linha caiu neste status (retorno da area 10/08/2026: a
         # tela mostrava "Em Analise" com esperado == encontrado e nao dizia o
         # motivo — a conta estava com status pendente no extrato).

@@ -108,6 +108,7 @@ class RepositorioMatrizSqlite:
                     "perfil_atual": r.perfil_atual, "acesso_manual": r.acesso_manual,
                     "status": r.status, "situacao_acao": r.situacao_acao,
                     "origem_matriz": r.origem_matriz,
+                    "funcao": getattr(r, "funcao", "") or "",
                     "dt_processamento": r.dt_processamento,
                 }
                 for r in rows

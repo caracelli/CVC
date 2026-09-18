@@ -99,8 +99,15 @@ class TestExportsAgrupamPorSistema(unittest.TestCase):
                           f"{fn} deve descer os perfis para o nivel 2 do outline")
 
     def test_grids_usam_agrupamento_por_sistema(self):
-        for fn in ("pintarDesligados", "pintarTransferidos"):
-            self.assertIn("_acessosPorSistema", self._corpo(fn),
+        # A grid pode delegar o desenho do detalhe a uma funcao propria (foi o
+        # que a Transferidos fez em 18/09, ao ganhar os 3 blocos do retorno da
+        # area): o que este teste garante e' que o agrupamento por sistema
+        # continua no caminho, direto ou via a funcao chamada.
+        cadeia = {"pintarDesligados": ("pintarDesligados",),
+                  "pintarTransferidos": ("pintarTransferidos", "_transfDetalhe")}
+        for fn, funcoes in cadeia.items():
+            corpo = "".join(self._corpo(f) for f in funcoes)
+            self.assertIn("_acessosPorSistema", corpo,
                           f"{fn} deve abrir os acessos por sistema")
 
 

@@ -160,12 +160,19 @@ class ValidarAcessosSistema:
                     if (sistema_valor, perfil) not in _vistos_sp:
                         _vistos_sp.add((sistema_valor, perfil))
                         perfis_sis[sistema_valor].append((perfil, manual, "MATRIZ"))
-            for sistema_str, perfil_esperado in cco.get(chave_cco, []):
+            # (sistema, perfil) -> funcao da CCO, para carimbar a linha depois.
+            # Fora do loop de geracao de proposito: `_gerar_registros_sistema`
+            # trabalha com a tupla (perfil, manual, origem) em varios pontos, e
+            # mudar a aridade dela por causa de um rotulo sairia caro.
+            funcao_por_sp: Dict[Tuple[str, str], str] = {}
+            for sistema_str, perfil_esperado, _funcao in cco.get(chave_cco, []):
                 sistema_enum = sistema_do_texto(sistema_str)
                 sistema_valor = sistema_enum.value if sistema_enum else sistema_str.upper()
                 # SIG NAO usa CCO: e' validado por ESPELHO dinamico (_validar_sig_espelho)
                 if sistema_valor == Sistema.SIG.value:
                     continue
+                if _funcao:
+                    funcao_por_sp.setdefault((sistema_valor, perfil_esperado), _funcao)
                 if (sistema_valor, perfil_esperado) not in _vistos_sp:
                     _vistos_sp.add((sistema_valor, perfil_esperado))
                     perfis_sis[sistema_valor].append((perfil_esperado, False, "CCO"))
@@ -176,6 +183,12 @@ class ValidarAcessosSistema:
                     func, sistema_valor, perfis_comb,
                     acessos_por_matricula, sistemas_com_dados,
                 ))
+            # Carimba a FUNCAO da CCO na linha (vazio quando o esperado veio da
+            # matriz por cargo, que nao tem funcao).
+            for _r in regs_func:
+                _f = funcao_por_sp.get((_r.get("sistema"), _r.get("perfil_esperado")))
+                if _f:
+                    _r["funcao"] = _f
             # A regra TEMPORARIA de provavel desligamento (linha ~600, retorna
             # [] quando a pessoa JA foi aderente e zerou o acesso) tem dono
             # proprio — "sai na fase de desligados" — e o teste
@@ -454,12 +467,14 @@ class ValidarAcessosSistema:
             chave = (_norm(pe.cargo_codigo), _norm(pe.cargo_descricao))
             perfis_por_chave[chave][pe.sistema.value].append((pe.perfil, pe.acesso_manual))
 
-        # (cc, gestor_norm) → lista de (sistema_str, perfil), sem duplicatas.
-        # A CCO casa por centro de custo + GESTOR (nao por funcao/cargo).
-        cco: Dict[Tuple[str, str], List[Tuple[str, str]]] = defaultdict(list)
+        # (cc, gestor_norm) → lista de (sistema_str, perfil, funcao), sem duplicatas.
+        # A CCO casa por centro de custo + GESTOR (nao por funcao/cargo), mas a
+        # FUNCAO viaja junto: e' ela que a area usa para ler o esperado ("a
+        # pessoa tem direito a funcao X; quais acessos formam a X?", 17/09/2026).
+        cco: Dict[Tuple[str, str], List[Tuple[str, str, str]]] = defaultdict(list)
         for r in repo.obter_cco():
             chave = (_norm(r["cc"]), _norm(r.get("gestor", "")))
-            entry = (r["sistema"], r["perfil"])
+            entry = (r["sistema"], r["perfil"], (r.get("funcao") or "").strip())
             if entry not in cco[chave]:
                 cco[chave].append(entry)
 
@@ -547,6 +562,7 @@ class ValidarAcessosSistema:
             "centro_custo_nome": func.centro_custo_nome or "",
             "cargo_codigo": func.cargo_codigo or "",
             "cargo_descricao": func.cargo_descricao or "",
+            "funcao": "",          # preenchido quando o esperado vem da CCO
         }
 
     def _gerar_registros_sistema(

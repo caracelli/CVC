@@ -1110,7 +1110,10 @@ SELECT
   -- o login na tela, senao a grid mostra um login e jura que nao ha acesso.
   COALESCE((SELECT a.usuario FROM acessos_sistemas a
             WHERE a.matricula_vinculada = v.matricula AND a.sistema = v.sistema
-            LIMIT 1), '') AS login
+            LIMIT 1), '') AS login,
+  -- FUNCAO da matriz CCO (vazia quando o esperado veio da matriz por cargo).
+  -- Pedido da area, 17/09/2026: ler o esperado por funcao, nao por perfil solto.
+  COALESCE(v.funcao,'') AS funcao
 FROM validacao_acessos v
 UNION ALL
 SELECT
@@ -1123,7 +1126,8 @@ SELECT
   ''                              AS motivo,
   COALESCE(d.data_identificacao,'') AS data_identificacao,
   d.resolvida, 'Usuário Não Encontrado' AS acao, '' AS origem,
-  d.usuario AS login
+  d.usuario AS login,
+  '' AS funcao
 FROM divergencias d
 WHERE d.tipo = 'ACESSO_SEM_VINCULO_RH'
 """
@@ -1234,12 +1238,17 @@ def garantir_estrutura(force=False):
             if _v_cols and "motivo_status" not in _v_cols:
                 c.execute("ALTER TABLE validacao_acessos ADD COLUMN motivo_status TEXT")
                 c.commit()
+            # idem para a funcao da CCO (banco de Processador anterior a 18/09)
+            if _v_cols and "funcao" not in _v_cols:
+                c.execute("ALTER TABLE validacao_acessos ADD COLUMN funcao TEXT")
+                c.commit()
         except Exception:
             pass
         if existe and not force:
             cols = [r[1] for r in c.execute("PRAGMA table_info(bi_divergencias)")]
-            if "origem" not in cols or "login" not in cols or "motivo" not in cols:
-                force = True  # migração de schema: coluna 'origem'/'login'/'motivo'
+            if ("origem" not in cols or "login" not in cols or "motivo" not in cols
+                    or "funcao" not in cols):
+                force = True  # migração de schema: 'origem'/'login'/'motivo'/'funcao'
             elif c.execute("SELECT 1 FROM bi_divergencias WHERE tipo='NAO_MAPEADO' "
                            "AND acao<>'Não Mapeado' LIMIT 1").fetchone():
                 # Rotulo mudou (15/09: "Sem Expectativa" -> "Não Mapeado"). O
@@ -2435,6 +2444,7 @@ def _montar_base():
                        b.perfil_encontrado, b.perfil_esperado, b.data_identificacao,
                        b.resolvida, b.origem, b.sistema, b.login,
                        COALESCE(b.motivo,'') motivo,
+                       COALESCE(b.funcao,'') funcao,
                        COALESCE(r.cargo_descricao,'') cargo,
                        COALESCE(r.departamento,'')   depto,
                        COALESCE(r.centro_custo_codigo,'') cc_cod,
@@ -2478,13 +2488,24 @@ def _montar_base():
                 # (hoje: conta pendente/indefinida no extrato) — a grid mostra
                 # como aviso na linha. Vazio na esmagadora maioria das linhas.
                 "mot": r["motivo"] or "",
+                # funcao da matriz CCO que originou o esperado (vazio = veio da
+                # matriz por cargo). A Consulta agrupa o esperado por ela.
+                "fun": r["funcao"] or "",
                 "dt": r["data_identificacao"] or "",
                 # NAO_MAPEADO entra junto com OK: informativo, nunca "Pendente"
                 # (achado da revisao do fix de 10/09 — sem isso, a coluna
                 # Status da Consulta e o export csExportar() mostravam "1
                 # pendente" pra quem so' tinha a linha Não Mapeado,
                 # contradizendo o pino da mesma linha, que ja' mostra Aderente).
-                "s": ("Aderente" if tp in ("OK", "NAO_MAPEADO")
+                # NAO_MAPEADO nunca e' "Pendente" (informativo), mas tambem NAO
+                # e' "Aderente": o roteiro entregue define Aderente como "tem
+                # exatamente o que o cargo preve", e aqui NAO HA nada previsto.
+                # Retorno da area (17/09/2026): "trazer um status: sem perfis
+                # mapeados e nao como aderente". Aderencia e' POR SISTEMA (a
+                # regra OK do motor sempre foi) — quem nao tem expectativa em
+                # sistema nenhum nao herda o rotulo de quem esta conforme.
+                "s": ("Aderente" if tp == "OK"
+                      else "Sem perfis mapeados" if tp == "NAO_MAPEADO"
                       else "Resolvido" if r["resolvida"] else "Pendente"),
                 # categoria lida do rh_ativos (tipo_vinculo): Funcionário (CLT),
                 # Terceiro (fornecedor) ou Franqueado/Prestador (diretório AD).
@@ -3295,10 +3316,29 @@ def listar_transferidos():
         # par, o resto da aba segue igual.
         depara = _transferidos_depara(c, list(por_mat))
         reval = _revalidacao_transferidos(c, list(por_mat))
+        # FUNCAO da CCO para cada acesso do veredito. Retorno da area (17/09):
+        # "qual a matriz de acessos (cco ou sistema), qual a funcao?" — sem isso
+        # a analista ve "CVC AP BRASIL Consulta" e nao sabe de que funcao veio.
+        # Uma consulta so' para todos; o casamento e' por PERFIL dentro do
+        # (cc, gestor) da pessoa, e nao por sistema: na CCO o sistema vem
+        # "Systur"/"Oracle EBS" e no extrato "SYSTUR"/"ORACLE_EBS".
+        _cco_fun = {}
+        try:
+            for r in c.execute("SELECT cc, gestor, funcao, perfil FROM matriz_cco"):
+                k = ((r["cc"] or "").strip().upper(), (r["gestor"] or "").strip().upper())
+                _cco_fun.setdefault(k, {})[(r["perfil"] or "").strip().upper()] = r["funcao"] or ""
+        except Exception as e:
+            print(f"  [transf] matriz_cco indisponivel para a funcao: {e!r}")
         for mat, acessos in por_mat.items():
             info = rh.get(mat)
             dp = depara.get(mat) or {}
             rv = reval.get(mat) or {}
+            _fmap = _cco_fun.get(
+                (((info["cc"] if info else "") or "").strip().upper(),
+                 ((info["gestor"] if info else "") or "").strip().upper()), {})
+            for _lst in (rv.get("sobrou") or [], rv.get("falta") or []):
+                for _it in _lst:
+                    _it["fun"] = _fmap.get((_it.get("perfil") or "").strip().upper(), "")
             out.append({
                 "reval": rv.get("resumo"),
                 "sobrou": rv.get("sobrou", []),
@@ -3582,11 +3622,58 @@ _BASES_LABEL = {
 }
 
 
+# Onde cada base VIVE no banco, para o contador "lidas x carregadas" (pedido da
+# area, 18/09/2026: "tipo SIGOT eu li a base e tem 45 linhas, na aplicacao ele
+# faz ou nao a referencia mesmos 45?").
+#   acumula=False -> SUBSTITUICAO: o arquivo mais novo troca o anterior, entao o
+#                    numero TEM de bater com o do arquivo; diferenca = dedup ou
+#                    linha invalida, e a tela mostra a diferenca.
+#   acumula=True  -> INCREMENTAL (merge, bc7af3e "delete+insert apagaria os
+#                    ausentes"): a tabela junta varias cargas, entao o total e'
+#                    MAIOR que o arquivo por desenho. Comparar 1:1 ali seria
+#                    inventar um erro que nao existe — a tela diz "acumulado".
+_BASES_ORIGEM = {
+    "SYSTUR":                 ("SELECT COUNT(*) FROM acessos_sistemas WHERE sistema='SYSTUR'", False),
+    "SIGOT":                  ("SELECT COUNT(*) FROM acessos_sistemas WHERE sistema='SIGOT'", False),
+    "SICA_RA":                ("SELECT COUNT(*) FROM acessos_sistemas WHERE sistema='SICA_RA'", False),
+    "SICA_ESFERA":            ("SELECT COUNT(*) FROM acessos_sistemas WHERE sistema='SICA_ESFERA'", False),
+    "IC_INTEGRADOR_CONTABIL": ("SELECT COUNT(*) FROM acessos_sistemas WHERE sistema='IC_INTEGRADOR_CONTABIL'", False),
+    "ORACLE_EBS":             ("SELECT COUNT(*) FROM acessos_sistemas WHERE sistema='ORACLE_EBS'", False),
+    "SIG":                    ("SELECT COUNT(*) FROM acessos_sistemas WHERE sistema='SIG'", False),
+    "MATRIZ_PERFIS":          ("SELECT COUNT(*) FROM perfis_esperados", False),
+    "MATRIZ_CCO":             ("SELECT COUNT(*) FROM matriz_cco", False),
+    "RH_ATIVOS":              ("SELECT COUNT(*) FROM rh_ativos WHERE UPPER(COALESCE(tipo_vinculo,'FUNCIONARIO')) "
+                               "IN ('FUNCIONARIO','TERCEIRO')", True),
+    "RH_DESLIGADOS":          ("SELECT COUNT(*) FROM rh_desligados WHERE matricula NOT LIKE 'ADESL-%'", True),
+    "AD_FRANQUEADOS":         ("SELECT COUNT(*) FROM rh_ativos WHERE UPPER(COALESCE(tipo_vinculo,''))='FRANQUEADO'", True),
+    "AD_PRESTADORES":         ("SELECT COUNT(*) FROM rh_ativos WHERE UPPER(COALESCE(tipo_vinculo,''))='PRESTADOR'", True),
+    "AD_DESLIGADOS":          ("SELECT COUNT(*) FROM rh_desligados WHERE matricula LIKE 'ADESL-%'", True),
+}
+
+
+def _contagens_na_app(c):
+    """{tipo: (linhas no banco, acumula)} — o outro lado do contador de Bases.
+
+    Cada consulta e' isolada: banco de Processador antigo pode nao ter uma
+    tabela/coluna, e uma base sem contagem vale muito mais que a tela inteira
+    cair (mesmo principio do achado de 06/08 em listar_bases)."""
+    out = {}
+    for tipo, (sql, acumula) in _BASES_ORIGEM.items():
+        try:
+            out[tipo] = (c.execute(sql).fetchone()[0], acumula)
+        except Exception as e:
+            print(f"  [bases] sem contagem na aplicacao para {tipo}: {e!r}")
+    return out
+
+
 def listar_bases():
     """Catalogo das bases: por tipo, SO a ULTIMA importacao bem-sucedida —
     nome do arquivo e a data do PROPRIO arquivo (disponibilizacao). Agrupado
     em RH / Matrizes / Extratos dos Sistemas. Fonte: log_importacoes (o SQLite
-    devolve o arquivo/dt_arquivo da linha de maior dt_importacao por tipo)."""
+    devolve o arquivo/dt_arquivo da linha de maior dt_importacao por tipo).
+
+    Traz tambem `na_app` (quantas linhas daquela base estao no banco) e
+    `acumula` — ver _BASES_ORIGEM."""
     c = conn_ro()
     try:
         # DOIS casos que davam a MESMA tela vazia (achado 06/08: a base aparecia
@@ -3605,13 +3692,16 @@ def listar_bases():
             f"SELECT tipo, arquivo, {col_dt}, total_registros, MAX(dt_importacao) AS dt_imp "
             "FROM log_importacoes WHERE status='SUCESSO' "
             "GROUP BY tipo").fetchall()     # (b) qualquer erro sobe
+        cont = _contagens_na_app(c)
     finally:
         c.close()
 
     def _item(tipo, rotulo, r):
+        na_app, acumula = cont.get(tipo, ("", False))
         return {"tipo": tipo, "base": rotulo, "arquivo": r["arquivo"] or "",
                 "dt_arquivo": r["dt_arquivo"] or "", "dt_importacao": r["dt_imp"] or "",
-                "registros": r["total_registros"] if r["total_registros"] is not None else ""}
+                "registros": r["total_registros"] if r["total_registros"] is not None else "",
+                "na_app": na_app, "acumula": bool(acumula)}
 
     por_tipo = {r["tipo"]: r for r in rows}
     grupos = {g: [] for g in _BASES_GRUPOS}
