@@ -1,0 +1,252 @@
+================================================================================
+CVC IAM ANALYTICS - REGRAS APLICADAS, NA ORDEM DE EXECUCAO
+================================================================================
+Levantado do codigo em 22/09/2026 (branch sig-fase1).
+
+As datas entre parenteses sao as que o proprio codigo registra como origem da
+regra - quase sempre um retorno da area. Regra sem data e' de desenho original.
+
+Marcacoes:
+  [SOME]  ponto em que uma pessoa pode deixar de gerar linha, e portanto
+          desaparecer da tela. Sao 6 no total, listados no fim.
+  [FLAG]  comportamento que depende de chave no config.xml.
+
+
+================================================================================
+FASE 1 - IMPORTACAO
+================================================================================
+
+ 1. Dobra das interacoes: os .jsonl por usuario viram quarentena/resolucoes no
+    banco, e a pasta e' resetada por rename atomico.
+
+ 2. Diretorio AD (franqueados/prestadores) entra ANTES do RH. E' a base
+    principal de identidade: da' dono aos acessos orfaos pelo login. A
+    matricula fica namespaced (FRANQ-/PREST-<login>), entao nao colide com CLT.
+    (area, 22/07)
+
+ 3. Importa RH ativos e desligados. O snapshot/historico e' gravado ANTES do
+    merge, senao a mudanca se perde.
+
+ 4. Padroniza o RH.
+
+ 5. Importa matrizes: perfis por sistema (CC + cargo) e a CCO organizacional
+    (CC + gestor). Filtra pelos sistemas com ativo=true.
+
+ 6. Importa os extratos dos sistemas em escopo.
+
+ 7. Importa o SIG (formato matricial + de-para). Ausencia do arquivo nao quebra
+    o pipeline.
+
+
+================================================================================
+FASE 2 - VINCULACAO DE ACESSO A PESSOA
+================================================================================
+
+ 8. Cascata de 6 niveis, nesta ordem:
+       CPF exato ................ score 1.00
+       e-mail exato ............. score 0.95
+       login exato .............. score 0.93
+       CPF parcial + nome ....... score 0.90
+       nome exato ............... score 0.70
+       fuzzy de nome ............ score 0.50  (NAO vincula, so' sugere)
+    CLT tem precedencia explicita sobre o AD.
+
+
+================================================================================
+FASE 3 - DIVERGENCIAS
+================================================================================
+
+ 9. ACESSO DE DESLIGADO: casa por uniao de chaves - matricula OU CPF do extrato
+    OU login. So' matricula subcontava, porque o vinculo cruza contra ativos.
+
+10. CONTA DE SERVICO (robo/automacao) com prefixo de login configurado sai da
+    lista de revogacao e vira tipo proprio. Nao some: sai da cobranca.
+    (area, 28 e 31/08)
+
+11. ACESSO SEM VINCULO NO RH: acesso sem dono.
+
+12. TRANSFERIDOS: entra na revisao quem mudou de cargo, centro de custo,
+    departamento OU gestor. Sem janela temporal - vale enquanto a pessoa
+    estiver ativa. (area, 29/07)
+
+
+================================================================================
+FASE 4 - VALIDACAO DE ACESSOS
+================================================================================
+E' aqui que mora quase tudo. O que a tela mostra como Aderente, Incluir,
+Alterar, Em Analise e Nao Mapeado sai desta fase.
+
+--------------------------------------------------------------------------------
+4.1 PREPARACAO
+--------------------------------------------------------------------------------
+
+13. CONTA BLOQUEADA OU INATIVA NAO E' ACESSO - o acesso e' descartado da lista
+    da pessoa. (area, 22/07)
+
+14. Conta com status indefinido (P ou vazio) conta como acesso, mas a linha
+    sera revista no fim. (area, 10/08)
+
+15. Calcula a adesao de cada cargo a cada sistema - insumo da regra B1 (#22).
+
+16. Calcula quem SUMIU DO ARQUIVO DE ATIVOS mais recente. Se o ultimo arquivo
+    tem menos de 50% da populacao, ninguem some e sai um aviso.
+    (usuario, 15/09)
+
+--------------------------------------------------------------------------------
+4.2 POR PESSOA
+--------------------------------------------------------------------------------
+Terceiro, franqueado e prestador NAO passam por aqui: tem caminho proprio
+(#26, #27 e #28).
+
+17. Monta o esperado juntando MATRIZ (CC + cargo) e CCO (CC + gestor) num
+    conjunto unico por sistema, com dedup. A matriz tem precedencia.
+    O SIG NUNCA usa CCO.
+
+18. Carimba na linha a funcao da CCO que originou o esperado. (area, 17/09)
+
+--------------------------------------------------------------------------------
+4.3 POR SISTEMA - na ordem em que o motor decide
+--------------------------------------------------------------------------------
+A primeira regra que casar decide a linha.
+
+19. Sistema sem nenhum extrato no banco
+       -> SEM_DADOS  [SOME] descartado na hora de salvar
+
+20. TEM PELO MENOS UM PERFIL ESPERADO ADERENTE
+       -> OK (Aderente)
+
+    20a. Perfil que ela tem e a matriz NAO explica entra no campo e marca
+         perfil excessivo. So' vira pendencia com a flag. [FLAG]
+         (area, 28/08 - informativo por padrao)
+
+    20b. Os outros perfis previstos que ela tambem tem passaram a aparecer
+         no campo. (22/09)
+
+21. PROVAVEL DESLIGAMENTO: ja' foi aderente naquele sistema E esta com zero
+    acesso E sumiu do arquivo de ativos
+       -> [SOME] nenhuma linha
+       (12/06, endurecida em 15/09)
+
+22. B1 - LIMIAR DE ADESAO: esta sem acesso nenhum e menos de 30% do cargo usa
+    aquele sistema
+       -> [SOME] nenhuma linha
+
+23. Esta sem acesso e passou da B1
+       -> SEM_ACESSO (Incluir Acesso)
+
+24. Tem acesso, nenhum aderente, e ha' 2+ perfis esperados ou 2+ acessos
+       -> EM_ANALISE
+
+25. Tem acesso, nenhum aderente, 1 esperado x 1 acesso
+       -> DIVERGENTE (Alterar Perfil)
+
+--------------------------------------------------------------------------------
+4.4 CAMINHOS PARALELOS
+--------------------------------------------------------------------------------
+
+26. SIG POR ESPELHO: nao tem matriz. O esperado e' o padrao do grupo - perfil
+    presente em >=70% dos colegas que usam SIG, exigindo >=2 colegas,
+    agrupando por CC+gestor+cargo com queda para CC+gestor. Sem par comparavel
+    e sem usar SIG, [SOME] nao gera linha. (usuaria, 24/06)
+
+27. FRANQUEADO POR MATRIZ PROPRIA: cargo x tipo de atendimento x tipo de loja.
+    Como os dois ultimos nao existem no cadastro, a regra so' fecha ao
+    contrario - do perfil que a pessoa TEM, diz se o cargo justifica. Valida
+    aderencia e NAO gera inclusao; franqueado sem acesso [SOME] nao aparece.
+    (area, 31/08 e 04/09)
+
+28. TERCEIRO E PRESTADOR POR ESPELHO DE VINCULO: mesmo criterio de >=70%. Sem
+    grupo com padrao, [SOME] nao vira pendencia - para nao inflar a fila com
+    ruido. (area, 30/07)
+
+--------------------------------------------------------------------------------
+4.5 FALLBACK POR PESSOA
+--------------------------------------------------------------------------------
+
+29. Nao gerou linha em sistema nenhum -> NAO_MAPEADO ("Nao Mapeado"), salvo
+    como informativo. Antes disso a pessoa ficava com zero linha em qualquer
+    lugar do painel - eram 49% dos ativos. (Bruna, 09/09)
+
+30. Quem sumiu do arquivo de ativos mais recente [SOME] nao ganha o Nao
+    Mapeado. (usuario, 15/09)
+
+--------------------------------------------------------------------------------
+4.6 POS-PROCESSAMENTO, SOBRE TODAS AS LINHAS
+--------------------------------------------------------------------------------
+
+31. CONTA INDEFINIDA: linha OK ou Divergente com conta em status indefinido
+    vira SEM_ACESSO com o perfil liberavel [FLAG], ou EM_ANALISE. Franqueado
+    nunca entra nesse ramo - apagaria uma escalada de privilegio real.
+    (area, 31/08; correcao 08/09)
+
+32. CONTA BLOQUEADA: explica o Sem Acesso - "a conta existe e esta revogada;
+    a acao e' desbloquear, nao criar". (area, 10/08 e 25/08)
+
+33. MAIS DE UM PERFIL NO MESMO SISTEMA: linha que seria Aderente vira
+    EM_ANALISE [FLAG]. Nao e' o perfil excessivo - aqui nao importa se a
+    matriz preve os dois. (area, 22/09)
+
+34. FILTRO DE GRAVACAO: so' sao salvos DIVERGENTE, EM_ANALISE, OK, SEM_ACESSO
+    e NAO_MAPEADO. O SEM_DADOS e' descartado aqui.
+
+35. O QUE E' PENDENCIA: so' DIVERGENTE e EM_ANALISE. SEM_ACESSO e' informativo
+    e aparece so' na Consulta; NAO_MAPEADO idem. (Bruna, Fase 1)
+
+
+================================================================================
+FASE 5 - POS-VALIDACAO
+================================================================================
+
+36. REVALIDACAO POS-TRANSFERENCIA: cada acesso e' julgado contra o esperado da
+    area nova e da antiga, com o mesmo criterio de cada sistema. (Card 23)
+
+37. CICLO DE VIDA por (matricula, sistema): Pendencia -> Resolvido ->
+    Aderente, com datas first-wins.
+
+38. Eventos de acesso e trilha de historico.
+
+39. Geracao das saidas em Excel.
+
+
+================================================================================
+OS 6 PONTOS ONDE UMA PESSOA DESAPARECE
+================================================================================
+Esta e' a lista que interessa quando alguem pergunta "por que o fulano nao
+aparece". Hoje o motor CONTA cada um deles no log, mas nao registra QUEM foi
+descartado - por isso responder exige investigacao manual, caso a caso.
+
+   PONTO  REGRA                                     VOLUME EM 22/09
+   -----  ----------------------------------------  ----------------------
+   #19    Sistema sem extrato (SEM_DADOS)           nao medido
+   #21    Provavel desligamento                     37 casos
+   #22    B1 - LIMIAR DE 30%                        1.176 inclusoes
+   #26/28 Espelho sem par ou sem padrao             85 acessos
+   #27    Franqueado sem acesso                     ~5.400 (decisao 04/09)
+   #30    Sem expectativa E sumiu dos ativos        27 pessoas
+
+
+--------------------------------------------------------------------------------
+A COMBINACAO QUE NINGUEM DECIDIU
+--------------------------------------------------------------------------------
+As regras #13 e #22 se somam sem que ninguem tenha decidido isso:
+
+   1. A conta da pessoa esta bloqueada ou inativa -> #13 descarta o acesso;
+   2. ela fica com zero acesso                    -> cai em #22;
+   3. o cargo tem adesao baixa                    -> a linha e' descartada;
+   4. a pessoa NAO APARECE EM LUGAR NENHUM, nem na Consulta.
+
+O aviso "a conta existe e esta bloqueada, a acao e' desbloquear" (#32) so' e'
+carimbado em linhas que sobreviveram - quem a B1 matou nunca chega la'.
+
+Medido na base real: 536 pares pessoa/sistema nessa situacao.
+   SIG .......... 327
+   SICA_RA ...... 187
+   SICA_ESFERA ... 22
+
+Para comparar: so' 121 linhas hoje carregam o aviso de conta bloqueada.
+
+O argumento da B1 e' "a matriz e' abrangente demais, nao inundar a tela com
+esperado irrelevante". Quando a pessoa TEM conta naquele sistema, existe prova
+direta de que o acesso e' relevante para ela, e o argumento nao se aplica.
+
+================================================================================
