@@ -1,0 +1,61 @@
+seria bom ter a visão de poder ver o todo mais se eu selecionar um sistema vir só ele 
+ 
+para isso precisa desagrupar ou pode gerar uma aba ja com a analise eu recomendo desagrupar, deixar o analítico aberto
+ 
+como ficaria isso ? kkkkk consegue fazer para eu ver como fica?
+ 
+tipo isso
+ 
+consulta (5) - Copiar.xlsx
+consulta (5) - Copiar.xlsx
+ 
+mais por exemplo nao vem os dados do usuário se eu filtrar o sistema 
+ 
+sim, é so dando o exemplo de como viria, viriam todas as linhas preenchidas se agrupamento, vou gerar uma sem agrupamento e te mando
+ 
+ahhh tá isso rs 
+ 
+vou fazer o seguinte, na exportação vou deixar para exportar igual a tela ou sem agrupamenteo, mais facil,kkk
+ 
+bleza
+ 
+Só do SICA esfera que era para estar vindo o perfil sugerido e não esta vindo... 
+95 são relacionados a matriz cco 
+ 
+eita
+ 
+hahaha sim 
+ 
+tá estranho mais validei e ta assim mesmo 
+ 
+exemplo 
+ 
+essa usuária deveria ter acesso por exemplo ao sica esfera em uma desses duas funções:
+ 
+ 
+ai isso ta estranho de uma regra cobrir a outra porque teoricamente isso seria a regra principal rs 
+ 
+Sera que a regra que ta bloqueado isso é a regra do incluir ? 
+ 
+tipo se o usuário não tem ok? não precisa vir no incluir pendente 
+ 
+mais precisa vir na consulta 
+ 
+será que não é essa regra
+ 
+coloca tudo no word
+ 
+vou almoçar ai na volta eu vejo aqui como fazer isso no word , e de um forma fácil que eu fechei tudo aqui.... preciso começar de novo para fazer de uma forma clara 
+ 
+Combinado!
+ 
+Me tira uma duvida quando você diz que ajusta a regra lá... por exemplo teve um caso que eu mandei no outro ajuste e nesse seguiu do mesmo jeito, você não chega a validar se deu certo ? 
+ 
+eu valido uma a uma, mas eles seguem uma sequencia e pelo que estou vendo uma acaba sobreponto a outra, por exemplo a regra de incluir acesso foi fechado para não aparecer em pendentes, mais alguns casos que me passou está como incluir acesso na aba de incluir, mas precisa aparecer em pendentes como passou hoje e acaba uma matando a oura é isso que estou verificando agora
+ 
+entendi , porque por exemplo o caso do Marcelo do systur ele não tava vindo na outra, e nessa a primeira validação que fiz foi se isso foi corrigido... e não ele seguiu sem vir o perfil mapeado... por isso eu perguntei s você validava isso
+ 
+eu vou ajustando um a um e validando, mas no montane está se perdendo
+ 
+ vish 
+ 
