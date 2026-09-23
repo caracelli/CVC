@@ -83,7 +83,8 @@ class ValidarAcessosSistema:
                  limiar_inclusao: float = None,
                  ancora_systur_sistemas=None,
                  ancora_systur_isentos=None,
-                 matriz_tem_precedencia: bool = True):
+                 matriz_tem_precedencia: bool = True,
+                 cco_pela_funcao: bool = True):
         self._conexao = conexao
         # Regras da matriz do franqueado (lista de RegraFranqueado). Vazio/None
         # = regra desligada e o franqueado segue so' no espelho, como antes de
@@ -169,6 +170,10 @@ class ValidarAcessosSistema:
         # para MEDIR o efeito (A/B na base real) e para um teste poder
         # exercitar o comportamento anterior sem reescrever o motor.
         self._matriz_tem_precedencia = bool(matriz_tem_precedencia)
+        # A CCO responde pela FUNCAO da pessoa, e nao por todas as funcoes
+        # do gestor dela — ver o laco por pessoa. Ligado por padrao; chave
+        # propria para medir o efeito e para a area poder recuar.
+        self._cco_pela_funcao = bool(cco_pela_funcao)
         self._ancora_filtrados = 0      # linhas de esperado cortadas pelo filtro
         self._ancora_sem_systur = 0     # pessoas com acesso e sem perfil no SYSTUR
         self._ancora_divergentes = 0    # pessoas com acesso fora do que o SYSTUR preve
@@ -196,6 +201,10 @@ class ValidarAcessosSistema:
         self._ancora_nao_mapeado = 0
         # perfis da CCO descartados porque a MATRIZ ja' respondia pelo sistema
         self._cco_apos_matriz = 0
+        # linhas da CCO descartadas por serem de OUTRA funcao do gestor
+        self._cco_outra_funcao = 0
+        # pessoas com acesso que a funcao DELA nao preve (a guarda acima)
+        self._acesso_fora_da_funcao = 0
         self._calc_adocao_cargo(ativos, acessos_por_matricula)   # B1
         self._desatualizados = self._calc_desatualizados(ativos)
         self._nao_map_desatualizado = 0
@@ -242,6 +251,30 @@ class ValidarAcessosSistema:
             # trabalha com a tupla (perfil, manual, origem) em varios pontos, e
             # mudar a aridade dela por causa de um rotulo sairia caro.
             funcao_por_sp: Dict[Tuple[str, str], str] = {}
+            # A FUNCAO DA PESSOA, lida do perfil que ela tem no SYSTUR.
+            #
+            # A CCO casa por (centro de custo, GESTOR) — nao por funcao. Um
+            # gestor tem varias funcoes na equipe, e ate' 23/09/2026 a pessoa
+            # recebia a UNIAO de todas elas. Retorno da area:
+            #   "CCO esta vindo errado: com base na matriz o usuario nao pode
+            #    ter acesso ao SIG (...) exemplo para Funcao a Receber 1"
+            # Caso do documento: a matricula 34530984 tem A_RECEBER_1 no
+            # SYSTUR, e a funcao "A Receber 1" NAO preve SIG — mas ela recebia
+            # 14 perfis de SIG, vindos da funcao "A Receber 2 + SIG" do mesmo
+            # gestor.
+            #
+            # Medido na base de 15/09: 2.929 linhas vinham de outra funcao
+            # (SIG 2.244, SIGOT 336, SICA_RA 199, SICA_ESFERA 143, SYSTUR 7),
+            # contra 806 da funcao certa. 196 pessoas.
+            #
+            # Quem NAO tem perfil no SYSTUR fica como estava: sem ele nao ha'
+            # como saber a funcao, e filtrar tiraria toda a previsao de 1.034
+            # linhas. Errar para o lado de mostrar demais, nao de esconder.
+            _sis_filtrados: Set[str] = set()
+            _funcoes_da_pessoa: Set[str] = set()
+            if self._cco_pela_funcao:
+                for _p in self._perfis_systur_de(func, acessos_por_matricula):
+                    _funcoes_da_pessoa |= self._funcao_do_perfil_systur.get(_p, set())
             for sistema_str, perfil_esperado, _funcao in cco.get(chave_cco, []):
                 sistema_enum = sistema_do_texto(sistema_str)
                 # Sistema que o projeto nao conhece e' IGNORADO. A planilha da
@@ -258,6 +291,14 @@ class ValidarAcessosSistema:
                 if (self._matriz_tem_precedencia
                         and sistema_valor in _sistemas_da_matriz):
                     self._cco_apos_matriz += 1
+                    continue
+                # Linha de OUTRA funcao do mesmo gestor — ver acima. So' filtra
+                # quando se sabe a funcao da pessoa E a linha diz de qual
+                # funcao veio; na duvida, mantem.
+                if (_funcoes_da_pessoa and _funcao
+                        and _norm(_funcao) not in _funcoes_da_pessoa):
+                    self._cco_outra_funcao += 1
+                    _sis_filtrados.add(sistema_valor)
                     continue
                 if (sistema_valor, perfil_esperado) not in _vistos_sp:
                     _vistos_sp.add((sistema_valor, perfil_esperado))
@@ -294,12 +335,48 @@ class ValidarAcessosSistema:
                     func, sistema_valor, perfis_comb,
                     acessos_por_matricula, sistemas_com_dados,
                 ))
+            # NINGUEM SOME POR CAUSA DO FILTRO DE FUNCAO. Se a CCO so' falava
+            # daquele sistema por OUTRA funcao, a pessoa fica sem esperado ali
+            # — e, se ela TEM acesso, a linha inteira desaparecia e o acesso
+            # sumia da tela. E' o mesmo cuidado do lado do Oracle
+            # (_cobrar_ancora_systur). Medido em 23/09 na base de 15/09: 3
+            # pares (2 pessoas), todos ja' pendencia antes; sem esta guarda
+            # eles virariam invisiveis, que e' pior que a pendencia errada.
+            for _s in _sis_filtrados:
+                if _s not in sistemas_com_dados:
+                    continue
+                if any(r.get("sistema") == _s for r in regs_func):
+                    continue
+                _tem = {p for sis, p in acessos_por_matricula.get(func.matricula, ())
+                        if sis == _s and p}
+                if not _tem:
+                    continue
+                self._acesso_fora_da_funcao += 1
+                regs_func.append(self._registro_base(func) | {
+                    "sistema": _s,
+                    "perfil_esperado": "",
+                    "perfil_atual": ", ".join(sorted(_tem)),
+                    "acesso_manual": False,
+                    "status": StatusValidacao.EM_ANALISE.value,
+                    "origem_matriz": "CCO",
+                    "motivo_status": "ACESSO_FORA_DA_FUNCAO",
+                })
+
             # Carimba a FUNCAO da CCO na linha (vazio quando o esperado veio da
             # matriz por cargo, que nao tem funcao).
+            # A busca e' POR PERFIL, e o campo pode trazer VARIOS separados por
+            # virgula (linha Aderente, desde 23/09). Procurar pela string
+            # inteira nao acha nada: medido no mesmo dia, 685 linhas — 100% das
+            # aderentes com mais de um previsto — perderam a funcao, e ela
+            # sumiu do bloco "Funcoes previstas", que e' justamente o que a
+            # area pediu em 17/09 ("qual a matriz de acessos, qual a funcao?").
             for _r in regs_func:
-                _f = funcao_por_sp.get((_r.get("sistema"), _r.get("perfil_esperado")))
-                if _f:
-                    _r["funcao"] = _f
+                _sis = _r.get("sistema")
+                for _p in (_r.get("perfil_esperado") or "").split(","):
+                    _f = funcao_por_sp.get((_sis, _p.strip()))
+                    if _f:
+                        _r["funcao"] = _f
+                        break
             # A regra TEMPORARIA de provavel desligamento (linha ~600, retorna
             # [] quando a pessoa JA foi aderente e zerou o acesso) tem dono
             # proprio — "sai na fase de desligados" — e o teste

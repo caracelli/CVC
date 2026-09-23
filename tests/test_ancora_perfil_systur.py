@@ -100,9 +100,10 @@ def _base(perfis_systur_da_pessoa, acessos_oracle, com_cco=True,
     return cx
 
 
-def _rodar(cx, ancora=(ORA,), isentos=()):
+def _rodar(cx, ancora=(ORA,), isentos=(), cco_pela_funcao=True):
     uc = ValidarAcessosSistema(cx, ancora_systur_sistemas=list(ancora),
-                               ancora_systur_isentos=list(isentos))
+                               ancora_systur_isentos=list(isentos),
+                               cco_pela_funcao=cco_pela_funcao)
     uc.executar()
     return uc
 
@@ -177,7 +178,7 @@ class QuantosPerfisAPessoaPodeTer(unittest.TestCase):
     mesma gestora, porque a CCO casa por cc+gestor, nao por funcao).
     """
 
-    def _priscila(self, ancora):
+    def _priscila(self, ancora, cco_pela_funcao=True):
         tmp = tempfile.mkdtemp(prefix="cvc_esp_")
         cx = ConexaoBancoDados(os.path.join(tmp, "d.db"))
         cx.inicializar()
@@ -217,7 +218,7 @@ class QuantosPerfisAPessoaPodeTer(unittest.TestCase):
             s.add(AcessoSistema(sistema=ORA, usuario="pslima", perfil=p,
                                 matricula_vinculada="90001455", situacao="ATIVO"))
         s.commit(); s.close()
-        _rodar(cx, ancora=ancora)
+        _rodar(cx, ancora=ancora, cco_pela_funcao=cco_pela_funcao)
         s = cx.sessao()
         r = [(x.status, x.perfil_esperado or "")
              for x in s.query(ValidacaoAcessoModel)
@@ -236,13 +237,29 @@ class QuantosPerfisAPessoaPodeTer(unittest.TestCase):
             sorted(["CVC AP NOVA VISUAL Consulta", "CVC AP BRASIL Consulta",
                     "CVC AP SUBMARINO Consulta", "CVC AP VISUAL Consulta"]))
 
-    def test_sem_a_ancora_vazariam_os_da_outra_funcao(self):
-        """A CCO casa por cc+GESTOR, nao por funcao: sem a ancora ela herdaria
-        os perfis das outras funcoes da mesma gestora. E' o perfil do SYSTUR
-        que diz qual das funcoes daquele par e' a dela."""
-        _, esperado = self._priscila(ancora=())[0]
-        self.assertIn("CVC GL BRASIL Consulta", esperado,
-                      "sem a ancora, o vazamento e' justamente o defeito")
+    def test_duas_regras_barram_o_mesmo_vazamento(self):
+        """A CCO casa por cc+GESTOR, nao por funcao: sem nenhuma das duas
+        regras a pessoa herda os perfis das outras funcoes da mesma gestora.
+
+        ATUALIZADO em 23/09/2026. Este teste exigia que, com a ANCORA
+        desligada, o vazamento aparecesse — e ele apareceria mesmo, naquele
+        momento. Depois entrou a regra geral da CCO
+        (tests/test_cco_pela_funcao.py, retorno da area sobre o SIG), que
+        barra o mesmo vazamento em TODOS os sistemas e antes da ancora. As
+        duas se sobrepoem no Oracle, de proposito: a da CCO decide QUAL FUNCAO
+        responde; a ancora filtra tambem o que vem da matriz por cargo, pela
+        coluna PERFIL SYSTUR, que a CCO nao alcanca.
+
+        Para ver o vazamento e' preciso desligar as DUAS — e' o que este teste
+        passa a provar."""
+        so_ancora_off = self._priscila(ancora=())[0][1]
+        self.assertNotIn("CVC GL BRASIL Consulta", so_ancora_off,
+                         "a regra da CCO ja' barra sozinha")
+
+        ambas_off = self._priscila(ancora=(), cco_pela_funcao=False)
+        self.assertIn("CVC GL BRASIL Consulta",
+                      " | ".join(x[1] for x in ambas_off),
+                      "com as duas desligadas, o vazamento e' o defeito original")
 
     def test_a_matriz_tambem_lista_todos_os_previstos(self):
         """⭐ Mudou na validacao visual de 23/09, e o caso explica por que.

@@ -1337,6 +1337,16 @@ SELECT
     -- vir que nao esta mapeado, isso pode acontecer". Informativo: nao ha o
     -- que cobrar enquanto a matriz nao disser o que esse cargo pode ter. A
     -- matriz do Oracle cobre 307 dos 13.733 ativos, entao o caso e' comum.
+    -- A pessoa tem acesso que a FUNCAO dela nao preve. A CCO casa por centro
+    -- de custo + GESTOR, e um gestor tem varias funcoes; quem diz qual e' a
+    -- dela e' o perfil do SYSTUR. Retorno da area (23/09/2026): "CCO esta
+    -- vindo errado: com base na matriz o usuario nao pode ter acesso ao SIG".
+    WHEN COALESCE(v.motivo_status,'') LIKE 'ACESSO_FORA_DA_FUNCAO%' THEN
+      'A pessoa TEM este acesso, mas a funcao dela nao o preve. O mapeamento '
+      || 'CCO e por centro de custo e gestor, e o mesmo gestor tem varias '
+      || 'funcoes; quem diz qual e a dela e o perfil que ela tem no SYSTUR. '
+      || 'Este acesso pertence a OUTRA funcao da mesma equipe. Avaliar se se '
+      || 'justifica; se nao, revogar.'
     WHEN COALESCE(v.motivo_status,'') LIKE 'SEM_MAPEAMENTO_%' THEN
       'A pessoa TEM acesso neste sistema, mas a matriz dele nao mapeia o cargo '
       || 'e o centro de custo dela — nao existe perfil esperado para comparar. '
