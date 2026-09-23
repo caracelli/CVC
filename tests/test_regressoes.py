@@ -44,7 +44,6 @@ class TestSistemaDoTexto(unittest.TestCase):
             "SICA ESFERA": Sistema.SICA_ESFERA, "Sica Esfera": Sistema.SICA_ESFERA,
             "SIG": Sistema.SIG,
             "Oracle EBS": Sistema.ORACLE_EBS,
-            "Opera Operacional": Sistema.OPERA_OPERACIONAL,
         }
         for texto, esperado in casos.items():
             self.assertEqual(sistema_do_texto(texto), esperado, texto)

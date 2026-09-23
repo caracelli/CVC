@@ -171,6 +171,9 @@ class PerfilEsperadoModel(Base):
     sistema = Column(String, nullable=False)
     perfil = Column(String, nullable=False)
     acesso_manual = Column(Boolean, default=False)
+    # coluna PERFIL SYSTUR da matriz (hoje so' o Oracle EBS a tem) — ver
+    # PerfilEsperado.perfil_systur
+    perfil_systur = Column(String, index=True)
     arquivo_origem = Column(String)
     dt_importacao = Column(DateTime, default=datetime.now)
 

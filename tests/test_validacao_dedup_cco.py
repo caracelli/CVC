@@ -2,6 +2,19 @@
 """Regressao do bug de pendencia em DOBRO: matriz de perfis + CCO cobrindo o
 mesmo (sistema, perfil) gerava duas linhas. Fix: a matriz vence; a CCO so
 adiciona o que a matriz nao cobriu. (IC nao usa CCO — so SYSTUR e afins.)
+
+23/09/2026 — A PRECEDENCIA FICOU MAIS FORTE. Regra do usuario: "regra primeiro
+matriz depois cco" (e, em 22/09, "quem nao tem matriz tem cco"). A matriz nao
+vence mais so' no EMPATE de perfil: quando ela fala de um sistema para aquela
+pessoa, a CCO nao entra NAQUELE sistema. A precedencia e' POR SISTEMA — a
+matriz calar sobre o SIGOT nao cala a CCO sobre ele.
+
+Medido na base de 15/09: 14 perfis da CCO descartados, e UMA pessoa deixou de
+ser aderente (CLAUDIA 90001433 — detalhe no teste correspondente). 23 das 25
+combinacoes (sistema, status) ficaram identicas.
+
+A garantia central da classe nao mudou: a mesma pessoa nunca sai OK por uma
+origem e DIVERGENTE pela outra no mesmo run.
 """
 import os
 import sys
@@ -96,10 +109,17 @@ class TestDedupCCO(unittest.TestCase):
         self.assertEqual(r[0].origem_matriz, "MATRIZ")
         self.assertEqual(r[0].perfil_esperado, "P1")
 
-    def test_cco_com_perfil_diferente_e_adicionado(self):
-        r = sorted(self.by_mat["M2"], key=lambda x: x.perfil_esperado)
+    def test_cco_nao_acrescenta_onde_a_matriz_falou(self):
+        """MUDOU EM 23/09/2026. Ate' aqui a CCO ACRESCENTAVA o perfil que a
+        matriz nao tinha (PA da matriz + PB da CCO = 2 linhas). O usuario
+        definiu outra regra: "regra primeiro matriz depois cco" — a CCO so'
+        responde pelos sistemas sobre os quais a matriz calou.
+
+        O caso M1 (mesmo par nos dois catalogos) continua valendo igual; o que
+        muda e' este, o de perfis DIFERENTES."""
+        r = self.by_mat["M2"]
         self.assertEqual([(x.perfil_esperado, x.origem_matriz) for x in r],
-                         [("PA", "MATRIZ"), ("PB", "CCO")])
+                         [("PA", "MATRIZ")])
 
     def test_cco_sozinho_ainda_funciona(self):
         r = self.by_mat["M3"]
@@ -114,12 +134,28 @@ class TestDedupCCO(unittest.TestCase):
         self.assertEqual(r[0].perfil_esperado, "PD")
         self.assertEqual(r[0].origem_matriz, "MATRIZ")
 
-    def test_aderente_a_cco_nao_gera_divergente_pela_matriz(self):
-        # Simetrico: tem o perfil da CCO; a matriz espera outro -> SO OK (origem CCO).
+    def test_nunca_ok_e_divergente_ao_mesmo_tempo(self):
+        """A GARANTIA ORIGINAL desta classe, que continua valendo: a mesma
+        pessoa nao pode sair OK por uma origem e DIVERGENTE pela outra no
+        mesmo run. Antes isso era garantido JUNTANDO as duas num conjunto
+        unico; desde 23/09 e' garantido porque so' UMA origem responde pelo
+        sistema. O defeito e' estruturalmente impossivel nos dois desenhos.
+
+        MUDOU O VEREDITO: a M5 tem o perfil que a CCO previa (PG) e a matriz
+        do cargo dela preve outro (PF) — antes saia OK pela CCO, agora sai
+        pendencia, porque quem responde pelo sistema e' a matriz.
+
+        Caso real medido em 23/09 na base de 15/09, e foi o UNICO: CLAUDIA DA
+        LUZ SALIDO RIVERO (90001433), ANALISTA FINANCEIRO JR. A matriz do
+        cargo preve TESOURARIA e CUSTOS; a CCO da gestora preve
+        ATD_FOR_TREND_N2, que e' o que ela tem. Virou pendencia."""
         r = self.by_mat["M5"]
-        self.assertEqual([x.status for x in r], ["OK"])
-        self.assertEqual(r[0].perfil_esperado, "PG")
-        self.assertEqual(r[0].origem_matriz, "CCO")
+        status = {x.status for x in r}
+        self.assertNotIn("OK", status)
+        self.assertEqual({x.origem_matriz for x in r}, {"MATRIZ"})
+        self.assertEqual([x.perfil_esperado for x in r], ["PF"])
+        self.assertTrue(all(x.perfil_atual == "PG" for x in r),
+                        "a linha tem de dizer o que ela REALMENTE tem")
 
     def test_aderencia_vence_em_analise_da_cco(self):
         # Tem o perfil da matriz; a CCO ofereceria 2 opcoes (sozinha = EM_ANALISE)
@@ -128,16 +164,44 @@ class TestDedupCCO(unittest.TestCase):
         self.assertEqual([x.status for x in r], ["OK"])
         self.assertEqual((r[0].perfil_esperado, r[0].origem_matriz), ("PH", "MATRIZ"))
 
-    def test_merge_matriz_cco_vira_em_analise_com_todos_esperados(self):
-        # matriz(1) + cco(2) = 3 esperados, nenhum aderente -> EM_ANALISE nos 3,
-        # carregando o perfil que a pessoa realmente tem (PZ) em perfil_atual.
+    def test_so_a_matriz_responde_quando_ela_fala(self):
+        """MUDOU EM 23/09/2026. Antes: matriz(PK) + cco(PL,PM) = 3 esperados e
+        3 linhas EM_ANALISE. Agora a matriz responde sozinha por SYSTUR, entao
+        sobra so' PK — e com 1 esperado e 1 acesso que nao casam o veredito e'
+        DIVERGENTE ("perfil errado"), nao EM_ANALISE ("ambiguidade").
+
+        O que NAO mudou, e importa: a linha continua dizendo o que a pessoa
+        REALMENTE tem (PZ) em perfil_atual."""
         r = self.by_mat["M7"]
-        self.assertEqual(sorted(x.status for x in r), ["EM_ANALISE"] * 3)
-        self.assertEqual(sorted(x.perfil_esperado for x in r), ["PK", "PL", "PM"])
+        self.assertEqual([x.perfil_esperado for x in r], ["PK"])
+        self.assertEqual([x.origem_matriz for x in r], ["MATRIZ"])
+        self.assertEqual([x.status for x in r], ["DIVERGENTE"])
         self.assertTrue(all(x.perfil_atual == "PZ" for x in r))
-        # origem preservada por perfil: PK veio da MATRIZ, PL/PM da CCO
-        origem = {x.perfil_esperado: x.origem_matriz for x in r}
-        self.assertEqual(origem, {"PK": "MATRIZ", "PL": "CCO", "PM": "CCO"})
+
+    def test_o_comportamento_anterior_ainda_e_alcancavel(self):
+        """A precedencia e' um parametro do motor, nao uma reescrita. Este
+        teste exercita o desenho ANTIGO (as duas origens somadas) — serve para
+        provar que a diferenca e' so' essa chave, e para medir o efeito na base
+        real sem manter duas versoes do motor."""
+        import tempfile as _tmp
+        cx = ConexaoBancoDados(os.path.join(_tmp.mkdtemp(prefix="cvc_prec0_"), "d.db"))
+        cx.inicializar()
+        s = cx.sessao()
+        s.add_all([
+            _rh("X1", "900", "ANALISTA"),
+            PerfilEsperadoModel(cargo_codigo="900", cargo_descricao="ANALISTA",
+                                sistema=SYSTUR, perfil="PA"),
+            MatrizCcoModel(cc="900", funcao="ANALISTA", sistema="Systur", perfil="PB"),
+            AcessoSistema(situacao="ATIVO", sistema=SYSTUR, usuario="z",
+                          perfil="ZZ", matricula_vinculada="ZZ"),
+        ])
+        s.commit(); s.close()
+        ValidarAcessosSistema(cx, matriz_tem_precedencia=False).executar()
+        s = cx.sessao()
+        r = sorted((x.perfil_esperado, x.origem_matriz)
+                   for x in s.query(ValidacaoAcessoModel).filter_by(matricula="X1").all())
+        s.close()
+        self.assertEqual(r, [("PA", "MATRIZ"), ("PB", "CCO")])
 
     def test_cco_para_sistema_sem_dados_nao_vira_em_analise(self):
         # CCO de sistema fora de escopo (sem extrato) -> SEM_DADOS, que NAO e'

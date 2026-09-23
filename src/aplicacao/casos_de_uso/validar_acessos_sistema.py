@@ -76,7 +76,14 @@ class ValidarAcessosSistema:
     def __init__(self, conexao: ConexaoBancoDados,
                  excesso_gera_pendencia: bool = False,
                  pendente_vira_inclusao: bool = False,
-                 matriz_franqueado=None):
+                 matriz_franqueado=None,
+                 multi_perfil_gera_pendencia: bool = False,
+                 multi_perfil_sistemas=None,
+                 multi_perfil_sistemas_fora=None,
+                 limiar_inclusao: float = None,
+                 ancora_systur_sistemas=None,
+                 ancora_systur_isentos=None,
+                 matriz_tem_precedencia: bool = True):
         self._conexao = conexao
         # Regras da matriz do franqueado (lista de RegraFranqueado). Vazio/None
         # = regra desligada e o franqueado segue so' no espelho, como antes de
@@ -100,6 +107,32 @@ class ValidarAcessosSistema:
         self._excesso_gera_pendencia = bool(excesso_gera_pendencia)
         self._excesso_casos = 0
         self._excesso_perfis = 0
+        # MAIS DE UM PERFIL no mesmo sistema — ver _aplicar_mais_de_um_perfil.
+        # Nao confundir com o excesso acima: aqui nao importa se a matriz preve
+        # os dois perfis. A area (22/09/2026) decidiu que UM perfil por pessoa
+        # por sistema e' o limite, entao a linha nao pode ficar Aderente.
+        # Default False no construtor (quem chama sem a flag mantem o
+        # comportamento antigo); em producao o config manda, e ele vem true.
+        # Lista vazia de sistemas = TODOS.
+        self._multi_perfil_gera_pendencia = bool(multi_perfil_gera_pendencia)
+        self._multi_perfil_sistemas = {
+            str(x).strip().upper() for x in (multi_perfil_sistemas or []) if str(x).strip()}
+        # Sistemas em que ter varios perfis e' NORMAL — a regra nao se aplica.
+        # ORACLE_EBS entrou em 23/09/2026, com a explicacao da area: "no oracle
+        # cada perfil e' um acesso especifico ao sistema". Contar esses perfis
+        # como "um a mais" transformava em pendencia quem tem exatamente o que
+        # a funcao dela preve (caso medido: PRISCILA 90001455, 4 perfis Oracle,
+        # todos da funcao "Atendimento a fornecedores CVC e VISUAL").
+        self._multi_perfil_fora = {
+            str(x).strip().upper() for x in (multi_perfil_sistemas_fora or [])
+            if str(x).strip()}
+        self._multi_perfil_casos = 0
+        # LIMIAR DE INCLUSAO (B1) — ver a constante da classe. Passa a vir do
+        # config; None mantem o valor historico de 25/06 (0,30), que e' o que
+        # os testes exercitam. Em producao o config manda, e ele vem ZERO desde
+        # 23/09/2026: a area pediu 100% do que a matriz mapeia.
+        self._limiar_inclusao = (self._LIMIAR_INCLUSAO if limiar_inclusao is None
+                                 else float(limiar_inclusao))
         # regra temporaria de provavel desligamento (sobrescritos no fluxo real)
         self._aderentes_anteriores: Set[Tuple[str, str]] = set()
         self._prov_deslig = 0
@@ -121,6 +154,24 @@ class ValidarAcessosSistema:
         # _calc_desatualizados) — nao recebem a linha NAO_MAPEADO
         self._desatualizados: Set[str] = set()
         self._nao_map_desatualizado = 0
+        # ANCORA NO PERFIL DO SYSTUR — ver _filtrar_pelo_perfil_systur.
+        # Lista vazia = regra desligada (comportamento anterior a 23/09/2026).
+        self._ancora_systur = {
+            str(x).strip().upper() for x in (ancora_systur_sistemas or [])
+            if str(x).strip()}
+        # Perfis que NAO entram na conta da divergencia (corporativos, que
+        # matriz nenhuma prescreve). Comparados por _norm, com casamento por
+        # PREFIXO — 'CVC OIE BRASIL' pega as variacoes do mesmo acesso.
+        self._ancora_systur_isentos = [
+            _norm(x) for x in (ancora_systur_isentos or []) if str(x).strip()]
+        # PRECEDENCIA DA MATRIZ sobre a CCO (usuario, 23/09/2026: "regra
+        # primeiro matriz depois cco"). Ligada por padrao; o parametro existe
+        # para MEDIR o efeito (A/B na base real) e para um teste poder
+        # exercitar o comportamento anterior sem reescrever o motor.
+        self._matriz_tem_precedencia = bool(matriz_tem_precedencia)
+        self._ancora_filtrados = 0      # linhas de esperado cortadas pelo filtro
+        self._ancora_sem_systur = 0     # pessoas com acesso e sem perfil no SYSTUR
+        self._ancora_divergentes = 0    # pessoas com acesso fora do que o SYSTUR preve
 
     def executar(self):
         ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco = self._carregar_dados()
@@ -130,6 +181,21 @@ class ValidarAcessosSistema:
         self._excesso_casos = 0
         self._excesso_perfis = 0
         self._espelho_sem_padrao = 0
+        # REGRA DO SIG (area, 23/09/2026): quem tem SIG pela CCO nao passa pelo
+        # espelho — senao a mesma pessoa sairia duas vezes no sistema.
+        self._sig_pela_cco: Set[str] = set()
+        self._sig_inclusao_suprimida = 0
+        # (matricula, sistema) -> esperado que sobreviveu ao filtro da ancora,
+        # normalizado. Ver o comentario no laco por pessoa.
+        self._ancora_esperado: Dict[Tuple[str, str], Set[str]] = {}
+        # (matricula, sistema) que a matriz/CCO cobria ANTES do filtro
+        self._ancora_tinha_mapa: Set[Tuple[str, str]] = set()
+        self._ancora_filtrados = 0
+        self._ancora_sem_systur = 0
+        self._ancora_divergentes = 0
+        self._ancora_nao_mapeado = 0
+        # perfis da CCO descartados porque a MATRIZ ja' respondia pelo sistema
+        self._cco_apos_matriz = 0
         self._calc_adocao_cargo(ativos, acessos_por_matricula)   # B1
         self._desatualizados = self._calc_desatualizados(ativos)
         self._nao_map_desatualizado = 0
@@ -155,11 +221,22 @@ class ValidarAcessosSistema:
             # a matriz tem precedencia (avaliada primeiro).
             perfis_sis: Dict[str, List[Tuple[str, bool, str]]] = defaultdict(list)
             _vistos_sp: Set[Tuple[str, str]] = set()
+            # Sistemas em que a MATRIZ por cargo falou desta pessoa. Quando ela
+            # fala, a CCO NAO entra naquele sistema — regra do usuario
+            # (23/09/2026): "regra primeiro matriz depois cco"; e antes, em
+            # 22/09: "a pessoa nao precisa ter as duas origens, quem nao tem
+            # matriz tem cco". Ate aqui as duas eram SOMADAS e a matriz so'
+            # vencia no empate de perfil, o que misturava dois catalogos e
+            # inflava o esperado de quem ja' estava coberto pela matriz.
+            # Medido em 23/09 na base de 15/09: 7 pessoas, 13 perfis da CCO,
+            # todos no SYSTUR — as duas matrizes quase nao se sobrepoem.
+            _sistemas_da_matriz: Set[str] = set()
             for sistema_valor, perfis in perfis_por_chave.get(chave_matriz, {}).items():
                 for perfil, manual in perfis:
                     if (sistema_valor, perfil) not in _vistos_sp:
                         _vistos_sp.add((sistema_valor, perfil))
                         perfis_sis[sistema_valor].append((perfil, manual, "MATRIZ"))
+                        _sistemas_da_matriz.add(sistema_valor)
             # (sistema, perfil) -> funcao da CCO, para carimbar a linha depois.
             # Fora do loop de geracao de proposito: `_gerar_registros_sistema`
             # trabalha com a tupla (perfil, manual, origem) em varios pontos, e
@@ -167,18 +244,52 @@ class ValidarAcessosSistema:
             funcao_por_sp: Dict[Tuple[str, str], str] = {}
             for sistema_str, perfil_esperado, _funcao in cco.get(chave_cco, []):
                 sistema_enum = sistema_do_texto(sistema_str)
-                sistema_valor = sistema_enum.value if sistema_enum else sistema_str.upper()
-                # SIG NAO usa CCO: e' validado por ESPELHO dinamico (_validar_sig_espelho)
-                if sistema_valor == Sistema.SIG.value:
+                # Sistema que o projeto nao conhece e' IGNORADO. A planilha da
+                # CCO cita sistema fora do escopo; antes disso o nome cru virava
+                # um "sistema" fantasma, que so' servia para ser descartado
+                # depois, sem log nenhum.
+                if sistema_enum is None:
                     continue
+                sistema_valor = sistema_enum.value
                 if _funcao:
                     funcao_por_sp.setdefault((sistema_valor, perfil_esperado), _funcao)
+                # PRECEDENCIA: a matriz por cargo ja' respondeu por este
+                # sistema — a CCO nao acrescenta. Ver _sistemas_da_matriz.
+                if (self._matriz_tem_precedencia
+                        and sistema_valor in _sistemas_da_matriz):
+                    self._cco_apos_matriz += 1
+                    continue
                 if (sistema_valor, perfil_esperado) not in _vistos_sp:
                     _vistos_sp.add((sistema_valor, perfil_esperado))
                     perfis_sis[sistema_valor].append((perfil_esperado, False, "CCO"))
 
             _prov_deslig_antes = self._prov_deslig
+            _ps_systur = (self._perfis_systur_de(func, acessos_por_matricula)
+                          if self._ancora_systur else set())
             for sistema_valor, perfis_comb in perfis_sis.items():
+                if sistema_valor in self._ancora_systur:
+                    # A matriz/CCO falava deste sistema para esta pessoa ANTES
+                    # do filtro? E' o que separa "a matriz nao cobre voce"
+                    # (nao mapeado) de "cobre, mas o seu perfil do SYSTUR nao
+                    # autoriza" (divergencia). Ver _cobrar_ancora_systur.
+                    self._ancora_tinha_mapa.add((func.matricula, sistema_valor))
+                    perfis_comb = self._filtrar_pelo_perfil_systur(
+                        sistema_valor, perfis_comb, chave_matriz,
+                        funcao_por_sp, _ps_systur)
+                    # GUARDA O CONJUNTO INTEIRO que sobrou. A cobranca nao pode
+                    # relê-lo das linhas: a linha de ADERENTE grava um unico
+                    # `perfil_esperado` (o que casou), nao os N previstos —
+                    # medido em 23/09, ler dali derrubava o Aderente do Oracle
+                    # de 169 para 32 pessoas, acusando de divergencia quem tem
+                    # exatamente o que a funcao dela preve.
+                    self._ancora_esperado[(func.matricula, sistema_valor)] = {
+                        _norm(p) for p, _, _ in perfis_comb}
+                    # Sobrou nada: o SYSTUR dela nao autoriza NADA neste
+                    # sistema. Nao gera linha de esperado — o que ela porventura
+                    # TENHA de acesso e' cobrado no passo de divergencia, que
+                    # roda sobre os acessos e nao sobre a matriz.
+                    if not perfis_comb:
+                        continue
                 regs_func.extend(self._gerar_registros_sistema(
                     func, sistema_valor, perfis_comb,
                     acessos_por_matricula, sistemas_com_dados,
@@ -222,6 +333,8 @@ class ValidarAcessosSistema:
                     "motivo_status": "SEM_EXPECTATIVA_RELEVANTE",
                 })
 
+            if any(r.get("sistema") == Sistema.SIG.value for r in regs_func):
+                self._sig_pela_cco.add(func.matricula)
             registros.extend(regs_func)
 
         # SIG: validacao por ESPELHO dinamico (so CLT; terceiros vao no proprio)
@@ -322,6 +435,68 @@ class ValidarAcessosSistema:
                 r["motivo_status"] = "CONTA_BLOQUEADA"
                 self._sem_acesso_explicado += 1
 
+        # MAIS DE UM PERFIL no mesmo sistema (retorno da area, 22/09/2026,
+        # textual): "Mais de um perfil nao pode ficar nada como aderente, ele
+        # precisa vir como pendencia para analise".
+        #
+        # NAO e' o perfil excessivo. O excessivo pergunta "a matriz preve este
+        # acesso?"; esta regra pergunta "quantos perfis ela tem?" — e a
+        # resposta so' pode ser um. Uma pessoa com DOIS perfis que a matriz
+        # preve nao tem excesso nenhum e, ate aqui, saia Aderente.
+        #
+        # Roda como PASSO SOBRE OS REGISTROS, e nao dentro de cada regra, de
+        # proposito: os perfis chegam por quatro caminhos (matriz por cargo,
+        # CCO, espelho do SIG e espelho de terceiros/franqueado) e todos eles
+        # terminam com a mesma pergunta. Um passo so' nao tem como esquecer um
+        # caminho — e passa a valer sozinho para um caminho novo.
+        #
+        # So' mexe em quem esta OK: DIVERGENTE e EM_ANALISE ja' sao pendencia
+        # (mudar o motivo delas apagaria o achado da regra que as gerou), e
+        # SEM_ACESSO/NAO_MAPEADO nao afirmam posse de perfil nenhum.
+        #
+        # Vem DEPOIS de CONTA_INDEFINIDA e CONTA_BLOQUEADA: quem tem a conta
+        # inativa ja' saiu de OK e nao deve ser cobrada por perfil que nao
+        # exerce.
+        #
+        # Conta perfis DISTINTOS pela mesma normalizacao do casamento (_norm, e
+        # _norm_perfil nos sistemas de perfil aproximado): 'IC_CONSULTA' e
+        # 'IC CONSULTA' sao o mesmo perfil, e contar os dois inventaria
+        # pendencia — o mesmo cuidado que o dedup dos esperados ja' toma.
+        #
+        # Medido em 22/09/2026 na base de 15/09: 419 linhas Aderentes viram
+        # pendencia (SIG 197, ORACLE_EBS 164, SYSTUR 58) e o total de
+        # pendencias vai de 826 para 1.245.
+        self._multi_perfil_casos = 0
+        if self._multi_perfil_gera_pendencia:
+            for r in registros:
+                if r["status"] != StatusValidacao.OK.value:
+                    continue
+                sis = r.get("sistema") or ""
+                if self._multi_perfil_sistemas and sis.upper() not in self._multi_perfil_sistemas:
+                    continue
+                if sis.upper() in self._multi_perfil_fora:
+                    continue
+                _k = (_norm_perfil if sis in _SISTEMAS_PERFIL_APROXIMADO else _norm)
+                _perfis = {_k(x) for x in (r.get("perfil_atual") or "").split(",") if x.strip()}
+                if len(_perfis) <= 1:
+                    continue
+                r["status"] = StatusValidacao.EM_ANALISE.value
+                # PRESERVA o motivo anterior, igual ao CONTA_INDEFINIDA: a
+                # linha pode ja' carregar PERFIL_EXCESSIVO ou o veredito da
+                # matriz do franqueado, e esse porque nao pode se perder.
+                _antes = (r.get("motivo_status") or "").strip()
+                r["motivo_status"] = (
+                    f"MAIS_DE_UM_PERFIL | {_antes}" if _antes else "MAIS_DE_UM_PERFIL")
+                self._multi_perfil_casos += 1
+
+        # ANCORA NO SYSTUR — cobranca. O filtro acima so' ESTREITA o esperado;
+        # este passo olha para o lado do ACESSO e garante que ninguem some.
+        # Roda por ultimo de proposito: precisa enxergar o veredito final das
+        # outras regras para nao sobrescrever pendencia ja' achada.
+        if self._ancora_systur:
+            registros.extend(self._cobrar_ancora_systur(
+                ativos, acessos_por_matricula, sistemas_com_dados, registros))
+
         # PENDENCIAS (acao): so DIVERGENTE e EM_ANALISE. SEM_ACESSO ("esperado")
         # deixou de ser pendencia (retorno Bruna): e' informativo, so na Consulta.
         _STATUS_ACAO = {
@@ -377,6 +552,22 @@ class ValidarAcessosSistema:
                 f"terceiro/franqueado/prestador sem grupo-espelho com padrao — "
                 f"NAO viraram pendencia (sem par comparavel para dizer o esperado)."
             )
+        if self._multi_perfil_casos:
+            _esc = (", ".join(sorted(self._multi_perfil_sistemas))
+                    if self._multi_perfil_sistemas else "todos os sistemas")
+            logger.info(
+                f"[mais de um perfil] {self._multi_perfil_casos} resultado(s) que "
+                f"seriam ADERENTES viraram pendencia (Em Analise) por ter mais de "
+                f"um perfil no mesmo sistema — escopo: {_esc}. Regra da area de "
+                f"22/09/2026; desligue em validacao/mais_de_um_perfil/gera_pendencia."
+            )
+        if self._sig_inclusao_suprimida:
+            logger.info(
+                f"[sig] {self._sig_inclusao_suprimida} inclusao(oes) de SIG NAO "
+                f"geradas pelo espelho — regra da area de 23/09/2026: no SIG, "
+                f"quem diz o que a pessoa DEVERIA ter e' so' a matriz CCO. Quem "
+                f"TEM acesso continua sendo validado normalmente."
+            )
         if self._excesso_casos:
             _modo = ("como PENDENCIA (Em Analise)" if self._excesso_gera_pendencia
                      else "so' INFORMATIVO (segue Aderente) — ligar em "
@@ -412,7 +603,7 @@ class ValidarAcessosSistema:
         if self._inclusao_suprimida:
             logger.info(
                 f"[B1] {self._inclusao_suprimida} inclusao(oes) suprimida(s): cargo com "
-                f"adesao < {self._LIMIAR_INCLUSAO:.0%} ao sistema (matriz abrangente demais)."
+                f"adesao < {self._limiar_inclusao:.0%} ao sistema (matriz abrangente demais)."
             )
 
     # ------------------------------------------------------------------
@@ -463,20 +654,40 @@ class ValidarAcessosSistema:
         # (cc, cargo_norm) → {sistema_valor: [(perfil, acesso_manual)]}
         perfis_por_chave: Dict[Tuple[str, str], Dict[str, List[Tuple[str, bool]]]] = \
             defaultdict(lambda: defaultdict(list))
+        # (sistema, cc, cargo_norm, perfil_norm) -> perfil do SYSTUR que a
+        # matriz exige para aquela linha. Indice LATERAL de proposito: a tupla
+        # de `perfis_por_chave` e' desempacotada em varios pontos do motor e
+        # mudar a aridade dela por causa de um filtro sairia caro (mesmo
+        # cuidado que `funcao_por_sp` ja' toma com a funcao da CCO).
+        self._systur_da_linha: Dict[Tuple[str, str, str, str], Set[str]] = defaultdict(set)
         for pe in repo.obter_perfis_esperados():
             chave = (_norm(pe.cargo_codigo), _norm(pe.cargo_descricao))
             perfis_por_chave[chave][pe.sistema.value].append((pe.perfil, pe.acesso_manual))
+            _ps = _norm(getattr(pe, "perfil_systur", "") or "")
+            if _ps:
+                self._systur_da_linha[
+                    (pe.sistema.value, chave[0], chave[1], _norm(pe.perfil))].add(_ps)
 
         # (cc, gestor_norm) → lista de (sistema_str, perfil, funcao), sem duplicatas.
         # A CCO casa por centro de custo + GESTOR (nao por funcao/cargo), mas a
         # FUNCAO viaja junto: e' ela que a area usa para ler o esperado ("a
         # pessoa tem direito a funcao X; quais acessos formam a X?", 17/09/2026).
         cco: Dict[Tuple[str, str], List[Tuple[str, str, str]]] = defaultdict(list)
+        # PONTE perfil do SYSTUR -> funcao. Ela mora dentro da PROPRIA CCO: as
+        # linhas de sistema 'Systur' dao a traducao entre o nome tecnico do
+        # perfil e o nome humano da funcao ('A_RECEBER_1' <-> 'A Receber 1',
+        # 'ATD_FOR_CVC_VISUAL_CP' <-> 'Atendimento a fornecedores CVC e
+        # VISUAL'). Sem ela as duas matrizes nao se falam: a do Oracle usa o
+        # nome tecnico na coluna PERFIL SYSTUR e a CCO usa o nome humano na
+        # coluna FUNCAO. Medido em 23/09/2026: 111 funcoes, 177 linhas.
+        self._funcao_do_perfil_systur: Dict[str, Set[str]] = defaultdict(set)
         for r in repo.obter_cco():
             chave = (_norm(r["cc"]), _norm(r.get("gestor", "")))
             entry = (r["sistema"], r["perfil"], (r.get("funcao") or "").strip())
             if entry not in cco[chave]:
                 cco[chave].append(entry)
+            if sistema_do_texto(r["sistema"]) is Sistema.SYSTUR and r.get("funcao"):
+                self._funcao_do_perfil_systur[_norm(r["perfil"])].add(_norm(r["funcao"]))
 
         return ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco
 
@@ -564,6 +775,182 @@ class ValidarAcessosSistema:
             "cargo_descricao": func.cargo_descricao or "",
             "funcao": "",          # preenchido quando o esperado vem da CCO
         }
+
+    # ------------------------------------------------------------------
+    # ANCORA NO PERFIL DO SYSTUR (area, 23/09/2026)
+    # ------------------------------------------------------------------
+    # Textual: "ele so' pode ter os acessos oracle se o perfil bater com o
+    # systur que ele tem; se no systur nao vier perfil e' pendencia systur; se
+    # no oracle o perfil ou acesso divergir do systur e' pendencia oracle".
+    #
+    # E' um FILTRO sobre o esperado que ja' existia, nao uma fonte nova: o
+    # conjunto continua vindo da matriz (cc+cargo) e da CCO (cc+gestor), e
+    # depois perde as linhas que pertencem a um perfil do SYSTUR que a pessoa
+    # nao tem. Feito assim de proposito — trocar a origem do esperado mudaria
+    # o escopo de quem recebe linha de Oracle; filtrar so' pode ESTREITAR.
+    #
+    # As duas matrizes se ligam por caminhos diferentes:
+    #   MATRIZ  — coluna PERFIL SYSTUR, nome tecnico, casa direto com o extrato.
+    #   CCO     — coluna FUNCAO, nome humano; a traducao vem das linhas de
+    #             'Systur' da propria CCO (ver _funcao_do_perfil_systur).
+    # Linha sem nenhum dos dois campos NAO depende do SYSTUR e fica.
+    def _perfis_systur_de(self, func, acessos_por_matricula) -> Set[str]:
+        return {_norm(p) for s, p in acessos_por_matricula.get(func.matricula, ())
+                if s == Sistema.SYSTUR.value and p}
+
+    def _filtrar_pelo_perfil_systur(
+        self,
+        sistema_valor: str,
+        perfis: List[Tuple[str, bool, str]],
+        chave_matriz: Tuple[str, str],
+        funcao_por_sp: Dict[Tuple[str, str], str],
+        perfis_systur: Set[str],
+    ) -> List[Tuple[str, bool, str]]:
+        funcoes = set()
+        for p in perfis_systur:
+            funcoes |= self._funcao_do_perfil_systur.get(p, set())
+
+        mantidos: List[Tuple[str, bool, str]] = []
+        for perfil, manual, origem in perfis:
+            exigido = self._systur_da_linha.get(
+                (sistema_valor, chave_matriz[0], chave_matriz[1], _norm(perfil)))
+            if exigido:
+                if exigido & perfis_systur:
+                    mantidos.append((perfil, manual, origem))
+                else:
+                    self._ancora_filtrados += 1
+                continue
+            _f = _norm(funcao_por_sp.get((sistema_valor, perfil), ""))
+            if _f:
+                if _f in funcoes:
+                    mantidos.append((perfil, manual, origem))
+                else:
+                    self._ancora_filtrados += 1
+                continue
+            # nao diz a qual perfil do SYSTUR pertence: nao depende dele
+            mantidos.append((perfil, manual, origem))
+        return mantidos
+
+    def _cobrar_ancora_systur(
+        self, ativos, acessos_por_matricula, sistemas_com_dados, registros,
+    ) -> List[Dict]:
+        """Lado do ACESSO da regra da ancora. Duas cobrancas:
+
+        1. tem acesso no sistema ancorado e NAO tem perfil no SYSTUR
+           -> pendencia no SYSTUR ("se no systur nao vier perfil e' pendencia
+           systur"). E' la' que esta' a falta: o Oracle dela so' pode ser
+           julgado depois que o SYSTUR disser qual funcao ela exerce.
+
+        2. tem acesso que o perfil do SYSTUR dela nao preve
+           -> pendencia no proprio sistema ancorado.
+
+        3. tem acesso e a matriz do sistema NAO COBRE o cargo/centro de custo
+           dela -> linha informativa "Nao Mapeado" no proprio sistema.
+           Pedido da area (Bruna) em 23/09/2026, sobre a matricula 1303:
+           "tem o centro de custo dele mas nao tem o cargo no EBS, ai vai ter
+           que vir o perfil que pode ter no systur e no ebs vir que nao esta
+           mapeado, isso pode acontecer". Nao e' pendencia: nao ha o que
+           cobrar de ninguem enquanto a matriz nao disser o que esse cargo
+           pode ter. A falta que gera acao e' a do SYSTUR (caso 1).
+
+        O caso 2 PRECISA criar linha quando o filtro zerou o esperado: sem
+        isso a pessoa sairia do painel justamente por ter acesso que ninguem
+        explica — o oposto do que a regra quer.
+        """
+        novos: List[Dict] = []
+        por_mat = {f.matricula: f for f in ativos}
+        # (matricula, sistema) -> linhas ja' existentes
+        linhas: Dict[Tuple[str, str], List[Dict]] = defaultdict(list)
+        for r in registros:
+            linhas[(r.get("matricula"), r.get("sistema") or "")].append(r)
+
+        for sistema_valor in sorted(self._ancora_systur):
+            if sistema_valor not in sistemas_com_dados:
+                continue
+            for mat, func in por_mat.items():
+                tem = {p for s, p in acessos_por_matricula.get(mat, ()) if s == sistema_valor and p}
+                if not tem:
+                    continue
+                cobravel = {p for p in tem if not self._isento_da_ancora(p)}
+                ps = self._perfis_systur_de(func, acessos_por_matricula)
+
+                # CASO 3 — a matriz deste sistema nao cobre o cargo/CC dela.
+                # Independe do SYSTUR: nao ha esperado nenhum para comparar, e
+                # dizer "perfil fora do SYSTUR" seria acusar de divergencia
+                # quem a matriz sequer menciona. Informativo, nao pendencia.
+                if (mat, sistema_valor) not in self._ancora_tinha_mapa:
+                    if not linhas[(mat, sistema_valor)]:
+                        self._ancora_nao_mapeado += 1
+                        novos.append(self._registro_base(func) | {
+                            "sistema": sistema_valor,
+                            "perfil_esperado": "",
+                            "perfil_atual": ", ".join(sorted(tem)),
+                            "acesso_manual": False,
+                            "status": StatusValidacao.NAO_MAPEADO.value,
+                            "origem_matriz": "ANCORA_SYSTUR",
+                            "motivo_status": f"SEM_MAPEAMENTO_{sistema_valor}",
+                        })
+                    # o lado do SYSTUR (caso 1) continua valendo — e' a falta
+                    # que gera acao. Nao ha' `continue` aqui de proposito.
+                    if ps:
+                        continue
+
+                if not ps:
+                    self._ancora_sem_systur += 1
+                    alvo = [x for x in linhas[(mat, Sistema.SYSTUR.value)]
+                            if x["status"] != StatusValidacao.EM_ANALISE.value]
+                    motivo = f"SEM_PERFIL_SYSTUR_COM_{sistema_valor}"
+                    if alvo:
+                        # ja' tem linha de SYSTUR (tipicamente "incluir"):
+                        # vira pendencia e ganha o porque, sem duplicar.
+                        r = alvo[0]
+                        r["status"] = StatusValidacao.EM_ANALISE.value
+                        _antes = (r.get("motivo_status") or "").strip()
+                        r["motivo_status"] = f"{motivo} | {_antes}" if _antes else motivo
+                    else:
+                        novos.append(self._registro_base(func) | {
+                            "sistema": Sistema.SYSTUR.value,
+                            "perfil_esperado": "",
+                            "perfil_atual": "",
+                            "acesso_manual": False,
+                            "status": StatusValidacao.EM_ANALISE.value,
+                            "origem_matriz": "ANCORA_SYSTUR",
+                            "motivo_status": motivo,
+                        })
+                    continue
+
+                esperado = self._ancora_esperado.get((mat, sistema_valor), set())
+                sobra = {p for p in cobravel if _norm(p) not in esperado}
+                if not sobra:
+                    continue
+                self._ancora_divergentes += 1
+                motivo = "PERFIL_FORA_DO_SYSTUR"
+                alvo = [x for x in linhas[(mat, sistema_valor)]
+                        if x["status"] != StatusValidacao.EM_ANALISE.value]
+                if alvo:
+                    r = alvo[0]
+                    r["status"] = StatusValidacao.EM_ANALISE.value
+                    r["perfil_atual"] = ", ".join(sorted(tem))
+                    _antes = (r.get("motivo_status") or "").strip()
+                    r["motivo_status"] = f"{motivo} | {_antes}" if _antes else motivo
+                elif not linhas[(mat, sistema_valor)]:
+                    # o filtro zerou o esperado: cria a linha, senao some
+                    novos.append(self._registro_base(func) | {
+                        "sistema": sistema_valor,
+                        "perfil_esperado": "",
+                        "perfil_atual": ", ".join(sorted(tem)),
+                        "acesso_manual": False,
+                        "status": StatusValidacao.EM_ANALISE.value,
+                        "origem_matriz": "ANCORA_SYSTUR",
+                        "motivo_status": motivo,
+                    })
+        return novos
+
+    def _isento_da_ancora(self, perfil: str) -> bool:
+        """Acesso corporativo que matriz nenhuma prescreve e que a area nao
+        quer ver como divergencia. Casa por PREFIXO."""
+        p = _norm(perfil)
+        return any(p.startswith(i) for i in self._ancora_systur_isentos)
 
     def _gerar_registros_sistema(
         self,
@@ -665,18 +1052,72 @@ class ValidarAcessosSistema:
             # Dedup por _chave, igual a lista de esperados acima: a matriz e o
             # extrato grafam o mesmo perfil de dois jeitos ('IC_CONSULTA' x
             # 'IC CONSULTA') e sem isso o mesmo acesso contaria como dois extras.
+            #
+            # OS OUTROS PERFIS QUE ELA TEM (22/09/2026) — ate aqui a linha so'
+            # gravava `p_ok` + os extras NAO previstos. O perfil que ela TEM e
+            # que a matriz PREVE, mas que nao foi o escolhido como `p_ok`,
+            # sumia do campo: a tela dizia "tem 1 perfil" para quem tem dois.
+            # E' o mesmo defeito do perfil excessivo pre-28/08 (a tela AFIRMA
+            # posse, e afirmava errado), so' que do lado de dentro da matriz —
+            # por isso nao aparecia: os dois perfis estavam "certos".
+            # Medido em 22/09 na base de 15/09: 107 linhas escondiam um perfil
+            # (ORACLE_EBS 59, SIG 33, SYSTUR 15). Caso real: matricula 14389,
+            # SYSTUR, tem PARAMETROS_DE_CAIXA e N2_FINANCEIRO no MESMO login e
+            # a tela mostrava so' PARAMETROS_DE_CAIXA.
+            # Sem isso a regra de mais-de-um-perfil abaixo ficaria cega
+            # justamente nos casos que a area levantou.
             esperados_k = {_chave(p) for p, _, _ in perfis}
+            _k_ok = _chave(p_ok)
+            _outros: Dict[str, str] = {}
             _ext: Dict[str, str] = {}
             for a in sorted(acessos_atuais):
                 k = _chave(a)
-                if k not in esperados_k and k not in _ext:
+                if k == _k_ok:
+                    continue
+                if k in esperados_k:
+                    _outros.setdefault(k, a)
+                elif k not in _ext:
                     _ext[k] = a
+            outros = list(_outros.values())
             extras = list(_ext.values())
+
+            # QUANTOS PERFIS A PESSOA PODE TER (area, 23/09/2026). Ate aqui a
+            # linha Aderente gravava APENAS o perfil que casou, e a coluna
+            # "Perfil Esperado" dizia UM para quem a matriz autoriza varios.
+            # Retorno da area sobre a matricula 90001455: "Ela pode ter acesso
+            # a 3 perfis do oracle e tem um so entao esta errado" — a CCO da'
+            # 4 perfis a funcao dela ("Atendimento a fornecedores CVC e
+            # VISUAL"), ela TEM os 4, e a tela mostrava so' 'CVC AP NOVA VISUAL
+            # Consulta'. E' o mesmo defeito do perfil excessivo pre-28/08 e do
+            # perfil_atual pre-22/09, agora na coluna do ESPERADO.
+            #
+            # VALE PARA AS DUAS ORIGENS. A regra do usuario — "para matriz ele
+            # traz somente o que casa PARA INCLUIR, para cco precisa trazer
+            # todos" — fala das linhas de INCLUSAO, que saem uma por perfil
+            # esperado num ramo proprio, mais abaixo, e nao mudaram.
+            #
+            # Aqui e' outra coisa: este campo e' o que a tela compara contra o
+            # que a pessoa TEM para dizer "falta X / tem Y a mais". Guardar so'
+            # o perfil que casou faz a tela acusar como excesso tudo o que a
+            # matriz preve e nao foi o escolhido.
+            # Medido na validacao visual de 23/09/2026 — GILDA (34530435),
+            # ANALISTA CUSTOS SR: o perfil INTERCOMPANY dela autoriza 47
+            # acessos do Oracle, ela tem 42, dos quais 41 AUTORIZADOS e UM
+            # fora (o relatorio de despesas). A tela dizia "41 a mais". Um
+            # alarme falso de 41 para 1, na direcao que mais assusta.
+            #
+            # As linhas SEM_ACESSO / EM_ANALISE / DIVERGENTE ja' saem uma por
+            # perfil esperado: o colapso so' existia no ramo Aderente.
+            _esp: Dict[str, str] = {}
+            for _p, _, _o in perfis:
+                _esp.setdefault(_chave(_p), _p)
+            esperado_txt = ", ".join(
+                [p_ok] + [x for k, x in _esp.items() if k != _k_ok])
 
             reg = base | {
                 "sistema": sistema_valor,
-                "perfil_esperado": p_ok,
-                "perfil_atual": ", ".join([p_ok] + extras),
+                "perfil_esperado": esperado_txt,
+                "perfil_atual": ", ".join([p_ok] + outros + extras),
                 "acesso_manual": bool(m_ok),
                 "status": StatusValidacao.OK.value,
                 "origem_matriz": o_ok,
@@ -721,7 +1162,7 @@ class ValidarAcessosSistema:
             # B1: cargo com adesao baixa ao sistema => matriz abrangente demais
             # => suprime (nao inunda a Consulta com esperados irrelevantes).
             cg = _norm(func.cargo_descricao or "")
-            if self._adocao(sistema_valor, cg) < self._LIMIAR_INCLUSAO:
+            if self._adocao(sistema_valor, cg) < self._limiar_inclusao:
                 self._inclusao_suprimida += 1
                 return []
             return [
@@ -807,7 +1248,8 @@ class ValidarAcessosSistema:
         # proprio (_validar_espelho_vinculo), que ja cobre o SIG — sem isso a
         # mesma pessoa sairia duas vezes no SIG.
         ativos = [f for f in ativos
-                  if (getattr(f, "tipo_vinculo", "") or "").upper() not in _VINCULOS_ESPELHO]
+                  if (getattr(f, "tipo_vinculo", "") or "").upper() not in _VINCULOS_ESPELHO
+                  and f.matricula not in getattr(self, "_sig_pela_cco", ())]
 
         # mat -> set(perfis SIG) — so quem tem acesso ao SIG
         perfis_sig: Dict[str, Set[str]] = defaultdict(set)
@@ -864,7 +1306,16 @@ class ValidarAcessosSistema:
 
             esp_str = ", ".join(sorted(esp))
             if not u:
-                regs.append(self._reg_sig(f, esp_str, "", StatusValidacao.SEM_ACESSO))   # Incluir
+                # REGRA DO SIG (area, 23/09/2026): o espelho NAO sugere mais
+                # inclusao. Textual: "o SIG nao tem matriz, eu tiraria ele do
+                # processo de inclusao, deixaria exclusivamente para o CCO (...)
+                # tipo ele nao validar se a pessoa precisa ter, mas se alguem
+                # tiver, ele fazer as validacoes que colocamos".
+                # Quem esta na CCO ja' recebeu a inclusao no caminho normal e
+                # nem chega aqui (_sig_pela_cco). Quem nao esta, e nao tem
+                # acesso, deixa de receber sugestao tirada dos colegas.
+                self._sig_inclusao_suprimida += 1
+                continue
             elif u - esp:
                 regs.append(self._reg_sig(f, esp_str, ", ".join(sorted(u)),
                                           StatusValidacao.EM_ANALISE))                    # Excesso
@@ -1167,6 +1618,12 @@ class ValidarAcessosSistema:
                     continue
                 esp_str = ", ".join(sorted(rotulo[k] for k in esp))
                 if not u:
+                    # SIG fora da inclusao por espelho (area, 23/09/2026) — a
+                    # mesma regra vale aqui: sem matriz, so' a CCO diz quem
+                    # DEVERIA ter SIG.
+                    if sistema == Sistema.SIG.value:
+                        self._sig_inclusao_suprimida += 1
+                        continue
                     regs.append(self._reg_terc(f, sistema, esp_str, "",
                                                StatusValidacao.SEM_ACESSO, origem))  # Incluir
                 elif u - esp:

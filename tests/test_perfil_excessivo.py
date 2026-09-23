@@ -93,12 +93,23 @@ class ExcessoAparece(unittest.TestCase):
         r = _cenario(["P1", "P2"], ["P1", "P2"])
         self.assertEqual(len(r), 1)
         self.assertIsNone(r[0][1], "perfil previsto pela matriz NAO e' excesso")
-        self.assertEqual(r[0][3], "P1")
+        # 22/09/2026: `perfil_atual` passou a listar TUDO o que a pessoa tem.
+        # Ate aqui gravava so' "P1" e a tela dizia "tem 1 perfil" para quem tem
+        # dois — o mesmo defeito que o cabecalho deste arquivo condena, so' que
+        # dentro da matriz (os dois perfis estao previstos, entao nao havia
+        # excesso que denunciasse a omissao). O que este teste protege continua
+        # de pe' e intocado: previsto pela matriz NAO vira PERFIL_EXCESSIVO.
+        self.assertEqual(r[0][3], "P1, P2")
 
     def test_um_previsto_um_fora(self):
         r = _cenario(["P1", "P2"], ["P1", "P2", "SOBRA"])
-        self.assertEqual(r[0][1], "PERFIL_EXCESSIVO")
-        self.assertEqual(r[0][3], "P1, SOBRA", "so' o que a matriz nao explica")
+        self.assertEqual(r[0][1], "PERFIL_EXCESSIVO",
+                         "so' SOBRA e' excesso; P2 a matriz explica")
+        # Ordem: o que casou primeiro, depois os outros previstos que ela tem,
+        # por fim o que a matriz nao explica (ver test_ter_dois_esperados).
+        self.assertEqual(r[0][3], "P1, P2, SOBRA",
+                         "a tela mostra tudo o que ela tem; o motivo e' que "
+                         "separa o previsto do nao previsto")
 
     def test_grafia_diferente_nao_e_extra(self):
         """Retorno de 10/08: a matriz e o extrato grafam o mesmo perfil de dois
@@ -131,7 +142,10 @@ class TelaExplicaOExcesso(unittest.TestCase):
         '?' da grid nao aparece — o dado existe e a tela nao conta."""
         src = (Path(__file__).resolve().parent.parent
                / "src" / "visualizador" / "main.py").read_text(encoding="utf-8")
-        self.assertIn("WHEN 'PERFIL_EXCESSIVO' THEN", src)
+        # Em 22/09 o CASE do snapshot deixou de ser `CASE <expr> WHEN <valor>`
+        # e virou CASE pesquisado, para o motivo ENCADEADO tambem achar texto.
+        # O que este teste protege e' o mesmo: o excesso se explica na tela.
+        self.assertIn("= 'PERFIL_EXCESSIVO' THEN", src)
 
     def test_config_ausente_significa_desligado(self):
         """A instalacao da area tem config.xml ANTIGO, sem <validacao>. Se o

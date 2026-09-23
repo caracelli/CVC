@@ -48,6 +48,31 @@ class Configuracao:
     # Analise). Default False: sao 196 casos medidos e transformar isso em
     # pendencia de uma vez e' decisao da area, nao do motor.
     validacao_excesso_gera_pendencia: bool
+    # MAIS DE UM PERFIL no mesmo sistema. Nao e' o excesso acima: aqui nao
+    # importa se a matriz preve os dois — a regra da area (22/09/2026) e' UM
+    # perfil por pessoa por sistema, entao a linha nao pode ficar Aderente.
+    # Default True (a area pediu para cobrar); `sistemas` vazio = todos.
+    validacao_multi_perfil_gera_pendencia: bool
+    validacao_multi_perfil_sistemas: List[str]
+    # Sistemas em que ter varios perfis e' NORMAL e nao vira pendencia. O
+    # Oracle EBS entrou em 23/09/2026: a area explicou que ali "cada perfil e'
+    # um acesso especifico ao sistema", nao um perfil a mais.
+    validacao_multi_perfil_sistemas_fora: List[str]
+    # LIMIAR DE INCLUSAO (B1): adesao minima do cargo ao sistema para a
+    # inclusao ser gerada. ZERO desliga a regra. Ausente = 0,30 (valor de
+    # 25/06), para config antigo nao mudar de comportamento sozinho.
+    validacao_limiar_inclusao: float
+    # ANCORA NO PERFIL DO SYSTUR (area, 23/09/2026): nestes sistemas o esperado
+    # so' vale se a linha pertencer ao perfil que a pessoa tem no SYSTUR. Vazio
+    # = regra desligada. Hoje so' o Oracle EBS tem a coluna PERFIL SYSTUR na
+    # matriz — a lista existe para o dia em que outra matriz ganhar a coluna.
+    validacao_ancora_systur_sistemas: List[str]
+    # Acessos corporativos que matriz nenhuma prescreve e que NAO devem contar
+    # como divergencia (casam por prefixo). O 'CVC OIE BRASIL' (relatorio de
+    # despesas) esta' em 373 das 457 pessoas com Oracle. Vazio = tudo conta,
+    # que foi a decisao de 23/09 — a chave existe para a area recuar sem
+    # rebuild se o volume nao se sustentar.
+    validacao_ancora_systur_isentos: List[str]
     # CONTA DE SERVICO (robo/automacao) nos desligados. Prefixos de LOGIN; o
     # acesso deixa de entrar na lista de revogacao e passa a um tipo proprio,
     # consultavel. Vazio = regra desligada (comportamento anterior).
@@ -94,6 +119,47 @@ def _ad_caminhos(root) -> List[str]:
     if no is None:
         return []
     return [c.text.strip() for c in no.findall("caminho") if (c.text or "").strip()]
+
+
+def _lista_sistemas(root, caminho: str) -> List[str]:
+    """Lista de IDs de sistema separada por virgula; vazia se ausente."""
+    bruto = root.findtext(caminho, "") or ""
+    return [p.strip().upper() for p in bruto.split(",") if p.strip()]
+
+
+def _limiar_inclusao(root) -> float:
+    """Adesao minima do cargo ao sistema para gerar INCLUSAO (regra B1).
+
+    Zero desliga a regra. Ausente ou invalido = 0.30, o valor historico — um
+    config antigo nao pode mudar de comportamento sozinho."""
+    bruto = (root.findtext("validacao/limiar_inclusao/adesao_minima", "") or "").strip()
+    if not bruto:
+        return 0.30
+    try:
+        v = float(bruto.replace(",", "."))
+    except ValueError:
+        return 0.30
+    return v if 0.0 <= v <= 1.0 else 0.30
+
+
+def _multi_perfil_sistemas(root) -> List[str]:
+    """Sistemas em que MAIS DE UM PERFIL vira pendencia, de
+    <validacao><mais_de_um_perfil><sistemas>.
+
+    Vazio (ou chave ausente) = TODOS os sistemas — a escolha do usuario em
+    22/09/2026. A lista existe para a area poder recuar para um subconjunto
+    (ex.: so' SYSTUR) sem rebuild: o desligamento total fica com
+    <gera_pendencia>, que preserva o que estiver configurado aqui."""
+    bruto = root.findtext("validacao/mais_de_um_perfil/sistemas", "") or ""
+    return [p.strip().upper() for p in bruto.split(",") if p.strip()]
+
+
+def _lista_texto(root, caminho: str) -> List[str]:
+    """Lista de textos livres separada por virgula (nomes de perfil, prefixos).
+
+    Nao faz upper nem normaliza: quem consome decide. Vazia se ausente."""
+    bruto = root.findtext(caminho, "") or ""
+    return [p.strip() for p in bruto.split(",") if p.strip()]
 
 
 def _conta_servico_prefixos(root) -> List[str]:
@@ -170,6 +236,16 @@ class LeitorConfig:
             rh_processar_terceiros=_bool("rh/ativos/processar_terceiros"),
             validacao_excesso_gera_pendencia=_bool(
                 "validacao/perfil_excessivo/gera_pendencia", "false"),
+            validacao_multi_perfil_gera_pendencia=_bool(
+                "validacao/mais_de_um_perfil/gera_pendencia", "true"),
+            validacao_multi_perfil_sistemas=_multi_perfil_sistemas(root),
+            validacao_multi_perfil_sistemas_fora=_lista_sistemas(
+                root, "validacao/mais_de_um_perfil/sistemas_fora"),
+            validacao_limiar_inclusao=_limiar_inclusao(root),
+            validacao_ancora_systur_sistemas=_lista_sistemas(
+                root, "validacao/ancora_systur/sistemas"),
+            validacao_ancora_systur_isentos=_lista_texto(
+                root, "validacao/ancora_systur/perfis_isentos"),
             conta_servico_prefixos=_conta_servico_prefixos(root),
             validacao_pendente_vira_inclusao=_bool(
                 "validacao/conta_pendente/vira_inclusao", "false"),

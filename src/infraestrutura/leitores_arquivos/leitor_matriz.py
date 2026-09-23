@@ -36,6 +36,14 @@ _CANDIDATOS_PERFIL = ["PERFIL ACESSO", "RESPONSABILIDADE", "PERFIL"]
 # Coluna de acesso manual (presente na matriz SYSTUR)
 _COL_ACESSO_MANUAL = "ACESSO MANUAL"
 
+# Coluna PERFIL SYSTUR — presente na matriz do Oracle EBS (2.556 linhas, 39
+# valores distintos, 38 deles existindo literalmente como perfil no extrato do
+# SYSTUR). Ela diz a QUAL perfil do SYSTUR cada responsabilidade do Oracle
+# pertence. Era lida e descartada em silencio ate 23/09/2026 — por isso a
+# pessoa recebia TODAS as responsabilidades do cargo+CC dela, sem olhar o
+# SYSTUR. Ver ValidarAcessosSistema._esperado_ancorado_no_systur.
+_COL_PERFIL_SYSTUR = "PERFIL SYSTUR"
+
 
 def _extrair_sistema(nome_arquivo: str) -> Optional[Sistema]:
     nome = nome_arquivo.upper()
@@ -159,6 +167,8 @@ class LeitorMatrizPerfis(LeitorArquivoBase):
                     continue
 
                 col_manual = _COL_ACESSO_MANUAL if _COL_ACESSO_MANUAL in df.columns else None
+                _upper = {str(c).upper(): c for c in df.columns}
+                col_systur = _upper.get(_COL_PERFIL_SYSTUR)
 
                 for _, row in df.iterrows():
                     cc = str(row.get(col_cc, "")).strip()
@@ -167,12 +177,16 @@ class LeitorMatrizPerfis(LeitorArquivoBase):
                         continue
                     cargo_desc = str(row.get(col_cargo, "")).strip() if col_cargo else ""
                     manual_raw = str(row.get(col_manual, "")).strip().upper() if col_manual else ""
+                    p_systur = str(row.get(col_systur, "")).strip() if col_systur else ""
+                    if p_systur.upper() in ("NAN", "NONE"):
+                        p_systur = ""
                     perfis.append(PerfilEsperado(
                         cargo_codigo=cc,
                         sistema=sistema,
                         perfil=perfil,
                         cargo_descricao=cargo_desc,
                         acesso_manual=(manual_raw == "SIM"),
+                        perfil_systur=p_systur,
                     ))
 
                 self.mover_para_processados(arquivo)

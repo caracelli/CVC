@@ -35,9 +35,11 @@ class TestConfigProducao(unittest.TestCase):
         for sid in ("SYSTUR", "IC", "SICA_RA", "SIGOT", "ORACLE_EBS", "SIG", "SICA_ESFERA"):
             self.assertTrue(self.cfg.sistemas[sid].ativo, f"{sid} deveria estar ativo")
 
-    def test_opera_fora_de_escopo(self):
-        # OPERA_OPERACIONAL nao esta no cronograma -> fora de escopo (inativo).
-        self.assertFalse(self.cfg.sistemas["OPERA_OPERACIONAL"].ativo)
+    def test_so_os_sete_do_cronograma(self):
+        # O projeto tem 7 sistemas, os dos cards 6 a 13. Nao existe outro.
+        self.assertEqual(sorted(self.cfg.sistemas),
+                         sorted(["SYSTUR", "IC", "SICA_RA", "SIGOT",
+                                 "ORACLE_EBS", "SIG", "SICA_ESFERA"]))
 
     def test_terceiros_e_desligados_em_escopo(self):
         # Terceiros ENTRARAM na Fase 1 (espelho). Desligados: motor ATIVADO

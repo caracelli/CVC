@@ -133,6 +133,10 @@ class ConexaoBancoDados:
             conn.execute(text("ALTER TABLE perfis_esperados ADD COLUMN acesso_manual INTEGER DEFAULT 0"))
             conn.commit()
             logger.info("Migration: perfis_esperados.acesso_manual adicionada.")
+        if "perfil_systur" not in cols:
+            conn.execute(text("ALTER TABLE perfis_esperados ADD COLUMN perfil_systur TEXT"))
+            conn.commit()
+            logger.info("Migration: perfis_esperados.perfil_systur adicionada.")
 
     def _migrar_snapshots_rh(self, conn):
         if "snapshots_rh" not in self._tabelas(conn):

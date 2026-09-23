@@ -340,6 +340,12 @@ def _executar(caminho_config: Path) -> int:
             excesso_gera_pendencia=cfg.validacao_excesso_gera_pendencia,
             pendente_vira_inclusao=cfg.validacao_pendente_vira_inclusao,
             matriz_franqueado=regras_franq,
+            multi_perfil_gera_pendencia=cfg.validacao_multi_perfil_gera_pendencia,
+            multi_perfil_sistemas=cfg.validacao_multi_perfil_sistemas,
+            multi_perfil_sistemas_fora=cfg.validacao_multi_perfil_sistemas_fora,
+            limiar_inclusao=cfg.validacao_limiar_inclusao,
+            ancora_systur_sistemas=cfg.validacao_ancora_systur_sistemas,
+            ancora_systur_isentos=cfg.validacao_ancora_systur_isentos,
         ).executar()
 
         # Card 23 — revalidacao POS-TRANSFERENCIA. Depois do AnalisarDivergencias

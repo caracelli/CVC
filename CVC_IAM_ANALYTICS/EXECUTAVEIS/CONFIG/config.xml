@@ -93,6 +93,91 @@
             <gera_pendencia>false</gera_pendencia>
         </perfil_excessivo>
 
+        <!-- MAIS DE UM PERFIL: a pessoa tem mais de um perfil NO MESMO sistema.
+             Diferente do perfil excessivo acima: nao importa se a matriz preve
+             os dois: a regra da area e' UM perfil por pessoa por sistema.
+             Retorno da area (22/09/2026, textual): "Mais de um perfil nao pode
+             ficar nada como aderente, ele precisa vir como pendencia para
+             analise". Com true, a linha que seria Aderente vira Em Analise com
+             motivo MAIS_DE_UM_PERFIL.
+             `sistemas` vazio = TODOS os sistemas (escolha do usuario em
+             22/09/2026). Para restringir, liste os IDs separados por virgula
+             (ex.: SYSTUR).
+             Medido em 22/09/2026 na base de 15/09: 419 linhas hoje Aderentes
+             viram pendencia (SIG 197, ORACLE_EBS 164, SYSTUR 58); as
+             pendencias passam de 826 para 1.245. Restringindo a SYSTUR seriam
+             58. -->
+        <!-- LIMIAR DE INCLUSAO (regra B1). Adesao minima do CARGO ao sistema
+             para a aplicacao sugerir a inclusao de um acesso que a matriz
+             preve. ZERO desliga a regra; ausente = 0,30.
+
+             HISTORIA, porque o valor mudou de sentido no meio do caminho:
+             nasceu em 25/06/2026 com uma justificativa unica — "nao inundar a
+             fila de pendencias" com esperado irrelevante. Em 29/07 a area
+             pediu que "sem acesso" saisse das pendencias e ficasse so' na
+             Consulta; dali em diante o limiar passou a cortar informacao que
+             nao entra em fila nenhuma.
+             A area cobrou o efeito tres vezes (10/08, 25/08 e 17/09) e de novo
+             em 22/09. Em 23/09/2026 ficou decidido: para os sistemas com
+             matriz, trazer 100% do que esta mapeado.
+
+             Medido em 22/09 na base de 15/09, ao zerar: as PENDENCIAS NAO
+             sobem (Alterar Perfil 318 e Em Analise 927 ficam identicos);
+             Incluir Acesso vai de 3.682 para 6.790 e Nao Mapeado cai de 589
+             para 216. 773 pessoas passam a mostrar o que a matriz preve,
+             sendo 335 que so' tinham a linha "Nao Mapeado".
+             O SIG nao e' afetado: ele nao tem matriz e nunca passou por esta
+             regra (874 linhas antes e depois). -->
+        <limiar_inclusao>
+            <adesao_minima>0</adesao_minima>
+        </limiar_inclusao>
+
+        <mais_de_um_perfil>
+            <gera_pendencia>true</gera_pendencia>
+            <sistemas></sistemas>
+            <!-- Sistemas em que ter varios perfis e' NORMAL e NAO vira
+                 pendencia. ORACLE_EBS entrou em 23/09/2026: "no oracle cada
+                 perfil e' um acesso especifico ao sistema" — contar isso como
+                 "um a mais" fazia virar pendencia quem tem exatamente o que a
+                 funcao dela preve. Caso medido: matricula 90001455, 4 perfis
+                 Oracle, todos da funcao "Atendimento a fornecedores CVC e
+                 VISUAL". -->
+            <sistemas_fora>ORACLE_EBS</sistemas_fora>
+        </mais_de_um_perfil>
+
+        <!-- ANCORA NO PERFIL DO SYSTUR (area, 23/09/2026), textual:
+             "ele so pode ter os acessos oracle se o perfil bater com o systur
+              que ele tem, se no systur nao vier perfil e pendencia systur, se
+              no oracle o perfil ou acesso divergir do systur e pendencia
+              oracle".
+
+             A matriz do Oracle tem a coluna PERFIL SYSTUR (39 valores, 38 deles
+             existindo literalmente como perfil no extrato do SYSTUR) e ela era
+             lida e DESCARTADA. Sem ela a pessoa recebia todas as
+             responsabilidades do cargo+CC, sem olhar o SYSTUR.
+
+             A CCO entra pelo outro lado: as linhas de sistema 'Systur' dela
+             traduzem o nome tecnico do perfil para o nome humano da funcao
+             (A_RECEBER_1 <-> "A Receber 1"), e e por essa ponte que o perfil
+             do SYSTUR chega nos acessos Oracle que a funcao preve.
+
+             Medido em 23/09/2026 na base de 15/09, nas 457 pessoas com Oracle
+             vivo: 190 sem perfil no SYSTUR (pendencia no SYSTUR), 106 com
+             perfil que matriz nenhuma conhece, 99 divergentes, 17 a incluir e
+             45 aderentes (eram 13 antes de juntar as duas matrizes).
+
+             Vazio desliga a regra. -->
+        <ancora_systur>
+            <sistemas>ORACLE_EBS</sistemas>
+            <!-- Acessos corporativos que matriz nenhuma prescreve e que NAO
+                 contam como divergencia (casam por prefixo). VAZIO por decisao
+                 de 23/09: o 'CVC OIE BRASIL - RELATORIO DE DESPESAS' esta em
+                 373 das 457 pessoas e 278 tem so ele — preenchendo aqui, a
+                 pendencia do Oracle cai de 99 para 18 pessoas e os aderentes
+                 sobem de 45 para 69, sem rebuild. -->
+            <perfis_isentos></perfis_isentos>
+        </ancora_systur>
+
         <!-- CONTA DE SERVICO nos DESLIGADOS (retorno da area, 28 e 31/08/2026):
              "porque ta vindo uns usuarios sistemicos nos desligados".
              O robo e' cadastrado com o e-mail de quem o criou; quando essa
@@ -289,25 +374,6 @@
             </colunas>
             <ativo>true</ativo>
         </sistema>
-
-        <!-- OPERA OPERACIONAL — scaffold preparado. Aparece no Mapeamento CCO_CSC
-             (30 entradas) mas escopo na entrega ainda precisa ser confirmado
-             com a usuaria. -->
-        <sistema id="OPERA_OPERACIONAL">
-            <nome>OPERA_OPERACIONAL</nome>
-            <descricao>Opera Operacional</descricao>
-            <caminho_entrada>ENTRADA/SISTEMAS/OPERA_OPERACIONAL</caminho_entrada>
-            <caminho_parquet>DADOS/PARQUET/ACESSOS/OPERA_OPERACIONAL</caminho_parquet>
-            <colunas>
-                <usuario>USUARIO</usuario>
-                <nome>NOME</nome>
-                <cpf>CPF</cpf>
-                <email>EMAIL</email>
-                <perfil>PERFIL</perfil>
-                <situacao>SITUACAO</situacao>
-            </colunas>
-            <ativo>false</ativo>
-        </sistema>
     </sistemas>
 
     <matrizes>
@@ -360,6 +426,20 @@
              Preencher com um id (ex.: SYSTUR) para limitar a um sistema so. -->
         <sistema></sistema>
         <quarentena_dias>90</quarentena_dias>
+
+        <!-- OCIOSIDADE (area, 23/09/2026): "o programa ainda fica dando erro ao
+             pular as janelas, ai precisa ficar fechando e abrindo ele de novo".
+        
+             O painel manda um sinal de vida a cada 4 s, mas o navegador CONGELA a
+             aba quando a janela fica atras de outra (guias em suspensao do Edge,
+             congelamento do Chrome) — e a maquina bloqueada para tudo. Com o valor
+             antigo, 300, bastavam 5 minutos fora para o servidor encerrar: a aba
+             seguia aberta e tudo passava a dar erro.
+        
+             Fechar a pagina continua encerrando na hora (o beacon do pagehide nao
+             depende deste relogio). Este numero so cobre o caso anormal: navegador
+             morto sem avisar. 0 desliga o encerramento por ociosidade. -->
+        <ociosidade_segundos>28800</ociosidade_segundos>
     </visualizador>
 
     <!-- A configuracao do Jira (Cards 25-26) NAO fica aqui: vive em

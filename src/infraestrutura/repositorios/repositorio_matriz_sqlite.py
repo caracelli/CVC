@@ -32,6 +32,7 @@ class RepositorioMatrizSqlite:
                     sistema=p.sistema.value,
                     perfil=p.perfil,
                     acesso_manual=bool(p.acesso_manual),
+                    perfil_systur=getattr(p, "perfil_systur", "") or "",
                     arquivo_origem=arquivo_origem,
                     dt_importacao=datetime.now(),
                 ))
@@ -50,6 +51,7 @@ class RepositorioMatrizSqlite:
                     sistema=Sistema(r.sistema),
                     perfil=r.perfil,
                     acesso_manual=bool(r.acesso_manual),
+                    perfil_systur=getattr(r, "perfil_systur", "") or "",
                 )
                 for r in rows
             ]
