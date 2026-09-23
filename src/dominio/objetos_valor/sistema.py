@@ -9,7 +9,6 @@ class Sistema(Enum):
     IC_INTEGRADOR_CONTABIL = "IC_INTEGRADOR_CONTABIL"
     SIG = "SIG"
     ORACLE_EBS = "ORACLE_EBS"
-    OPERA_OPERACIONAL = "OPERA_OPERACIONAL"
 
 
 # Normaliza o nome do sistema como vem da planilha CCO para o enum
@@ -22,7 +21,6 @@ _CCO_SISTEMA_MAP: dict[str, Sistema] = {
     "SICA_ESFERA": Sistema.SICA_ESFERA,
     "SIG": Sistema.SIG,
     "ORACLE EBS": Sistema.ORACLE_EBS,
-    "OPERA OPERACIONAL": Sistema.OPERA_OPERACIONAL,
 }
 
 

@@ -59,7 +59,7 @@ ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",
     "SISTEMAS/SIGOT", "SISTEMAS/SICA_RA", "SISTEMAS/SICA_ESFERA",
     "SISTEMAS/SYSTUR", "SISTEMAS/IC", "SISTEMAS/SIG",
-    "SISTEMAS/ORACLE_EBS", "SISTEMAS/OPERA_OPERACIONAL",
+    "SISTEMAS/ORACLE_EBS",
     "MATRIZES/ORGANIZACIONAL", "MATRIZES/PERFIS_SISTEMAS",
     # de-para de codigos do SIG (ID -> nome do perfil). Sem esta pasta o
     # cliente nao tem onde depositar o arquivo, e os perfis do SIG aparecem
