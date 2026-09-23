@@ -36,6 +36,38 @@ body{
   background:linear-gradient(180deg,var(--gold-l),var(--gold));
   box-shadow:0 0 18px rgba(245,184,0,.75);
 }
+/* Aviso de base nova (23/09/2026) — faixa discreta abaixo do cabeçalho.
+   `flex:none` para não roubar altura do conteúdo; escondida por padrão via
+   style inline, e só avaliarBaseNova() a mostra. */
+.base-nova{
+  flex:none;display:flex;align-items:center;gap:12px;
+  padding:9px 32px;background:#FFF8E1;border-bottom:1px solid #E8D28A;
+  font:600 13px Arial;color:#6B5200;
+}
+.base-nova-ico{font-size:15px;line-height:1;}
+.base-nova-bts{margin-left:auto;display:flex;gap:8px;}
+.base-nova button{
+  font:600 12px Arial;padding:5px 14px;border-radius:7px;cursor:pointer;
+  border:1px solid transparent;
+}
+.base-nova .bn-ok{background:#1F2D5C;color:#fff;}
+.base-nova .bn-ok:hover{background:#2C3D72;}
+.base-nova .bn-no{background:#fff;color:#6B5200;border-color:#E8D28A;}
+.base-nova .bn-no:hover{background:#FDF3D3;}
+/* Transferidos — a "foto por sistema" (23/09/2026): uma linha por sistema e
+   uma coluna por pergunta, no desenho que a área mandou. Substitui os três
+   blocos de texto corrido, que era o "em uma única linha" que ela reclamou. */
+.tr-foto{width:100%;border-collapse:collapse;margin:4px 0 8px;font:13px Arial;}
+.tr-foto th{
+  text-align:left;padding:6px 10px;background:#EEF1F8;color:#1F2D5C;
+  font:700 12px Arial;border:1px solid #D7DEEC;white-space:nowrap;
+}
+.tr-foto td{padding:6px 10px;border:1px solid #E3E8F2;vertical-align:top;}
+.tr-foto tr:nth-child(even) td{background:#FAFBFE;}
+.tr-foto .tr-sis{font:700 12px Arial;color:#1F2D5C;white-space:nowrap;}
+.tr-cel-i{padding:1px 0;line-height:1.45;}
+.tr-cel-vazio{color:#AEB5C2;}
+.tr-login{font:400 11px Arial;color:#6B7280;margin-top:2px;}
 .hdr-titles{display:flex;flex-direction:column;}
 .hdr-title{font-size:21px;font-weight:700;color:#fff;line-height:1.25;letter-spacing:.2px;}
 .hdr-sub{font-size:12px;color:#AEB8D4;}
@@ -270,6 +302,13 @@ body{
   border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,193,66,.22);}
 .modal-bd textarea{resize:vertical;min-height:64px;}
 .modal-err{color:#C0392B;font:600 10.5px Arial;margin:8px 0 0;min-height:14px;}
+/* Escolha do formato de exportacao (agrupado x analitico) */
+.exp-op{border:1px solid #D7DCE5;border-radius:8px;padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:border-color .12s,background .12s;}
+.exp-op:hover{border-color:#2F6FB0;background:#F4F8FC;}
+.exp-op b{display:block;font-size:14px;color:#1F2733;margin-bottom:3px;}
+.exp-op span{display:block;font-size:12.5px;color:#5A6376;line-height:1.45;}
+.exp-op.exp-sel{border-color:#2F6FB0;background:#F4F8FC;}
+.exp-op.exp-sel b::after{content:" ¹3";color:#2F6FB0;}
 .modal-ft{padding:13px 20px 16px;display:flex;gap:8px;justify-content:flex-end;}
 .modal-ft button{border:none;border-radius:6px;padding:8px 16px;
   font:700 11.5px Arial;cursor:pointer;}
@@ -1137,6 +1176,19 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
   </div>
 </header>
 
+<!-- BASE NOVA NA REDE (23/09/2026). Barra, e não janela modal: o Processador
+     pode rodar enquanto alguém está no meio de uma análise, e interromper para
+     pedir confirmação seria pior do que esperar. Fica visível até a pessoa
+     escolher. Nasce escondida; quem a mostra é avaliarBaseNova(). -->
+<div id="base-nova" class="base-nova" style="display:none">
+  <span class="base-nova-ico">&#8635;</span>
+  <span id="base-nova-txt">Há uma carga mais recente da base disponível.</span>
+  <span id="base-nova-bts" class="base-nova-bts">
+    <button type="button" class="bn-ok" onclick="aplicarBaseNova()">Atualizar agora</button>
+    <button type="button" class="bn-no" onclick="dispensarBaseNova()">Agora não</button>
+  </span>
+</div>
+
 <div class="bases-bar">
   <a class="bases-link" id="bases-btn" role="button" tabindex="0" onclick="abrirBases()"
      title="Ver o último arquivo importado de cada base e a data do arquivo">
@@ -1702,6 +1754,14 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
 <script>
 /* ── Navegação entre abas ─────────────────────────────────────────────── */
 let _procT = 0;
+/* Estado do overlay de processamento — ver `proc()`. Declarados AQUI, junto do
+   `_procT`, e não ao lado da função: `proc()` pode ser chamado antes de o
+   script terminar de executar, e `let`/`const` lançam
+   "Cannot access before initialization" nesse caso. Foi o que aconteceu ao
+   medir a troca de abas em 23/09/2026 — o painel quebrava. */
+const _PROC_ATRASO = 180;   // só mostra o overlay se o trabalho passar disto
+const _PROC_MINIMO = 260;   // uma vez visível, fica ao menos isto (anti-pisca)
+let _procTimer = null, _procVisivel = false;
 proc(true);   /* overlay "Processando" visível desde a abertura da página */
 
 function showPage(tab){
@@ -2319,8 +2379,18 @@ const TIPO_CSS = {
 function motIcone(mot){
   return mot ? `<span class="mot-info" title="${esc(mot)}">?</span>` : '';
 }
-function tipoBadge(t, tl, mot){
-  const b = `<span class="badge ${TIPO_CSS[t]||''}">${tl||t}</span>`;
+/* MAIS DE UM PERFIL (área, 22/09/2026): a linha vira "Em Análise", mas na fila
+   de pendências "Em Análise" não diz o que aconteceu — e foi exatamente o que
+   ela pediu para enxergar. O badge passa a nomear a regra; o tipo continua
+   EM_ANALISE no dado (filtros, export e ciclo de vida não mudam). O motivo vem
+   do motor, não é inferido aqui. */
+function tipoBadge(t, tl, mot, cod){
+  const multi = /MAIS_DE_UM_PERFIL/.test(cod || '');
+  const txt = multi ? 'Mais de um perfil' : (tl || t);
+  const dica = multi ? ' title="Usuário com mais de um perfil no mesmo sistema. '
+                     + 'A regra da área permite apenas um, então a linha entrou '
+                     + 'como pendência para análise."' : '';
+  const b = `<span class="badge ${TIPO_CSS[t]||''}"${dica}>${txt}</span>`;
   return b + motIcone(mot);
 }
 function stBadge(s)      { const cls = s==='Pendente'?'b-pendente':(s==='Aderente'?'b-ok':(s==='Sem perfis mapeados'?'b-sem-acesso':'b-resolvida')); return `<span class="badge ${cls}">${s}</span>`; }
@@ -2892,7 +2962,7 @@ function pintarPagina(){
         <td>${d.sis?`<span class="h-sis">${esc(d.sis)}</span>`:'—'}</td>
         <td style="text-align:center;">1</td>
         <td>—</td><td>—</td><td>—</td><td>—</td>
-        <td>${tipoBadge(d.t,d.tl,d.mot)}</td>
+        <td>${tipoBadge(d.t,d.tl,d.mot,d.motc)}</td>
         <td class="perfil-cel">${_perfResumo(d.pe,{matricula:u.m,sistema:d.sis})||'—'}</td>
         <td class="perfil-cel">${_pendEsp(d, u)}</td>
         <td style="text-align:center;">${esc(d.o)||'—'}</td>
@@ -3068,7 +3138,7 @@ function _vgDonut(div_tipos){
 // IC_INTEGRADOR_CONTABIL encavalar a barra). Chaves nao mapeadas ficam como vem.
 const SIS_LABEL = {
   'IC_INTEGRADOR_CONTABIL':'IC', 'SICA_RA':'SICA RA', 'SICA_ESFERA':'SICA Esfera',
-  'ORACLE_EBS':'Oracle EBS', 'OPERA_OPERACIONAL':'Opera'
+  'ORACLE_EBS':'Oracle EBS'
 };
 function _vgBarras(host, dados, opcoesCorPorChave){
   if (!dados || !Object.keys(dados).length) { host.innerHTML = '<div class="vg-soft">sem dados</div>'; return; }
@@ -4082,6 +4152,62 @@ async function fetchAPI(url){
   return obj;
 }
 
+/* ── Base nova na rede ────────────────────────────────────────────────────
+   Decisão do usuário (23/09/2026): quando o Processador roda de novo, o painel
+   AVISA e pergunta — não troca sozinho. Trocar por conta própria puxaria o
+   tapete de quem está no meio de uma análise, e o Processador roda uma vez por
+   dia, então a pergunta aparece uma vez por dia.
+
+   `_baseRecusada` guarda a assinatura que a pessoa dispensou: sem isso o aviso
+   voltaria a cada 10 s. Se o Processador rodar OUTRA vez, a assinatura muda e
+   a pergunta volta — que é o certo, é uma carga diferente.
+
+   As tratativas dela NÃO estão no banco copiado (vão para os .jsonl da rede e
+   são lidas ao vivo), então atualizar não perde nada do que ela registrou. */
+let _baseRecusada = null;
+function avaliarBaseNova(d){
+  if (!d) return;
+  const barra = document.getElementById('base-nova');
+  if (!barra) return;
+  const nova = !!d.base_nova && d.base_sig && d.base_sig !== _baseRecusada;
+  barra.style.display = nova ? 'flex' : 'none';
+  if (nova) barra.dataset.sig = d.base_sig;
+}
+function dispensarBaseNova(){
+  const barra = document.getElementById('base-nova');
+  _baseRecusada = barra ? (barra.dataset.sig || null) : null;
+  if (barra) barra.style.display = 'none';
+}
+const _BASE_NOVA_MSG = 'Há uma carga mais recente da base disponível.';
+async function aplicarBaseNova(){
+  const barra = document.getElementById('base-nova');
+  const txt = document.getElementById('base-nova-txt');
+  const bts = document.getElementById('base-nova-bts');
+  const falhou = (msg) => { if (txt) txt.textContent = msg;
+                            if (bts) bts.style.display = ''; };
+  if (txt) txt.textContent = 'Atualizando a base… isso leva alguns segundos.';
+  if (bts) bts.style.display = 'none';
+  try{
+    const r = await fetch('/api/atualizar-base', {method:'POST'});
+    const j = await r.json();
+    if (!j || !j.ok){
+      falhou((j && j.msg) ||
+        'Não foi possível atualizar agora. Os dados continuam os da última carga.');
+      return;
+    }
+    _baseRecusada = null;
+    _tokenDB = null;            // força o download completo do dado novo
+    // Mesmo caminho do auto-refresh: redesenha a aba atual SEM mexer nos
+    // filtros nem no scroll de quem estava trabalhando.
+    await recarregarAbaAtual();
+    if (barra) barra.style.display = 'none';
+    if (txt) txt.textContent = _BASE_NOVA_MSG;   // pronta para a próxima carga
+    if (bts) bts.style.display = '';
+  }catch(e){
+    falhou('Falha ao falar com o painel. Tente de novo.');
+  }
+}
+
 async function refreshDB(forcar){
   try{
     const agora = Date.now();
@@ -4091,6 +4217,7 @@ async function refreshDB(forcar){
       try{
         const rv = await fetch('/api/versao');
         const dv = await rv.json();
+        avaliarBaseNova(dv);
         if (dv && dv.token === _tokenDB){
           agendarAutoRefresh();   // nada mudou: so' re-arma o relogio
           return;
@@ -4099,6 +4226,7 @@ async function refreshDB(forcar){
     }
     const r = await fetch('/api/dados');
     const d = await r.json();
+    avaliarBaseNova(d);
     if (d && d.token) _tokenDB = d.token;
     _ultimoCheio = Date.now();
     DB.kpis = d.kpis; DB.acao_dist = d.acao_dist;
@@ -4130,11 +4258,40 @@ function pintarAlertaSemExtrato(){
 }
 
 /* ── Overlay "Processando" (mínimo de exibição evita piscar) ──────────── */
+/* Overlay de "processando".
+
+   ATÉ 23/09/2026 ele aparecia NA HORA e ficava no mínimo 450 ms:
+
+       const espera = Math.max(0, 450 - (Date.now() - _procT));
+
+   A intenção era não piscar. O efeito era outro: uma troca de aba que termina
+   em 50 ms esperava mais 400 ms de propósito — um piso artificial em TODA
+   troca. Medido no Edge, com o painel real: as trocas repetidas davam ~0,46 s,
+   e quase tudo era esta espera. Foi o "a troca de abas está lenta" da área.
+
+   Agora o atraso é para APARECER, não para sumir:
+     - trabalho rápido (< _PROC_ATRASO) → o overlay nunca chega a aparecer e a
+       troca é instantânea;
+     - trabalho longo → o overlay aparece e fica um mínimo curto, que é o que
+       de fato evita o pisca-pisca.
+   Piscar é o overlay aparecer e sumir num piscar de olhos — e isso só pode
+   acontecer se ele TIVER aparecido. */
 function proc(on){
   const ov = document.getElementById('overlay');
-  if(on){ _procT = Date.now(); ov.classList.add('show'); return Promise.resolve(); }
-  const espera = Math.max(0, 450 - (Date.now() - _procT));
-  return new Promise(res => setTimeout(() => { ov.classList.remove('show'); res(); }, espera));
+  if(on){
+    if(_procTimer) clearTimeout(_procTimer);
+    _procTimer = setTimeout(() => {
+      _procT = Date.now(); _procVisivel = true;
+      ov.classList.add('show'); _procTimer = null;
+    }, _PROC_ATRASO);
+    return Promise.resolve();
+  }
+  if(_procTimer){ clearTimeout(_procTimer); _procTimer = null; }
+  if(!_procVisivel){ ov.classList.remove('show'); return Promise.resolve(); }
+  const espera = Math.max(0, _PROC_MINIMO - (Date.now() - _procT));
+  return new Promise(res => setTimeout(() => {
+    ov.classList.remove('show'); _procVisivel = false; res();
+  }, espera));
 }
 
 /* ── Enviar para quarentena (modal → grava interação QUARENTENA) ───────── */
@@ -4246,6 +4403,10 @@ function _modal(html, cls){
   document.getElementById('modal-bg').classList.add('show');
 }
 function fecharModal(){
+  // Modal do formato de exportacao aberto e fechado por fora (clique no fundo):
+  // solta a promise como CANCELAR, senao o await de baixarExcel fica pendurado
+  // para sempre e o botao de exportar parece travado.
+  if (_exportEscolha) { const r = _exportEscolha; _exportEscolha = null; r(null); }
   document.getElementById('modal-bg').classList.remove('show');
   _resAlvo = null;
   agendarAutoRefresh();   // tick foi pausado enquanto o modal estava aberto
@@ -4896,6 +5057,13 @@ document.addEventListener('keydown', e => {
       t = setTimeout(() => {
         _csBusca = inp.value || '';
         _csPag = 1;
+        /* FECHA O POPUP DA PESSOA (23/09/2026). Sem isto, quem abria alguém e
+           voltava a digitar na busca ficava com o popup preso na pessoa
+           ANTERIOR enquanto a lista atrás já mostrava outra — a tela passava a
+           afirmar acessos de uma pessoa sob a busca de outra. O popup é um
+           recorte da linha selecionada; mudando a lista, a seleção deixa de
+           existir. */
+        if (_csUserAtivo) csFecharDrawer();
         renderConsulta();
       }, 200);
     });
@@ -5592,44 +5760,76 @@ function _transfDetalhe(d, acessos, sobrou){
       + `<span class="rev-kpi rev-k-falta">${rv.FALTA||0} faltando na nova</span>${par}`
       + `</td></tr>`;
   }
-  // 1 · o que a pessoa TEM hoje (lista por sistema, marcação inalterada)
-  const grupos = _acessosPorSistema(acessos);
-  if(grupos.length){
-    h += _transfTit(1, `acessos que o colaborador tem (${acessos.length})`);
-    grupos.forEach(g => {
-      h += `<tr class="sub">
-        <td></td><td></td>
-        <td colspan="2"><span class="h-sis">${esc(g.sis)}</span>
-            ${g.lista.length > 1 ? `<small style="color:#6B7280;"> ${g.lista.length} acessos</small>` : ''}
-            ${g.login?`<small style="color:#4B5563;"> login: ${esc(g.login)}</small>`:''}</td>
-        <td colspan="3">${_perfisCel(g.perfis)}</td>
-        <td colspan="2">${fmtDate(g.dt)}</td>
-      </tr>`;
-    });
-  }
-  // 2 · o que a NOVA área prevê: o que ele mantém + o que a equipe tem e ele não
+  /* UMA LINHA POR SISTEMA (retorno da área, 23/09/2026): "Trazer em linhas ao
+     invés de em uma única linha / Se der pra trazer em colunas pode ser tbm",
+     com o desenho Sistema | Tem atualmente | mapeando nova área |
+     incluir/excluir/alterar acesso.
+
+     São as MESMAS três perguntas do pedido de 17/09 — o que ele tem, o que a
+     nova área prevê, o que mudar — que antes saíam como três blocos de texto
+     corrido dentro de uma célula. Agora cada sistema é uma linha e cada
+     pergunta é uma coluna, então dá para ler na horizontal: "no EBS, ele tem
+     isto, deveria ter aquilo, e a ação é esta".
+
+     Percorre TODOS os sistemas, não só os que têm algo: a área pediu uma
+     "foto", e o sistema sem nada é informação ("no SICA Esfera não há nada a
+     fazer"), não ausência de informação. */
   const mantem = [];
   acessos.forEach(a => {
     if(!sobrouSet.has(_transfChave(a.sis, a.perfil))) mantem.push(a);
   });
-  if(mantem.length || falta.length){
-    h += _transfTit(2, `acessos que deveria ter na nova área (${mantem.length + falta.length})`);
-    h += `<tr class="sub"><td></td><td></td><td colspan="7"><div class="rev-lista rev-info">`
-      + mantem.map(a => _transfItem(a.sis, a.perfil, '', 'tem', '#1E7B43')).join('')
-      + falta.map(f => _transfItem(f.sis, f.perfil, f.fun, 'falta', '#2980B9')).join('')
+  const porSis = {};
+  const _addCel = (sis, campo, item) => {
+    const s = sis || '—';
+    (porSis[s] = porSis[s] || {tem:[], nova:[], acao:[]})[campo].push(item);
+  };
+  acessos.forEach(a => _addCel(a.sis, 'tem', esc(a.perfil || '—')));
+  mantem.forEach(a => _addCel(a.sis, 'nova',
+    `${esc(a.perfil || '—')} <b style="color:#1E7B43;">tem</b>`));
+  falta.forEach(f => _addCel(f.sis, 'nova',
+    `${esc(f.perfil || '—')}${f.fun ? ` <small style="color:#6B7280;">(${esc(f.fun)})</small>` : ''}`
+    + ` <b style="color:#2980B9;">falta</b>`));
+  sobrou.forEach(s => _addCel(s.sis, 'acao',
+    `<b style="color:#B33A3A;">Excluir</b> ${esc(s.perfil || '—')}`
+    + `${s.fun ? ` <small style="color:#6B7280;">(${esc(s.fun)})</small>` : ''}`));
+  falta.forEach(f => _addCel(f.sis, 'acao',
+    `<b style="color:#2980B9;">Incluir</b> ${esc(f.perfil || '—')}`
+    + `${f.fun ? ` <small style="color:#6B7280;">(${esc(f.fun)})</small>` : ''}`));
+
+  // O LOGIN por sistema vem de `_acessosPorSistema`, a mesma função que a
+  // Desligados e os exports usam. Ele estava no bloco antigo e não pode se
+  // perder na troca de formato: é por ele que se acha a conta no sistema.
+  const loginDe = {};
+  _acessosPorSistema(acessos).forEach(g => { if(g.login) loginDe[g.sis] = g.login; });
+
+  const sistemas = Array.from(new Set(_sisTodos().concat(Object.keys(porSis))))
+                        .filter(s => s && s !== '—').sort();
+  if(sistemas.length){
+    h += _transfTit(1, `foto por sistema (${acessos.length} acesso(s) hoje)`);
+    const cel = (lst) => lst && lst.length
+      ? lst.map(x => `<div class="tr-cel-i">${x}</div>`).join('')
+      : '<span class="tr-cel-vazio">—</span>';
+    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
+      + `<table class="tr-foto"><thead><tr>`
+      + `<th>Sistema</th><th>Tem atualmente</th>`
+      + `<th>Mapeando nova área</th><th>Incluir/excluir/alterar acesso</th>`
+      + `</tr></thead><tbody>`
+      + sistemas.map(s => {
+          const g = porSis[s] || {tem:[], nova:[], acao:[]};
+          const lg = loginDe[s]
+            ? `<div class="tr-login">login: ${esc(loginDe[s])}</div>` : '';
+          return `<tr><td class="tr-sis">${esc(s)}${lg}</td>`
+               + `<td>${cel(g.tem)}</td><td>${cel(g.nova)}</td>`
+               + `<td>${cel(g.acao)}</td></tr>`;
+        }).join('')
+      + `</tbody></table></td></tr>`;
+  }
+  if(falta.length){
+    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
+      + `<div class="rev-lista rev-info"><i>A inclusão já aparece nas pendências.</i>`
       + `</div></td></tr>`;
   }
-  // 3 · a DIFERENÇA — o acionável
-  if(sobrou.length || falta.length){
-    h += _transfTit(3, `o que precisa alterar (${sobrou.length + falta.length})`);
-    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
-      + (sobrou.length ? `<div class="rev-lista"><b>Revogar — era padrão na função/equipe anterior:</b> `
-          + sobrou.map(s => _transfItem(s.sis, s.perfil, s.fun, 'revogar', '#B33A3A')).join('') + `</div>` : '')
-      + (falta.length ? `<div class="rev-lista rev-info"><b>Incluir — a nova função/equipe tem e esta pessoa não:</b> `
-          + falta.map(f => _transfItem(f.sis, f.perfil, f.fun, 'incluir', '#2980B9')).join('')
-          + ` <i>(a inclusão já aparece nas pendências)</i></div>` : '')
-      + `</td></tr>`;
-  } else if(rv){
+  if(!(sobrou.length || falta.length) && rv){
     // "se a pessoa não tiver alterações... trazer ok apenas para validação"
     h += `<tr class="sub"><td></td><td></td><td colspan="7">`
       + `<div class="rev-lista rev-info"><span class="badge b-ok">OK</span> `
@@ -6299,8 +6499,82 @@ function equiparHist(){
 }
 
 /* ── Exportação para Excel (respeita os filtros da página) ────────────── */
+/* ── Exportar: AGRUPADO x ANALITICO ──────────────────────────────────────
+   A planilha agrupada poe a PESSOA na linha-pai e o SISTEMA na linha-filha.
+   Retorno da area (22/09/2026): ela filtra por Sistema dentro do Excel e PERDE
+   a matricula — o autofiltro mantem so as linhas-filhas, e elas vem com
+   Matricula, Nome, CPF e Cargo em BRANCO, porque esses valores moram no pai.
+
+   Nenhum dos dois formatos serve sozinho: o agrupado e' melhor para LER (foi
+   pedido dela em 31/08, "abrir por sistema") e o analitico e' o unico que
+   FILTRA. Entao a escolha passa a ser dela, na hora de exportar — e nao uma
+   troca que tiraria de alguem o formato que ja usa. */
+function _exportTemGrupo(niveis){
+  return !!(niveis && niveis.some(n => n > 0));
+}
+
+/* Achata a hierarquia: cada FOLHA herda dos ancestrais o que veio vazio.
+   Folha = a proxima linha nao e' filha desta. Um pai SEM filho continua
+   saindo — senao a pessoa sem nenhum acesso sumiria da planilha, que e' o
+   defeito oposto ao que estamos consertando. */
+function _exportAchatar(linhas, niveis){
+  const anc = [], out = [];
+  linhas.forEach((l, i) => {
+    const nv = (niveis && niveis[i]) || 0;
+    anc[nv] = l; anc.length = nv + 1;
+    const prox = (niveis && niveis[i + 1]) || 0;
+    if (prox > nv) return;              // tem filho: quem carrega a linha e' a folha
+    const nova = l.slice();
+    for (let c = 0; c < nova.length; c++) {
+      if (nova[c] !== '' && nova[c] != null) continue;
+      for (let k = nv - 1; k >= 0; k--) {
+        const a = anc[k];
+        if (a && a[c] !== '' && a[c] != null) { nova[c] = a[c]; break; }
+      }
+    }
+    out.push(nova);
+  });
+  return out;
+}
+
+let _exportEscolha = null;   // resolve() do modal aberto (null = nenhum aberto)
+function _exportFormato(nome){
+  return new Promise(resolve => {
+    let lembrado = '';
+    try { lembrado = localStorage.getItem('cvc_export_formato') || ''; } catch(e) {}
+    const sel = op => (lembrado === op ? ' exp-sel' : '');
+    _exportEscolha = resolve;
+    _modal(
+      '<div class="modal-hd"><h3>⬇ Exportar ' + esc(nome) + '</h3>'
+      + '<p>Como você vai usar esta planilha?</p></div>'
+      + '<div class="modal-bd">'
+      + '<div class="exp-op' + (lembrado === 'analitico' ? '' : sel('agrupado') || ' exp-sel')
+      + '" onclick="_exportEscolher(\'agrupado\')">'
+      + '<b>Agrupado</b><span>Uma linha por pessoa, com os sistemas e perfis dentro '
+      + 'dos grupos do Excel (os botões + e − na lateral). Melhor para LER.</span></div>'
+      + '<div class="exp-op' + sel('analitico') + '" onclick="_exportEscolher(\'analitico\')">'
+      + '<b>Analítico</b><span>Uma linha por acesso, repetindo matrícula, nome e cargo '
+      + 'em todas elas. Use este para FILTRAR e ordenar: no agrupado, filtrar por '
+      + 'Sistema esconde justamente a linha que tem a matrícula.</span></div>'
+      + '</div>'
+      + '<div class="modal-ft">'
+      + '<button class="mf-cancel" onclick="_exportEscolher(null)">Cancelar</button></div>');
+  });
+}
+function _exportEscolher(op){
+  const r = _exportEscolha; _exportEscolha = null;   // antes de fechar: fecharModal
+  fecharModal();                                      // tambem resolve, e nao pode 2x
+  if (op) { try { localStorage.setItem('cvc_export_formato', op); } catch(e) {} }
+  if (r) r(op);
+}
+
 async function baixarExcel(arquivo, colunas, linhas, niveis, formatos){
   if(!linhas.length){ alert('Nada para exportar com os filtros atuais.'); return; }
+  if (_exportTemGrupo(niveis)) {
+    const op = await _exportFormato(arquivo);
+    if (!op) return;                                  // cancelou: nao baixa nada
+    if (op === 'analitico') { linhas = _exportAchatar(linhas, niveis); niveis = null; }
+  }
   proc(true);
   try{
     const r = await fetch('/api/exportar', {
@@ -6329,16 +6603,25 @@ let _histMats = new Set();    // matrículas que têm histórico (p/ botão H co
 let _deslMats = new Set();     // matrículas de desligados (p/ botão D condicional)
 let _deslSit = new Map();      // matrícula -> 'Tratar' | 'Tratado' | 'OK' (texto do botão D)
 let _csAbasFilt = null;       // funil da coluna Abas: Set de {Pendência,Incluir acessos,Aderente,Histórico,Desligado}
+/* Marcadores da Consulta: quem aparece no Histórico e quem está nos
+   Desligados. Uma rota ENXUTA (23/09/2026).
+
+   Antes buscava `/api/historico` (11,07 MB, 12.084 registros) e
+   `/api/desligados` (7,37 MB, 30.247 registros) — 18,4 MB e 2,18 s — para
+   jogar fora tudo menos as matrículas, que é o que as três estruturas abaixo
+   guardam. Era o "a troca de abas está lenta" apontado na Consulta.
+
+   O cache por token já evitava rebuscar, mas a PRIMEIRA abertura pagava a
+   conta — e ela volta a cada carga nova do Processador.
+
+   As abas Histórico e Desligados seguem usando as rotas completas: quem só
+   quer o marcador é a Consulta. */
 async function _carregarHistMats(){
   try {
-    const recs = await fetchAPI('/api/historico');
-    _histMats = new Set((recs || []).map(x => x.matricula).filter(Boolean));
-  } catch(e) { /* mantém o cache atual */ }
-  try {
-    const d = await fetchAPI('/api/desligados');
-    _deslMats = new Set((d.lista || []).map(x => x.m).filter(Boolean));
-    _deslSit = new Map((d.lista || []).filter(x => x.m)
-      .map(x => [x.m, x.tratado ? 'Tratado' : x.sit]));
+    const d = await fetchAPI('/api/consulta-marcadores');
+    _histMats = new Set(d.hist || []);
+    _deslMats = new Set(Object.keys(d.desl || {}));
+    _deslSit = new Map(Object.entries(d.desl || {}));
   } catch(e) { /* mantém o cache atual */ }
 }
 
@@ -6954,22 +7237,53 @@ function _csDelta(pe, pp){
    HTML ja escapado. */
 function _csPerfilTxt(d){
   const pe = (d.pe || '').trim(), pp = (d.pp || '').trim();
-  /* ALERTA do SYSTUR (retorno da área, 17/09/2026, cenário de teste 1): "todos
-     colaboradores do systur que tiver mais de um perfil deve vir com alerta:
-     Usuário com mais de um acesso. Obs.: usuários do systur não podem ter mais
-     de um perfil". Segue a decisão de 28/08 sobre perfil excessivo — VER
-     sempre, COBRAR só com a flag do config: o aviso aparece, mas NÃO cria
-     pendência; ligar `validacao/perfil_excessivo/gera_pendencia` é decisão da
-     área. Conta SEM helper externo de propósito: esta função é exercitada
-     isolada no node pelos testes do painel.
-     Medido em 18/09 na base do cliente: 68 pessoas no SYSTUR com mais de um
-     perfil (62 com dois, 1 com três e 5 com 42 — estas com cara de conta
-     técnica, a confirmar com a área). */
+  /* ALERTA de MAIS DE UM PERFIL.
+
+     Nasceu no retorno de 17/09 restrito ao SYSTUR ("todos colaboradores do
+     systur que tiver mais de um perfil deve vir com alerta: Usuário com mais
+     de um acesso"), como AVISO que não virava pendência — seguindo a decisão
+     de 28/08 sobre perfil excessivo (VER sempre, COBRAR só com a flag).
+
+     Em 22/09 a área fechou a decisão, textual: "Mais de um perfil não pode
+     ficar nada como aderente, ele precisa vir como pendência para análise". E
+     o escopo deixou de ser só o SYSTUR (decisão do usuário, 22/09): a regra
+     vale para todos os sistemas. Quem cobra é o motor
+     (`validacao/mais_de_um_perfil/gera_pendencia`, motivo MAIS_DE_UM_PERFIL);
+     aqui só se MOSTRA — e o texto acompanha o que o motor decidiu, para tela e
+     motor nunca dizerem coisas diferentes. Com a flag desligada o aviso
+     continua aparecendo, agora como informativo.
+
+     Conta SEM helper externo de propósito: esta função é exercitada isolada no
+     node pelos testes do painel. */
   const _atuais = new Set((pe.split(',').map(s => s.trim().toUpperCase())).filter(Boolean));
-  const alerta = (d.sis === 'SYSTUR' && _atuais.size > 1)
-    ? '<span class="alerta-sis" title="No SYSTUR a pessoa só pode ter um perfil. '
-      + 'Os perfis a mais estão listados abaixo. É um aviso: não vira pendência.">'
-      + '⚠ Usuário com mais de um acesso</span><br>'
+  const _ehPend = /MAIS_DE_UM_PERFIL/.test(d.motc || '');
+  /* SISTEMA FORA DA REGRA (23/09/2026): o alerta contava perfis e mais nada,
+     então aparecia também onde a regra NÃO vale — e o texto dele afirma "a
+     regra da área é um perfil por pessoa por sistema", o oposto do que ela
+     disse sobre o Oracle ("cada perfil é um acesso específico"). Na validação
+     visual a PRISCILA (90001455), aderente com exatamente os 4 perfis que a
+     função dela prevê, aparecia com um "⚠". A lista vem do servidor
+     (DB.meta.multi_perfil_fora), que lê a MESMA chave do config que o motor —
+     tela e motor não podem discordar sobre onde a regra vale.
+
+     A leitura é por `typeof DB`, e não `DB.meta` direto: esta função é
+     exercitada ISOLADA no node pelos testes do painel (é o que o comentário
+     acima já avisa), e lá o `DB` não existe. Sem a guarda, 25 testes quebram
+     com "DB is not defined" — e, pior, o painel quebraria em qualquer caminho
+     que chamasse isto antes de o `DB` estar montado. Sem a lista, a regra
+     vale para todos os sistemas, que é o comportamento anterior. */
+  const _fora = ((typeof DB !== 'undefined' && DB && DB.meta
+                  && DB.meta.multi_perfil_fora) || [])
+                  .map(s => String(s).toUpperCase());
+  const _regraVale = !_fora.includes(String(d.sis || '').toUpperCase());
+  const alerta = (_atuais.size > 1 && _regraVale)
+    ? '<span class="alerta-sis" title="' + (_ehPend
+        ? 'A regra da área é um perfil por pessoa por sistema. Esta linha entrou '
+          + 'como pendência para análise.'
+        : 'A regra da área é um perfil por pessoa por sistema. É um aviso: não '
+          + 'vira pendência.')
+      + ' Os perfis estão listados abaixo.">'
+      + '⚠ Usuário com mais de um perfil (' + _atuais.size + ')</span><br>'
     : '';
   /* "Em Análise" AMBÍGUO, já consolidado por `_divsDisplayA` (a mesma regra da
      Pendências): o acesso encontrado casa com N perfis do cargo. Retorno de
@@ -7226,13 +7540,33 @@ function _csFuncoesCco(divs){
    É calculado na tela, não gravado — virariam ~5.000 pessoas × 7 sistemas de
    linhas no banco para dizer "nada a fazer". */
 function _csSemMapeamento(u){
-  const tem = new Set((u.divs||[]).map(d => d.sis).filter(Boolean));
-  const faltam = _sisTodos().filter(s => !tem.has(s));
+  const divs = u.divs || [];
+  const comLinha = new Set(divs.map(d => d.sis).filter(Boolean));
+  // 1) sistema sem NENHUMA linha: a matriz nunca falou dele para esta pessoa.
+  const faltam = _sisTodos().filter(s => !comLinha.has(s))
+                            .map(s => ({sis: s, tem: ''}));
+  // 2) sistema com linha "Não Mapeado" E SISTEMA PREENCHIDO (23/09/2026): a
+  //    matriz não cobre o cargo/centro de custo dela, mas ela TEM acesso.
+  //    Pedido da área sobre a matrícula 1303: "no ebs vir que não está
+  //    mapeado". Sem este ramo a linha sumiria da tela — `_csCatDe` devolve
+  //    null para "Não Mapeado" (para o registro-marcador, que vem SEM sistema,
+  //    não virar pendência) e o laço acima só olha sistema sem linha nenhuma.
+  //    Some da tela o acesso que motivou a linha: o oposto do pedido.
+  divs.forEach(d => {
+    if ((d.a || d.tl) === 'Não Mapeado' && d.sis)
+      faltam.push({sis: d.sis, tem: d.pe || ''});
+  });
   if (!faltam.length) return '';
-  const linhas = faltam.map(s =>
-    `<div class="cs-sub-acc-p"><span class="h-sis">${esc(s)}</span>`
-    + `<span class="cs-sub-acc-v" style="color:#8A9099;">sem perfil previsto`
-    + ` para o cargo/centro de custo</span></div>`
+  faltam.sort((a, b) => a.sis.localeCompare(b.sis));
+  const linhas = faltam.map(x =>
+    `<div class="cs-sub-acc-p"><span class="h-sis">${esc(x.sis)}</span>`
+    + (x.tem
+       ? `<span class="cs-sub-acc-v" style="color:#8A9099;">tem hoje: `
+         + `<b style="color:#5A616E;">${esc(x.tem)}</b>`
+         + ` — sem perfil previsto para o cargo/centro de custo</span>`
+       : `<span class="cs-sub-acc-v" style="color:#8A9099;">sem perfil previsto`
+         + ` para o cargo/centro de custo</span>`)
+    + `</div>`
   ).join('');
   return `<div style="margin:9px 0 4px;">`
     + `<div style="color:#7B8294;font-weight:700;font-size:12px;">● Sem mapeamento (${faltam.length})`
@@ -7532,15 +7866,11 @@ function csExportar(){
       niveis.push(1);
     });
   });
-  fetch('/api/exportar', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({arquivo:'consulta', colunas:cols, linhas:rows, niveis:niveis})
-  }).then(r => r.blob()).then(b => {
-    const url = URL.createObjectURL(b);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'consulta.xlsx'; a.click();
-    URL.revokeObjectURL(url);
-  }).catch(() => alert('Falha ao exportar.'));
+  // Passa pelo baixarExcel: e' ele que pergunta agrupado x analitico e trata a
+  // falha de conexao. Ate 22/09 a Consulta montava a requisicao por conta
+  // propria — mesmo arquivo e mesmo payload, mas por um caminho paralelo, que
+  // escapava da pergunta. Um caminho so'.
+  baixarExcel('consulta', cols, rows, niveis);
 }
 
 function exportarInclusao(){

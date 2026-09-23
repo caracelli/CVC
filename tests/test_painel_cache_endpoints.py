@@ -66,11 +66,24 @@ class EndpointPesadoPassaPeloCache(unittest.TestCase):
             self.assertEqual(crus, [], f"{ep} buscado sem cache em {len(crus)} ponto(s)")
 
     def test_a_consulta_nao_puxa_12MB(self):
-        """`_carregarHistMats` roda ao abrir a Consulta e busca os DOIS
-        endpoints pesados — era o caminho mais caro do painel."""
+        """MESMA GARANTIA, cumprida de forma mais forte desde 23/09/2026.
+
+        `_carregarHistMats` roda ao abrir a Consulta. Ele buscava os DOIS
+        endpoints pesados — era o caminho mais caro do painel — e o cache por
+        token apenas evitava REBUSCAR; a primeira abertura pagava 18,4 MB
+        (/api/historico 11,07 MB + /api/desligados 7,37 MB, medidos na base de
+        15/09) e ela voltava a cada carga nova do Processador.
+
+        Agora ele nao os busca: usa uma rota enxuta de 145 KB com o que a
+        Consulta de fato consome — matriculas e situacao. Ver
+        tests/test_consulta_marcadores.py.
+        """
         corpo = _corpo("_carregarHistMats")
-        self.assertIn("fetchAPI('/api/historico')", corpo)
-        self.assertIn("fetchAPI('/api/desligados')", corpo)
+        self.assertIn("fetchAPI('/api/consulta-marcadores')", corpo,
+                      "segue passando pelo cache por token")
+        for ep in PESADOS:
+            self.assertNotIn(ep, corpo,
+                             f"{ep} de volta no caminho da Consulta")
 
     def test_cache_e_chaveado_pelo_token(self):
         corpo = _corpo("fetchAPI")

@@ -53,7 +53,7 @@ class AlertaDeSistemaSemExtrato(unittest.TestCase):
   <sistemas>
     <sistema id="SYSTUR"><nome>SYSTUR</nome><ativo>true</ativo></sistema>
     <sistema id="SIGOT"><nome>SIGOT</nome><ativo>true</ativo></sistema>
-    <sistema id="OPERA"><nome>OPERA_OPERACIONAL</nome><ativo>false</ativo></sistema>
+    <sistema id="FORA_ESCOPO"><nome>FORA_ESCOPO</nome><ativo>false</ativo></sistema>
   </sistemas>
 </configuracao>"""
 
@@ -88,7 +88,7 @@ class AlertaDeSistemaSemExtrato(unittest.TestCase):
         self.assertEqual(vm.sistemas_sem_extrato(), ["SIGOT"])
 
     def test_sistema_desligado_no_config_nao_alerta(self):
-        """OPERA_OPERACIONAL esta com ativo=false: nao ter extrato e' o esperado."""
+        """Sistema com ativo=false: nao ter extrato e' o esperado."""
         self._acesso("SYSTUR")
         self._acesso("SIGOT")
         self.assertEqual(vm.sistemas_sem_extrato(), [])
@@ -146,10 +146,12 @@ class CategoriaVemDoSqlSemInventar(unittest.TestCase):
                 " usuario TEXT, nome_usuario TEXT, matricula TEXT,"
                 " perfil_encontrado TEXT, perfil_esperado TEXT, descricao TEXT,"
                 " motivo TEXT, data_identificacao TEXT, resolvida INTEGER,"
-                # `funcao` entrou em 18/09 (funcao da matriz CCO). Este fixture
+                # `funcao` entrou em 18/09 (funcao da matriz CCO) e
+                # `motivo_cod` em 22/09 (codigo cru do motivo). Este fixture
                 # imita o snapshot real: quando o SQL da Consulta ganha coluna,
                 # ele acompanha — senao o teste falha por schema, nao por regra.
-                " acao TEXT, origem TEXT, login TEXT, funcao TEXT);")
+                " acao TEXT, origem TEXT, login TEXT, funcao TEXT,"
+                " motivo_cod TEXT);")
             # uma pessoa do RH e um acesso orfao (login de franquia, sem RH)
             cols = [r[1] for r in c.execute("PRAGMA table_info(rh_ativos)")]
             base = {"matricula": "34532779", "nome": "MICHELE COSTA",

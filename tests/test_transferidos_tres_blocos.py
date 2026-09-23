@@ -11,9 +11,26 @@ vem na planilha vem mais confusa que na visualização."
 O dado já existia (`transferidos` e `revalidacao_transferido`, Card 23); o que
 faltava era a LEITURA. Nada do que a aba mostrava saiu — os contadores e a lista
 por sistema continuam, agora dentro dos blocos.
+
+23/09/2026 — MESMAS PERGUNTAS, OUTRA LEITURA. A área voltou ao tema:
+
+    "Transferidos: Trazer em linhas ao invés de em uma única linha
+     Se der pra trazer em colunas pode ser tbm"
+
+e mandou o desenho: Sistema | Tem atualmente | mapeando nova área |
+Incluir/excluir/alterar acesso.
+
+Os três blocos respondiam às três perguntas dela, mas como texto corrido dentro
+de uma célula — que é o "uma única linha" da reclamação. Viraram uma TABELA:
+uma linha por sistema, uma coluna por pergunta. Percorre TODOS os sistemas,
+inclusive aqueles em que a pessoa não tem nada: ela pediu uma "foto", e "no
+SICA Esfera não há nada a fazer" é informação.
+
+O conteúdo é o mesmo; os testes de formato mudaram junto e dizem por quê.
 """
 import json
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -66,7 +83,12 @@ _BASE_JS = ("const esc = s => String(s == null ? '' : s);\n"
             # `_perfisCel` usa este contador global ao dobrar a lista em "+N
             # perfis" (mais de 4 no mesmo sistema). Sem ele o teste só exercita
             # o caminho curto — foi o que a bateria na base real pegou em 18/09.
-            "let _grpSeq = 0;\n")
+            "let _grpSeq = 0;\n"
+            # Universo de sistemas: na tela sai de DB.users; aqui e' fixo. A
+            # "foto por sistema" de 23/09 percorre TODOS, inclusive os que a
+            # pessoa nao tem — e' o ponto do formato novo.
+            "const _sisTodos = () => ['ORACLE_EBS','SICA_RA','SICA_ESFERA',"
+            "'SIGOT','IC_INTEGRADOR_CONTABIL','SYSTUR','SIG'];\n")
 
 REG = {
     "m": "90000416", "n": "FILIPE NOGUEIRA", "cargo": "ANALISTA CONTABIL PL",
@@ -97,19 +119,67 @@ class TresBlocosNaTela(unittest.TestCase):
               + "console.log(_transfDetalhe(d, d.acessos, d.sobrou||[]));")
         return _node(js)
 
-    def test_os_tres_blocos_na_ordem_que_ela_pediu(self):
+    # ── formato de 23/09/2026 ────────────────────────────────────────────
+    # A area voltou ao tema: "Transferidos: Trazer em linhas ao inves de em uma
+    # unica linha / Se der pra trazer em colunas pode ser tbm", com o desenho
+    # Sistema | Tem atualmente | mapeando nova area | Incluir/excluir/alterar
+    # acesso.
+    #
+    # As TRES PERGUNTAS de 17/09 continuam as mesmas — o que ele tem, o que a
+    # nova area preve, o que mudar. O que mudou foi a LEITURA: eram tres blocos
+    # de texto corrido dentro de uma celula (o "uma unica linha" que ela
+    # reclamou) e viraram uma linha por sistema, uma coluna por pergunta.
+    # Os testes abaixo trocaram de forma pelo mesmo motivo; o CONTEUDO que eles
+    # garantem e' o mesmo.
+
+    def test_as_tres_perguntas_viraram_as_colunas_que_ela_desenhou(self):
         html = self._detalhe(REG)
-        i1 = html.index("acessos que o colaborador tem")
-        i2 = html.index("acessos que deveria ter na nova área")
-        i3 = html.index("o que precisa alterar")
+        for coluna in ("Sistema", "Tem atualmente", "Mapeando nova área",
+                       "Incluir/excluir/alterar acesso"):
+            self.assertIn(f"<th>{coluna}</th>", html)
+        i1 = html.index("<th>Tem atualmente</th>")
+        i2 = html.index("<th>Mapeando nova área</th>")
+        i3 = html.index("<th>Incluir/excluir/alterar acesso</th>")
         self.assertLess(i1, i2)
         self.assertLess(i2, i3)
 
-    def test_o_que_alterar_diz_revogar_incluir_e_a_funcao(self):
+    def test_uma_linha_por_sistema_inclusive_os_vazios(self):
+        """⭐ O coracao do pedido. A area quer uma FOTO: o sistema em que nao ha'
+        nada a fazer e' informacao, nao ausencia dela."""
         html = self._detalhe(REG)
-        self.assertIn("revogar", html)
-        self.assertIn("incluir", html)
-        self.assertIn("Controle de pagamentos AP/AR", html, "a função do CCO precisa aparecer")
+        for sis in ("ORACLE_EBS", "SICA_RA", "SICA_ESFERA", "SIGOT",
+                    "IC_INTEGRADOR_CONTABIL", "SYSTUR", "SIG"):
+            self.assertIn(f'<td class="tr-sis">{sis}', html)
+
+    def test_o_login_de_cada_sistema_nao_se_perde(self):
+        """Quase se perdeu na troca de formato (23/09): o bloco antigo mostrava
+        "login: X" por sistema e a primeira versao da tabela o deixou de fora.
+        E' por ele que se acha a conta DENTRO do sistema — sem isso a analista
+        sabe o que revogar, mas nao em qual conta."""
+        html = self._detalhe(REG)
+        self.assertIn("login: CORPC90000416", html)
+        self.assertIn("login: corpc90000416", html)
+
+    def test_a_acao_usa_as_palavras_dela(self):
+        """O cabecalho que ela escreveu e' "Incluir/excluir/alterar acesso" —
+        a coluna fala "Excluir"/"Incluir", nao mais "revogar"."""
+        html = self._detalhe(REG)
+        self.assertIn("Excluir", html)
+        self.assertIn("Incluir", html)
+        self.assertIn("Controle de pagamentos AP/AR", html,
+                      "a função do CCO precisa aparecer")
+
+    def test_a_acao_cai_na_linha_do_sistema_certo(self):
+        """Sem isto a tabela seria so' enfeite: o SIGOT e' que tem o acesso a
+        excluir, e o Oracle o a incluir."""
+        html = self._detalhe(REG)
+        linhas = dict(re.findall(
+            r'<td class="tr-sis">([A-Z_]+)(?:<div[^>]*>.*?</div>)?</td>'
+            r'(.*?)</tr>', html, re.S))
+        self.assertIn("Excluir", linhas["SIGOT"])
+        self.assertNotIn("Excluir", linhas["ORACLE_EBS"])
+        self.assertIn("Incluir", linhas["ORACLE_EBS"])
+        self.assertNotIn("Incluir", linhas["SYSTUR"])
 
     def test_o_que_ele_tem_continua_listado_por_sistema(self):
         """O que já existia não pode sumir: a lista por sistema continua."""
@@ -124,14 +194,27 @@ class TresBlocosNaTela(unittest.TestCase):
         self.assertIn("faltando na nova", html)
 
     def test_muitos_perfis_no_mesmo_sistema(self):
-        """Mais de 4 perfis no mesmo sistema dobra a lista em "+N perfis" — na
-        base do cliente isso é comum (o FILIPE tem 21 acessos só no Oracle)."""
+        """Na base do cliente isso e' comum (o FILIPE tem 21 acessos so' no
+        Oracle, a GILDA 46 no total).
+
+        MUDOU DE PROPOSITO em 23/09: ate' aqui a lista dobrava em "+N perfis"
+        porque era texto corrido e ficava ilegivel. Na tabela cada perfil e'
+        uma linha DENTRO da celula do sistema — dobrar seria desfazer o pedido
+        ("trazer em linhas ao inves de em uma unica linha")."""
         reg = dict(REG, acessos=[
             {"sis": "ORACLE_EBS", "login": "CORPC1", "perfil": f"CVC GL PERFIL {i}",
              "dt": "2026-09-15"} for i in range(6)])
         html = self._detalhe(reg)
-        self.assertIn("perfis", html)
-        self.assertIn("acessos que o colaborador tem (6)", html)
+        linha = re.search(r'<td class="tr-sis">ORACLE_EBS(?:<div[^>]*>.*?</div>)?</td>(.*?)</tr>',
+                          html, re.S).group(1)
+        for i in range(6):
+            self.assertIn(f"CVC GL PERFIL {i}", linha,
+                          "cada perfil precisa aparecer, um por linha")
+        self.assertEqual(linha.count('class="tr-cel-i"'), 6 + (6 + 1) + 1,
+                         "coluna 'tem': os 6; coluna 'nova area': os 6 que ele "
+                         "mantem MAIS o que falta; coluna 'acao': o incluir. "
+                         "O que falta conta duas vezes de proposito — ele e' "
+                         "previsto na nova area E gera acao.")
 
     def test_sem_diferenca_diz_validado(self):
         """"Se a pessoa não tiver alterações... trazer ok apenas para validação"."""

@@ -155,33 +155,122 @@ class PinoEColunaStatus(unittest.TestCase):
 @unittest.skipUnless(NODE, "Node não disponível nesta máquina")
 class AlertaDeMaisDeUmPerfilNoSystur(unittest.TestCase):
 
-    def _txt(self, d):
-        js = ("const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')"
+    def _txt(self, d, fora=None):
+        """`fora` = sistemas ISENTOS da regra, como o servidor os manda em
+        DB.meta.multi_perfil_fora. None = sem DB nenhum, que e' como esta
+        funcao roda isolada aqui — e como o painel pode chama-la antes de
+        montar o DB."""
+        db = ("" if fora is None else
+              "const DB = {meta: {multi_perfil_fora: "
+              + json.dumps(fora) + "}};\n")
+        js = (db
+              + "const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')"
               ".replace(/>/g,'&gt;').replace(/\"/g,'&quot;');\n"
               f"{_funcao('_csListaPerfis')}\n{_funcao('_csDelta')}\n"
               f"{_funcao('_csPerfilTxt')}\n"
               f"console.log(_csPerfilTxt({json.dumps(d)}));")
         return _node(js)
 
-    def test_systur_com_dois_perfis_alerta(self):
-        html = self._txt({"sis": "SYSTUR", "pe": "P_UM, P_DOIS", "pp": "P_UM"})
-        self.assertIn("mais de um acesso", html)
+    def test_sistema_isento_nao_recebe_o_alerta(self):
+        """Achado na validacao visual de 23/09/2026: a PRISCILA (90001455),
+        ADERENTE com exatamente os 4 perfis do Oracle que a funcao dela preve,
+        levava um "⚠ Usuario com mais de um perfil (4)". O alerta contava
+        perfis e nada mais, sem saber que o Oracle esta' FORA da regra — e o
+        texto dele afirma "a regra da area e um perfil por pessoa por
+        sistema", o oposto do que a area disse sobre o Oracle."""
+        d = {"sis": "ORACLE_EBS", "pe": "P_UM, P_DOIS", "pp": "P_UM"}
+        self.assertNotIn("mais de um perfil", self._txt(d, fora=["ORACLE_EBS"]))
+        self.assertIn("mais de um perfil", self._txt(d, fora=["SIG"]),
+                      "isento e' so' quem esta' na lista")
 
-    def test_systur_com_um_perfil_nao_alerta(self):
-        self.assertNotIn("mais de um acesso",
+    def test_sem_DB_a_regra_vale_para_todos(self):
+        """⭐ Esta funcao e' exercitada ISOLADA no node (os testes acima), e o
+        painel pode chama-la antes de montar o DB. Ler `DB.meta` direto
+        quebrou 25 testes com "DB is not defined" em 23/09 — e quebraria o
+        painel no boot. Sem DB, vale o comportamento anterior."""
+        self.assertIn("mais de um perfil",
+                      self._txt({"sis": "ORACLE_EBS", "pe": "A, B", "pp": "A"}))
+
+    def test_dois_perfis_alerta(self):
+        html = self._txt({"sis": "SYSTUR", "pe": "P_UM, P_DOIS", "pp": "P_UM"})
+        self.assertIn("mais de um perfil", html)
+        self.assertIn("(2)", html, "o número de perfis entra no alerta")
+
+    def test_um_perfil_nao_alerta(self):
+        self.assertNotIn("mais de um perfil",
                          self._txt({"sis": "SYSTUR", "pe": "P_UM", "pp": "P_UM"}))
 
-    def test_outro_sistema_nao_alerta(self):
-        """A regra é do SYSTUR (área, 17/09). No SIG ter vários perfis é normal —
-        medido em 18/09: 1.048 pessoas."""
-        self.assertNotIn("mais de um acesso",
-                         self._txt({"sis": "SIG", "pe": "P_UM, P_DOIS", "pp": "P_UM"}))
+    def test_vale_para_todos_os_sistemas(self):
+        """⭐ MUDANÇA DE ESCOPO (22/09/2026). Em 17/09 a regra era só do SYSTUR e
+        este teste exigia o CONTRÁRIO: que o SIG não alertasse. A área fechou a
+        decisão ("mais de um perfil não pode ficar nada como aderente") e o
+        usuário estendeu a todos os sistemas, ciente do volume — medido em
+        22/09: 419 linhas Aderentes viram pendência (SIG 197, ORACLE_EBS 164,
+        SYSTUR 58)."""
+        self.assertIn("mais de um perfil",
+                      self._txt({"sis": "SIG", "pe": "P_UM, P_DOIS", "pp": "P_UM"}))
 
-    def test_o_alerta_nao_inventa_pendencia(self):
-        """Informativo, como o perfil excessivo desde 28/08: o texto diz isso."""
-        html = self._txt({"sis": "SYSTUR", "pe": "P_UM, P_DOIS", "pp": "P_UM"})
-        self.assertIn("não vira pendência", html)
+    def test_o_texto_segue_o_motor(self):
+        """Tela e motor não podem dizer coisas diferentes. Quem cobra é o motor
+        (motivo MAIS_DE_UM_PERFIL); o alerta só relata o que ele decidiu."""
+        com = self._txt({"sis": "SYSTUR", "pe": "P_UM, P_DOIS", "pp": "P_UM",
+                         "motc": "MAIS_DE_UM_PERFIL"})
+        self.assertIn("entrou como pendência", com)
+        self.assertNotIn("não vira pendência", com)
+        # flag do config desligada: o motor não marca, e o aviso volta a ser
+        # informativo (a decisão de 28/08, "VER sempre, COBRAR com a flag")
+        sem = self._txt({"sis": "SYSTUR", "pe": "P_UM, P_DOIS", "pp": "P_UM"})
+        self.assertIn("não vira pendência", sem)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(NODE, "Node não disponível nesta máquina")
+class RotuloNaFilaDePendencias(unittest.TestCase):
+    """Área, 22/09: a linha entra em pendência "como usuário com mais de um
+    perfil". Na fila, "Em Análise" sozinho não diz o que aconteceu — era
+    justamente o que ela queria enxergar."""
+
+    def _js(self, *funcoes):
+        # esc simplificado: o que estes testes verificam e o ROTULO, nao o
+        # escape (esse ja tem cobertura propria nos testes do painel).
+        esc = 'const esc = s => String(s);'
+        css = "const TIPO_CSS = {" + chr(39) + "EM_ANALISE" + chr(39) + ": "
+        css += chr(39) + "b-em-analise" + chr(39) + "};"
+        partes = [esc, css] + [_funcao(f) for f in funcoes]
+        return chr(10).join(partes) + chr(10)
+
+    def test_badge_nomeia_a_regra(self):
+        js = self._js("motIcone", "tipoBadge")
+        html = _node(js + "console.log(tipoBadge('EM_ANALISE','Em Análise','',"
+                          "'MAIS_DE_UM_PERFIL'));")
+        self.assertIn("Mais de um perfil", html)
+        self.assertNotIn(">Em Análise<", html)
+        self.assertIn("b-em-analise", html, "o tipo no dado continua EM_ANALISE")
+
+    def test_outros_motivos_nao_mudam(self):
+        """Não-regressão: o badge das outras pendências fica como estava."""
+        js = self._js("motIcone", "tipoBadge")
+        html = _node(js + "console.log(tipoBadge('EM_ANALISE','Em Análise','',"
+                          "'CONTA_INDEFINIDA'));")
+        self.assertIn(">Em Análise<", html)
+
+    def test_badge_decide_pelo_codigo_e_nao_pela_frase(self):
+        """⭐ O `mot` que chega à tela é a FRASE montada pelo servidor; o código
+        cru vem em `motc`. Casar por frase quebraria no dia em que alguém
+        melhorasse a redação do texto."""
+        js = self._js("motIcone", "tipoBadge")
+        # a frase no lugar do código: NÃO pode virar rótulo
+        html = _node(js + "console.log(tipoBadge('EM_ANALISE','Em Análise',"
+                          "'Usuario com mais de um perfil no MESMO sistema.',''));")
+        self.assertIn(">Em Análise<", html)
+
+    def test_motivo_encadeado_ainda_nomeia_a_regra(self):
+        """O motor encadeia ("MAIS_DE_UM_PERFIL | PERFIL_EXCESSIVO") — medido em
+        22/09: 134 das 419 linhas. O rótulo não pode se perder nelas."""
+        js = self._js("motIcone", "tipoBadge")
+        html = _node(js + "console.log(tipoBadge('EM_ANALISE','Em Análise','',"
+                          "'MAIS_DE_UM_PERFIL | PERFIL_EXCESSIVO'));")
+        self.assertIn("Mais de um perfil", html)

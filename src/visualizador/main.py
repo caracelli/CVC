@@ -173,10 +173,28 @@ def rotulo_origem(org, sistema="") -> str:
 SRV = None
 _last_seen = time.time()
 _armed = False
-_OCIOSO = 300   # watchdog tolerante: aba em 2o plano (heartbeat estrangulado) nao mata o servidor
+_APP_ID = "cvc-iam-visualizador"
+# WATCHDOG DE OCIOSIDADE — ver _watchdog e _ler_ocioso.
+#
+# Era 300 s, e ESSE era o defeito relatado pela area em 23/09/2026: "o programa
+# ainda fica dando erro ao pular as janelas, ai precisa ficar fechando e abrindo
+# ele de novo". O heartbeat do painel (setInterval de 4 s no index.html) so
+# roda enquanto a aba esta viva; quando a janela vai para tras de outra, o
+# navegador congela a aba (Edge "guias em suspensao", congelamento do Chrome) —
+# e a maquina bloqueada ou suspensa para tudo. Passados 5 minutos o watchdog
+# derrubava o servidor; a aba continuava aberta e TODA chamada passava a falhar.
+# Reproduzido em 23/09 (scratchpad/prova_watchdog2.py): parado o heartbeat, a
+# porta deixa de atender.
+#
+# O encerramento normal NAO depende deste relogio: o `pagehide` manda um beacon
+# para /api/encerrar quando a pagina e' realmente fechada. O watchdog so cobre
+# o caso anormal (navegador morto sem beacon), e para isso horas bastam.
+_OCIOSO_PADRAO = 8 * 3600   # 8 h — uma jornada; 0 desliga o watchdog
+_OCIOSO = _OCIOSO_PADRAO
 _enc_em = None  # timestamp de um encerramento agendado (None = nenhum pendente)
 _GRACE = 5      # carencia: F5/Ctrl+F5 recarrega e re-arma a aba dentro desse prazo
 _sessao = None  # id da aba ativa; um beacon de encerrar so vale vindo dela
+_MARCADORES = None   # (token, marcadores da Consulta) — ver consulta_marcadores
 _BASE = None   # cache da parte cara do DB (bi_divergencias + JOIN); 1x por execução
 _SEM_BANCO = False   # True quando o banco da rede ainda nao existe (mostra aviso)
 
@@ -281,9 +299,64 @@ def _watchdog():
         if _enc_em is not None and (time.time() - _enc_em) > _GRACE:
             _enc("aba fechada (sem retorno apos carencia)")
             return
-        if _armed and (time.time() - _last_seen) > _OCIOSO:
+        if _armed and _OCIOSO > 0 and (time.time() - _last_seen) > _OCIOSO:
             _enc(f"aba inativa (sem heartbeat >{_OCIOSO}s)")
             return
+
+
+class _Servidor(ThreadingHTTPServer):
+    """Servidor do painel, com SO_REUSEADDR DESLIGADO.
+
+    O `HTTPServer` do Python liga `allow_reuse_address` por padrao. No Linux
+    isso so' encurta o TIME_WAIT, mas no WINDOWS ele permite que um SEGUNDO
+    processo ligue na MESMA porta — e os dois passam a disputar as conexoes.
+    Medido em 23/09/2026: duas instancias abriram em 127.0.0.1 sem erro nenhum.
+
+    O estrago e' silencioso e casa com o relato da area ("fica dando erro, ai
+    precisa ficar fechando e abrindo de novo"): o navegador cai ora num
+    servidor ora no outro, e o beacon de "fechei a pagina" do painel VELHO
+    pode ser entregue ao painel NOVO, que encerra na hora.
+
+    Desligado, a segunda abertura recebe um erro limpo e `_ceder_porta` trata
+    a troca de forma ordenada.
+    """
+    allow_reuse_address = False
+
+
+def _ceder_porta(espera_s: float = 12.0) -> bool:
+    """Pede a uma copia ANTIGA do painel que saia, e espera a porta liberar.
+
+    Devolve True quando a porta ficou livre. False quando quem responde nao e'
+    o Visualizador (ai' a porta e' de outro programa e nao cabe a nos derrubar)
+    ou quando a instancia antiga nao saiu no prazo.
+    """
+    base = f"http://{HOST}:{PORT}"
+    try:
+        with urllib.request.urlopen(base + "/api/ping?s=takeover", timeout=3) as r:
+            dono = json.loads(r.read().decode("utf-8") or "{}")
+    except Exception:
+        return False
+    if dono.get("app") != _APP_ID:
+        return False
+    print("  [porta] ja ha um painel aberto nesta maquina — pedindo que ele "
+          "encerre para abrir com os dados atuais.")
+    try:
+        urllib.request.urlopen(base + "/api/encerrar", timeout=3).read()
+    except Exception:
+        pass   # ele encerra ao responder; a conexao cair aqui e' esperado
+    fim = time.time() + espera_s
+    while time.time() < fim:
+        time.sleep(0.4)
+        s = socket.socket()
+        s.settimeout(1)
+        try:
+            s.connect((HOST, PORT))
+        except OSError:
+            return True          # ninguem atende mais: porta livre
+        finally:
+            s.close()
+    print("  [porta] o painel anterior nao encerrou a tempo.")
+    return False
 
 
 def carregar_config():
@@ -325,7 +398,46 @@ def carregar_config():
     return rede_raiz, banco_sub, sistema, duracao, meta_desl, origem
 
 
+def _multi_perfil_fora():
+    """Sistemas em que ter varios perfis e' NORMAL — a regra de "mais de um
+    perfil" nao se aplica. Mesma chave que o Processador le
+    (<validacao><mais_de_um_perfil><sistemas_fora>); aqui serve so' para a tela
+    nao afirmar uma regra onde ela nao vale."""
+    if not os.path.exists(CONFIG_PATH):
+        return []
+    try:
+        bruto = (ET.parse(CONFIG_PATH).getroot()
+                 .findtext("validacao/mais_de_um_perfil/sistemas_fora") or "")
+    except Exception:
+        return []
+    return [p.strip().upper() for p in bruto.split(",") if p.strip()]
+
+
+def _ler_ocioso():
+    """Segundos sem heartbeat ate o watchdog encerrar. 0 desliga.
+
+    Funcao propria, e nao mais um item da tupla de `carregar_config`: aquela
+    assinatura e' desempacotada em varios pontos (inclusive fora daqui) e
+    aumenta-la quebraria quem so' quer a raiz da rede.
+    """
+    if not os.path.exists(CONFIG_PATH):
+        return _OCIOSO_PADRAO
+    try:
+        bruto = (ET.parse(CONFIG_PATH).getroot()
+                 .findtext("visualizador/ociosidade_segundos") or "").strip()
+    except Exception:
+        return _OCIOSO_PADRAO
+    if not bruto:
+        return _OCIOSO_PADRAO
+    try:
+        v = int(bruto)
+    except ValueError:
+        return _OCIOSO_PADRAO
+    return v if v >= 0 else _OCIOSO_PADRAO
+
+
 REDE_RAIZ, BANCO_SUB, SISTEMA, QUAR_DIAS, META_ACESSOS_DESLIG, CONFIG_SRC = carregar_config()
+_OCIOSO = _ler_ocioso()
 
 
 def _jira_xml_path():
@@ -674,17 +786,36 @@ def sincronizar_banco():
         if not _precisa_sincronizar(rede_db, local_db):
             print(f"  [banco] cache local em dia (rede inalterada): {local_db}")
             return local_db
+        # COPIA ATOMICA (23/09/2026): escreve num arquivo ao lado e so' troca
+        # no fim, por os.replace. Antes o backup ia DIRETO no cache local — se
+        # a rede caisse no meio, a copia boa era destruida e o painel ficava
+        # com um banco pela metade. No startup isso ainda se resolvia
+        # reabrindo; com a atualizacao acontecendo de painel ABERTO (ver
+        # /api/atualizar-base) nao se resolve — quem esta lendo perde o chao.
+        # Falhou? o cache anterior continua intacto e a funcao cai no ramo de
+        # baixo, que segue usando ele.
+        novo = local_db + ".novo"
         try:
+            if os.path.exists(novo):
+                os.remove(novo)
             src = sqlite3.connect(f"file:{rede_db}?mode=ro", uri=True, timeout=15)
-            dst = sqlite3.connect(local_db, timeout=15)
-            with dst:
-                src.backup(dst)
-            dst.close()
-            src.close()
+            dst = sqlite3.connect(novo, timeout=15)
+            try:
+                with dst:
+                    src.backup(dst)
+            finally:
+                dst.close()
+                src.close()
+            os.replace(novo, local_db)        # troca atomica no mesmo volume
             print(f"  [banco] sincronizado da rede: {rede_db}")
             return local_db
         except Exception as e:
             print(f"  [banco] falha ao sincronizar da rede ({e!r})")
+            try:
+                if os.path.exists(novo):
+                    os.remove(novo)
+            except OSError:
+                pass
     if os.path.exists(local_db):
         print("  [banco] rede indisponivel — usando copia local anterior")
         return local_db
@@ -693,6 +824,76 @@ def sincronizar_banco():
 
 
 DB_PATH = sincronizar_banco()
+
+# ── Base nova na rede: avisar, nao trocar por conta propria ──────────────
+# Decisao do usuario (23/09/2026): "acho interessante um monitoramento de a
+# base alterou e se caso altere aparecer uma mensagem perguntando se quer
+# atualizar". Trocar sozinho puxaria o tapete de quem esta no meio de uma
+# analise; o Processador roda uma vez por dia, entao a pergunta aparece uma
+# vez por dia.
+#
+# Seguro porque as TRATATIVAS nao moram no banco copiado: elas sao anexadas
+# aos .jsonl da rede (ver `registrar_interacao`) e lidas ao vivo. Atualizar a
+# base nao perde nada do que a pessoa registrou.
+_LOCK_SYNC = threading.Lock()
+
+
+def _assinatura_base_rede():
+    """Assinatura barata do banco DA REDE (tamanho + data, incluindo o -wal).
+
+    Serve para o painel saber que HOUVE nova rodada do Processador e para
+    lembrar qual versao ja foi recusada ("Agora nao") — sem isso a pergunta
+    voltaria a cada 10 s. Vazia em modo local (nao ha rede para comparar)."""
+    if not REDE_RAIZ:
+        return ""
+    try:
+        rede = _rede_db_path()
+        st = os.stat(rede)
+        maior = st.st_mtime
+        wal = rede + "-wal"
+        if os.path.exists(wal):
+            maior = max(maior, os.path.getmtime(wal))
+        return f"{int(maior)}.{st.st_size}"
+    except OSError:
+        return ""
+
+
+def base_da_rede_mudou() -> bool:
+    """True quando a rede esta' mais nova que a copia que estamos servindo."""
+    if not REDE_RAIZ:
+        return False
+    try:
+        return _precisa_sincronizar(_rede_db_path(), BANCO_LOCAL)
+    except Exception:
+        return False
+
+
+def atualizar_base():
+    """Recopia o banco da rede e reconstroi o snapshot. So' a pedido da tela.
+
+    Devolve (ok, mensagem). Sob lock: dois cliques (ou duas abas) nao copiam
+    ao mesmo tempo. Se a copia falhar, `sincronizar_banco` preserva o cache
+    anterior e o painel continua servindo o que ja tinha."""
+    global _BASE
+    with _LOCK_SYNC:
+        if not REDE_RAIZ:
+            return False, "Painel em modo local: nao ha base de rede."
+        antes = _assinatura_base_rede()
+        try:
+            sincronizar_banco()
+        except Exception as e:
+            return False, f"Falha ao copiar da rede: {e}"
+        if base_da_rede_mudou():
+            # a copia nao pegou (rede caiu no meio): nao mente para a tela
+            return False, ("Nao foi possivel atualizar agora — a rede nao "
+                           "respondeu. Os dados continuam os da ultima carga.")
+        try:
+            garantir_estrutura(force=True)
+        except Exception as e:
+            return False, f"Base copiada, mas o painel nao remontou: {e}"
+        _BASE = None          # o cache caro morre junto com o snapshot antigo
+        print(f"  [banco] atualizado a pedido da tela (assinatura {antes})")
+        return True, "Base atualizada."
 
 
 # ───────────── Interacoes multiusuario (.jsonl na rede) ─────────────
@@ -1069,22 +1270,94 @@ SELECT
   -- perfil esperado == encontrado e nao havia como saber que o motivo era o
   -- status da CONTA no extrato. O motivo e' decidido no motor (validacao), aqui
   -- so vira texto.
-  CASE COALESCE(v.motivo_status,'')
-    WHEN 'CONTA_INDEFINIDA' THEN
+  -- CASE PESQUISADO (22/09/2026), e nao mais `CASE COALESCE(...) WHEN`: o
+  -- motor ENCADEIA motivos ("MAIS_DE_UM_PERFIL | PERFIL_EXCESSIVO"), e a
+  -- igualdade exata deixava a linha encadeada cair no ELSE — sem texto nenhum
+  -- na tela. Os casamentos exatos abaixo continuam exatos, letra por letra; o
+  -- que entra e' o LIKE do motivo novo, que vem primeiro porque ele e' o que
+  -- muda o DESFECHO da linha (o outro so' a descreve).
+  CASE
+    WHEN COALESCE(v.motivo_status,'') LIKE 'MAIS_DE_UM_PERFIL%' THEN
+      'Usuario com mais de um perfil no MESMO sistema. A regra da area '
+      || '(22/09/2026) e de um perfil por pessoa por sistema, entao a linha nao '
+      || 'fica como aderente: vem como pendencia para analise. Os perfis que ela '
+      || 'tem hoje estao listados ao lado. Ate 22/09 este caso saia Aderente.'
+    -- ANCORA NO PERFIL DO SYSTUR (23/09/2026). Vem no topo, junto do
+    -- mais-de-um-perfil, porque tambem MUDA O DESFECHO da linha; e por LIKE,
+    -- porque encadeia com o motivo anterior ("PERFIL_FORA_DO_SYSTUR |
+    -- PERFIL_EXCESSIVO"). O sufixo do segundo e' o nome do sistema.
+    WHEN COALESCE(v.motivo_status,'') LIKE 'PERFIL_FORA_DO_SYSTUR%' THEN
+      'A pessoa TEM acessos neste sistema que o perfil dela no SYSTUR nao '
+      || 'preve. Pela regra da area (23/09/2026), os acessos do Oracle seguem o '
+      || 'perfil liberado no SYSTUR: a matriz diz, para cada perfil do SYSTUR, '
+      || 'quais responsabilidades do Oracle ele autoriza. Avaliar se o acesso a '
+      || 'mais se justifica; se nao, revogar. Ate 23/09 este caso saia Aderente.'
+    -- LISTA OS ACESSOS que motivaram a pendencia. Sem isso a tela diz "falta
+    -- SYSTUR porque ela tem Oracle" e nunca mostra QUAL Oracle — a linha e' do
+    -- SYSTUR e o perfil_atual dela e' (corretamente) vazio. Era a reclamacao
+    -- original da area sobre a matricula 1303: "esses acessos dele precisam
+    -- aparecer". 190 pessoas neste caso na base de 15/09.
+    --
+    -- O sistema sai do proprio codigo do motivo ('SEM_PERFIL_SYSTUR_COM_' tem
+    -- 22 caracteres), cortando um eventual encadeamento ' | OUTRO'.
+    --
+    -- O filtro de situacao ESPELHA dominio/objetos_valor/situacao_conta.py
+    -- (SEM_ACESSO): conta bloqueada nao e' acesso e nao pode ser listada aqui
+    -- como se fosse. A duplicacao e' proposital — SQL nao importa o modulo — e
+    -- esta' travada por teste, que falha se as duas listas divergirem.
+    WHEN COALESCE(v.motivo_status,'') LIKE 'SEM_PERFIL_SYSTUR_COM_%' THEN
+      'A pessoa TEM acesso no ' || (CASE WHEN instr(v.motivo_status,' |') > 0
+            THEN substr(v.motivo_status, 23, instr(v.motivo_status,' |') - 23)
+            ELSE substr(v.motivo_status, 23) END)
+      || ' mas NAO tem nenhum perfil no SYSTUR. '
+      || 'Como os acessos do Oracle seguem o perfil do SYSTUR (regra da area, '
+      || '23/09/2026), nao ha como dizer se o que ela tem esta certo: a falta '
+      || 'esta no SYSTUR. Definir o perfil dela no SYSTUR e entao revalidar o '
+      || 'Oracle. Acessos que ela tem hoje: '
+      || COALESCE((SELECT CASE
+            -- O motivo vira um `title` NATIVO do navegador (ver motIcone no
+            -- index.html): lista longa ali fica ilegivel. 166 das 190 pessoas
+            -- tem UM acesso so', entao o corte quase nunca entra; quando entra,
+            -- o total diz mais do que a lista inteira truncada.
+            WHEN length(group_concat(a.perfil, ', ')) > 220
+              THEN substr(group_concat(a.perfil, ', '), 1, 220)
+                   || '... (' || COUNT(*) || ' acessos no total)'
+            ELSE group_concat(a.perfil, ', ') END
+                   FROM acessos_sistemas a
+                   WHERE a.matricula_vinculada = v.matricula
+                     AND a.sistema = (CASE WHEN instr(v.motivo_status,' |') > 0
+                          THEN substr(v.motivo_status, 23, instr(v.motivo_status,' |') - 23)
+                          ELSE substr(v.motivo_status, 23) END)
+                     AND UPPER(TRIM(COALESCE(a.situacao,''))) NOT IN
+                         ('INATIVO','INACTIVE','BLOQUEADO','BLOCKED',
+                          'SUSPENSO','DESATIVADO','CANCELADO','I','B')),
+                  '(nenhum ativo)') || '.'
+    -- A matriz do sistema nao cobre o cargo/centro de custo da pessoa, mas ela
+    -- TEM acesso. Pedido da area (23/09/2026) sobre a matricula 1303: "no ebs
+    -- vir que nao esta mapeado, isso pode acontecer". Informativo: nao ha o
+    -- que cobrar enquanto a matriz nao disser o que esse cargo pode ter. A
+    -- matriz do Oracle cobre 307 dos 13.733 ativos, entao o caso e' comum.
+    WHEN COALESCE(v.motivo_status,'') LIKE 'SEM_MAPEAMENTO_%' THEN
+      'A pessoa TEM acesso neste sistema, mas a matriz dele nao mapeia o cargo '
+      || 'e o centro de custo dela — nao existe perfil esperado para comparar. '
+      || 'Nao e uma pendencia: enquanto a matriz nao disser o que este cargo '
+      || 'pode ter, nao ha o que incluir nem o que revogar. Os acessos que ela '
+      || 'tem hoje estao listados ao lado.'
+    WHEN COALESCE(v.motivo_status,'') = 'CONTA_INDEFINIDA' THEN
       'O perfil confere com o esperado, mas a conta esta com status pendente/'
       || 'indefinido no extrato do sistema — nao da para afirmar que o acesso '
       || 'esta ativo. Confirmar a situacao da conta no proprio sistema.'
-    WHEN 'CONTA_BLOQUEADA' THEN
+    WHEN COALESCE(v.motivo_status,'') = 'CONTA_BLOQUEADA' THEN
       'A pessoa JA TEM conta neste sistema (o login aparece ao lado), mas ela '
       || 'esta BLOQUEADA/INATIVA no extrato — conta revogada nao conta como '
       || 'acesso, por isso o resultado e "sem acesso". A acao aqui e '
       || 'DESBLOQUEAR a conta existente, nao criar uma nova.'
-    WHEN 'CONTA_PENDENTE' THEN
+    WHEN COALESCE(v.motivo_status,'') = 'CONTA_PENDENTE' THEN
       'A conta desta pessoa aparece no extrato com status PENDENTE (ou sem '
       || 'status), entao ela nao conta como acesso ativo. Pela regra da area '
       || '(31/08/2026) o caso vira INCLUSAO: o perfil ao lado e o que pode ser '
       || 'liberado para ela. Ate 31/08 isto saia como "Em Analise".'
-    WHEN 'PERFIL_EXCESSIVO' THEN
+    WHEN COALESCE(v.motivo_status,'') = 'PERFIL_EXCESSIVO' THEN
       'A pessoa TEM o perfil que o cargo preve, e alem dele outros que a matriz '
       || 'nao explica (os "a mais" listados ao lado). Ate 28/08/2026 esses '
       || 'extras nao apareciam: a linha mostrava so o perfil esperado. Avaliar '
@@ -1092,9 +1365,13 @@ SELECT
     -- Texto pedido pela area (Bruna, 15/09), o mesmo usado por eles. Cobre os
     -- dois caminhos do motor: sem linha na matriz/CCO, ou com linha mas toda
     -- inclusao cortada pelo limiar de 30% (decisao do usuario: um rotulo so').
-    WHEN 'SEM_EXPECTATIVA_RELEVANTE' THEN
+    WHEN COALESCE(v.motivo_status,'') = 'SEM_EXPECTATIVA_RELEVANTE' THEN
       'Não tem mapeamento localizado para o centro de custo.'
     ELSE '' END                  AS motivo,
+  -- O CODIGO cru, alem da frase. A tela precisa DECIDIR com ele (o rotulo do
+  -- badge na fila de pendencias e o alerta da Consulta); decidir pelo texto
+  -- seria casar por frase, que quebra no dia em que alguem melhorar a redacao.
+  COALESCE(v.motivo_status,'')   AS motivo_cod,
   COALESCE(v.dt_processamento,'') AS data_identificacao,
   0                              AS resolvida,
   CASE v.status WHEN 'SEM_ACESSO' THEN 'Incluir Acesso'
@@ -1124,6 +1401,7 @@ SELECT
   COALESCE(d.perfil_esperado,'')  AS perfil_esperado,
   COALESCE(d.descricao,'')        AS descricao,
   ''                              AS motivo,
+  ''                              AS motivo_cod,
   COALESCE(d.data_identificacao,'') AS data_identificacao,
   d.resolvida, 'Usuário Não Encontrado' AS acao, '' AS origem,
   d.usuario AS login,
@@ -1136,7 +1414,26 @@ _IDX_BI = [
     "CREATE INDEX IF NOT EXISTS ix_bi_div_usuario  ON bi_divergencias(usuario)",
     "CREATE INDEX IF NOT EXISTS ix_bi_div_matricula ON bi_divergencias(matricula)",
     "CREATE INDEX IF NOT EXISTS ix_bi_div_sistema  ON bi_divergencias(sistema)",
-    "CREATE INDEX IF NOT EXISTS ix_bi_div_tipo     ON bi_divergencias(tipo)",
+    # `tipo` leva `usuario` na ponta pelo mesmo motivo dos de baixo: quem
+    # pergunta por tipo esta' contando usuario DISTINTO.
+    "CREATE INDEX IF NOT EXISTS ix_bi_div_tipo     ON bi_divergencias(tipo, usuario)",
+    # INDICES DE COBERTURA (23/09/2026) — a area reclamou de carga lenta e a
+    # medicao mostrou 5,0 s dos 6,3 s da primeira montagem em SQL. Os KPIs
+    # agrupam por acao/tipo/sistema contando usuario DISTINTO; com os indices
+    # de UMA coluna o SQLite varria a tabela e ia buscar `usuario` linha a
+    # linha. Incluir `usuario` na ponta faz a consulta se resolver dentro do
+    # indice. Medido nesta base (10.424 linhas):
+    #     acao        0,315 s -> 0,008 s
+    #     sistema     0,368 s -> 0,015 s
+    # Nao e' regressao de hoje: a tabela passou de 5.821 para 10.424 linhas com
+    # as decisoes da semana (limiar desligado, SIG pela CCO, nao mapeado), e o
+    # custo cresceu junto.
+    "CREATE INDEX IF NOT EXISTS ix_bi_div_acao_us  ON bi_divergencias(acao, usuario)",
+    "CREATE INDEX IF NOT EXISTS ix_bi_div_sis_tipo ON bi_divergencias(sistema, tipo, usuario)",
+    # KPI de pendencias abertas e a data da ultima carga — as duas varriam a
+    # tabela inteira.
+    "CREATE INDEX IF NOT EXISTS ix_bi_div_res_tipo ON bi_divergencias(resolvida, tipo, usuario)",
+    "CREATE INDEX IF NOT EXISTS ix_bi_div_data     ON bi_divergencias(data_identificacao)",
 ]
 
 _SQL_QUAR = """
@@ -1247,8 +1544,9 @@ def garantir_estrutura(force=False):
         if existe and not force:
             cols = [r[1] for r in c.execute("PRAGMA table_info(bi_divergencias)")]
             if ("origem" not in cols or "login" not in cols or "motivo" not in cols
-                    or "funcao" not in cols):
-                force = True  # migração de schema: 'origem'/'login'/'motivo'/'funcao'
+                    or "funcao" not in cols or "motivo_cod" not in cols):
+                force = True  # migração de schema: 'origem'/'login'/'motivo'/
+                              # 'funcao'/'motivo_cod'
             elif c.execute("SELECT 1 FROM bi_divergencias WHERE tipo='NAO_MAPEADO' "
                            "AND acao<>'Não Mapeado' LIMIT 1").fetchone():
                 # Rotulo mudou (15/09: "Sem Expectativa" -> "Não Mapeado"). O
@@ -1267,6 +1565,15 @@ def garantir_estrutura(force=False):
         try:
             c.execute("CREATE INDEX IF NOT EXISTS ix_rh_ativos_matricula "
                       "ON rh_ativos(matricula)")
+        except Exception:
+            pass
+        try:
+            # A consulta mais cara da carga (23/09/2026): contar acessos
+            # VINCULADOS varria as 90.592 linhas de `acessos_sistemas`, uma
+            # tabela larga — 1,02 s so' nela. Indice de COBERTURA com as duas
+            # colunas da clausula resolve dentro do indice: 0,13 s.
+            c.execute("CREATE INDEX IF NOT EXISTS ix_acessos_metodo_matricula "
+                      "ON acessos_sistemas(metodo_vinculacao, matricula_vinculada)")
         except Exception:
             pass
         # Defensivo: DB gerado por Processador antigo pode nao ter tipo_vinculo.
@@ -2444,6 +2751,7 @@ def _montar_base():
                        b.perfil_encontrado, b.perfil_esperado, b.data_identificacao,
                        b.resolvida, b.origem, b.sistema, b.login,
                        COALESCE(b.motivo,'') motivo,
+                       COALESCE(b.motivo_cod,'') motivo_cod,
                        COALESCE(b.funcao,'') funcao,
                        COALESCE(r.cargo_descricao,'') cargo,
                        COALESCE(r.departamento,'')   depto,
@@ -2488,6 +2796,9 @@ def _montar_base():
                 # (hoje: conta pendente/indefinida no extrato) — a grid mostra
                 # como aviso na linha. Vazio na esmagadora maioria das linhas.
                 "mot": r["motivo"] or "",
+                # codigo do motivo (cru). A frase acima e' para LER; este e'
+                # para a tela DECIDIR — hoje, o rotulo "Mais de um perfil".
+                "motc": r["motivo_cod"] or "",
                 # funcao da matriz CCO que originou o esperado (vazio = veio da
                 # matriz por cargo). A Consulta agrupa o esperado por ela.
                 "fun": r["funcao"] or "",
@@ -2530,7 +2841,16 @@ def _montar_base():
         maxdt = c.execute(
             "SELECT MAX(data_identificacao) FROM bi_divergencias "
             "WHERE data_identificacao <> ''").fetchone()[0] or ""
-        meta = {"referencia": _mes_ref(maxdt), "atualizacao": _fmt_dt(maxdt)}
+        meta = {"referencia": _mes_ref(maxdt), "atualizacao": _fmt_dt(maxdt),
+                # Sistemas FORA da regra de "mais de um perfil". A tela precisa
+                # saber: o alerta "Usuario com mais de um perfil" contava os
+                # perfis e nada mais, entao aparecia tambem onde a regra NAO
+                # vale — e o texto dele afirma "a regra da area e um perfil por
+                # pessoa por sistema", o oposto do que a area disse sobre o
+                # Oracle ("cada perfil e' um acesso especifico"). Na validacao
+                # de 23/09/2026 a PRISCILA (90001455), perfeitamente aderente
+                # com os 4 perfis que a funcao dela preve, aparecia com um "⚠".
+                "multi_perfil_fora": _multi_perfil_fora()}
         # Data do ARQUIVO de RH ativos — nao e' a data do processamento. A area
         # pediu (25/08/2026) para saber de quando e' a base de ativos ao olhar
         # um movimento: sem isso nao da' para dizer se uma transferencia ja
@@ -3038,6 +3358,57 @@ def enviar_quarentena(usuarios, origem="Inclusão / Alteração",
     print(f"  [QUARENTENA] +{novos} ENVIAR por {USUARIO} "
           f"({dias}d, ticket='{ticket}') (ignorados {len(usuarios)-novos} ja ativos)")
     return {"novos": novos, "total": len(ja), "data_fim": fim}
+
+
+def consulta_marcadores():
+    """So' o que a CONSULTA precisa do Historico e dos Desligados: um conjunto
+    de matriculas e a situacao de cada desligado.
+
+    POR QUE EXISTE (23/09/2026). A area reclamou que "a troca de abas esta
+    lenta" e apontou a Consulta. Medido: abrir a Consulta chamava
+    `/api/historico` (0,95 s, 11,07 MB, 12.084 registros) e `/api/desligados`
+    (1,23 s, 7,37 MB, 30.247 registros) — 2,18 s e 18,4 MB — e o painel
+    DESCARTAVA tudo menos as matriculas:
+
+        _histMats = new Set(recs.map(x => x.matricula))
+        _deslMats = new Set(d.lista.map(x => x.m))
+        _deslSit  = new Map(d.lista.map(x => [x.m, x.tratado ? 'Tratado' : x.sit]))
+
+    O cache por token (fetchAPI) ja' evitava REBUSCAR, mas a primeira abertura
+    pagava a conta inteira — e ela volta a cada nova carga do Processador.
+
+    As duas rotas continuam existindo: as abas Historico e Desligados usam os
+    registros completos. O que muda e' so' quem quer apenas os marcadores.
+
+    MEMOIZADO pelo token do dado. Montar os marcadores ainda custa ~2,5 s
+    porque reusa as duas funcoes completas — e reusa de proposito: a situacao
+    do desligado ("Tratar"/"OK"/"Tratado") e' regra de negocio, e reescreve-la
+    em SQL aqui criaria uma segunda versao da mesma regra para divergir com o
+    tempo. Com o memo, esse custo acontece UMA VEZ por carga do Processador,
+    em vez de uma vez por abertura da Consulta, em cada aba e cada analista.
+    """
+    global _MARCADORES
+    tok = token_mudanca()
+    if _MARCADORES and _MARCADORES[0] == tok:
+        return _MARCADORES[1]
+    hist, desl = set(), {}
+    try:
+        for r in listar_historico_rh():
+            m = (r.get("matricula") or "").strip()
+            if m:
+                hist.add(m)
+    except Exception as e:
+        print(f"  [marcadores] historico indisponivel: {e!r}")
+    try:
+        for r in (listar_desligados().get("lista") or []):
+            m = (r.get("m") or "").strip()
+            if m:
+                desl[m] = "Tratado" if r.get("tratado") else (r.get("sit") or "")
+    except Exception as e:
+        print(f"  [marcadores] desligados indisponivel: {e!r}")
+    saida = {"hist": sorted(hist), "desl": desl}
+    _MARCADORES = (tok, saida)
+    return saida
 
 
 def listar_desligados():
@@ -4407,7 +4778,7 @@ def _vg_secoes(de="", ate=""):
           'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
           'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Não Mapeado'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
-          'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
+          'ORACLE_EBS': 'Oracle EBS'}
     pct = lambda n, t: (round(100 * n / t, 1) if t else 0)
     ch = vg.get("chamados") or {}
     tp = vg.get("tempos") or {}
@@ -4474,7 +4845,7 @@ def _vg_analiticos(de="", ate=""):
           'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
           'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Não Mapeado'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
-          'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera'}
+          'ORACLE_EBS': 'Oracle EBS'}
     d19 = lambda s: (str(s) if s else "")[:19]
     from datetime import datetime as _dt
     hoje = _dt.now()
@@ -4642,7 +5013,14 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/api/versao":
                 # Pergunta barata que evita o download de 5,5 MB — ver
                 # token_mudanca(). Responde em bytes, nao em megabytes.
-                self._send(200, json.dumps({"token": token_mudanca()}),
+                # `base_nova` diz que o Processador rodou de novo na rede.
+                # Vai JUNTO do token (que fala do dado ja' servido) porque
+                # esta chamada e' a unica que o painel ja' faz de 10 em 10 s —
+                # nao vale criar um segundo relogio. Ambas as perguntas sao
+                # `os.stat`, nao SQL.
+                self._send(200, json.dumps({"token": token_mudanca(),
+                                            "base_nova": base_da_rede_mudou(),
+                                            "base_sig": _assinatura_base_rede()}),
                            "application/json; charset=utf-8")
             elif self.path == "/api/dados":
                 # O token vai JUNTO com os dados: assim o cliente guarda a
@@ -4654,10 +5032,19 @@ class H(BaseHTTPRequestHandler):
                 _tok = token_mudanca()
                 _dados = construir_db()
                 _dados["token"] = _tok
+                # o mesmo aviso de /api/versao: o cliente so' pergunta a versao
+                # quando pode pular o download, entao sem isto o aviso de base
+                # nova nao apareceria no caminho do download completo.
+                _dados["base_nova"] = base_da_rede_mudou()
+                _dados["base_sig"] = _assinatura_base_rede()
                 self._send(200, json.dumps(_dados, ensure_ascii=False),
                            "application/json; charset=utf-8")
             elif self.path == "/api/quarentena":
                 self._send(200, json.dumps(listar_quarentena(), ensure_ascii=False),
+                           "application/json; charset=utf-8")
+            elif self.path == "/api/consulta-marcadores":
+                self._send(200, json.dumps(consulta_marcadores(),
+                                           ensure_ascii=False),
                            "application/json; charset=utf-8")
             elif self.path == "/api/historico":
                 self._send(200, json.dumps(listar_historico_rh(), ensure_ascii=False),
@@ -4720,7 +5107,12 @@ class H(BaseHTTPRequestHandler):
                 # Antes esse estado so' chegava junto de /api/desligados, entao
                 # quem abrisse a Pendencia sem passar pelos Desligados via o
                 # botao permanentemente desabilitado.
+                # `app` identifica esta instancia como o Visualizador do CVC
+                # IAM: quando o exe e' aberto e a porta ja esta ocupada, ele
+                # precisa saber se quem esta la e' uma copia dele (e pode ser
+                # pedida para sair) ou um programa alheio. Ver `_ceder_porta`.
                 self._send(200, json.dumps({"ok": True,
+                                            "app": _APP_ID,
                                             "jira": jira_habilitado()}),
                            "application/json")
             elif self.path == "/api/encerrar":
@@ -4748,6 +5140,15 @@ class H(BaseHTTPRequestHandler):
                 sessao = self.rfile.read(n).decode("utf-8").strip() if n else ""
                 self._send(200, '{"ok":true}', "application/json")
                 agendar_encerramento(sessao, "aba fechada/recarregada (sendBeacon)")
+                return
+            if self.path == "/api/atualizar-base":
+                # POST, e nao GET, de proposito: muda o estado do painel
+                # (recopia o banco e remonta o snapshot). So' roda a pedido
+                # explicito de quem esta na tela.
+                ok, msg = atualizar_base()
+                self._send(200, json.dumps({"ok": ok, "msg": msg},
+                                           ensure_ascii=False),
+                           "application/json; charset=utf-8")
                 return
             if self.path == "/api/quarentena":
                 n = int(self.headers.get("Content-Length", 0))
@@ -5151,11 +5552,27 @@ def main():
             print(f"  [FALHA] index.html nao encontrado: {INDEX_PATH}")
             return 1
     try:
-        srv = ThreadingHTTPServer((HOST, PORT), H)
-    except OSError as e:
-        print(f"  [FALHA] nao abriu {HOST}:{PORT} -> {e!r}")
-        time.sleep(8)
-        return 1
+        srv = _Servidor((HOST, PORT), H)
+    except OSError:
+        # Porta ocupada. Com o watchdog em horas (ver _OCIOSO), uma copia
+        # esquecida do painel pode continuar de pe' — e ate 23/09/2026 isso
+        # fazia o exe simplesmente FALHAR, trocando um transtorno por outro.
+        # Se quem esta la' e' uma copia deste mesmo programa, pedimos que ela
+        # saia e assumimos a porta. Comecar do zero (em vez de so' reaproveitar
+        # a instancia antiga) e' de proposito: a copia local do banco e' feita
+        # no startup (`sincronizar_banco`), entao reaproveitar serviria dado
+        # velho depois de uma nova rodada do Processador.
+        if not _ceder_porta():
+            print(f"  [FALHA] a porta {HOST}:{PORT} esta ocupada por outro "
+                  f"programa. Feche-o e abra o painel de novo.")
+            time.sleep(8)
+            return 1
+        try:
+            srv = _Servidor((HOST, PORT), H)
+        except OSError as e:
+            print(f"  [FALHA] nao abriu {HOST}:{PORT} -> {e!r}")
+            time.sleep(8)
+            return 1
     SRV = srv
     threading.Thread(target=_watchdog, daemon=True).start()
     url = f"http://{HOST}:{PORT}/"

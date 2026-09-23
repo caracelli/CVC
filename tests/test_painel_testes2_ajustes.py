@@ -168,9 +168,23 @@ class AmbiguoNaConsultaIgualPendencias(unittest.TestCase):
 class BotaoDDizOCaso(unittest.TestCase):
 
     def test_situacao_do_desligado_e_carregada(self):
+        """A garantia e' a mesma; o LUGAR mudou em 23/09/2026.
+
+        Ate' aqui o painel baixava /api/desligados inteiro (7,37 MB, 30.247
+        registros) e derivava a situacao no cliente com
+        `x.tratado ? 'Tratado' : x.sit`. Isso era metade dos 18,4 MB que abrir
+        a Consulta custava. Agora o servidor manda a situacao ja' resolvida
+        numa rota enxuta (145 KB) — ver tests/test_consulta_marcadores.py.
+
+        Continua sendo verificado que `_deslSit` e' preenchido E que alguem
+        decide "Tratado": o teste so' olha o lado certo de cada um."""
         corpo = _funcao("_carregarHistMats")
         self.assertIn("_deslSit = new Map(", corpo)
-        self.assertIn("x.tratado ? 'Tratado' : x.sit", corpo)
+        self.assertIn("d.desl", corpo)
+        fonte = (Path(__file__).resolve().parent.parent
+                 / "src/visualizador/main.py").read_text(encoding="utf-8")
+        self.assertIn('"Tratado" if r.get("tratado")', fonte,
+                      "quem decide a situacao agora e' o servidor")
 
     def test_botao_d_explica_e_apaga_no_ok(self):
         corpo = _funcao("renderConsulta")

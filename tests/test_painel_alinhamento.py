@@ -73,7 +73,12 @@ class LinhaDeAcessoEmDuasColunas(unittest.TestCase):
         justamente no bloco que responde 'por que ela nao tem o IC?'."""
         html = INDEX.read_text(encoding="utf-8")
         i = html.index("function _csSemMapeamento(")
-        corpo = html[i:i + 900]
+        # A funcao INTEIRA, e nao uma janela de N caracteres: em 23/09/2026 ela
+        # cresceu (passou a mostrar o acesso de quem tem sem mapeamento) e o
+        # corte fixo passou a parar ANTES do trecho que este teste julga —
+        # falha sem nada ter quebrado.
+        j = html.index("\n}", i)
+        corpo = html[i:j]
         self.assertIn("cs-sub-acc-p", corpo)
         self.assertIn("cs-sub-acc-v", corpo)
 
