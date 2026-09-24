@@ -52,6 +52,19 @@ DENTRO_DOS_EXES = [
     # "Funcoes previstas" aparecer na Consulta depois do reprocessamento)
     ("launcher/launcher_processador.exe", b"funcao_por_sp"),
     ("launcher/launcher_visualizador.exe", b"Sem perfis mapeados"),
+    # 24/09: nomes NOVOS desta rodada. Os de cima ja' existiam antes dela, e
+    # um pacote com o motor velho passaria por todos — foi a lacuna apontada
+    # em 15/09. Um por regra entregue:
+    #   ancora do Oracle no perfil do SYSTUR
+    ("launcher/launcher_processador.exe", b"_filtrar_pelo_perfil_systur"),
+    ("launcher/launcher_processador.exe", b"SEM_PERFIL_SYSTUR_COM_"),
+    #   a CCO responde pela funcao da pessoa (+ a guarda de quem tem acesso)
+    ("launcher/launcher_processador.exe", b"ACESSO_FORA_DA_FUNCAO"),
+    #   matriz antes da CCO
+    ("launcher/launcher_processador.exe", b"_cco_apos_matriz"),
+    #   painel: rota enxuta da Consulta e o texto do motivo novo
+    ("launcher/launcher_visualizador.exe", b"/api/consulta-marcadores"),
+    ("launcher/launcher_visualizador.exe", b"a funcao dela nao o preve"),
 ]
 
 
