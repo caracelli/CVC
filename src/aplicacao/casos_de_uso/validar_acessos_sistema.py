@@ -266,7 +266,11 @@ class ValidarAcessosSistema:
             # Fora do loop de geracao de proposito: `_gerar_registros_sistema`
             # trabalha com a tupla (perfil, manual, origem) em varios pontos, e
             # mudar a aridade dela por causa de um rotulo sairia caro.
-            funcao_por_sp: Dict[Tuple[str, str], str] = {}
+            # LISTA de funcoes: o mesmo (sistema, perfil) aparece em varias
+            # funcoes da equipe (os 6 Oracle do A Receber 1, 1 Comissao, 2 e 3).
+            # Guardar so' a primeira carimbava a funcao errada — EDISON (1759),
+            # A_RECEBER_2, aparecia com "A Receber 1" (validacao de 24/09).
+            funcao_por_sp: Dict[Tuple[str, str], List[str]] = {}
             # A FUNCAO DA PESSOA, lida do perfil que ela tem no SYSTUR.
             #
             # A CCO casa por (centro de custo, GESTOR) — nao por funcao. Um
@@ -301,7 +305,9 @@ class ValidarAcessosSistema:
                     continue
                 sistema_valor = sistema_enum.value
                 if _funcao:
-                    funcao_por_sp.setdefault((sistema_valor, perfil_esperado), _funcao)
+                    _lf = funcao_por_sp.setdefault((sistema_valor, perfil_esperado), [])
+                    if _funcao not in _lf:
+                        _lf.append(_funcao)
                 # PRECEDENCIA: a matriz por cargo ja' respondeu por este
                 # sistema — a CCO nao acrescenta. Ver _sistemas_da_matriz.
                 if (self._matriz_tem_precedencia
@@ -417,7 +423,10 @@ class ValidarAcessosSistema:
             for _r in regs_func:
                 _sis = _r.get("sistema")
                 for _p in (_r.get("perfil_esperado") or "").split(","):
-                    _f = funcao_por_sp.get((_sis, _p.strip()))
+                    _fs = funcao_por_sp.get((_sis, _p.strip())) or []
+                    # a funcao DA PESSOA (pelo SYSTUR) vence; senao a primeira
+                    _f = next((f for f in _fs if _norm(f) in _funcoes_da_pessoa),
+                              _fs[0] if _fs else "")
                     if _f:
                         _r["funcao"] = _f
                         break
@@ -435,17 +444,14 @@ class ValidarAcessosSistema:
                             and not (r.get("perfil_atual") or "").strip()
                             for r in _ls):
                         continue
-                    regs_func = [r for r in regs_func if r.get("sistema") != _s]
+                    # Uma linha POR PERFIL, mantendo perfil e funcao: a tela
+                    # mostra dentro da funcao "nao mapeado na matriz". Juntar
+                    # tudo numa linha so' tirava o Oracle da funcao e ela
+                    # aparecia "completa" (ROSE, 2752, validacao de 24/09).
                     self._ancora_cco_sem_matriz += 1
-                    regs_func.append(self._registro_base(func) | {
-                        "sistema": _s,
-                        "perfil_esperado": "",
-                        "perfil_atual": "",
-                        "acesso_manual": False,
-                        "status": StatusValidacao.NAO_MAPEADO.value,
-                        "origem_matriz": "CCO",
-                        "motivo_status": f"NAO_MAPEADO_NA_MATRIZ_{_s}",
-                    })
+                    for r in _ls:
+                        r["status"] = StatusValidacao.NAO_MAPEADO.value
+                        r["motivo_status"] = f"NAO_MAPEADO_NA_MATRIZ_{_s}"
             # A regra TEMPORARIA de provavel desligamento (linha ~600, retorna
             # [] quando a pessoa JA foi aderente e zerou o acesso) tem dono
             # proprio — "sai na fase de desligados" — e o teste
@@ -949,7 +955,7 @@ class ValidarAcessosSistema:
         sistema_valor: str,
         perfis: List[Tuple[str, bool, str]],
         chave_matriz: Tuple[str, str],
-        funcao_por_sp: Dict[Tuple[str, str], str],
+        funcao_por_sp: Dict[Tuple[str, str], List[str]],
         perfis_systur: Set[str],
     ) -> List[Tuple[str, bool, str]]:
         funcoes = set()
@@ -966,9 +972,9 @@ class ValidarAcessosSistema:
                 else:
                     self._ancora_filtrados += 1
                 continue
-            _f = _norm(funcao_por_sp.get((sistema_valor, perfil), ""))
-            if _f:
-                if _f in funcoes:
+            _fs = {_norm(f) for f in funcao_por_sp.get((sistema_valor, perfil), [])}
+            if _fs:
+                if _fs & funcoes:
                     mantidos.append((perfil, manual, origem))
                 else:
                     self._ancora_filtrados += 1

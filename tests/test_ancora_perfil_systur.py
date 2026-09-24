@@ -474,8 +474,20 @@ class QuemEDaCcoNaoPassaPelaAncora(unittest.TestCase):
         cx = _base(["A_RECEBER_1"], [], com_matriz=False)
         uc = self._rodar(cx, isenta=True)
         self.assertEqual(_linhas(cx, ORA),
-                         [("NAO_MAPEADO", "", "NAO_MAPEADO_NA_MATRIZ_ORACLE_EBS")])
+                         [("NAO_MAPEADO", "CVC AR BRASIL",
+                           "NAO_MAPEADO_NA_MATRIZ_ORACLE_EBS")])
         self.assertEqual(uc._ancora_cco_sem_matriz, 1)
+
+    def test_o_perfil_continua_dentro_da_funcao(self):
+        """⭐ ROSE (2752), validacao de 24/09: sem a funcao na linha, o bloco
+        "Funcoes previstas" perdia o Oracle e dizia "completa"."""
+        cx = _base(["A_RECEBER_1"], [], com_matriz=False)
+        self._rodar(cx, isenta=True)
+        s = cx.sessao()
+        fun = [x.funcao for x in s.query(ValidacaoAcessoModel)
+               .filter_by(matricula="M1", sistema=ORA).all()]
+        s.close()
+        self.assertEqual(fun, ["A Receber 1"])
 
     def test_com_o_acesso_segue_a_comparacao_normal(self):
         """Tem o Oracle que a CCO preve: continua aderente."""
@@ -489,6 +501,35 @@ class QuemEDaCcoNaoPassaPelaAncora(unittest.TestCase):
         self._rodar(cx, isenta=True)
         self.assertEqual(sorted(st for st, _, _ in _linhas(cx, ORA)),
                          ["SEM_ACESSO", "SEM_ACESSO"])
+
+    def test_a_funcao_carimbada_e_a_da_pessoa(self):
+        """⭐ EDISON (1759), validacao de 24/09: o mesmo Oracle esta' em duas
+        funcoes da equipe; ele e' A_RECEBER_2 e aparecia com "A Receber 1",
+        a primeira da planilha."""
+        tmp = tempfile.mkdtemp(prefix="cvc_carimbo_")
+        cx = ConexaoBancoDados(os.path.join(tmp, "d.db"))
+        cx.inicializar()
+        s = cx.sessao()
+        s.add(RhAtivo(matricula="M1", nome="EDISON", cpf="1", cargo_codigo="CG",
+                      cargo_descricao=CARGO, centro_custo_codigo=CC,
+                      gestor="GESTOR X", situacao="ATIVO",
+                      tipo_vinculo="FUNCIONARIO"))
+        for f, sis_p in (("A Receber 1", "A_RECEBER_1"), ("A Receber 2", "A_RECEBER_2")):
+            s.add(MatrizCcoModel(cc=CC, gestor="GESTOR X", funcao=f,
+                                 sistema="Oracle EBS", perfil="CVC AR BRASIL"))
+            s.add(MatrizCcoModel(cc=CC, gestor="GESTOR X", funcao=f,
+                                 sistema="Systur", perfil=sis_p))
+        s.add(AcessoSistema(sistema=SYS, usuario="e", perfil="A_RECEBER_2",
+                            matricula_vinculada="M1", situacao="ATIVO"))
+        s.add(AcessoSistema(sistema=ORA, usuario="e", perfil="CVC AR BRASIL",
+                            matricula_vinculada="M1", situacao="ATIVO"))
+        s.commit(); s.close()
+        self._rodar(cx, isenta=True)
+        s = cx.sessao()
+        fun = [x.funcao for x in s.query(ValidacaoAcessoModel)
+               .filter_by(matricula="M1", sistema=ORA).all()]
+        s.close()
+        self.assertEqual(fun, ["A Receber 2"])
 
     def test_quem_nao_e_da_cco_continua_ancorado(self):
         """⭐ O discriminador: fora da CCO a regra segue igual."""

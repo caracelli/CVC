@@ -7508,6 +7508,7 @@ function _sisTodos(){
      pessoa na base do cliente. */
 function _csFuncoesCco(divs){
   const _semExtrato = d => String((d && d.motc) || '').indexOf('SEM_EXTRATO_') === 0;  // autocontida: os testes extraem a funcao sozinha
+  const _naoMapMatriz = d => String((d && d.motc) || '').indexOf('NAO_MAPEADO_NA_MATRIZ_') === 0;
   const porFun = {};
   (divs || []).forEach(d => { if (d.fun) (porFun[d.fun] = porFun[d.fun] || []).push(d); });
   const nomes = Object.keys(porFun);
@@ -7516,20 +7517,28 @@ function _csFuncoesCco(divs){
     const ds = porFun[f];
     const tem = ds.filter(d => d.a === 'Aderente').length;
     // sem extrato nao se confere: fica fora do "tem X de Y"
-    const total = ds.filter(d => !_semExtrato(d)).length;
-    return {f: f, ds: ds, tem: tem, total: total, faltam: total - tem};
+    const total = ds.filter(d => !_semExtrato(d) && !_naoMapMatriz(d)).length;
+    const nmm = ds.filter(_naoMapMatriz).length;
+    return {f: f, ds: ds, tem: tem, total: total, faltam: total - tem, nmm: nmm};
   }).sort((a, b) => (b.faltam - a.faltam) || a.f.localeCompare(b.f, 'pt-BR'));
   const corpo = info.map(i => {
-    const resumo = i.total === 0
-      ? '<span style="color:#8A9099;font-weight:700;">sem extrato</span>'
+    // "completa com so' 2 acessos" (Bruna, 22/09): quando parte da funcao nao
+    // tem matriz, o resumo diz quanto ficou de fora da conta.
+    const _nota = i.nmm
+      ? ` <span style="color:#8A9099;font-weight:600;">· ${i.nmm} não mapeado${i.nmm > 1 ? 's' : ''} na matriz</span>`
+      : '';
+    const resumo = (i.total === 0
+      ? (i.nmm ? '' : '<span style="color:#8A9099;font-weight:700;">sem extrato</span>')
       : i.faltam === 0
       ? '<span style="color:#1E7B43;font-weight:700;">completa</span>'
       : (i.tem
           ? `<span style="color:#B9770E;font-weight:700;">tem ${i.tem} de ${i.total}</span>`
-          : `<span style="color:#2980B9;font-weight:700;">falta${i.faltam > 1 ? 'm' : ''} ${i.faltam}</span>`);
+          : `<span style="color:#2980B9;font-weight:700;">falta${i.faltam > 1 ? 'm' : ''} ${i.faltam}</span>`)) + _nota;
     const linhas = i.ds.map(d => {
       const est = _semExtrato(d)
         ? '<span style="color:#8A9099;font-weight:700;">sem extrato</span>'
+        : _naoMapMatriz(d)
+        ? '<span style="color:#8A9099;font-weight:700;">não mapeado na matriz</span>'
         : d.a === 'Aderente'
         ? '<span style="color:#1E7B43;font-weight:700;">tem</span>'
         : (d.a === 'Incluir Acesso'
@@ -7586,6 +7595,7 @@ function _csOutrasFuncoes(u){
    linhas no banco para dizer "nada a fazer". */
 function _csSemMapeamento(u){
   const _semExtrato = d => String((d && d.motc) || '').indexOf('SEM_EXTRATO_') === 0;  // autocontida: os testes extraem a funcao sozinha
+  const _naoMapMatriz = d => String((d && d.motc) || '').indexOf('NAO_MAPEADO_NA_MATRIZ_') === 0;
   const divs = u.divs || [];
   const comLinha = new Set(divs.map(d => d.sis).filter(Boolean));
   // 1) sistema sem NENHUMA linha: a matriz nunca falou dele para esta pessoa.
@@ -7598,9 +7608,13 @@ function _csSemMapeamento(u){
   //    null para "Não Mapeado" (para o registro-marcador, que vem SEM sistema,
   //    não virar pendência) e o laço acima só olha sistema sem linha nenhuma.
   //    Some da tela o acesso que motivou a linha: o oposto do pedido.
+  const _vistoSis = new Set();
   divs.forEach(d => {
-    if ((d.a || d.tl) === 'Não Mapeado' && d.sis && !_semExtrato(d))
-      faltam.push({sis: d.sis, tem: d.pe || ''});
+    if ((d.a || d.tl) === 'Não Mapeado' && d.sis && !_semExtrato(d)
+        && !_vistoSis.has(d.sis)) {
+      _vistoSis.add(d.sis);
+      faltam.push({sis: d.sis, tem: d.pe || '', nmm: _naoMapMatriz(d)});
+    }
   });
   if (!faltam.length) return '';
   faltam.sort((a, b) => a.sis.localeCompare(b.sis));
@@ -7610,6 +7624,9 @@ function _csSemMapeamento(u){
        ? `<span class="cs-sub-acc-v" style="color:#8A9099;">tem hoje: `
          + `<b style="color:#5A616E;">${esc(x.tem)}</b>`
          + ` — sem perfil previsto para o cargo/centro de custo</span>`
+       : x.nmm
+       ? `<span class="cs-sub-acc-v" style="color:#8A9099;">não tem mapeado na matriz`
+         + ` — a previsão vem só da CCO da equipe</span>`
        : `<span class="cs-sub-acc-v" style="color:#8A9099;">sem perfil previsto`
          + ` para o cargo/centro de custo</span>`)
     + `</div>`
