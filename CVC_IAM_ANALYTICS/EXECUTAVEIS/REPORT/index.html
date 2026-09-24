@@ -7750,6 +7750,31 @@ function csAbrirDrawer(uid, aba){
   if (ativa) ativa.classList.add('cs-row-ativa');
 }
 
+/* FECHAR CLICANDO FORA, e com Esc (retorno da area em 24/09/2026: "só se
+   digitar, o melhor seria ao clicar em qualquer coisa ou controle fora dele").
+
+   O popup da Consulta é um painel flutuante, SEM fundo escurecido por cima da
+   tela — então não há onde "clicar fora" que o capture. O listener vai no
+   documento e ignora três coisas, para não fechar quando não deve:
+     - cliques DENTRO do próprio popup;
+     - o clique que ABRE outra pessoa (a linha da grid), senão ele fecharia o
+       popup logo depois de csAbrirDrawer tê-lo aberto;
+     - cliques em modal (resolver, quarentena), que vive por cima do popup.
+   Fase de CAPTURA não: usa bubbling, para que o onclick da linha rode antes. */
+document.addEventListener('click', (ev) => {
+  if (!_csUserAtivo) return;
+  const dr = document.getElementById('cs-drawer');
+  if (!dr || !dr.classList.contains('show')) return;
+  const alvo = ev.target;
+  if (dr.contains(alvo)) return;
+  if (alvo.closest && (alvo.closest('.cs-nome-link') || alvo.closest('.cs-ver-detalhe')
+      || alvo.closest('#modal-bg') || alvo.closest('#gx-menu'))) return;
+  csFecharDrawer();
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && _csUserAtivo && !_modalAberto()) csFecharDrawer();
+});
+
 function csFecharDrawer(){
   document.getElementById('cs-drawer').classList.remove('show');
   _csUserAtivo = null;
