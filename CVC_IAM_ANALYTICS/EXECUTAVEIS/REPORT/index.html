@@ -7318,7 +7318,13 @@ function _csPerfilTxt(d){
         partes.push(`<span style="color:#1E7B43;font-weight:700;">Tem `
                   + `${emComum.length}:</span> `
                   + `<span style="color:#1E7B43;">${_csListaPerfis(emComum, 3)}</span>`);
-      if (faltam.length)
+      /* UM PERFIL POR SISTEMA (Bruna, Sistema_24_09.docx, caso ROSELAINE):
+         "se um dos acessos mapeados estiver ok traz ele ok, e os a mais
+         precisam ser trazidos estilo as funções do CCO". Aderente num sistema
+         da regra: as outras opções NÃO são "falta" — vão para o bloco
+         "Outros acessos previstos" (_csOutrasOpcoes). Oracle fica de fora. */
+      const _umSo = _regraVale && d.a === 'Aderente';
+      if (faltam.length && !_umSo)
         partes.push(`<span style="color:#2980B9;font-weight:700;">Falta${faltam.length>1?'m':''} `
                   + `${faltam.length}:</span> ` + _csListaPerfis(faltam));
       if (aMais.length)
@@ -7332,8 +7338,15 @@ function _csPerfilTxt(d){
   }
   const um = s => _csListaPerfis(String(s).split(','));
   if (pe && pp) return alerta + '<span style="color:#1E7B43">' + um(pe) + '</span>';
-  if (pp) return alerta + '<b>' + um(pp) + '</b>';
-  if (pe) return alerta + um(pe);
+  /* EM ANÁLISE com UM lado só (validação de 24/09, caso DENISE 1562): o bloco
+     "Necessário análise" não diz se o perfil é o que ela TEM ou o que DEVERIA
+     ter — e as duas linhas saíam iguais, com sentidos opostos (SYSTUR que
+     falta x IC que sobra). Nos outros blocos o título já diz (regra 1). */
+  const _ana = d.a === 'Em Análise';
+  if (pp) return alerta + (_ana ? '<span style="color:#2980B9;font-weight:700;">Deveria ter:</span> ' : '')
+                        + '<b>' + um(pp) + '</b>';
+  if (pe) return alerta + (_ana ? '<span style="color:#B9770E;font-weight:700;">Tem hoje:</span> ' : '')
+                        + um(pe);
   return '—';
 }
 
@@ -7554,6 +7567,41 @@ function _csFuncoesCco(divs){
   return `<div class="cs-sec">Funções previstas (${info.length})</div>`
        + `<div class="cs-fun-cap">Vêm do Mapeamento CCO pelo centro de custo e gestor. `
        + `Clique para ver os acessos que formam cada função.</div>` + corpo;
+}
+
+/* OUTROS ACESSOS PREVISTOS (Bruna, Sistema_24_09.docx, caso ROSELAINE 34532575).
+   A matriz prevê mais de uma opção por sistema (SYSTUR CUSTOS ou INTERCOMPANY)
+   e a pessoa só pode ter um perfil por sistema: tendo um, o sistema vem
+   Aderente e as demais opções aparecem aqui, no estilo das funções da CCO, em
+   vez de "Falta 1". Vale para todos os sistemas menos os de multi_perfil_fora
+   (Oracle: cada perfil é um acesso). Autocontida: os testes a extraem sozinha. */
+function _csOutrasOpcoes(divs){
+  const _fora = ((typeof DB !== 'undefined' && DB && DB.meta
+                  && DB.meta.multi_perfil_fora) || []).map(x => String(x).toUpperCase());
+  const lista = x => String(x || '').split(',').map(y => y.trim()).filter(Boolean);
+  const norm = x => x.toUpperCase().replace(/\s+/g, ' ');
+  const itens = [];
+  (divs || []).forEach(d => {
+    if (d.a !== 'Aderente' || !d.sis || _fora.includes(String(d.sis).toUpperCase())) return;
+    const tem = new Set(lista(d.pe).map(norm));
+    const outras = lista(d.pp).filter(x => !tem.has(norm(x)));
+    if (outras.length) itens.push({sis: d.sis, tem: lista(d.pe), outras: outras});
+  });
+  if (!itens.length) return '';
+  const linha = (sis, o) => `<div class="cs-fun-l"><span class="h-sis">${esc(sis)}</span>`
+        + `<span class="cs-fun-p">${esc(o)}</span>`
+        + `<span style="color:#8A9099;font-weight:700;">opção prevista</span></div>`;
+  // UMA opção: direto, sem o "+" (validação de 24/09 — "se tem uma opção só
+  // acho desnecessário o + para ampliar"). Mais de uma, recolhido: "pode vir
+  // muitos sistemas e acessos e bagunçar a coisa".
+  const corpo = itens.map(i => i.outras.length === 1
+    ? i.outras.map(o => linha(i.sis, o)).join('')
+    : `<details class="cs-fun"><summary><span class="cs-fun-n">${esc(i.sis)}</span>`
+      + `<span style="color:#7B8294;font-weight:700;">${i.outras.length} opções</span></summary>`
+      + i.outras.map(o => linha(i.sis, o)).join('') + `</details>`).join('');
+  return `<div class="cs-sec">Outros acessos previstos (${itens.length})</div>`
+       + `<div class="cs-fun-cap">A matriz prevê mais de uma opção para o cargo/centro de custo. `
+       + `Só pode haver um perfil por sistema: a pessoa já tem um, que está aderente.</div>` + corpo;
 }
 
 /* OUTRAS FUNÇÕES QUE ELA PODE TER (usuário, 24/09/2026). Só CCO.
@@ -7883,6 +7931,7 @@ function csRenderDrawerBody(){
       + _csSemMapeamento(u)
       // "precisaria ter uma lista nessa visualizacao EM BAIXO: funcoes
       // disponiveis e uma possibilidade de expandir e ver os acessos" (17/09)
+      + _csOutrasOpcoes(u.divs)
       + _csFuncoesCco(u.divs)
       + _csOutrasFuncoes(u);
   }

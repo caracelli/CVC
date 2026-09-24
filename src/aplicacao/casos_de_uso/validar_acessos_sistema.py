@@ -649,6 +649,9 @@ class ValidarAcessosSistema:
             registros.extend(self._cobrar_ancora_systur(
                 ativos, acessos_por_matricula, sistemas_com_dados, registros))
 
+        registros.extend(self._acesso_sem_previsao(
+            ativos, acessos_por_matricula, sistemas_com_dados, registros))
+
         # PENDENCIAS (acao): so DIVERGENTE e EM_ANALISE. SEM_ACESSO ("esperado")
         # deixou de ser pendencia (retorno Bruna): e' informativo, so na Consulta.
         _STATUS_ACAO = {
@@ -1100,6 +1103,44 @@ class ValidarAcessosSistema:
                         "origem_matriz": "ANCORA_SYSTUR",
                         "motivo_status": motivo,
                     })
+        return novos
+
+    def _acesso_sem_previsao(self, ativos, acessos_por_matricula,
+                             sistemas_com_dados, registros) -> List[Dict]:
+        """"Nao pode ter acesso e tem" (Bruna, Sistema_24_09.docx): a pessoa
+        TEM acesso num sistema que nem a matriz nem a CCO preveem para ela, e
+        a tela nao dizia nada — nem o perfil. Caso: DENISE (1562), IC_CADASTRO
+        no IC, cargo sem IC na matriz. Vira pendencia com o acesso nomeado.
+
+        So' CLT (terceiro/franqueado/prestador tem caminho proprio) e fora do
+        Oracle (a ancora ja' cobre, e o "nao mapeado" dele e' decisao de 23/09).
+        Medido na base de 15/09: 7 pessoas."""
+        fora = set(self._ancora_systur) | _SISTEMAS_SO_CCO
+        com_linha = {(r.get("matricula"), r.get("sistema")) for r in registros}
+        novos: List[Dict] = []
+        self._acesso_sem_previsao_n = 0
+        for func in ativos:
+            if (getattr(func, "tipo_vinculo", "") or "").upper() in _VINCULOS_ESPELHO:
+                continue
+            if func.matricula in self._desatualizados:
+                continue
+            por_sis: Dict[str, Set[str]] = defaultdict(set)
+            for s, p in acessos_por_matricula.get(func.matricula, ()):
+                if p and s in sistemas_com_dados and s not in fora:
+                    por_sis[s].add(p)
+            for s, ps in sorted(por_sis.items()):
+                if (func.matricula, s) in com_linha:
+                    continue
+                self._acesso_sem_previsao_n += 1
+                novos.append(self._registro_base(func) | {
+                    "sistema": s,
+                    "perfil_esperado": "",
+                    "perfil_atual": ", ".join(sorted(ps)),
+                    "acesso_manual": False,
+                    "status": StatusValidacao.EM_ANALISE.value,
+                    "origem_matriz": "",
+                    "motivo_status": "ACESSO_SEM_PREVISAO",
+                })
         return novos
 
     def _isento_da_ancora(self, perfil: str) -> bool:

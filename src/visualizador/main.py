@@ -1349,6 +1349,12 @@ SELECT
       || 'justifica; se nao, revogar.'
     -- Da CCO, sem o acesso, e a matriz do sistema nao mapeia a pessoa
     -- (retorno da area, 24/09/2026: "colocar que nao tem mapeado na matriz").
+    -- "Nao pode ter acesso e tem" (Bruna, Sistema_24_09.docx, caso DENISE).
+    WHEN COALESCE(v.motivo_status,'') = 'ACESSO_SEM_PREVISAO' THEN
+      'Nao pode ter acesso e tem: a pessoa TEM acesso neste sistema, mas nem a '
+      || 'matriz nem a CCO preveem acesso a ele para o cargo, centro de custo e '
+      || 'gestor dela. O acesso que ela tem esta listado ao lado. Avaliar se se '
+      || 'justifica; se nao, revogar.'
     -- Sistema sem extrato (Opera Operacional): so' o que a CCO preve
     -- (usuario, 24/09/2026: "pode trazer no painel so para cco").
     WHEN COALESCE(v.motivo_status,'') LIKE 'SEM_EXTRATO_%' THEN
