@@ -3138,7 +3138,7 @@ function _vgDonut(div_tipos){
 // IC_INTEGRADOR_CONTABIL encavalar a barra). Chaves nao mapeadas ficam como vem.
 const SIS_LABEL = {
   'IC_INTEGRADOR_CONTABIL':'IC', 'SICA_RA':'SICA RA', 'SICA_ESFERA':'SICA Esfera',
-  'ORACLE_EBS':'Oracle EBS'
+  'ORACLE_EBS':'Oracle EBS', 'OPERA_OPERACIONAL':'Opera Operacional'
 };
 function _vgBarras(host, dados, opcoesCorPorChave){
   if (!dados || !Object.keys(dados).length) { host.innerHTML = '<div class="vg-soft">sem dados</div>'; return; }
@@ -7380,7 +7380,7 @@ function csExpandDaLinha(ev, el){
    análise / Não localizados. Cada bloco lista os acessos por sistema. É a
    organização que ela desenhou para a visão Consulta ficar menos confusa. */
 const _CS_CATS = [
-  {k:'enc', lbl:'Acessos encontrados',    curto:'já tem',        hint:'o que ele já tem (aderente)',
+  {k:'enc', lbl:'Acessos encontrados',    curto:'já tem',        hint:'o que a pessoa já tem (aderente)',
    acoes:['Aderente'], cor:'#16A085'},
   {k:'esp', lbl:'Acessos esperados',      curto:'a incluir',     hint:'não tem, mas o cargo prevê',
    acoes:['Incluir Acesso'], cor:'#2980B9'},
@@ -7467,11 +7467,19 @@ function _csDetalheCategorias(divs, pfx, comData){
    de sistemas que o painel consegue avaliar. Cacheado por tamanho de DB.users
    (muda quando o servidor devolve dados novos). */
 let _sisUniverso = null, _sisUniversoN = -1;
+/* Linha de sistema SEM EXTRATO (Opera Operacional): o que a CCO preve, sem
+   conferencia. Grava como NAO_MAPEADO para ser informativa em todo lugar (nunca
+   pendencia, nunca "incluir"); estas guardas so' trocam o que a tela ESCREVE. */
+function _semExtrato(d){ return String((d && d.motc) || '').indexOf('SEM_EXTRATO_') === 0; }
 function _sisTodos(){
   const n = (DB.users||[]).length;
   if (_sisUniverso && _sisUniversoN === n) return _sisUniverso;
   const s = new Set();
-  (DB.users||[]).forEach(u => (u.divs||[]).forEach(d => { if (d.sis) s.add(d.sis); }));
+  // Linha SEM_EXTRATO_* (Opera Operacional, 24/09/2026) nao conta: o sistema
+  // nao tem extrato, e sem isso TODA pessoa fora da CCO dele ganharia "Opera —
+  // sem perfil previsto" no bloco Sem mapeamento.
+  (DB.users||[]).forEach(u => (u.divs||[]).forEach(d => {
+    if (d.sis && !_semExtrato(d)) s.add(d.sis); }));
   _sisUniverso = Array.from(s).sort(); _sisUniversoN = n;
   return _sisUniverso;
 }
@@ -7499,6 +7507,7 @@ function _sisTodos(){
      "acabou ficando muita informação". Medido em 18/09: no máximo 8 funções por
      pessoa na base do cliente. */
 function _csFuncoesCco(divs){
+  const _semExtrato = d => String((d && d.motc) || '').indexOf('SEM_EXTRATO_') === 0;  // autocontida: os testes extraem a funcao sozinha
   const porFun = {};
   (divs || []).forEach(d => { if (d.fun) (porFun[d.fun] = porFun[d.fun] || []).push(d); });
   const nomes = Object.keys(porFun);
@@ -7506,16 +7515,22 @@ function _csFuncoesCco(divs){
   const info = nomes.map(f => {
     const ds = porFun[f];
     const tem = ds.filter(d => d.a === 'Aderente').length;
-    return {f: f, ds: ds, tem: tem, total: ds.length, faltam: ds.length - tem};
+    // sem extrato nao se confere: fica fora do "tem X de Y"
+    const total = ds.filter(d => !_semExtrato(d)).length;
+    return {f: f, ds: ds, tem: tem, total: total, faltam: total - tem};
   }).sort((a, b) => (b.faltam - a.faltam) || a.f.localeCompare(b.f, 'pt-BR'));
   const corpo = info.map(i => {
-    const resumo = i.faltam === 0
+    const resumo = i.total === 0
+      ? '<span style="color:#8A9099;font-weight:700;">sem extrato</span>'
+      : i.faltam === 0
       ? '<span style="color:#1E7B43;font-weight:700;">completa</span>'
       : (i.tem
           ? `<span style="color:#B9770E;font-weight:700;">tem ${i.tem} de ${i.total}</span>`
           : `<span style="color:#2980B9;font-weight:700;">falta${i.faltam > 1 ? 'm' : ''} ${i.faltam}</span>`);
     const linhas = i.ds.map(d => {
-      const est = d.a === 'Aderente'
+      const est = _semExtrato(d)
+        ? '<span style="color:#8A9099;font-weight:700;">sem extrato</span>'
+        : d.a === 'Aderente'
         ? '<span style="color:#1E7B43;font-weight:700;">tem</span>'
         : (d.a === 'Incluir Acesso'
             ? '<span style="color:#2980B9;font-weight:700;">falta</span>'
@@ -7532,6 +7547,36 @@ function _csFuncoesCco(divs){
        + `Clique para ver os acessos que formam cada função.</div>` + corpo;
 }
 
+/* OUTRAS FUNÇÕES QUE ELA PODE TER (usuário, 24/09/2026). Só CCO.
+   A CCO casa por centro de custo + gestor e lista todas as funções da equipe;
+   o perfil do SYSTUR diz qual ela exerce, e só essa é cobrada (Funções
+   previstas, acima). As demais continuam sendo o que ela PODE ter — caso da
+   BRENDA (34530984): A_RECEBER_1, e a gestora tem também A Receber 1
+   Comissão, 2 + SIG e 3. Informativo: não vira "incluir" nem pendência.
+   Montado no servidor (_outras_funcoes_cco), em u.fo = [{f, a:[[sis,perfil,tem]]}]. */
+function _csOutrasFuncoes(u){
+  const fo = (u && u.fo) || [];
+  if (!fo.length) return '';
+  const corpo = fo.map(x => {
+    const conf = x.a.filter(a => a[0] !== 'OPERA_OPERACIONAL');
+    const tem = conf.filter(a => a[2]).length;
+    const resumo = `<span style="color:#7B8294;font-weight:700;">tem ${tem} de ${conf.length}</span>`;
+    const linhas = x.a.map(a => {
+      const est = a[0] === 'OPERA_OPERACIONAL'
+        ? '<span style="color:#8A9099;font-weight:700;">sem extrato</span>'
+        : (a[2] ? '<span style="color:#1E7B43;font-weight:700;">tem</span>'
+                : '<span style="color:#8A9099;font-weight:700;">não tem</span>');
+      return `<div class="cs-fun-l"><span class="h-sis">${esc(a[0])}</span>`
+           + `<span class="cs-fun-p">${esc(a[1])}</span>${est}</div>`;
+    }).join('');
+    return `<details class="cs-fun"><summary><span class="cs-fun-n">${esc(x.f)}</span>`
+         + `${resumo}</summary>${linhas}</details>`;
+  }).join('');
+  return `<div class="cs-sec">Outras funções que a pessoa pode ter (${fo.length})</div>`
+       + `<div class="cs-fun-cap">Mesma equipe no Mapeamento CCO (centro de custo e gestor). `
+       + `Não são cobradas: o perfil do SYSTUR da pessoa é da função acima.</div>` + corpo;
+}
+
 /* "Por que ela não tem o IC?" (retorno da área, 10/08). Antes, o sistema em que
    a pessoa não tem acesso simplesmente NÃO APARECIA — e não dava para saber se
    era porque a matriz não prevê nada para o cargo/CC dela, ou porque prevê e
@@ -7540,6 +7585,7 @@ function _csFuncoesCco(divs){
    É calculado na tela, não gravado — virariam ~5.000 pessoas × 7 sistemas de
    linhas no banco para dizer "nada a fazer". */
 function _csSemMapeamento(u){
+  const _semExtrato = d => String((d && d.motc) || '').indexOf('SEM_EXTRATO_') === 0;  // autocontida: os testes extraem a funcao sozinha
   const divs = u.divs || [];
   const comLinha = new Set(divs.map(d => d.sis).filter(Boolean));
   // 1) sistema sem NENHUMA linha: a matriz nunca falou dele para esta pessoa.
@@ -7553,7 +7599,7 @@ function _csSemMapeamento(u){
   //    não virar pendência) e o laço acima só olha sistema sem linha nenhuma.
   //    Some da tela o acesso que motivou a linha: o oposto do pedido.
   divs.forEach(d => {
-    if ((d.a || d.tl) === 'Não Mapeado' && d.sis)
+    if ((d.a || d.tl) === 'Não Mapeado' && d.sis && !_semExtrato(d))
       faltam.push({sis: d.sis, tem: d.pe || ''});
   });
   if (!faltam.length) return '';
@@ -7571,7 +7617,7 @@ function _csSemMapeamento(u){
   return `<div style="margin:9px 0 4px;">`
     + `<div style="color:#7B8294;font-weight:700;font-size:12px;">● Sem mapeamento (${faltam.length})`
     + ` <span style="color:#9AA3B5;font-weight:500;font-size:11px;">— a matriz não prevê acesso`
-    + ` a este sistema para o cargo/centro de custo dela; nada a incluir</span></div>`
+    + ` a este sistema para o cargo/centro de custo da pessoa; nada a incluir</span></div>`
     + linhas + `</div>`;
 }
 
@@ -7820,7 +7866,8 @@ function csRenderDrawerBody(){
       + _csSemMapeamento(u)
       // "precisaria ter uma lista nessa visualizacao EM BAIXO: funcoes
       // disponiveis e uma possibilidade de expandir e ver os acessos" (17/09)
-      + _csFuncoesCco(u.divs);
+      + _csFuncoesCco(u.divs)
+      + _csOutrasFuncoes(u);
   }
   else if (_csTab === 'hist') {
     body.innerHTML = '<div class="cs-empty">📜 Histórico de movimentações '

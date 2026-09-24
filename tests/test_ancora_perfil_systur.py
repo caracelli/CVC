@@ -100,10 +100,12 @@ def _base(perfis_systur_da_pessoa, acessos_oracle, com_cco=True,
     return cx
 
 
-def _rodar(cx, ancora=(ORA,), isentos=(), cco_pela_funcao=True):
+def _rodar(cx, ancora=(ORA,), isentos=(), cco_pela_funcao=True,
+           isenta_cco=True):
     uc = ValidarAcessosSistema(cx, ancora_systur_sistemas=list(ancora),
                                ancora_systur_isentos=list(isentos),
-                               cco_pela_funcao=cco_pela_funcao)
+                               cco_pela_funcao=cco_pela_funcao,
+                               ancora_isenta_cco=isenta_cco)
     uc.executar()
     return uc
 
@@ -145,9 +147,13 @@ class OFiltroEstreitaOEsperado(unittest.TestCase):
         SEM MATRIZ de proposito: desde 23/09 a matriz por cargo tem
         PRECEDENCIA (ver test_matriz_antes_da_cco.py), entao a CCO so' responde
         pelo sistema sobre o qual a matriz calou. Com as duas, este caminho
-        nem seria alcancado — e o teste estaria verde medindo outra coisa."""
+        nem seria alcancado — e o teste estaria verde medindo outra coisa.
+
+        Desde 24/09 quem e' da CCO nao passa pela ancora (ver
+        QuemEDaCcoNaoPassaPelaAncora); o caminho so' e' alcancado com a chave
+        desligada."""
         cx = _base(["A_RECEBER_1"], [], com_matriz=False)
-        _rodar(cx)
+        _rodar(cx, isenta_cco=False)
         self.assertEqual(
             [(st, esp) for st, esp, _ in _linhas(cx, ORA)],
             [("SEM_ACESSO", "CVC AR BRASIL")])
@@ -420,6 +426,78 @@ class AMatrizNaoCobreOCargo(unittest.TestCase):
         self.assertEqual([st for st, _, _ in _linhas(cx, ORA)], ["OK"])
 
 
+class QuemEDaCcoNaoPassaPelaAncora(unittest.TestCase):
+    """Usuario, 24/09/2026: "quem for da matriz do CCO nao aplicar a regra
+    oracle x systur". Ser da CCO = o (cc, gestor) da pessoa existe na CCO.
+    Medido na base de 15/09: 57 das 457 pessoas com Oracle."""
+
+    def _rodar(self, cx, isenta):
+        uc = ValidarAcessosSistema(cx, ancora_systur_sistemas=[ORA],
+                                   ancora_isenta_cco=isenta)
+        uc.executar()
+        return uc
+
+    def test_sem_perfil_no_systur_nao_vira_pendencia(self):
+        """⭐ Da CCO, com Oracle e sem SYSTUR: nada de SEM_PERFIL_SYSTUR."""
+        cx = _base([], ["CVC GL CUSTOS"])
+        uc = self._rodar(cx, isenta=True)
+        self.assertEqual(uc._ancora_sem_systur, 0)
+        self.assertFalse(any("SEM_PERFIL_SYSTUR" in m
+                             for _, _, m in _linhas(cx, SYS)))
+
+    def test_perfil_fora_do_systur_nao_vira_pendencia(self):
+        """⭐ Tem CUSTOS no SYSTUR e INTERCOMPANY no Oracle: pela matriz o
+        INTERCOMPANY e' previsto; sem a ancora ele e' aderente."""
+        cx = _base(["CUSTOS"], ["CVC GL INTERCOMPANY"])
+        uc = self._rodar(cx, isenta=True)
+        self.assertEqual(uc._ancora_divergentes, 0)
+        self.assertFalse(any("FORA_DO_SYSTUR" in m
+                             for _, _, m in _linhas(cx, ORA)))
+        self.assertEqual([st for st, _, _ in _linhas(cx, ORA)], ["OK"])
+
+    def test_o_esperado_nao_e_filtrado(self):
+        cx = _base(["CUSTOS"], [])
+        self._rodar(cx, isenta=True)
+        self.assertEqual(sorted(esp for _, esp, _ in _linhas(cx, ORA)),
+                         ["CVC GL CUSTOS", "CVC GL INTERCOMPANY"])
+
+    def test_com_a_chave_desligada_a_ancora_volta(self):
+        """Nao-regressao: o comportamento de 23/09 continua alcancavel."""
+        cx = _base([], ["CVC GL CUSTOS"])
+        uc = self._rodar(cx, isenta=False)
+        self.assertEqual(uc._ancora_sem_systur, 1)
+
+    def test_so_a_cco_preve_e_nao_tem_o_acesso_vira_nao_mapeado(self):
+        """⭐ Bruna, 24/09: "colocar que nao tem mapeado na matriz". A matriz
+        do Oracle nao cobre a pessoa, so' a CCO da equipe cita; ela nao tem
+        Oracle. Nada de "incluir": uma linha informativa."""
+        cx = _base(["A_RECEBER_1"], [], com_matriz=False)
+        uc = self._rodar(cx, isenta=True)
+        self.assertEqual(_linhas(cx, ORA),
+                         [("NAO_MAPEADO", "", "NAO_MAPEADO_NA_MATRIZ_ORACLE_EBS")])
+        self.assertEqual(uc._ancora_cco_sem_matriz, 1)
+
+    def test_com_o_acesso_segue_a_comparacao_normal(self):
+        """Tem o Oracle que a CCO preve: continua aderente."""
+        cx = _base(["A_RECEBER_1"], ["CVC AR BRASIL"], com_matriz=False)
+        self._rodar(cx, isenta=True)
+        self.assertEqual([st for st, _, _ in _linhas(cx, ORA)], ["OK"])
+
+    def test_com_a_matriz_o_incluir_continua(self):
+        """A matriz do Oracle cobre a pessoa: o incluir vem dela e fica."""
+        cx = _base(["CUSTOS"], [])
+        self._rodar(cx, isenta=True)
+        self.assertEqual(sorted(st for st, _, _ in _linhas(cx, ORA)),
+                         ["SEM_ACESSO", "SEM_ACESSO"])
+
+    def test_quem_nao_e_da_cco_continua_ancorado(self):
+        """⭐ O discriminador: fora da CCO a regra segue igual."""
+        cx = _base([], ["CVC GL CUSTOS"], com_cco=False)
+        uc = self._rodar(cx, isenta=True)
+        self.assertEqual(uc._ancora_sem_systur, 1)
+        self.assertEqual(uc._ancora_isentos_cco, set())
+
+
 class PerfisIsentos(unittest.TestCase):
     """Acesso corporativo que matriz nenhuma prescreve. VAZIO em producao por
     decisao de 23/09 ("joga como pendencia"); a chave existe para recuar sem
@@ -562,6 +640,12 @@ class TelaTraduzOsMotivosNovos(unittest.TestCase):
         motivo, _ = self._bi("SEM_MAPEAMENTO_ORACLE_EBS")
         self.assertTrue(motivo, "a linha nao pode chegar muda na tela")
         self.assertNotIn("localizado para o centro de custo", motivo)
+        self.assertIn("nao e uma pendencia", motivo.lower())
+
+
+    def test_nao_mapeado_na_matriz_vira_texto_da_bruna(self):
+        motivo, _ = self._bi("NAO_MAPEADO_NA_MATRIZ_ORACLE_EBS")
+        self.assertTrue(motivo.startswith("Nao tem mapeado na matriz"))
         self.assertIn("nao e uma pendencia", motivo.lower())
 
 

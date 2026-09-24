@@ -57,7 +57,7 @@ class TestEnumsContrato(unittest.TestCase):
             {"SIGOT": "SIGOT", "SICA_RA": "SICA_RA", "SICA_ESFERA": "SICA_ESFERA",
              "SYSTUR": "SYSTUR", "IC_INTEGRADOR_CONTABIL": "IC_INTEGRADOR_CONTABIL",
              "SIG": "SIG", "ORACLE_EBS": "ORACLE_EBS",
-})
+             "OPERA_OPERACIONAL": "OPERA_OPERACIONAL"})
 
 
 class TestStatusValidacaoStrEnum(unittest.TestCase):

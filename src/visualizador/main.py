@@ -1347,6 +1347,19 @@ SELECT
       || 'funcoes; quem diz qual e a dela e o perfil que ela tem no SYSTUR. '
       || 'Este acesso pertence a OUTRA funcao da mesma equipe. Avaliar se se '
       || 'justifica; se nao, revogar.'
+    -- Da CCO, sem o acesso, e a matriz do sistema nao mapeia a pessoa
+    -- (retorno da area, 24/09/2026: "colocar que nao tem mapeado na matriz").
+    -- Sistema sem extrato (Opera Operacional): so' o que a CCO preve
+    -- (usuario, 24/09/2026: "pode trazer no painel so para cco").
+    WHEN COALESCE(v.motivo_status,'') LIKE 'SEM_EXTRATO_%' THEN
+      'Previsto pela CCO para a funcao da pessoa. Nao ha extrato deste sistema, '
+      || 'entao nao da para conferir se ela tem o acesso. Informativo: nao e '
+      || 'pendencia nem inclusao.'
+    WHEN COALESCE(v.motivo_status,'') LIKE 'NAO_MAPEADO_NA_MATRIZ_%' THEN
+      'Nao tem mapeado na matriz. A matriz deste sistema nao mapeia o cargo e '
+      || 'o centro de custo da pessoa; a previsao vinha so da CCO da equipe. '
+      || 'Nao e uma pendencia: nao ha o que incluir enquanto a matriz nao '
+      || 'disser o que este cargo pode ter.'
     WHEN COALESCE(v.motivo_status,'') LIKE 'SEM_MAPEAMENTO_%' THEN
       'A pessoa TEM acesso neste sistema, mas a matriz dele nao mapeia o cargo '
       || 'e o centro de custo dela — nao existe perfil esperado para comparar. '
@@ -2593,6 +2606,65 @@ def _perfil_div(d):
     return (d.get("pe") or d.get("pp") or "").strip()
 
 
+_CCO_SIS = {"SYSTUR": "SYSTUR", "SIGOT": "SIGOT", "SICA RA": "SICA_RA",
+            "SICA_RA": "SICA_RA", "SICA ESFERA": "SICA_ESFERA",
+            "SICA_ESFERA": "SICA_ESFERA", "SIG": "SIG",
+            "ORACLE EBS": "ORACLE_EBS", "OPERA OPERACIONAL": "OPERA_OPERACIONAL"}
+_CONTA_SEM_ACESSO = {"INATIVO", "INACTIVE", "BLOQUEADO", "BLOCKED", "SUSPENSO",
+                     "DESATIVADO", "CANCELADO", "I", "B"}
+
+
+def _nrm(s):
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(s or "").upper().strip())
+    return " ".join("".join(ch for ch in s if not unicodedata.combining(ch)).split())
+
+
+def _outras_funcoes_cco(c, users, cc_de):
+    """OUTRAS FUNCOES DA EQUIPE que a pessoa PODE TER (usuario, 24/09/2026).
+
+    So' CCO. A CCO casa por (centro de custo, GESTOR) e lista todas as funcoes
+    da equipe; o perfil do SYSTUR diz qual a pessoa exerce e so' essa e'
+    cobrada (regra de 23/09). As outras continuam sendo o que ela PODE ter:
+    caso da BRENDA (34530984), A_RECEBER_1, gestora com A Receber 1 / 1
+    Comissao / 2 + SIG / 3 — "deveria aparecer esses acessos para ela".
+    Sem perfil no SYSTUR o motor ja' cobra todas, entao aqui nao sobra nada.
+    Informativo: grava em u["fo"] a lista [{f, a: [[sis, perfil, tem]]}]."""
+    cco = {}
+    for cc, g, f, sis, p in c.execute(
+            "SELECT cc, gestor, funcao, sistema, perfil FROM matriz_cco"):
+        s = _CCO_SIS.get(_nrm(sis))
+        if not s or not f:
+            continue
+        lst = cco.setdefault((_nrm(cc), _nrm(g)), {}).setdefault(f.strip(), [])
+        if (s, p) not in lst:
+            lst.append((s, p))
+    if not cco:
+        return
+    alvo = {}
+    for usr, u in users.items():
+        k = (_nrm(cc_de.get(usr)), _nrm(u.get("gestor")))
+        if k in cco and u.get("m"):
+            alvo[u["m"]] = (u, cco[k])
+    if not alvo:
+        return
+    tem = {}
+    for m, s, p, sit in c.execute(
+            "SELECT matricula_vinculada, sistema, perfil, situacao "
+            "FROM acessos_sistemas WHERE matricula_vinculada IS NOT NULL"):
+        if m in alvo and p and _nrm(sit) not in _CONTA_SEM_ACESSO:
+            tem.setdefault(m, set()).add((s, _nrm(p)))
+    for m, (u, funcoes) in alvo.items():
+        dela = {_nrm(d.get("fun")) for d in u["divs"] if d.get("fun")}
+        if not dela:
+            continue   # sem funcao cobrada: nada a separar
+        t = tem.get(m, set())
+        fo = [{"f": f, "a": [[s, p, (s, _nrm(p)) in t] for s, p in ac]}
+              for f, ac in sorted(funcoes.items()) if _nrm(f) not in dela]
+        if fo:
+            u["fo"] = fo
+
+
 def construir_db():
     """DB para o index.html. A parte cara (bi_divergencias + JOIN rh_ativos) e
     calculada 1x e cacheada; so o filtro de quarentena re-roda a cada request
@@ -2783,9 +2855,11 @@ def _montar_base():
                 ORDER BY b.usuario""", a2).fetchall()
 
         users = {}
+        cc_de = {}   # usuario -> codigo do centro de custo (casa com a CCO)
         for r in rows:
             u = users.get(r["usuario"])
             if u is None:
+                cc_de[r["usuario"]] = r["cc_cod"] or ""
                 u = {"u": r["usuario"], "n": r["nome_usuario"] or r["usuario"],
                      "m": r["matricula"] or "", "c": r["cargo"], "d": r["depto"],
                      "cc": (r["cc_cod"] + " - " + r["cc_nome"]).strip(" -"),
@@ -2826,6 +2900,8 @@ def _montar_base():
                 # regra OK do motor sempre foi) — quem nao tem expectativa em
                 # sistema nenhum nao herda o rotulo de quem esta conforme.
                 "s": ("Aderente" if tp == "OK"
+                      else "Previsto (sem extrato)"
+                      if (r["motivo_cod"] or "").startswith("SEM_EXTRATO_")
                       else "Sem perfis mapeados" if tp == "NAO_MAPEADO"
                       else "Resolvido" if r["resolvida"] else "Pendente"),
                 # categoria lida do rh_ativos (tipo_vinculo): Funcionário (CLT),
@@ -2848,6 +2924,11 @@ def _montar_base():
                 if lg and lg.strip().lower() not in _por_caixa:
                     _por_caixa[lg.strip().lower()] = lg
             _u["login"] = ", ".join(sorted(_por_caixa.values()))
+        try:
+            _outras_funcoes_cco(c, users, cc_de)
+        except Exception as e:
+            # banco sem matriz_cco/funcao nao pode derrubar a tela
+            print(f"  [cco] outras funcoes da equipe indisponiveis: {e!r}")
         maxdt = c.execute(
             "SELECT MAX(data_identificacao) FROM bi_divergencias "
             "WHERE data_identificacao <> ''").fetchone()[0] or ""
@@ -4788,7 +4869,7 @@ def _vg_secoes(de="", ate=""):
           'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
           'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Não Mapeado'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
-          'ORACLE_EBS': 'Oracle EBS'}
+          'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera Operacional'}
     pct = lambda n, t: (round(100 * n / t, 1) if t else 0)
     ch = vg.get("chamados") or {}
     tp = vg.get("tempos") or {}
@@ -4855,7 +4936,7 @@ def _vg_analiticos(de="", ate=""):
           'ACESSO_DESLIGADO': 'Acesso de Desligado', 'PERFIL_INVALIDO': 'Perfil Inválido',
           'ACESSO_CONTA_SERVICO': 'Conta de Serviço', 'NAO_MAPEADO': 'Não Mapeado'}
     SL = {'IC_INTEGRADOR_CONTABIL': 'IC', 'SICA_RA': 'SICA RA', 'SICA_ESFERA': 'SICA Esfera',
-          'ORACLE_EBS': 'Oracle EBS'}
+          'ORACLE_EBS': 'Oracle EBS', 'OPERA_OPERACIONAL': 'Opera Operacional'}
     d19 = lambda s: (str(s) if s else "")[:19]
     from datetime import datetime as _dt
     hoje = _dt.now()

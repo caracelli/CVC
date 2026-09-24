@@ -38,6 +38,9 @@ def _norm(s: str) -> str:
 # homologado). Solucao temporaria — rever quando o cliente padronizar a matriz.
 _SISTEMAS_PERFIL_APROXIMADO = {Sistema.IC_INTEGRADOR_CONTABIL.value}
 
+# Sistemas sem extrato que aparecem SO' pelo que a CCO preve (24/09/2026).
+_SISTEMAS_SO_CCO = {Sistema.OPERA_OPERACIONAL.value}
+
 # Populacoes que NAO tem matriz de cargo e sao validadas por ESPELHO (cada uma
 # com os SEUS pares): terceiros (base de RH) e as identidades do diretorio AD
 # (franqueado/prestador). Decidido com a usuaria em 24/06 (terceiros) e
@@ -84,7 +87,8 @@ class ValidarAcessosSistema:
                  ancora_systur_sistemas=None,
                  ancora_systur_isentos=None,
                  matriz_tem_precedencia: bool = True,
-                 cco_pela_funcao: bool = True):
+                 cco_pela_funcao: bool = True,
+                 ancora_isenta_cco: bool = True):
         self._conexao = conexao
         # Regras da matriz do franqueado (lista de RegraFranqueado). Vazio/None
         # = regra desligada e o franqueado segue so' no espelho, como antes de
@@ -174,6 +178,15 @@ class ValidarAcessosSistema:
         # do gestor dela — ver o laco por pessoa. Ligado por padrao; chave
         # propria para medir o efeito e para a area poder recuar.
         self._cco_pela_funcao = bool(cco_pela_funcao)
+        # QUEM E' DA CCO NAO PASSA PELA ANCORA (usuario, 24/09/2026: "quem for
+        # da matriz do CCO nao aplicar a regra oracle x systur"). "Ser da CCO"
+        # = o (centro de custo, gestor) da pessoa existe na matriz CCO. Para
+        # ela o Oracle e' comparado so' com o esperado, sem o filtro pelo
+        # perfil do SYSTUR e sem as pendencias SEM_PERFIL_SYSTUR_COM_* e
+        # PERFIL_FORA_DO_SYSTUR. Medido na base de 15/09: 57 das 457 pessoas
+        # com Oracle; 13 + 5 pendencias da ancora eram delas.
+        self._ancora_isenta_cco = bool(ancora_isenta_cco)
+        self._ancora_isentos_cco: Set[str] = set()
         self._ancora_filtrados = 0      # linhas de esperado cortadas pelo filtro
         self._ancora_sem_systur = 0     # pessoas com acesso e sem perfil no SYSTUR
         self._ancora_divergentes = 0    # pessoas com acesso fora do que o SYSTUR preve
@@ -199,6 +212,9 @@ class ValidarAcessosSistema:
         self._ancora_sem_systur = 0
         self._ancora_divergentes = 0
         self._ancora_nao_mapeado = 0
+        self._ancora_isentos_cco = set()
+        self._ancora_cco_sem_matriz = 0
+        self._previsto_sem_extrato = 0
         # perfis da CCO descartados porque a MATRIZ ja' respondia pelo sistema
         self._cco_apos_matriz = 0
         # linhas da CCO descartadas por serem de OUTRA funcao do gestor
@@ -307,8 +323,36 @@ class ValidarAcessosSistema:
             _prov_deslig_antes = self._prov_deslig
             _ps_systur = (self._perfis_systur_de(func, acessos_por_matricula)
                           if self._ancora_systur else set())
+            _da_cco = self._ancora_isenta_cco and chave_cco in cco
+            if _da_cco:
+                self._ancora_isentos_cco.add(func.matricula)
             for sistema_valor, perfis_comb in perfis_sis.items():
-                if sistema_valor in self._ancora_systur:
+                # SISTEMA SEM EXTRATO, SO' PELA CCO (usuario, 24/09/2026:
+                # "opera operacional pode trazer no painel so' para cco").
+                # Nao da' para conferir se a pessoa tem: sai o que a CCO preve,
+                # um perfil por linha (a tela agrupa por funcao), informativo.
+                # Pelo caminho normal viraria SEM_DADOS, que nao e' salvo.
+                if (sistema_valor in _SISTEMAS_SO_CCO
+                        and sistema_valor not in sistemas_com_dados):
+                    for _p, _m, _o in perfis_comb:
+                        if _o != "CCO":
+                            continue
+                        self._previsto_sem_extrato += 1
+                        regs_func.append(self._registro_base(func) | {
+                            "sistema": sistema_valor,
+                            "perfil_esperado": _p,
+                            "perfil_atual": "",
+                            "acesso_manual": bool(_m),
+                            "status": StatusValidacao.NAO_MAPEADO.value,
+                            "origem_matriz": "CCO",
+                            "motivo_status": f"SEM_EXTRATO_{sistema_valor}",
+                        })
+                    continue
+                if sistema_valor in self._ancora_systur and _da_cco:
+                    # da CCO: sem a ancora. So' marca que havia mapa, para a
+                    # linha informativa "Nao Mapeado" nao sair por engano.
+                    self._ancora_tinha_mapa.add((func.matricula, sistema_valor))
+                elif sistema_valor in self._ancora_systur:
                     # A matriz/CCO falava deste sistema para esta pessoa ANTES
                     # do filtro? E' o que separa "a matriz nao cobre voce"
                     # (nao mapeado) de "cobre, mas o seu perfil do SYSTUR nao
@@ -377,6 +421,31 @@ class ValidarAcessosSistema:
                     if _f:
                         _r["funcao"] = _f
                         break
+            # DA CCO, SEM O SISTEMA ANCORADO E SO' COM "INCLUIR" DA CCO: a matriz
+            # do sistema nao mapeia a pessoa. Retorno da area (Bruna, 24/09/2026):
+            # "colocar que nao tem mapeado na matriz" — em vez de sugerir incluir
+            # o Oracle so' porque a CCO da equipe cita. Informativo, nao pendencia.
+            # Medido na base de 15/09: 50 pessoas, nenhuma com Oracle hoje.
+            if _da_cco:
+                for _s in self._ancora_systur:
+                    _ls = [r for r in regs_func if r.get("sistema") == _s]
+                    if not _ls or not all(
+                            r["status"] == StatusValidacao.SEM_ACESSO.value
+                            and r.get("origem_matriz") == "CCO"
+                            and not (r.get("perfil_atual") or "").strip()
+                            for r in _ls):
+                        continue
+                    regs_func = [r for r in regs_func if r.get("sistema") != _s]
+                    self._ancora_cco_sem_matriz += 1
+                    regs_func.append(self._registro_base(func) | {
+                        "sistema": _s,
+                        "perfil_esperado": "",
+                        "perfil_atual": "",
+                        "acesso_manual": False,
+                        "status": StatusValidacao.NAO_MAPEADO.value,
+                        "origem_matriz": "CCO",
+                        "motivo_status": f"NAO_MAPEADO_NA_MATRIZ_{_s}",
+                    })
             # A regra TEMPORARIA de provavel desligamento (linha ~600, retorna
             # [] quando a pessoa JA foi aderente e zerou o acesso) tem dono
             # proprio — "sai na fase de desligados" — e o teste
@@ -971,6 +1040,10 @@ class ValidarAcessosSistema:
                     # que gera acao. Nao ha' `continue` aqui de proposito.
                     if ps:
                         continue
+
+                # Da CCO: a regra Oracle x SYSTUR nao se aplica (casos 1 e 2).
+                if mat in self._ancora_isentos_cco:
+                    continue
 
                 if not ps:
                     self._ancora_sem_systur += 1
