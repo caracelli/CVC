@@ -31,6 +31,11 @@ MARCADORES = [
     "números indisponíveis", # ...e nao deixa o contador da carga anterior
     "_deslSit",              # botao D diz o caso
     "_divsDisplayA(u.divs)", # SYSTUR na Consulta = mesma leitura da Pendencias
+    # 24/09 tarde (e5b7241, 481ce82, bb84d84)
+    "_csOutrasFuncoes(u)",   # outras funcoes da equipe que a pessoa pode ter
+    "_csOutrasOpcoes(u.divs)",  # um perfil por sistema: outras opcoes previstas
+    "_naoMapMatriz",         # "nao mapeado na matriz" dentro da funcao
+    "Deveria ter:",          # Em Analise diz o lado
 ]
 
 # (marcador, em qual exe deve estar)
@@ -65,6 +70,17 @@ DENTRO_DOS_EXES = [
     #   painel: rota enxuta da Consulta e o texto do motivo novo
     ("launcher/launcher_visualizador.exe", b"/api/consulta-marcadores"),
     ("launcher/launcher_visualizador.exe", b"a funcao dela nao o preve"),
+    # 24/09 tarde: um nome NOVO por regra
+    #   quem e' da CCO nao passa pela ancora + "nao tem mapeado na matriz"
+    ("launcher/launcher_processador.exe", b"_ancora_isentos_cco"),
+    ("launcher/launcher_processador.exe", b"NAO_MAPEADO_NA_MATRIZ_"),
+    #   Opera Operacional so' pela CCO
+    ("launcher/launcher_processador.exe", b"SEM_EXTRATO_"),
+    #   nao pode ter e tem
+    ("launcher/launcher_processador.exe", b"ACESSO_SEM_PREVISAO"),
+    #   painel: outras funcoes da equipe (servidor) e os textos novos
+    ("launcher/launcher_visualizador.exe", b"_outras_funcoes_cco"),
+    ("launcher/launcher_visualizador.exe", b"Nao tem mapeado na matriz"),
 ]
 
 

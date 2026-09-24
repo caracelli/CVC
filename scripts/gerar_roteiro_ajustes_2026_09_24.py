@@ -2,8 +2,12 @@
 """Gera ENTREGA/ROTEIRO_AJUSTES_CVC_IAM_2026-09-24.docx (+ .md).
 
 Responde os OITO pontos do documento "Aplicação_2_09.pdf" (o retorno de 22/09,
-9 paginas) e avisa o que muda na tela — porque esta entrega REDUZ o numero de
-linhas, e sem aviso a primeira leitura e' "sumiu gente".
+9 paginas), o documento "Sistema_24_09 1.docx" (retorno de 24/09) e os ajustes
+validados pelo usuario na tarde de 24/09, e avisa o que muda na tela.
+
+Regerado na tarde de 24/09 (commits e5b7241, 481ce82, bb84d84): a versao da
+manha dizia que a BRENDA virou pendencia — deixou de ser, porque quem e' da
+CCO saiu da regra Oracle x SYSTUR. A Bruna nao tinha recebido a da manha.
 
 Mesma formatacao dos roteiros de 08, 11 e 18/09.
 
@@ -76,28 +80,29 @@ def main():
     r.font.size = Pt(20)
     r.font.color.rgb = AZUL
     s = doc.add_paragraph()
-    r = s.add_run("Roteiro de validação — os 8 pontos do seu documento de 22/09")
+    r = s.add_run("Roteiro de validação — seus documentos de 22/09 e 24/09")
     r.font.size = Pt(13)
     r.font.color.rgb = CINZA
     par(doc, "24/09/2026", size=9, cor=CINZA, md=False)
     _MD.insert(0, "# CVC IAM Analytics\n"
-                  "## Roteiro de validação — os 8 pontos do seu documento de 22/09\n"
+                  "## Roteiro de validação — seus documentos de 22/09 e 24/09\n"
                   "24/09/2026\n")
 
     doc.add_paragraph()
     par(doc, "Por que este documento existe", bold=True, size=11, cor=AZUL, space=2)
     par(doc,
         "Ele responde, um a um, os oito pontos do seu documento de 22/09 — as "
-        "nove páginas, incluindo as que eram só imagem. Cada item diz o que "
-        "mudou, como conferir e o valor esperado na sua base.")
+        "nove páginas, incluindo as que eram só imagem — e os do seu documento "
+        "de 24/09 (Sistema_24_09). Cada item diz o que mudou, como conferir e o "
+        "valor esperado na sua base.")
     par(doc, "Leia primeiro: o número de linhas DIMINUI", bold=True, size=11,
         cor=AZUL, space=2)
     par(doc,
         "Esta entrega tira da tela acessos que não deveriam estar lá, então o "
-        "total cai de 14.176 para 11.732 linhas. Isso é o efeito pretendido: "
-        "2.929 dessas linhas vinham de uma FUNÇÃO que não é a da pessoa (o "
+        "total cai de 14.176 para 12.310 linhas. Isso é o efeito pretendido: "
+        "boa parte dessas linhas vinha de uma FUNÇÃO que não é a da pessoa (o "
         "ponto que você levantou no SIG). As pendências, ao contrário, SOBEM — "
-        "de 1.151 para 1.289 pessoas —, porque passamos a cobrar casos que "
+        "de 1.151 para 1.278 pessoas —, porque passamos a cobrar casos que "
         "antes passavam batidos.")
     nota(doc,
          "O pacote já traz a pasta DADOS com o banco processado: você NÃO "
@@ -121,7 +126,7 @@ def main():
 
     # ------------------------------------------------- os 8 pontos
     doc.add_page_break()
-    h1(doc, "1. Os oito pontos do seu documento")
+    h1(doc, "1. Os oito pontos do seu documento de 22/09")
 
     regra(doc, "1.1", "Os acessos que a matriz prevê voltaram a aparecer",
           prioritaria=True,
@@ -161,9 +166,10 @@ def main():
           conferir="Consulta → PRISCILA SANTOS DE LIMA (90001455).",
           esperado="Oracle EBS aderente com os QUATRO perfis da função dela "
                    "(CVC AP NOVA VISUAL / AP BRASIL / AP SUBMARINO / AP VISUAL "
-                   "Consulta). Na base: 190 pessoas com Oracle e sem perfil no "
-                   "SYSTUR, 81 com acesso fora do que o perfil delas prevê, e "
-                   "o “incluir” do Oracle cai de 354 para 244 pessoas.")
+                   "Consulta). Na base: 185 pessoas com Oracle e sem perfil no "
+                   "SYSTUR, 68 com acesso fora do que o perfil delas prevê, e "
+                   "o “incluir” do Oracle cai de 354 para 233 pessoas. Quem é "
+                   "do Mapeamento CCO não passa por esta regra (item 2.1).")
 
     regra(doc, "1.4", "Quando a matriz não cobre o cargo, a tela diz isso",
           decide="O que aparece para quem tem acesso num sistema que a matriz "
@@ -188,11 +194,12 @@ def main():
                    "SYSTUR. Se ela TEM um acesso que a função dela não prevê, "
                    "a linha não some: vira pendência dizendo isso.",
           conferir="Consulta → BRENDA VASCONCELOS DERENCIO (34530984).",
-          esperado="Nenhuma linha de SIG (eram 14, vindas da função “A Receber "
-                   "2 + SIG”, que não é a dela). Na base: 2.929 linhas de "
-                   "outra função saíram — SIG 2.244, SIGOT 336, SICA RA 199, "
-                   "SICA Esfera 143 —, afetando 196 pessoas. Nenhuma pessoa "
-                   "entrou nem saiu da fila de pendências por causa disso.")
+          esperado="Nenhuma linha de SIG cobrada (eram 14, vindas da função "
+                   "“A Receber 2 + SIG”, que não é a dela). As outras funções "
+                   "da equipe continuam visíveis como “o que ela pode ter” "
+                   "(item 2.4). Na base: 2.929 linhas de outra função saíram "
+                   "da cobrança — SIG 2.244, SIGOT 336, SICA RA 199, SICA "
+                   "Esfera 143 —, afetando 196 pessoas.")
 
     regra(doc, "1.6", "Quantos perfis a pessoa pode ter",
           decide="O que a coluna “Perfil Esperado” mostra.",
@@ -235,45 +242,132 @@ def main():
           esperado="Tudo continua funcionando, sem precisar fechar e abrir. A "
                    "troca de abas também ficou mais rápida.")
 
+    # ------------------------------------------------- 24/09
+    doc.add_page_break()
+    h1(doc, "2. Seu documento de 24/09 e os ajustes do dia")
+
+    regra(doc, "2.1", "Quem é do Mapeamento CCO não passa pela regra Oracle x SYSTUR",
+          prioritaria=True,
+          decide="Se o Oracle de quem está no CCO depende do perfil do SYSTUR.",
+          criterio="Para quem está no Mapeamento CCO (centro de custo + gestor), "
+                   "o Oracle é comparado direto com o que o CCO prevê, sem o "
+                   "filtro pelo perfil do SYSTUR e sem as pendências “sem "
+                   "perfil no SYSTUR” e “perfil fora do SYSTUR”. São 57 das "
+                   "457 pessoas com Oracle.",
+          conferir="Consulta → BRENDA VASCONCELOS DERENCIO (34530984).",
+          esperado="Oracle EBS aderente — tem os 6 perfis da função dela; o CVC "
+                   "OIE BRASIL - Relatório de Despesas aparece como “1 a mais”, "
+                   "informativo. Ela não é pendência.")
+
+    regra(doc, "2.2", "“Não tem mapeado na matriz”",
+          decide="O que aparece para quem é do CCO, não tem Oracle e só o CCO "
+                 "da equipe prevê Oracle.",
+          criterio="Seu pedido: colocar que não tem mapeado na matriz. Em vez de "
+                   "sugerir incluir, a linha é informativa e diz isso — dentro "
+                   "da função, com cada perfil, e no bloco “Sem mapeamento”. "
+                   "A função passa a mostrar quantos perfis ficaram de fora da "
+                   "conta, para não dizer “completa” com metade dos acessos.",
+          conferir="Consulta → ROSE APARECIDA DIOGO (2752).",
+          esperado="Oracle: “não tem mapeado na matriz — a previsão vem só da "
+                   "CCO da equipe”. A função “Atendimento a fornecedores CVC e "
+                   "VISUAL” mostra “completa · 4 não mapeados na matriz”. Na "
+                   "base: 61 pessoas.")
+
+    regra(doc, "2.3", "Opera Operacional aparece pelo Mapeamento CCO",
+          decide="Se o Opera Operacional aparece na aplicação.",
+          criterio="Não recebemos extrato do Opera, então não dá para conferir se "
+                   "a pessoa tem o acesso. O que o CCO prevê para a função dela "
+                   "aparece como informativo — nunca como pendência nem como "
+                   "“incluir”.",
+          conferir="Consulta → EDISON ALVES DO NASCIMENTO (1759) → Funções "
+                   "previstas → A Receber 2 + SIG.",
+          esperado="OPERA_OPERACIONAL · A_RECEBER_2 · “sem extrato”. Na base: "
+                   "149 pessoas, 203 linhas.")
+
+    regra(doc, "2.4", "As outras funções da equipe que a pessoa pode ter",
+          prioritaria=True,
+          decide="O que aparece das funções do gestor que não são a da pessoa.",
+          criterio="O CCO lista todas as funções da equipe. A função da pessoa "
+                   "— a que o perfil do SYSTUR indica — é a cobrada. As demais "
+                   "aparecem logo abaixo, com cada acesso marcado “tem” / “não "
+                   "tem”, sem virar pendência. Quem não tem perfil no SYSTUR "
+                   "recebe todas as funções, como antes.",
+          conferir="Consulta → BRENDA VASCONCELOS DERENCIO (34530984) → final "
+                   "da aba Acessos.",
+          esperado="“Outras funções que a pessoa pode ter (3)”: A Receber 1 "
+                   "Comissão, A Receber 2 + SIG e A Receber 3. Na base: 374 "
+                   "pessoas têm o bloco.")
+
+    regra(doc, "2.5", "Um perfil por sistema: as outras opções não são “falta”",
+          prioritaria=True,
+          decide="Como aparece o sistema em que a matriz prevê mais de uma "
+                 "opção e a pessoa tem uma.",
+          criterio="Seu documento: “se um dos acessos mapeados estiver ok traz "
+                   "ele ok, e os a mais precisam ser trazidos estilo as funções "
+                   "do CCO”. O sistema vem aderente, sem “Falta 1”, e as outras "
+                   "opções vão para o bloco “Outros acessos previstos”. Uma "
+                   "opção aparece direto; mais de uma fica recolhida. Vale para "
+                   "todos os sistemas menos o Oracle, onde cada perfil é um "
+                   "acesso.",
+          conferir="Consulta → ROSELAINE DO NASCIMENTO FIGUEIREDO (34532575); "
+                   "depois CAIO LUIZ DA COSTA (34531299).",
+          esperado="Roselaine: SIGOT, SYSTUR e IC aderentes; em “Outros acessos "
+                   "previstos”, SIGOT Intercompany, SYSTUR INTERCOMPANY e IC "
+                   "IC_CADASTRO. Caio: “SYSTUR — 2 opções”, recolhido. Na base: "
+                   "168 pessoas.")
+
+    regra(doc, "2.6", "“Não pode ter acesso e tem”",
+          prioritaria=True,
+          decide="O que aparece para quem tem acesso num sistema que nem a "
+                 "matriz nem o CCO preveem para ela.",
+          criterio="A tela dizia só “sem perfil previsto”, sem mostrar o acesso. "
+                   "Agora é pendência, com o perfil que a pessoa tem. Nas "
+                   "linhas de análise com um lado só, a tela diz qual é: "
+                   "“Deveria ter:” ou “Tem hoje:”.",
+          conferir="Consulta → DENISE APARECIDA GONCALVES DOS SANTOS (1562).",
+          esperado="Necessário análise: SYSTUR “Deveria ter: INTEGRADOR_CONTABIL” "
+                   "e IC “Tem hoje: IC_CADASTRO”. Na base: 7 pessoas.")
+
+    regra(doc, "2.7", "A função certa em cada acesso",
+          decide="Em qual função do CCO cada acesso aparece.",
+          criterio="O mesmo perfil do Oracle está em várias funções da equipe, e "
+                   "a aplicação pegava a primeira da planilha. Agora vale a "
+                   "função que o SYSTUR da pessoa indica. Só muda o nome da "
+                   "função exibida; nenhum status muda.",
+          conferir="Consulta → EDISON ALVES DO NASCIMENTO (1759).",
+          esperado="Uma função só: A Receber 2 + SIG, com o Oracle dentro dela. "
+                   "Antes aparecia também “A Receber 1”, que não é a dele.")
+
     # ------------------------------------------------- o que muda na tela
     doc.add_page_break()
-    h1(doc, "2. O que vai parecer diferente — e por quê")
+    h1(doc, "3. O que vai parecer diferente — e por quê")
     par(doc,
-        "Três mudanças alteram números que você acompanha. Nenhuma delas é "
+        "Estas mudanças alteram números que você acompanha. Nenhuma delas é "
         "erro; todas vêm dos pontos acima.")
     lista(doc, [
-        "O total de linhas cai de 14.176 para 11.732. São os acessos de função "
+        "O total de linhas cai de 14.176 para 12.310. São os acessos de função "
         "que não é da pessoa (item 1.5) e os do Oracle que o perfil do SYSTUR "
         "não autoriza (item 1.3).",
-        "As pendências SOBEM: de 1.151 para 1.289 pessoas. A maior parte são "
-        "as 190 pessoas que têm Oracle e não têm perfil no SYSTUR.",
-        "BRENDA VASCONCELOS DERENCIO passa a aparecer como pendência no Oracle. "
-        "O único acesso dela fora do previsto é o CVC OIE BRASIL - Relatório "
-        "de Despesas. Esse mesmo acesso responde por 76 das divergências do "
-        "Oracle — 373 das 457 pessoas com Oracle o têm. Se ele for um acesso "
-        "corporativo que não deve ser cobrado, a aplicação já tem onde "
-        "configurar isso e a fila do Oracle cai de 99 para 18 pessoas.",
+        "As pendências SOBEM: de 1.151 para 1.278 pessoas. A maior parte são "
+        "as 185 pessoas que têm Oracle e não têm perfil no SYSTUR.",
+        "Aparecem linhas novas de Opera Operacional (149 pessoas) e de “não tem "
+        "mapeado na matriz” no Oracle (61 pessoas) — as duas informativas.",
+        "Aparecem 7 pendências novas de “não pode ter acesso e tem”.",
     ])
 
     # ------------------------------------------------- perguntas
     doc.add_page_break()
-    h1(doc, "3. Três perguntas para você")
-    pergunta(doc, "3.1 O Relatório de Despesas deve contar como pendência?",
-             "Hoje conta. São 373 das 457 pessoas com Oracle que têm esse "
-             "acesso, e 278 têm só ele. Se for corporativo, ele deixa de "
-             "contar e a fila do Oracle cai de 99 para 18 pessoas.")
-    pergunta(doc, "3.2 No SIG, os perfis são alternativos ou se somam?",
+    h1(doc, "4. Duas perguntas para você")
+    pergunta(doc, "4.1 O Relatório de Despesas deve contar como pendência?",
+             "Hoje conta para quem passa pela regra do SYSTUR. São 373 das 457 "
+             "pessoas com Oracle que têm esse acesso. Se for corporativo, ele "
+             "deixa de contar e a fila do Oracle diminui bastante.")
+    pergunta(doc, "4.2 No SIG, os perfis são alternativos ou se somam?",
              "Hoje ter mais de um perfil no mesmo sistema vira pendência, e no "
              "SIG isso são 230 linhas. Mas 47% das pessoas com SIG têm mais de "
              "um (média de 18,7), e os nomes parecem permissões que se somam "
              "(ACESSO_CARRO_INTER_GRUPOS, CAD_FORNECEDOR_SALVAR). No SYSTUR, "
              "onde a regra faz sentido, são 1%.")
-    pergunta(doc, "3.3 Quando a matriz por cargo lista dois perfis do mesmo "
-                  "sistema, eles são alternativas?",
-             "Exemplo: GILDA TAVARES DA SILVA tem INTERCOMPANY no SYSTUR e a "
-             "tela diz “Falta 1: CUSTOS”. Se os dois forem alternativas, a "
-             "sugestão está errada — e seguir por ela criaria uma pendência de "
-             "“mais de um perfil”.")
 
     # ------------------------------------------------- saida
     OUT_DOCX.parent.mkdir(parents=True, exist_ok=True)
