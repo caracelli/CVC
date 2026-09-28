@@ -36,6 +36,10 @@ MARCADORES = [
     "_csOutrasOpcoes(u.divs)",  # um perfil por sistema: outras opcoes previstas
     "_naoMapMatriz",         # "nao mapeado na matriz" dentro da funcao
     "Deveria ter:",          # Em Analise diz o lado
+    # 28/09 (ajustes_apl_28_09)
+    "paiRegistro",           # 1: analitico nao herda perfil nem descarta registro
+    "_conjExato",            # 5: SIG com o conjunto exato sem alerta
+    "i.its.map",             # 6: funcoes um perfil por linha
 ]
 
 # (marcador, em qual exe deve estar)
@@ -81,6 +85,14 @@ DENTRO_DOS_EXES = [
     #   painel: outras funcoes da equipe (servidor) e os textos novos
     ("launcher/launcher_visualizador.exe", b"_outras_funcoes_cco"),
     ("launcher/launcher_visualizador.exe", b"Nao tem mapeado na matriz"),
+    # 28/09 (ajustes_apl_28_09)
+    #   2: leitura de acentos e acento-only nao e' movimentacao
+    ("launcher/launcher_processador.exe", b"normalizar_encoding_detectado"),
+    ("launcher/launcher_processador.exe", b"_sem_acento"),
+    #   4: sem SYSTUR e sem Oracle, ancora no SYSTUR previsto
+    ("launcher/launcher_processador.exe", b"_systur_previsto"),
+    #   5: SIG com o conjunto exato da funcao
+    ("launcher/launcher_processador.exe", b"_SISTEMAS_CONJUNTO_DA_FUNCAO"),
 ]
 
 

@@ -136,7 +136,7 @@ class LigacaoNoPainel(unittest.TestCase):
         corpo = _funcao("baixarExcel")
         self.assertIn("_exportTemGrupo(niveis)", corpo)
         self.assertIn("_exportFormato(arquivo)", corpo)
-        self.assertIn("_exportAchatar(linhas, niveis)", corpo)
+        self.assertIn("_exportAchatar(linhas, niveis, achatar)", corpo)
 
     def test_analitico_manda_sem_niveis(self):
         """Se mandasse os níveis junto, o xlsx voltaria a sair agrupado."""
@@ -158,6 +158,12 @@ class LigacaoNoPainel(unittest.TestCase):
         baixarExcel ficaria pendurado e o botão pareceria travado."""
         corpo = _funcao("fecharModal")
         self.assertIn("_exportEscolha", corpo)
+
+    def test_quem_passa_opcoes_de_achatar(self):
+        self.assertIn("{herdar: [0,1,2,3,4,5,6,7,8,10,16]}", _funcao("csExportar"))
+        self.assertIn("paiRegistro: true", _funcao("exportarInclusao"))
+        self.assertIn("paiRegistro: true", _funcao("exportarHistorico"))
+        self.assertIn("paiRegistro: true", _funcao("exportarQuarentena"))
 
     def test_consulta_nao_perdeu_o_login_real(self):
         """Não-regressão do teste de 08/09 (export reflete a grid)."""

@@ -6516,17 +6516,30 @@ function _exportTemGrupo(niveis){
 /* Achata a hierarquia: cada FOLHA herda dos ancestrais o que veio vazio.
    Folha = a proxima linha nao e' filha desta. Um pai SEM filho continua
    saindo — senao a pessoa sem nenhum acesso sumiria da planilha, que e' o
-   defeito oposto ao que estamos consertando. */
-function _exportAchatar(linhas, niveis){
+   defeito oposto ao que estamos consertando.
+
+   Retorno de 28/09 (ajustes_apl_28_09.docx, a propria Bruna): na Consulta o
+   "Perfil Encontrado" do SIG aparecia em TODAS as linhas de sistema. O pai
+   carrega a UNIAO dos perfis; o sistema em que a pessoa nao tem nada vinha
+   vazio e herdava a uniao. Vazio ali e' "nao tem", nao "igual ao pai". Por isso
+   cada export diz o que pode herdar:
+     opts.herdar      — indices das colunas que herdam (ausente = todas);
+     opts.paiRegistro — o nivel 0 ja' e' um REGISTRO (Inclusao, Historico RH,
+                        Quarentena): ele sai tambem, em vez de ser descartado. */
+function _exportAchatar(linhas, niveis, opts){
+  const o = opts || {};
+  const herda = o.herdar ? new Set(o.herdar) : null;
   const anc = [], out = [];
   linhas.forEach((l, i) => {
     const nv = (niveis && niveis[i]) || 0;
     anc[nv] = l; anc.length = nv + 1;
     const prox = (niveis && niveis[i + 1]) || 0;
-    if (prox > nv) return;              // tem filho: quem carrega a linha e' a folha
+    // tem filho: quem carrega a linha e' a folha — salvo quando o pai e' registro
+    if (prox > nv && !o.paiRegistro) return;
     const nova = l.slice();
     for (let c = 0; c < nova.length; c++) {
       if (nova[c] !== '' && nova[c] != null) continue;
+      if (herda && !herda.has(c)) continue;
       for (let k = nv - 1; k >= 0; k--) {
         const a = anc[k];
         if (a && a[c] !== '' && a[c] != null) { nova[c] = a[c]; break; }
@@ -6568,12 +6581,12 @@ function _exportEscolher(op){
   if (r) r(op);
 }
 
-async function baixarExcel(arquivo, colunas, linhas, niveis, formatos){
+async function baixarExcel(arquivo, colunas, linhas, niveis, formatos, achatar){
   if(!linhas.length){ alert('Nada para exportar com os filtros atuais.'); return; }
   if (_exportTemGrupo(niveis)) {
     const op = await _exportFormato(arquivo);
     if (!op) return;                                  // cancelou: nao baixa nada
-    if (op === 'analitico') { linhas = _exportAchatar(linhas, niveis); niveis = null; }
+    if (op === 'analitico') { linhas = _exportAchatar(linhas, niveis, achatar); niveis = null; }
   }
   proc(true);
   try{
@@ -7276,7 +7289,14 @@ function _csPerfilTxt(d){
                   && DB.meta.multi_perfil_fora) || [])
                   .map(s => String(s).toUpperCase());
   const _regraVale = !_fora.includes(String(d.sis || '').toUpperCase());
-  const alerta = (_atuais.size > 1 && _regraVale)
+  /* CONJUNTO EXATO DA FUNÇÃO (retorno de 28/09, ATHAMIRIS 23242): no SIG a
+     função prevê um conjunto; quem tem exatamente esse conjunto é aderente e
+     o motor não marca MAIS_DE_UM_PERFIL. O alerta acompanha o motor. */
+  const _conjExato = ['SIG'].includes(String(d.sis || '').toUpperCase())
+    && !_ehPend && _atuais.size > 0
+    && _atuais.size === new Set(pp.split(',').map(s => s.trim().toUpperCase()).filter(Boolean)).size
+    && pp.split(',').every(s => !s.trim() || _atuais.has(s.trim().toUpperCase()));
+  const alerta = (_atuais.size > 1 && _regraVale && !_conjExato)
     ? '<span class="alerta-sis" title="' + (_ehPend
         ? 'A regra da área é um perfil por pessoa por sistema. Esta linha entrou '
           + 'como pendência para análise.'
@@ -7332,6 +7352,12 @@ function _csPerfilTxt(d){
                   + _csListaPerfis(aMais));
       return alerta + partes.join('<br>');
     }
+    // MESMOS perfis, so' em outra ORDEM (retorno de 28/09, ATHAMIRIS 23242:
+    // "esta repetindo o que ela tem e o que ela poderia ter"): nao ha' o que
+    // comparar — sai a lista uma vez, como aderente.
+    const _cru = l => [...new Set(l.map(x => x.trim()))].sort().join('');
+    if (_cru(tem) === _cru(dev))
+      return alerta + '<span style="color:#1E7B43">' + _csListaPerfis(tem) + '</span>';
     // mesma lista, grafia diferente — mostrar os dois lados e' o honesto
     return alerta + 'Tem hoje: ' + _csListaPerfis(tem)
          + '<br>Deveria ter: <b>' + _csListaPerfis(dev) + '</b>';
@@ -7440,17 +7466,22 @@ function _csDetalheCategorias(divs, pfx, comData){
       // (51)" — 51 perfis em texto corrido, o "muita informacao" que a area
       // reclamou. Mostra os 6 primeiros; o resto abre no clique (31/08 — ela
       // pediu: "ao clicar no +7 nao teria como expandir os demais perfis?").
+      // UM EMBAIXO DO OUTRO, como o `_csListaPerfis` (retorno de 28/09, "as
+      // vezes o acesso vem em lista, as vezes vem assim, da para padronizar?"):
+      // aqui cada perfil e' uma LINHA do banco e o join era por virgula, entao
+      // o mesmo Oracle saia em lista ou em paragrafo conforme a origem.
       const _TETO_SIS = 6;
       const _itens = lista.map(d => _csPerfilTxt(d) + motIcone(d.mot));
-      let perfis = _itens.slice(0, _TETO_SIS).join(', ');
+      let perfis = _itens.slice(0, _TETO_SIS).join('<br>');
       if (_itens.length > _TETO_SIS) {
-        const _resto = lista.slice(_TETO_SIS)
-          .map(d => _csPerfilTxt(d).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+        // o resto leva o MESMO html dos 6 visiveis (negrito, "?" do motivo);
+        // ate 28/09 ia como texto puro e a lista aberta mudava de cara no meio
+        const _resto = _itens.slice(_TETO_SIS);
         // clicavel, pelo mesmo motivo do `_csListaPerfis`: o resto tem de
         // ser alcancavel, nao so' existir no title (retorno de 31/08).
         const _rot = `+${_itens.length - _TETO_SIS} outros`;
-        perfis += ` <span class="cs-mais" data-rotulo="${esc(_rot)}" `
-                + `data-sep=", " data-resto="${esc(_resto.join('\u0001'))}" `
+        perfis += `<br><span class="cs-mais" data-rotulo="${esc(_rot)}" `
+                + `data-resto="${esc(_resto.join('\u0001'))}" `
                 + `onclick="csMaisPerfis(this, event)" `
                 + `title="Clique para ver os ${_resto.length} restantes">${esc(_rot)}</span>`;
       }
@@ -7526,13 +7557,34 @@ function _csFuncoesCco(divs){
   (divs || []).forEach(d => { if (d.fun) (porFun[d.fun] = porFun[d.fun] || []).push(d); });
   const nomes = Object.keys(porFun);
   if (!nomes.length) return '';
+  /* UM PERFIL POR LINHA (retorno de 28/09, PAMELLA 6171: "padronizar na mesma
+     leitura"). A linha do banco pode trazer VARIOS perfis — o SIG vem numa so',
+     com os 34 da funcao — e saia como paragrafo com um status so' ("Em
+     Analise"), enquanto "Outras funcoes" logo abaixo lista perfil a perfil com
+     tem/nao tem. Aqui a linha multipla e' aberta: cada perfil previsto vira
+     "tem" ou "falta", e o que ela tem fora do previsto vira "a mais" (nada
+     some). A conta do resumo passa a ser por perfil, como la'. Linha de UM
+     perfil segue como antes. */
+  const _lista = x => String(x || '').split(',').map(y => y.trim()).filter(Boolean);
+  const _n = x => x.toUpperCase().replace(/\s+/g, ' ');
+  const _itens = d => {
+    const pp = _lista(d.pp), pe = _lista(d.pe);
+    if (pp.length <= 1) return [{d: d, p: d.pp || d.pe || '—', st: null}];
+    if (_semExtrato(d) || _naoMapMatriz(d)) return pp.map(p => ({d: d, p: p, st: null}));
+    const tem = new Set(pe.map(_n)), dev = new Set(pp.map(_n));
+    return pp.map(p => ({d: d, p: p, st: tem.has(_n(p)) ? 'tem' : 'falta'}))
+      .concat(pe.filter(p => !dev.has(_n(p))).map(p => ({d: d, p: p, st: 'amais'})));
+  };
   const info = nomes.map(f => {
     const ds = porFun[f];
-    const tem = ds.filter(d => d.a === 'Aderente').length;
-    // sem extrato nao se confere: fica fora do "tem X de Y"
-    const total = ds.filter(d => !_semExtrato(d) && !_naoMapMatriz(d)).length;
-    const nmm = ds.filter(_naoMapMatriz).length;
-    return {f: f, ds: ds, tem: tem, total: total, faltam: total - tem, nmm: nmm};
+    const its = [].concat(...ds.map(_itens));
+    const tem = its.filter(x => x.st ? x.st === 'tem' : x.d.a === 'Aderente').length;
+    // sem extrato nao se confere: fica fora do "tem X de Y"; "a mais" tambem
+    // (nao e' da funcao)
+    const total = its.filter(x => x.st ? x.st !== 'amais'
+                                       : (!_semExtrato(x.d) && !_naoMapMatriz(x.d))).length;
+    const nmm = its.filter(x => _naoMapMatriz(x.d)).length;
+    return {f: f, ds: ds, its: its, tem: tem, total: total, faltam: total - tem, nmm: nmm};
   }).sort((a, b) => (b.faltam - a.faltam) || a.f.localeCompare(b.f, 'pt-BR'));
   const corpo = info.map(i => {
     // "completa com so' 2 acessos" (Bruna, 22/09): quando parte da funcao nao
@@ -7547,8 +7599,15 @@ function _csFuncoesCco(divs){
       : (i.tem
           ? `<span style="color:#B9770E;font-weight:700;">tem ${i.tem} de ${i.total}</span>`
           : `<span style="color:#2980B9;font-weight:700;">falta${i.faltam > 1 ? 'm' : ''} ${i.faltam}</span>`)) + _nota;
-    const linhas = i.ds.map(d => {
-      const est = _semExtrato(d)
+    const linhas = i.its.map(x => {
+      const d = x.d;
+      const est = x.st === 'tem'
+        ? '<span style="color:#1E7B43;font-weight:700;">tem</span>'
+        : x.st === 'falta'
+        ? '<span style="color:#2980B9;font-weight:700;">falta</span>'
+        : x.st === 'amais'
+        ? '<span style="color:#B9770E;font-weight:700;">a mais</span>'
+        : _semExtrato(d)
         ? '<span style="color:#8A9099;font-weight:700;">sem extrato</span>'
         : _naoMapMatriz(d)
         ? '<span style="color:#8A9099;font-weight:700;">não mapeado na matriz</span>'
@@ -7557,7 +7616,7 @@ function _csFuncoesCco(divs){
         : (d.a === 'Incluir Acesso'
             ? '<span style="color:#2980B9;font-weight:700;">falta</span>'
             : `<span style="color:#B9770E;font-weight:700;">${esc(d.a || 'a revisar')}</span>`);
-      const perfil = esc(d.pp || d.pe || '—');
+      const perfil = esc(x.p);
       return `<div class="cs-fun-l"><span class="h-sis">${esc(d.sis || '—')}</span>`
            + `<span class="cs-fun-p">${perfil}</span>${est}</div>`;
     }).join('');
@@ -8008,7 +8067,9 @@ function csExportar(){
   // falha de conexao. Ate 22/09 a Consulta montava a requisicao por conta
   // propria — mesmo arquivo e mesmo payload, mas por um caminho paralelo, que
   // escapava da pergunta. Um caminho so'.
-  baixarExcel('consulta', cols, rows, niveis);
+  // herdam so' a identificacao (0-8), Sistemas e E-mail; o resto e' do SISTEMA
+  baixarExcel('consulta', cols, rows, niveis, null,
+              {herdar: [0,1,2,3,4,5,6,7,8,10,16]});
 }
 
 function exportarInclusao(){
@@ -8041,7 +8102,8 @@ function exportarInclusao(){
       {quando:'Resolvido', fundo:'DFF6DD', texto:'107C10'}
     ]}
   ];
-  baixarExcel('Inclusao_Alteracao', cols, linhas, niveis, formatos);
+  baixarExcel('Inclusao_Alteracao', cols, linhas, niveis, formatos,
+              {paiRegistro: true, herdar: []});
 }
 
 function _pendDetalheTexto(ps){
@@ -8082,7 +8144,9 @@ function exportarHistorico(){
       niveis.push(i === 0 ? 0 : 1);
     });
   });
-  baixarExcel('Historico_RH', cols, linhas, niveis);
+  // so' Matricula e Nome moram no 1o registro; o resto e' de cada registro
+  baixarExcel('Historico_RH', cols, linhas, niveis, null,
+              {paiRegistro: true, herdar: [0,1]});
 }
 
 function exportarSV(){
@@ -8138,7 +8202,8 @@ function exportarQuarentena(){
                    fmtDT(q.data_inicio), fmtDT(q.data_saida), q.periodo_dias, q.motivo]);
       niveis.push(i === 0 ? 0 : 1);
     }));
-    baixarExcel('Quarentena_Historico', cols, linhas, niveis);
+    baixarExcel('Quarentena_Historico', cols, linhas, niveis, null,
+                {paiRegistro: true, herdar: []});
   }
 }
 

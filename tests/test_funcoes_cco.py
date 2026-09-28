@@ -154,6 +154,27 @@ class ListaDeFuncoesNaTela(unittest.TestCase):
         parcial = dict(self.FALTA1, fun="Func completa")
         self.assertIn("tem 1 de 2", self._html([self.TEM, parcial]))
 
+    def test_linha_com_varios_perfis_abre_um_por_linha(self):
+        """Retorno de 28/09 (PAMELLA 6171, "padronizar na mesma leitura"): o SIG
+        vem numa linha so' com N perfis e saia como paragrafo "Em Análise".
+        Agora cada perfil previsto e' tem/falta e o que sobra e' "a mais"."""
+        sig = {"fun": "Oper", "a": "Em Análise", "sis": "SIG",
+               "pp": "A, B, C", "pe": "A, C, X"}
+        html = self._html([sig])
+        self.assertNotIn("A, B, C", html, "voltou o paragrafo")
+        self.assertNotIn(">Em Análise<", html)
+        self.assertEqual(html.count(">tem<"), 2)
+        self.assertEqual(html.count(">falta<"), 1)
+        self.assertEqual(html.count(">a mais<"), 1)
+        self.assertIn("tem 2 de 3", html, "a conta e' por perfil; o a mais nao entra")
+
+    def test_conjunto_completo_fica_completa(self):
+        sig = {"fun": "Oper", "a": "Aderente", "sis": "SIG",
+               "pp": "A, B", "pe": "B, A"}
+        html = self._html([sig, self.TEM | {"fun": "Oper"}])
+        self.assertIn("completa", html)
+        self.assertEqual(html.count(">tem<"), 3)
+
     def test_o_drawer_chama_a_lista(self):
         """Guarda contra o fix virar código morto (achado de 26/08)."""
         html = INDEX.read_text(encoding="utf-8")

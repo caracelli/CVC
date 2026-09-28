@@ -104,5 +104,49 @@ class TestCdcRhAtivosIncremental(unittest.TestCase):
         self.assertEqual(self._historico(), [], "registro identico nao gera trilha")
 
 
+def _com_depto(depto):
+    f = _ativo("MAT1")
+    f.cargo = Cargo(codigo="CG1", descricao="ANALISTA",
+                    departamento=depto, centro_custo="100")
+    return f
+
+
+class TestCdcSoGrafiaNaoEMovimentacao(TestCdcRhAtivosIncremental):
+    """Retorno de 28/09/2026: corrigida a leitura cp1250 -> cp1252, a 1a carga
+    compararia 'CONCILIAÇĂO' (gravado errado) com 'CONCILIAÇÃO' e a admissao
+    vazia com a preenchida — ~2 mil ALTERADO e 328 transferidos falsos."""
+
+    def _base_e_lote(self, antes, depois):
+        self.hist.registrar_ativos([antes])
+        self.repo.salvar_ativos([antes])
+        return self.hist.registrar_ativos([depois])
+
+    def test_departamento_so_no_acento_nao_muda(self):
+        a, d = _com_depto("CONCILIAÇĂO"), _com_depto("CONCILIAÇÃO")
+        res = self._base_e_lote(a, d)
+        self.assertEqual(res["alterados"], 0)
+        self.assertEqual(self._historico(), [])
+
+    def test_cargo_so_no_acento_nao_muda(self):
+        res = self._base_e_lote(_ativo("MAT1", cargo_desc="DIRETOR INOVAÇĂO"),
+                                _ativo("MAT1", cargo_desc="DIRETOR INOVAÇÃO"))
+        self.assertEqual(res["alterados"], 0)
+
+    def test_admissao_que_passou_a_vir_nao_muda(self):
+        a, d = _ativo("MAT1"), _ativo("MAT1")
+        a.data_admissao = None
+        res = self._base_e_lote(a, d)
+        self.assertEqual(res["alterados"], 0)
+
+    def test_troca_real_continua_detectada(self):
+        a, d = _com_depto("CONCILIAÇĂO"), _com_depto("CONTABILIDADE")
+        self.assertEqual(self._base_e_lote(a, d)["alterados"], 1)
+
+    def test_admissao_trocada_continua_detectada(self):
+        a, d = _ativo("MAT1"), _ativo("MAT1")
+        d.data_admissao = date(2024, 5, 1)
+        self.assertEqual(self._base_e_lote(a, d)["alterados"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

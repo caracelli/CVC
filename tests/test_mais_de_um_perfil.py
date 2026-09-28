@@ -96,6 +96,29 @@ class DoisPerfisViramPendencia(unittest.TestCase):
         self.assertEqual(r[0][0], "OK", f"grafia dupla virou pendencia: {r[0]}")
 
 
+class SigConjuntoExatoDaFuncao(unittest.TestCase):
+    """Retorno de 28/09/2026 (ATHAMIRIS 23242): no SIG a funcao preve um
+    CONJUNTO; quem tem exatamente o conjunto (39 de 39) e' aderente. So' o
+    exato — tirar o SIG da regra inteira deixaria aderente quem tem 3 de 8."""
+
+    def test_conjunto_exato_e_aderente(self):
+        r = _cenario(["P1", "P2", "P3"], ["P3", "P1", "P2"], sistema="SIG")
+        self.assertEqual([x[0] for x in r], ["OK"], r)
+
+    def test_parte_do_conjunto_continua_em_analise(self):
+        r = _cenario(["P1", "P2", "P3"], ["P1", "P2"], sistema="SIG")
+        self.assertEqual(r[0][:2], ("EM_ANALISE", "MAIS_DE_UM_PERFIL"))
+
+    def test_conjunto_mais_um_continua_em_analise(self):
+        r = _cenario(["P1", "P2"], ["P1", "P2", "SOBRA"], sistema="SIG")
+        self.assertEqual(r[0][0], "EM_ANALISE")
+
+    def test_nos_outros_sistemas_o_exato_continua_pendencia(self):
+        """A decisao de 22/09 segue valendo fora do SIG (ex.: SYSTUR)."""
+        r = _cenario(["P1", "P2"], ["P1", "P2"])
+        self.assertEqual(r[0][:2], ("EM_ANALISE", "MAIS_DE_UM_PERFIL"))
+
+
 class EscopoEDesligamento(unittest.TestCase):
 
     def test_flag_desligada_mantem_o_comportamento_antigo(self):

@@ -328,6 +328,44 @@ class NinguemPodeSumir(unittest.TestCase):
         self.assertEqual(uc._ancora_sem_systur, 0)
 
 
+class SemSysturAncoraNoSysturPrevisto(unittest.TestCase):
+    """Retorno de 28/09/2026 (RAFAEL 14546, ANALISTA CONTABIL SR, 01.02.02.11):
+    sem perfil nenhum no SYSTUR o filtro cortava TODO o Oracle e a tela dizia
+    "sem perfil previsto para o cargo/centro de custo" — mas a matriz preve 39.
+    Bruna: "ele nao tem EBS mas seguindo a matriz ele deveria vir". Sem SYSTUR
+    e sem Oracle, a ancora e' o SYSTUR que a MATRIZ preve para a pessoa."""
+
+    def _com_systur_previsto(self, acessos_oracle, previsto="CUSTOS"):
+        cx = _base([], acessos_oracle, com_cco=False)
+        if previsto:
+            s = cx.sessao()
+            s.add(PerfilEsperadoModel(cargo_codigo=CC, cargo_descricao=CARGO,
+                                      sistema=SYS, perfil=previsto))
+            s.commit(); s.close()
+        return cx
+
+    def test_sem_systur_e_sem_oracle_vem_o_oracle_do_systur_previsto(self):
+        """⭐ O caso do Rafael: vem o Oracle de CUSTOS, nao o de INTERCOMPANY."""
+        cx = self._com_systur_previsto([])
+        _rodar(cx)
+        self.assertEqual([(st, esp) for st, esp, _ in _linhas(cx, ORA)],
+                         [("SEM_ACESSO", "CVC GL CUSTOS")])
+
+    def test_quem_tem_oracle_e_nao_tem_systur_segue_a_regra_de_23_09(self):
+        """Com Oracle e sem SYSTUR: pendencia no SYSTUR, o Oracle nao ganha
+        esperado pelo previsto (senao 13 pessoas virariam aderentes)."""
+        cx = self._com_systur_previsto(["CVC GL CUSTOS"])
+        _rodar(cx)
+        self.assertNotIn("OK", [st for st, _, _ in _linhas(cx, ORA)])
+        self.assertIn("SEM_PERFIL_SYSTUR_COM_ORACLE",
+                      " ".join(m for _, _, m in _linhas(cx, SYS)))
+
+    def test_sem_systur_previsto_continua_sem_oracle(self):
+        cx = self._com_systur_previsto([], previsto=None)
+        _rodar(cx)
+        self.assertEqual(_linhas(cx, ORA), [])
+
+
 class AMatrizNaoCobreOCargo(unittest.TestCase):
     """Pedido da area (Bruna) em 23/09/2026, sobre a matricula 1303:
 

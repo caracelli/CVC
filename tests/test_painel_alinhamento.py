@@ -64,7 +64,7 @@ class LinhaDeAcessoEmDuasColunas(unittest.TestCase):
         quebraria. O valor precisa estar dentro de UM span."""
         html = INDEX.read_text(encoding="utf-8")
         i = html.index("function _csDetalheCategorias(")
-        corpo = html[i:i + 3000]
+        corpo = html[i:html.index("\nfunction ", i + 10)]   # a funcao inteira
         self.assertIn('-v">', corpo,
                       "o valor voltou a ser texto solto dentro da linha")
 
@@ -92,7 +92,7 @@ class VolumePorSistema(unittest.TestCase):
     def test_ha_teto_por_sistema(self):
         html = INDEX.read_text(encoding="utf-8")
         i = html.index("function _csDetalheCategorias(")
-        corpo = html[i:i + 3000]
+        corpo = html[i:html.index("\nfunction ", i + 10)]   # a funcao inteira
         self.assertIn("_TETO_SIS", corpo)
         # o indicador do resto continua existindo; desde 31/08 ele e' um
         # CONTROLE (abre no clique) e nao mais um texto solto, entao a assercao
@@ -105,7 +105,7 @@ class VolumePorSistema(unittest.TestCase):
         tem de continuar acessivel no title."""
         html = INDEX.read_text(encoding="utf-8")
         i = html.index("function _csDetalheCategorias(")
-        corpo = html[i:i + 3000]
+        corpo = html[i:html.index("\nfunction ", i + 10)]   # a funcao inteira
         self.assertIn("title=", corpo)
         self.assertIn("_resto", corpo)
 

@@ -101,6 +101,28 @@ def _cabecalho_em_excel(arquivo: Path, esperadas: set, padrao: int):
     return melhor[1] if melhor else None
 
 
+# O chardet confunde cp1252 (Brasil) com as tabelas da Europa Central: o byte
+# E3 ('ã' na cp1252) vira 'ă' na cp1250, e 'Criação' chega como 'Criaçăo'.
+# Retorno de 28/09 (HERMES 90000639): o perfil Oracle nao casava com a matriz
+# e aparecia em "Faltam" E em "a mais". Medido na base de 15/09: 47 perfis do
+# ORACLE_EBS, 110 nomes do SYSTUR e departamento/cargo de 294 ativos e 1.688
+# desligados. Nenhum arquivo do cliente e' Europa Central de verdade — antes
+# isso so' era contornado sistema a sistema (SIGOT, SICA_ESFERA).
+_ENCODINGS_EUROPA_CENTRAL = {"windows-1250", "cp1250", "iso-8859-2",
+                             "maccentraleurope", "ibm852", "cp852"}
+
+
+def normalizar_encoding_detectado(enc) -> str:
+    """Encoding do chardet ajustado para os arquivos da CVC: ascii vira utf-8
+    (aguenta o acento tardio) e Europa Central vira cp1252."""
+    e = str(enc or "utf-8").lower()
+    if e in ("ascii", "us-ascii"):
+        return "utf-8"
+    if e in _ENCODINGS_EUROPA_CENTRAL:
+        return "cp1252"
+    return e
+
+
 def ler_tabela(arquivo, dtype=str, header=0, skiprows=0,
                encoding: str = None, separador: str = None,
                colunas_esperadas=None) -> "pd.DataFrame":
@@ -144,8 +166,7 @@ def ler_tabela(arquivo, dtype=str, header=0, skiprows=0,
             # extrato do SIG de 15/07 (12 MB) so tem o 1o acento no byte 78.344
             # e estourava aqui, ja fora da janela lida. utf-8 e' superconjunto
             # do ascii - le tudo o que ascii leria, e ainda o acento tardio.
-            if str(enc).lower() in ("ascii", "us-ascii"):
-                enc = "utf-8"
+            enc = normalizar_encoding_detectado(enc)
         try:
             linhas = bruto.decode(enc, errors="replace").splitlines()
         except LookupError:
@@ -276,10 +297,9 @@ class LeitorArquivoBase:
                 raw += f.read(self._AMOSTRA)
                 f.seek(max(0, tam - self._AMOSTRA))
                 raw += f.read(self._AMOSTRA)
-        encoding = (chardet.detect(raw).get("encoding") or "utf-8").lower()
         # 'ascii' e' subconjunto de utf-8 E de cp1252: assumir utf-8 le tudo o
         # que ascii leria e ainda aguenta o acento que a amostra nao alcancou.
-        if encoding in ("ascii", "us-ascii"):
-            encoding = "utf-8"
+        # Europa Central (cp1250) e' sempre engano do chardet: vira cp1252.
+        encoding = normalizar_encoding_detectado(chardet.detect(raw).get("encoding"))
         logger.debug(f"Encoding detectado ({arquivo.name}): {encoding}")
         return encoding

@@ -41,6 +41,15 @@ _SISTEMAS_PERFIL_APROXIMADO = {Sistema.IC_INTEGRADOR_CONTABIL.value}
 # Sistemas sem extrato que aparecem SO' pelo que a CCO preve (24/09/2026).
 _SISTEMAS_SO_CCO = {Sistema.OPERA_OPERACIONAL.value}
 
+# Sistemas em que a funcao preve um CONJUNTO de perfis (retorno de 28/09/2026,
+# ATHAMIRIS 23242: "a usuaria tem exatamente os mesmos perfis previstos na
+# funcao para o sistema SIG" — 39 de 39 — e vinha "Usuario com mais de um
+# perfil"). Ter o conjunto EXATO nao e' "mais de um perfil". So' o exato: quem
+# tem parte do conjunto, ou algo a mais, continua em analise — tirar o SIG da
+# regra inteira (sistemas_fora) deixaria aderente quem tem 3 de 8, porque a
+# regra OK aceita um perfil que case. Medido na base de 15/09: 219 linhas.
+_SISTEMAS_CONJUNTO_DA_FUNCAO = {Sistema.SIG.value}
+
 # Populacoes que NAO tem matriz de cargo e sao validadas por ESPELHO (cada uma
 # com os SEUS pares): terceiros (base de RH) e as identidades do diretorio AD
 # (franqueado/prestador). Decidido com a usuaria em 24/06 (terceiros) e
@@ -329,6 +338,24 @@ class ValidarAcessosSistema:
             _prov_deslig_antes = self._prov_deslig
             _ps_systur = (self._perfis_systur_de(func, acessos_por_matricula)
                           if self._ancora_systur else set())
+            # SEM PERFIL NENHUM NO SYSTUR (retorno de 28/09/2026, RAFAEL 14546,
+            # ANALISTA CONTABIL SR, 01.02.02.11): o filtro nao tinha com o que
+            # comparar e cortava TODO o Oracle — a tela dizia "sem perfil
+            # previsto para o cargo/centro de custo", mas a matriz preve 39
+            # (todos com PERFIL SYSTUR INTEGRADOR_CONTABIL). Bruna: "ele nao tem
+            # EBS mas seguindo a matriz ele deveria vir". Ancora entao no SYSTUR
+            # que a MATRIZ preve para ela — o mesmo que a pendencia de SYSTUR
+            # manda incluir. Quem tem SYSTUR continua ancorado no que TEM.
+            # SO' PARA QUEM TAMBEM NAO TEM ACESSO no sistema ancorado: quem TEM
+            # Oracle e nao tem SYSTUR segue a regra de 23/09 (pendencia no
+            # SYSTUR; o Oracle so' se julga depois). Medido na base de 15/09:
+            # sem esta guarda 13 dessas pessoas virariam "aderente" no Oracle.
+            _systur_previsto = set()
+            if self._ancora_systur and not _ps_systur:
+                _systur_previsto = {_norm(p) for p, _, _ in
+                                    perfis_sis.get(Sistema.SYSTUR.value, [])}
+            _sis_com_acesso = {s for s, _p in
+                               acessos_por_matricula.get(func.matricula, ())}
             _da_cco = self._ancora_isenta_cco and chave_cco in cco
             if _da_cco:
                 self._ancora_isentos_cco.add(func.matricula)
@@ -364,9 +391,12 @@ class ValidarAcessosSistema:
                     # (nao mapeado) de "cobre, mas o seu perfil do SYSTUR nao
                     # autoriza" (divergencia). Ver _cobrar_ancora_systur.
                     self._ancora_tinha_mapa.add((func.matricula, sistema_valor))
+                    _ancora = _ps_systur or (
+                        _systur_previsto
+                        if sistema_valor not in _sis_com_acesso else set())
                     perfis_comb = self._filtrar_pelo_perfil_systur(
                         sistema_valor, perfis_comb, chave_matriz,
-                        funcao_por_sp, _ps_systur)
+                        funcao_por_sp, _ancora)
                     # GUARDA O CONJUNTO INTEIRO que sobrou. A cobranca nao pode
                     # relê-lo das linhas: a linha de ADERENTE grava um unico
                     # `perfil_esperado` (o que casou), nao os N previstos —
@@ -619,6 +649,7 @@ class ValidarAcessosSistema:
         # pendencia (SIG 197, ORACLE_EBS 164, SYSTUR 58) e o total de
         # pendencias vai de 826 para 1.245.
         self._multi_perfil_casos = 0
+        self._multi_perfil_conjunto = 0
         if self._multi_perfil_gera_pendencia:
             for r in registros:
                 if r["status"] != StatusValidacao.OK.value:
@@ -631,6 +662,11 @@ class ValidarAcessosSistema:
                 _k = (_norm_perfil if sis in _SISTEMAS_PERFIL_APROXIMADO else _norm)
                 _perfis = {_k(x) for x in (r.get("perfil_atual") or "").split(",") if x.strip()}
                 if len(_perfis) <= 1:
+                    continue
+                if sis in _SISTEMAS_CONJUNTO_DA_FUNCAO and _perfis == {
+                        _k(x) for x in (r.get("perfil_esperado") or "").split(",")
+                        if x.strip()}:
+                    self._multi_perfil_conjunto += 1
                     continue
                 r["status"] = StatusValidacao.EM_ANALISE.value
                 # PRESERVA o motivo anterior, igual ao CONTA_INDEFINIDA: a
@@ -715,6 +751,12 @@ class ValidarAcessosSistema:
                 f"seriam ADERENTES viraram pendencia (Em Analise) por ter mais de "
                 f"um perfil no mesmo sistema — escopo: {_esc}. Regra da area de "
                 f"22/09/2026; desligue em validacao/mais_de_um_perfil/gera_pendencia."
+            )
+        if getattr(self, "_multi_perfil_conjunto", 0):
+            logger.info(
+                f"[mais de um perfil] {self._multi_perfil_conjunto} linha(s) com "
+                f"EXATAMENTE o conjunto previsto pela funcao ficaram aderentes "
+                f"({', '.join(sorted(_SISTEMAS_CONJUNTO_DA_FUNCAO))}; retorno de 28/09)."
             )
         if self._sig_inclusao_suprimida:
             logger.info(

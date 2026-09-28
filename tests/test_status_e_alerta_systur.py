@@ -183,6 +183,27 @@ class AlertaDeMaisDeUmPerfilNoSystur(unittest.TestCase):
         self.assertIn("mais de um perfil", self._txt(d, fora=["SIG"]),
                       "isento e' so' quem esta' na lista")
 
+    def test_sig_com_o_conjunto_exato_nao_alerta_nem_repete(self):
+        """Retorno de 28/09 (ATHAMIRIS 23242): 39 de 39 no SIG, so' em outra
+        ordem. Vinha o alerta e depois "Tem hoje" + "Deveria ter" com as duas
+        listas inteiras — "esta repetindo o que ela tem e o que poderia ter"."""
+        d = {"sis": "SIG", "a": "Aderente", "motc": "",
+             "pe": "P2, P1, P3", "pp": "P1, P2, P3"}
+        html = self._txt(d, fora=["ORACLE_EBS"])
+        self.assertNotIn("mais de um perfil", html)
+        self.assertNotIn("Deveria ter", html)
+        self.assertEqual(html.count("P1"), 1, "a lista sai uma vez so'")
+
+    def test_sig_em_analise_continua_alertando(self):
+        d = {"sis": "SIG", "a": "Em Análise", "motc": "MAIS_DE_UM_PERFIL",
+             "pe": "P1, P2", "pp": "P1, P2, P3"}
+        self.assertIn("mais de um perfil", self._txt(d, fora=["ORACLE_EBS"]))
+
+    def test_systur_com_o_conjunto_exato_continua_alertando(self):
+        d = {"sis": "SYSTUR", "a": "Em Análise", "motc": "MAIS_DE_UM_PERFIL",
+             "pe": "P2, P1", "pp": "P1, P2"}
+        self.assertIn("mais de um perfil", self._txt(d, fora=["ORACLE_EBS"]))
+
     def test_sem_DB_a_regra_vale_para_todos(self):
         """⭐ Esta funcao e' exercitada ISOLADA no node (os testes acima), e o
         painel pode chama-la antes de montar o DB. Ler `DB.meta` direto

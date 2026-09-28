@@ -12,6 +12,7 @@ Comparacao continua igual: NOVO / ALTERADO / REMOVIDO. Carga inicial nao
 gera trilha (so estabelece baseline).
 """
 import json
+import unicodedata
 from datetime import date
 from typing import Callable, Dict
 
@@ -36,6 +37,32 @@ _CAMPOS_DESLIGADO = [
     "nome", "cpf", "cargo_codigo", "cargo_descricao", "centro_custo_codigo",
     "departamento", "data_admissao", "data_desligamento", "email",
 ]
+
+
+# O que NAO e' movimentacao (retorno de 28/09/2026). Ate ai o RH era lido como
+# cp1250 por engano do chardet: 'CONCILIAÇÃO' virava 'CONCILIAÇĂO' e o
+# cabecalho 'Data de Admissão' nao era achado (admissao vazia para todos).
+# Corrigida a leitura, a 1a carga compararia a grafia certa com a errada e
+# geraria ~2 mil ALTERADO e 328 transferidos falsos na base de 15/09. Regra:
+#  - texto que so' difere no acento nao mudou;
+#  - admissao que estava vazia e passou a vir preenchida nao mudou (a pessoa
+#    nao foi readmitida — o dado so' passou a ser lido).
+_CAMPOS_TEXTO = {"nome", "cargo_descricao", "departamento", "gestor"}
+
+
+def _sem_acento(v) -> str:
+    d = unicodedata.normalize("NFD", str(v or ""))
+    return "".join(c for c in d if not unicodedata.combining(c)).strip().upper()
+
+
+def _mudou(campo: str, ant, novo) -> bool:
+    if ant == novo:
+        return False
+    if campo in _CAMPOS_TEXTO:
+        return _sem_acento(ant) != _sem_acento(novo)
+    if campo == "data_admissao" and not ant:
+        return False
+    return True
 
 
 class RegistrarHistorico:
@@ -120,7 +147,8 @@ class RegistrarHistorico:
                     ))
                     novos += 1
                 else:
-                    difs = [c for c in campos if dados_ant.get(c) != dados_novo.get(c)]
+                    difs = [c for c in campos
+                            if _mudou(c, dados_ant.get(c), dados_novo.get(c))]
                     if difs:
                         sessao.add(self._registro_historico(
                             hoje, entidade, tipo_compat, chave,
