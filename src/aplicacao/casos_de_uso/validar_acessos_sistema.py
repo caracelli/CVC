@@ -50,6 +50,15 @@ _SISTEMAS_SO_CCO = {Sistema.OPERA_OPERACIONAL.value}
 # regra OK aceita um perfil que case. Medido na base de 15/09: 219 linhas.
 _SISTEMAS_CONJUNTO_DA_FUNCAO = {Sistema.SIG.value}
 
+# Sistemas cujo perfil IDENTIFICA a funcao da pessoa na CCO (retorno de
+# 29/09/2026, ajustes_apl_29_09: "o que inicialmente vamos usar para definir em
+# qual funcao o user esta vai ser o perfil que os usuarios estao nos sistemas
+# Systur, SICA Ra, SICA ESFERA, SIGOT"). Oracle e SIG NAO identificam — o mesmo
+# perfil Oracle esta' em varias funcoes da equipe (CVC AR BRASIL Faturamento em
+# 3) — eles so' RECEBEM o que a funcao identificada preve.
+_SISTEMAS_IDENTIFICAM_FUNCAO = {Sistema.SYSTUR.value, Sistema.SICA_RA.value,
+                                Sistema.SICA_ESFERA.value, Sistema.SIGOT.value}
+
 # Populacoes que NAO tem matriz de cargo e sao validadas por ESPELHO (cada uma
 # com os SEUS pares): terceiros (base de RH) e as identidades do diretorio AD
 # (franqueado/prestador). Decidido com a usuaria em 24/06 (terceiros) e
@@ -304,6 +313,23 @@ class ValidarAcessosSistema:
             if self._cco_pela_funcao:
                 for _p in self._perfis_systur_de(func, acessos_por_matricula):
                     _funcoes_da_pessoa |= self._funcao_do_perfil_systur.get(_p, set())
+                # VALIDACAO REVERSA PELA CCO (29/09/2026): o perfil que ela tem
+                # em SICA RA, SICA ESFERA e SIGOT tambem diz a funcao — so' nas
+                # linhas da PROPRIA equipe (cc + gestor), para nao casar funcao
+                # homonima de outra. Caso do documento: BRUNA OLIVEIRA FERREIRA
+                # DA SILVA (34532401), sem SYSTUR, SICA RA POS FATURAMENTO CONC
+                # -> "Pos Faturamento" (4 acessos); cobrava as 6 funcoes da
+                # equipe e o Oracle dizia "faltam 7" em vez de 2. Medido na
+                # matriz: SICA RA 36/36, SICA ESFERA 23/23 e SIGOT 53/53 perfis
+                # pertencem a UMA funcao so' da equipe.
+                _tem_ident = {(_s, _norm(_p)) for _s, _p in
+                              acessos_por_matricula.get(func.matricula, ())
+                              if _p and _s in _SISTEMAS_IDENTIFICAM_FUNCAO}
+                for _ss, _pp, _ff in cco.get(chave_cco, []):
+                    _se = sistema_do_texto(_ss)
+                    if (_ff and _se is not None
+                            and (_se.value, _norm(_pp)) in _tem_ident):
+                        _funcoes_da_pessoa.add(_norm(_ff))
             for sistema_str, perfil_esperado, _funcao in cco.get(chave_cco, []):
                 sistema_enum = sistema_do_texto(sistema_str)
                 # Sistema que o projeto nao conhece e' IGNORADO. A planilha da

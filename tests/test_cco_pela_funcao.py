@@ -130,6 +130,37 @@ class ACcoSegueAFuncaoDaPessoa(unittest.TestCase):
         self.assertEqual(uc._cco_outra_funcao, 0)
 
 
+class AFuncaoVemTambemDoSicaESigot(unittest.TestCase):
+    """Retorno de 29/09/2026 (ajustes_apl_29_09, BRUNA OLIVEIRA FERREIRA DA
+    SILVA 34532401): a funcao e' definida pelo perfil em SYSTUR, SICA RA, SICA
+    ESFERA e SIGOT. Sem SYSTUR, o SICA RA dela ja' diz a funcao."""
+
+    def test_sem_systur_o_sica_ra_diz_a_funcao(self):
+        """⭐ Tem SICA RA 'A Receber 1' e nenhum SYSTUR: nao recebe o SIG da
+        'A Receber 2 + SIG'."""
+        cx = _base(None, acessos=[("SICA_RA", "A Receber 1")])
+        uc = ValidarAcessosSistema(cx)
+        uc.executar()
+        self.assertNotIn("SIG", _por_sistema(cx))
+        self.assertGreaterEqual(uc._cco_outra_funcao, 2)
+
+    def test_perfil_de_outra_equipe_nao_identifica(self):
+        """So' as linhas da PROPRIA equipe (cc + gestor) identificam."""
+        cx = _base(None, acessos=[("SICA_RA", "PERFIL DE OUTRA EQUIPE")])
+        uc = ValidarAcessosSistema(cx)
+        uc.executar()
+        self.assertIn("SIG", _por_sistema(cx), "sem funcao identificada: tudo")
+        self.assertEqual(uc._cco_outra_funcao, 0)
+
+    def test_sig_nao_identifica_a_funcao(self):
+        """Oracle e SIG so' RECEBEM: ter o SIG da 'A Receber 2 + SIG' nao faz
+        dela dessa funcao."""
+        cx = _base(None, acessos=[("SIG", "ATD_LAZER")])
+        uc = ValidarAcessosSistema(cx)
+        uc.executar()
+        self.assertEqual(uc._cco_outra_funcao, 0)
+
+
 class NinguemSomePorCausaDoFiltro(unittest.TestCase):
     """A guarda que fecha o risco desta regra: se a CCO so' falava daquele
     sistema por OUTRA funcao e a pessoa TEM acesso, a linha inteira sumiria e

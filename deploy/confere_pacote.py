@@ -40,6 +40,7 @@ MARCADORES = [
     "paiRegistro",           # 1: analitico nao herda perfil nem descarta registro
     "_conjExato",            # 5: SIG com o conjunto exato sem alerta
     "i.its.map",             # 6: funcoes um perfil por linha
+    "SICA RA, SICA ESFERA ou SIGOT",  # 29/09: legenda de Outras funcoes
 ]
 
 # (marcador, em qual exe deve estar)
@@ -93,6 +94,8 @@ DENTRO_DOS_EXES = [
     ("launcher/launcher_processador.exe", b"_systur_previsto"),
     #   5: SIG com o conjunto exato da funcao
     ("launcher/launcher_processador.exe", b"_SISTEMAS_CONJUNTO_DA_FUNCAO"),
+    # 29/09 (ajustes_apl_29_09): funcao pela CCO via SICA RA/ESFERA/SIGOT
+    ("launcher/launcher_processador.exe", b"_SISTEMAS_IDENTIFICAM_FUNCAO"),
 ]
 
 
