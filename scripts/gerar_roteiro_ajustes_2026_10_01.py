@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Gera ENTREGA/ROTEIRO_AJUSTES_CVC_IAM_2026-10-01.docx (+ .md).
+"""Gera ENTREGA/ROTEIRO_AJUSTES_CVC_IAM_2026-10-01_v2.docx (+ .md).
 
-Responde o documento "ajuste_01_10.docx" (retorno da Bruna), validado
-visualmente pelo usuario em 01/10:
+Responde o documento "ajuste_01_10.docx" (retorno da Bruna) e a resposta dela
+as perguntas do mesmo dia (versao 2):
   1. CCO e' uma regra a parte: quem e' da CCO segue so' a CCO (sem matriz por
      cargo), e perfis que a funcao preve nao sao "mais de um perfil".
   2. Exportacao da Consulta: Pendencias e Status iguais aos da tela.
+  3. Oracle que a matriz nao preve para o cargo vira pendencia; a planilha
+     de Pendencias ganha a coluna Sistema (uma linha por divergencia).
 
 Mesma formatacao dos roteiros de 24, 28 e 29/09.
 
-Uso:  python scripts/gerar_roteiro_ajustes_2026_10_01.py
+Uso:  python scripts/gerar_roteiro_ajustes_2026_10_01.py  (gera a versao 2)
 """
 import sys
 from pathlib import Path
@@ -27,8 +29,8 @@ _MD = base._MD
 MEDIDO = "Medido na sua base (a do pacote de 29/09, reprocessada com esta versão)"
 
 RAIZ = Path(__file__).resolve().parent.parent
-OUT_DOCX = RAIZ / "ENTREGA" / "ROTEIRO_AJUSTES_CVC_IAM_2026-10-01.docx"
-OUT_MD = RAIZ / "ENTREGA" / "ROTEIRO_AJUSTES_CVC_IAM_2026-10-01.md"
+OUT_DOCX = RAIZ / "ENTREGA" / "ROTEIRO_AJUSTES_CVC_IAM_2026-10-01_v2.docx"
+OUT_MD = RAIZ / "ENTREGA" / "ROTEIRO_AJUSTES_CVC_IAM_2026-10-01_v2.md"
 
 CASOS = [
     ('14389', 'TATIANE DA SILVA LEMES', 'N2 - Financeiro',
@@ -136,22 +138,23 @@ def main():
     r.font.size = Pt(20)
     r.font.color.rgb = AZUL
     s = doc.add_paragraph()
-    r = s.add_run("Roteiro de validação — seu documento de 01/10")
+    r = s.add_run("Roteiro de validação — seu documento de 01/10 (versão 2)")
     r.font.size = Pt(13)
     r.font.color.rgb = CINZA
     par(doc, "01/10/2026", size=9, cor=CINZA, md=False)
     _MD.insert(0, "# CVC IAM Analytics\n"
-                  "## Roteiro de validação — seu documento de 01/10\n"
+                  "## Roteiro de validação — seu documento de 01/10 (versão 2)\n"
                   "01/10/2026\n")
 
     doc.add_paragraph()
     par(doc, "Por que este documento existe", bold=True, size=11, cor=AZUL, space=2)
     par(doc,
-        "Ele responde os dois pontos do seu documento de 01/10 (ajuste_01_10): o "
-        "SYSTUR de quem é da CCO e a extração em Excel. Traz o antes e o depois "
-        "de cada caso para você conferir.")
+        "Ele responde os dois pontos do seu documento de 01/10 (ajuste_01_10) — o "
+        "SYSTUR de quem é da CCO e a extração em Excel — e a sua resposta sobre "
+        "o Oracle não previsto. Traz o antes e o depois de cada caso para você "
+        "conferir.")
     nota(doc,
-         "Este pacote substitui o de 29/09 e já inclui todos os ajustes dele. Ele "
+         "Este pacote substitui os de 29/09 e 01/10 e já inclui todos os ajustes deles. Ele "
          "traz a pasta DADOS com o banco processado: você NÃO precisa rodar o "
          "Processador.")
 
@@ -226,29 +229,44 @@ def main():
                    "SICA_RA “Incluir acessos” (SVA PRODUTOS); SYSTUR “Aderente”.")
 
     doc.add_page_break()
-    h1(doc, "3. O que vai parecer diferente")
+    h1(doc, "3. Oracle não previsto para o cargo vira pendência")
+    regra(doc, "3", "Acesso que a matriz não prevê entra na fila, uma linha por divergência",
+          prioritaria=True,
+          decide="O que acontece com o Oracle que a pessoa tem, mas que a matriz "
+                 "não prevê para o cargo dela.",
+          criterio="Sua resposta: “ele vem na pendência por ter um perfil não "
+                   "mapeado para ela”. Até aqui esse Oracle era só informativo "
+                   "(“sem mapeamento”, como combinado em 23/09). Agora é pendência "
+                   "em análise — o mesmo “não pode ter acesso e tem” dos outros "
+                   "sistemas — e vai para a aba Pendências e para a planilha. A "
+                   "planilha de Pendências ganhou a coluna Sistema: quem tem o "
+                   "Oracle não previsto e uma divergência no SIG sai em duas "
+                   "linhas, e cada uma diz de qual sistema é.",
+          conferir="Consulta → LETICIA THAIS SABIAO SOUZA (9130). ANTES: Oracle em "
+                   "“Sem mapeamento”, status “Incluir acessos”, fora da planilha de "
+                   "Pendências. Depois, aba Pendências → Exportar Excel.",
+          esperado="DEPOIS: Oracle em “Necessário análise” — “Tem hoje: CVC OIE "
+                   "BRASIL - Relatório de Despesas” —, status “1 pendente”. Na "
+                   "planilha: LETICIA em 1 linha (Sistema ORACLE_EBS); ARIANE "
+                   "CIRILLI DA SILVA (5135) em 2 linhas (SIG e ORACLE_EBS). Na base: "
+                   "282 pessoas com esse Oracle (276 só com o Relatório de "
+                   "Despesas); 94 delas entram na fila pela primeira vez.")
+
+    doc.add_page_break()
+    h1(doc, "4. O que vai parecer diferente")
     lista(doc, [
-        "As pendências caem de 1.064 para 1.048 pessoas (de 1.108 para 1.089 "
-        "linhas): são os SYSTUR da CCO que deixam de ser “mais de um perfil”.",
-        "Nenhum número da tela muda por causa da planilha: ela passa a repetir o "
-        "que a tela já mostrava.",
+        "As pendências passam de 1.064 para 1.142 pessoas (de 1.108 para 1.371 "
+        "linhas), comparando com o pacote de 29/09: caem 16 pessoas com o SYSTUR "
+        "da CCO (item 1) e entram as 94 do Oracle não previsto (item 3).",
+        "A planilha da Consulta não muda nenhum número da tela: ela passa a "
+        "repetir o que a tela já mostrava (item 2).",
     ])
 
-    h1(doc, "4. Duas perguntas para você")
+    h1(doc, "5. Suas respostas de 01/10")
     par(doc,
-        "4.1 No documento, o nome da usuária do ponto da extração ficou em branco. "
-        "O print da planilha é da LILIANE BENTO ALEXANDRE (4374), que tem só o SIG "
-        "pendente e não tem Oracle; o do painel é da LETICIA THAIS SABIAO SOUZA "
-        "(9130). Era uma delas, ou outra pessoa?", size=9.5)
-    par(doc, "Sua resposta: ______________________________________________",
-        size=9.5, cor=CINZA)
-    par(doc,
-        "4.2 O Oracle de quem a matriz não cobre (como o Relatório de Despesas da "
-        "LETICIA) hoje é informativo — “sem mapeamento”, como você pediu em 23/09. "
-        "Deve passar a contar como pendência? Na base, são cerca de 280 pessoas.",
-        size=9.5)
-    par(doc, "Sua resposta: ______________________________________________",
-        size=9.5, cor=CINZA)
+        "A usuária do ponto da extração é a LETICIA THAIS SABIAO SOUZA (9130), e "
+        "o Oracle que a matriz não prevê para o cargo passa a ser pendência — "
+        "aplicado no item 3.", size=9.5)
 
     OUT_DOCX.parent.mkdir(parents=True, exist_ok=True)
     doc.save(OUT_DOCX)
