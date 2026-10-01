@@ -204,6 +204,18 @@ class AlertaDeMaisDeUmPerfilNoSystur(unittest.TestCase):
              "pe": "P2, P1", "pp": "P1, P2"}
         self.assertIn("mais de um perfil", self._txt(d, fora=["ORACLE_EBS"]))
 
+    def test_cco_com_perfis_previstos_nao_alerta(self):
+        """01/10 (ANA PAULA 90001406): os 2 perfis de SYSTUR da funcao CCO."""
+        d = {"sis": "SYSTUR", "a": "Aderente", "motc": "", "o": "Matriz CCO",
+             "pe": "A_RECEBER_1_COMISSAO, GRP_COMISSOES_IMPORTACAO_ARQUIVOS",
+             "pp": "GRP_COMISSOES_IMPORTACAO_ARQUIVOS, A_RECEBER_1_COMISSAO"}
+        self.assertNotIn("mais de um perfil", self._txt(d, fora=["ORACLE_EBS"]))
+
+    def test_matriz_de_cargo_com_dois_continua_alertando(self):
+        d = {"sis": "SYSTUR", "a": "Em Análise", "motc": "MAIS_DE_UM_PERFIL",
+             "o": "Matriz SYSTUR", "pe": "P1, P2", "pp": "P1, P2"}
+        self.assertIn("mais de um perfil", self._txt(d, fora=["ORACLE_EBS"]))
+
     def test_sem_DB_a_regra_vale_para_todos(self):
         """⭐ Esta funcao e' exercitada ISOLADA no node (os testes acima), e o
         painel pode chama-la antes de montar o DB. Ler `DB.meta` direto

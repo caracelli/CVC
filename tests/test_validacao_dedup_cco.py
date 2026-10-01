@@ -104,9 +104,11 @@ class TestDedupCCO(unittest.TestCase):
         s.close()
 
     def test_matriz_e_cco_mesmo_par_nao_duplica(self):
+        """Mesmo par nos dois catalogos: uma linha so'. Desde 01/10 quem e' da
+        CCO responde pela CCO."""
         r = self.by_mat["M1"]
         self.assertEqual(len(r), 1)
-        self.assertEqual(r[0].origem_matriz, "MATRIZ")
+        self.assertEqual(r[0].origem_matriz, "CCO")
         self.assertEqual(r[0].perfil_esperado, "P1")
 
     def test_cco_nao_acrescenta_onde_a_matriz_falou(self):
@@ -118,8 +120,9 @@ class TestDedupCCO(unittest.TestCase):
         O caso M1 (mesmo par nos dois catalogos) continua valendo igual; o que
         muda e' este, o de perfis DIFERENTES."""
         r = self.by_mat["M2"]
+        # MUDOU DE NOVO EM 01/10/2026: da CCO, responde so' a CCO.
         self.assertEqual([(x.perfil_esperado, x.origem_matriz) for x in r],
-                         [("PA", "MATRIZ")])
+                         [("PB", "CCO")])
 
     def test_cco_sozinho_ainda_funciona(self):
         r = self.by_mat["M3"]
@@ -149,11 +152,12 @@ class TestDedupCCO(unittest.TestCase):
         LUZ SALIDO RIVERO (90001433), ANALISTA FINANCEIRO JR. A matriz do
         cargo preve TESOURARIA e CUSTOS; a CCO da gestora preve
         ATD_FOR_TREND_N2, que e' o que ela tem. Virou pendencia."""
+        # MUDOU DE NOVO EM 01/10/2026 (ajuste_01_10): CLAUDIA voltou a ser
+        # aderente — ela e' da CCO, e o que a CCO preve e' o que ela pode ter.
         r = self.by_mat["M5"]
-        status = {x.status for x in r}
-        self.assertNotIn("OK", status)
-        self.assertEqual({x.origem_matriz for x in r}, {"MATRIZ"})
-        self.assertEqual([x.perfil_esperado for x in r], ["PF"])
+        self.assertEqual([x.status for x in r], ["OK"])
+        self.assertEqual({x.origem_matriz for x in r}, {"CCO"})
+        self.assertEqual([x.perfil_esperado for x in r], ["PG"])
         self.assertTrue(all(x.perfil_atual == "PG" for x in r),
                         "a linha tem de dizer o que ela REALMENTE tem")
 
@@ -201,7 +205,10 @@ class TestDedupCCO(unittest.TestCase):
         r = sorted((x.perfil_esperado, x.origem_matriz)
                    for x in s.query(ValidacaoAcessoModel).filter_by(matricula="X1").all())
         s.close()
-        self.assertEqual(r, [("PA", "MATRIZ"), ("PB", "CCO")])
+        # Desde 01/10/2026 a X1 e' da CCO e a matriz do cargo nao entra, com a
+        # chave ligada ou desligada: a chave so' decidia a soma matriz + CCO,
+        # que nao acontece mais para quem e' da CCO.
+        self.assertEqual(r, [("PB", "CCO")])
 
     def test_cco_para_sistema_sem_dados_nao_vira_em_analise(self):
         # CCO de sistema fora de escopo (sem extrato) -> SEM_DADOS, que NAO e'

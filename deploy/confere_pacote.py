@@ -41,6 +41,8 @@ MARCADORES = [
     "_conjExato",            # 5: SIG com o conjunto exato sem alerta
     "i.its.map",             # 6: funcoes um perfil por linha
     "SICA RA, SICA ESFERA ou SIGOT",  # 29/09: legenda de Outras funcoes
+    "_ccoPrevisto",          # 01/10: CCO com perfis previstos sem alerta
+    "_csPino({divs: ds})",   # 01/10: planilha da Consulta = status da tela
 ]
 
 # (marcador, em qual exe deve estar)
@@ -96,6 +98,8 @@ DENTRO_DOS_EXES = [
     ("launcher/launcher_processador.exe", b"_SISTEMAS_CONJUNTO_DA_FUNCAO"),
     # 29/09 (ajustes_apl_29_09): funcao pela CCO via SICA RA/ESFERA/SIGOT
     ("launcher/launcher_processador.exe", b"_SISTEMAS_IDENTIFICAM_FUNCAO"),
+    # 01/10 (ajuste_01_10): CCO e' um mundo a parte
+    ("launcher/launcher_processador.exe", b"_eh_cco"),
 ]
 
 

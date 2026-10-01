@@ -36,7 +36,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.schema import (
-    RhAtivo, AcessoSistema, MatrizCcoModel, ValidacaoAcessoModel)
+    RhAtivo, AcessoSistema, MatrizCcoModel, ValidacaoAcessoModel,
+    PerfilEsperadoModel)
 from aplicacao.casos_de_uso.validar_acessos_sistema import ValidarAcessosSistema
 
 CC, GESTOR = "01.06.02.01", "FERNANDA DA SILVA AQUINO"
@@ -145,11 +146,12 @@ class AFuncaoVemTambemDoSicaESigot(unittest.TestCase):
         self.assertGreaterEqual(uc._cco_outra_funcao, 2)
 
     def test_perfil_de_outra_equipe_nao_identifica(self):
-        """So' as linhas da PROPRIA equipe (cc + gestor) identificam."""
+        """So' as linhas da PROPRIA equipe (cc + gestor) identificam. Perfil
+        que a equipe nao preve: nao e' da CCO (01/10/2026), nao recebe a CCO."""
         cx = _base(None, acessos=[("SICA_RA", "PERFIL DE OUTRA EQUIPE")])
         uc = ValidarAcessosSistema(cx)
         uc.executar()
-        self.assertIn("SIG", _por_sistema(cx), "sem funcao identificada: tudo")
+        self.assertNotIn("SIG", _por_sistema(cx), "nao e' da CCO")
         self.assertEqual(uc._cco_outra_funcao, 0)
 
     def test_sig_nao_identifica_a_funcao(self):
@@ -159,6 +161,48 @@ class AFuncaoVemTambemDoSicaESigot(unittest.TestCase):
         uc = ValidarAcessosSistema(cx)
         uc.executar()
         self.assertEqual(uc._cco_outra_funcao, 0)
+
+
+class CcoEUmMundoAParte(unittest.TestCase):
+    """Retorno de 01/10/2026 (ajuste_01_10, ANA PAULA 90001406): "o cco e' uma
+    regra a parte e o resto e' outra regra". Quem e' da CCO nao recebe nada da
+    matriz por cargo, e perfis que a funcao preve nao sao "mais de um"."""
+
+    def _com_matriz_de_cargo(self, acessos):
+        cx = _base(None, acessos=acessos)
+        s = cx.sessao()
+        for p in ("CUSTOS", "TESOURARIA"):
+            s.add(PerfilEsperadoModel(cargo_codigo=CC,
+                                      cargo_descricao="ANALISTA FINANCEIRO SR",
+                                      sistema="SYSTUR", perfil=p))
+        s.commit(); s.close()
+        ValidarAcessosSistema(cx, multi_perfil_gera_pendencia=True).executar()
+        return _por_sistema(cx)
+
+    def test_da_cco_nao_recebe_a_matriz_de_cargo(self):
+        """⭐ Tem o SYSTUR da funcao: nada de CUSTOS/TESOURARIA do cargo."""
+        r = self._com_matriz_de_cargo([("SYSTUR", "A_RECEBER_1")])
+        esp = " ".join(e for _, e, _ in r.get("SYSTUR", []))
+        self.assertNotIn("CUSTOS", esp)
+        self.assertNotIn("TESOURARIA", esp)
+        self.assertEqual([st for st, _, _ in r["SYSTUR"]], ["OK"])
+
+    def test_perfil_de_outra_area_nao_e_da_cco(self):
+        """Caso dos VPs da Presidencia: estar na chave nao basta. Perfil que
+        nenhuma funcao da equipe preve -> segue a matriz do cargo."""
+        r = self._com_matriz_de_cargo([("SYSTUR", "TI_DIRETOR")])
+        esp = " ".join(e for _, e, _ in r.get("SYSTUR", []))
+        self.assertIn("CUSTOS", esp)
+        self.assertNotIn("SIG", r, "nao recebe o SIG da CCO")
+
+    def test_perfis_previstos_pela_funcao_nao_sao_mais_de_um(self):
+        """"Pode ter mais de dois perfis se tiver na matriz" (Bruna)."""
+        cx = _base(None, acessos=[("SYSTUR", "A_RECEBER_2"),
+                                  ("SIG", "ATD_LAZER"), ("SIG", "FIN_INT")])
+        ValidarAcessosSistema(cx, multi_perfil_gera_pendencia=True).executar()
+        sig = _por_sistema(cx).get("SIG", [])
+        self.assertEqual([st for st, _, _ in sig], ["OK"], sig)
+        self.assertNotIn("MAIS_DE_UM_PERFIL", " ".join(m for _, _, m in sig))
 
 
 class NinguemSomePorCausaDoFiltro(unittest.TestCase):

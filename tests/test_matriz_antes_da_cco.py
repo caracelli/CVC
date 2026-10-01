@@ -97,15 +97,17 @@ def _origens(cx, sistema):
 
 class AMatrizResponde(unittest.TestCase):
 
-    def test_a_cco_nao_acrescenta_onde_a_matriz_falou(self):
-        """⭐ O coracao da regra: no SYSTUR quem responde e' a matriz, e o
-        perfil que so' a CCO previa NAO entra na lista de esperados."""
+    def test_da_cco_responde_a_cco_mesmo_com_matriz(self):
+        """⭐ MUDOU EM 01/10/2026 (ajuste_01_10, "o cco e' uma regra a parte"):
+        a M1 e' da CCO (cc + gestor, sem perfil de outra area), entao quem
+        responde pelo SYSTUR e' a CCO — a matriz do cargo nao entra. Ate' 01/10
+        valia "matriz primeiro, depois CCO" (23/09)."""
         cx = _base(com_matriz_no_systur=True)
         uc = ValidarAcessosSistema(cx)
         uc.executar()
-        self.assertEqual(_esperados(cx, SYS), ["DA_MATRIZ"])
-        self.assertEqual(_origens(cx, SYS), ["MATRIZ"])
-        self.assertEqual(uc._cco_apos_matriz, 1)
+        self.assertEqual(_esperados(cx, SYS), ["DA_CCO_SYSTUR"])
+        self.assertEqual(_origens(cx, SYS), ["CCO"])
+        self.assertEqual(uc._cco_apos_matriz, 0)
 
     def test_a_precedencia_e_por_sistema(self):
         """A matriz calar sobre o SIGOT nao pode calar a CCO tambem — senao a

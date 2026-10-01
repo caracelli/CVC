@@ -7296,7 +7296,12 @@ function _csPerfilTxt(d){
     && !_ehPend && _atuais.size > 0
     && _atuais.size === new Set(pp.split(',').map(s => s.trim().toUpperCase()).filter(Boolean)).size
     && pp.split(',').every(s => !s.trim() || _atuais.has(s.trim().toUpperCase()));
-  const alerta = (_atuais.size > 1 && _regraVale && !_conjExato)
+  /* CCO (01/10, ANA PAULA 90001406): "pode ter mais de dois perfis se tiver na
+     matriz" — aderente vindo da CCO com tudo previsto pela função não leva o
+     alerta. Mesma condição do motor: ele não marcou MAIS_DE_UM_PERFIL. */
+  const _ccoPrevisto = !_ehPend && d.a === 'Aderente' && d.o === 'Matriz CCO'
+    && [..._atuais].every(x => pp.split(',').some(s => s.trim().toUpperCase() === x));
+  const alerta = (_atuais.size > 1 && _regraVale && !_conjExato && !_ccoPrevisto)
     ? '<span class="alerta-sis" title="' + (_ehPend
         ? 'A regra da área é um perfil por pessoa por sistema. Esta linha entrou '
           + 'como pendência para análise.'
@@ -8036,29 +8041,38 @@ function csExportar(){
     });
     return [[...enc].sort().join(', '), [...esp].sort().join(', ')];
   };
+  /* PENDENCIAS E STATUS = OS DA TELA (retorno de 01/10, ajuste_01_10: "na
+     extracao traz a pendencia do SIG mas nao a do oracle"). A planilha contava
+     de outro jeito: "Pendencias" levava o TOTAL de linhas e "Status" chamava de
+     pendente tudo o que o banco marca assim — LETICIA THAIS (9130) saia com
+     SICA_RA "1 pendente" (e' "Incluir acesso"; a tela diz Pendencias 0) e o
+     Oracle "Sem mapeamento" como "Aderente". Agora a contagem e' a da coluna
+     Pendencias da grade e o status e' o pino (_csPino) — na linha da pessoa e,
+     aplicados so' aos acessos dele, na linha de cada sistema. */
+  const _nPend = ds => _divsDisplayA(ds).filter(d => d.a !== 'Aderente'
+      && d.a !== 'Incluir Acesso' && d.a !== 'Não Mapeado').length;
   users.forEach(u => {
     const porSis = {};
     u.divs.forEach(d => (porSis[d.sis || '—'] = porSis[d.sis || '—'] || []).push(d));
     const nSis = Object.keys(porSis).length;
-    const pend = u.divs.filter(d => d.s === 'Pendente').length;
     const datas = u.divs.map(d => d.dt).filter(Boolean).sort();
     const ultDt = datas.length ? fmtDH(datas[datas.length-1]) : '';
     const [encTudo, espTudo] = _perfis(u.divs);
     // nivel 0 — a pessoa (o resumo que a grid mostra fechada)
     rows.push([u.m||'', u.n, u.login||'', u.cpf||'', u.vinc||'', u.gestor||'', u.c||'', u.d||'', u.cc||'',
-               '', nSis, u.divs.length, ultDt,
-               pend > 0 ? `${pend} pendente${pend>1?'s':''}` : 'Aderente',
+               '', nSis, _nPend(u.divs), ultDt, _csPino(u).lbl,
                encTudo, espTudo, u.email||'']);
     niveis.push(0);
     // nivel 1 — uma linha por sistema, que e' o que faltava
     Object.keys(porSis).sort().forEach(sis => {
       const ds = porSis[sis];
       const [enc, esp] = _perfis(ds);
-      const p = ds.filter(d => d.s === 'Pendente').length;
       const dt = ds.map(d => d.dt).filter(Boolean).sort();
+      // no sistema, "sem perfis mapeados" da pessoa vira o nome do bloco da tela
+      const st = _csPino({divs: ds}).lbl;
       rows.push(['', '', '', '', '', '', '', '', '',
-                 sis, '', ds.length, dt.length ? fmtDH(dt[dt.length-1]) : '',
-                 p > 0 ? `${p} pendente${p>1?'s':''}` : 'Aderente',
+                 sis, '', _nPend(ds), dt.length ? fmtDH(dt[dt.length-1]) : '',
+                 st === 'Sem perfis mapeados' ? 'Sem mapeamento' : st,
                  enc, esp, '']);
       niveis.push(1);
     });

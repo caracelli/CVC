@@ -274,7 +274,34 @@ class ValidarAcessosSistema:
             # Medido em 23/09 na base de 15/09: 7 pessoas, 13 perfis da CCO,
             # todos no SYSTUR — as duas matrizes quase nao se sobrepoem.
             _sistemas_da_matriz: Set[str] = set()
-            for sistema_valor, perfis in perfis_por_chave.get(chave_matriz, {}).items():
+            # CCO E' UM MUNDO A PARTE (retorno de 01/10/2026, ajuste_01_10,
+            # ANA PAULA 90001406; area: "o cco e' uma regra a parte e o resto e'
+            # outra regra"). Quem e' da CCO (cc + gestor na matriz CCO) nao
+            # recebe NADA da matriz por cargo: a precedencia matriz > CCO de
+            # 23/09 fazia o SYSTUR dela seguir o cargo (CUSTOS/TESOURARIA) e
+            # ignorar a funcao "A Receber 1 Comissao", cujos 2 perfis ela tem.
+            # Medido na base de 15/09: 7 das 574 pessoas da CCO, 9 linhas, todas
+            # SYSTUR.
+            #
+            # QUEM E' DA CCO: estar na chave (cc + gestor) nao basta. A chave da
+            # Presidencia (01.01.01.01 + CEO) tem linhas so' do diretor da CCO, e
+            # todos os VPs dela caiam ali — EMERSON (VENDAS_DIRETOR), ROBERTSON
+            # (TI_DIRETOR)... virando pendencia por CCO_DIRETOR. E' da CCO quem
+            # tem perfil (SYSTUR/SICA RA/SICA ESFERA/SIGOT) que aponta uma funcao
+            # da equipe, ou nao tem perfil nenhum nesses sistemas (ai' recebe
+            # todas, como antes). Tem perfil e nenhum e' da equipe: nao e' da CCO,
+            # segue a matriz do cargo.
+            _tem_ident_cco = {(_s, _norm(_p)) for _s, _p in
+                              acessos_por_matricula.get(func.matricula, ())
+                              if _p and _s in _SISTEMAS_IDENTIFICAM_FUNCAO}
+            _casa_equipe = any(
+                _ff and (_se := sistema_do_texto(_ss)) is not None
+                and (_se.value, _norm(_pp)) in _tem_ident_cco
+                for _ss, _pp, _ff in cco.get(chave_cco, []))
+            _eh_cco = chave_cco in cco and (_casa_equipe or not _tem_ident_cco)
+            _matriz_da_pessoa = ({} if _eh_cco
+                                 else perfis_por_chave.get(chave_matriz, {}))
+            for sistema_valor, perfis in _matriz_da_pessoa.items():
                 for perfil, manual in perfis:
                     if (sistema_valor, perfil) not in _vistos_sp:
                         _vistos_sp.add((sistema_valor, perfil))
@@ -330,7 +357,8 @@ class ValidarAcessosSistema:
                     if (_ff and _se is not None
                             and (_se.value, _norm(_pp)) in _tem_ident):
                         _funcoes_da_pessoa.add(_norm(_ff))
-            for sistema_str, perfil_esperado, _funcao in cco.get(chave_cco, []):
+            for sistema_str, perfil_esperado, _funcao in (
+                    cco.get(chave_cco, []) if _eh_cco else []):
                 sistema_enum = sistema_do_texto(sistema_str)
                 # Sistema que o projeto nao conhece e' IGNORADO. A planilha da
                 # CCO cita sistema fora do escopo; antes disso o nome cru virava
@@ -382,7 +410,7 @@ class ValidarAcessosSistema:
                                     perfis_sis.get(Sistema.SYSTUR.value, [])}
             _sis_com_acesso = {s for s, _p in
                                acessos_por_matricula.get(func.matricula, ())}
-            _da_cco = self._ancora_isenta_cco and chave_cco in cco
+            _da_cco = self._ancora_isenta_cco and _eh_cco
             if _da_cco:
                 self._ancora_isentos_cco.add(func.matricula)
             for sistema_valor, perfis_comb in perfis_sis.items():
@@ -688,6 +716,14 @@ class ValidarAcessosSistema:
                 _k = (_norm_perfil if sis in _SISTEMAS_PERFIL_APROXIMADO else _norm)
                 _perfis = {_k(x) for x in (r.get("perfil_atual") or "").split(",") if x.strip()}
                 if len(_perfis) <= 1:
+                    continue
+                # CCO: o que a funcao preve e' o que ela pode ter — "pode ter
+                # mais de dois perfis se tiver na matriz" (Bruna, 01/10/2026).
+                # Tudo o que ela tem previsto pela CCO nao e' "mais de um".
+                if r.get("origem_matriz") == "CCO" and _perfis <= {
+                        _k(x) for x in (r.get("perfil_esperado") or "").split(",")
+                        if x.strip()}:
+                    self._multi_perfil_conjunto += 1
                     continue
                 if sis in _SISTEMAS_CONJUNTO_DA_FUNCAO and _perfis == {
                         _k(x) for x in (r.get("perfil_esperado") or "").split(",")

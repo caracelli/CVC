@@ -484,20 +484,30 @@ class QuemEDaCcoNaoPassaPelaAncora(unittest.TestCase):
                              for _, _, m in _linhas(cx, SYS)))
 
     def test_perfil_fora_do_systur_nao_vira_pendencia(self):
-        """⭐ Tem CUSTOS no SYSTUR e INTERCOMPANY no Oracle: pela matriz o
-        INTERCOMPANY e' previsto; sem a ancora ele e' aderente."""
-        cx = _base(["CUSTOS"], ["CVC GL INTERCOMPANY"])
+        """⭐ Da CCO (A_RECEBER_1 no SYSTUR, funcao da equipe) com o Oracle que
+        a CCO preve: aderente, sem a ancora."""
+        cx = _base(["A_RECEBER_1"], ["CVC AR BRASIL"])
         uc = self._rodar(cx, isenta=True)
         self.assertEqual(uc._ancora_divergentes, 0)
         self.assertFalse(any("FORA_DO_SYSTUR" in m
                              for _, _, m in _linhas(cx, ORA)))
         self.assertEqual([st for st, _, _ in _linhas(cx, ORA)], ["OK"])
 
-    def test_o_esperado_nao_e_filtrado(self):
+    def test_da_cco_vale_so_o_que_a_cco_preve(self):
+        """01/10/2026, "o cco e' uma regra a parte": da CCO, o Oracle vem so'
+        da CCO — a matriz por cargo (CUSTOS/INTERCOMPANY) nao entra."""
+        cx = _base(["A_RECEBER_1"], [])
+        self._rodar(cx, isenta=True)
+        self.assertEqual(sorted(esp for _, esp, _ in _linhas(cx, ORA)),
+                         ["CVC AR BRASIL"])
+
+    def test_perfil_que_a_equipe_nao_preve_nao_e_da_cco(self):
+        """CUSTOS no SYSTUR nao e' funcao da equipe: segue a matriz do cargo,
+        com a ancora (caso dos VPs da Presidencia, 01/10)."""
         cx = _base(["CUSTOS"], [])
         self._rodar(cx, isenta=True)
         self.assertEqual(sorted(esp for _, esp, _ in _linhas(cx, ORA)),
-                         ["CVC GL CUSTOS", "CVC GL INTERCOMPANY"])
+                         ["CVC GL CUSTOS"])
 
     def test_com_a_chave_desligada_a_ancora_volta(self):
         """Nao-regressao: o comportamento de 23/09 continua alcancavel."""
@@ -533,12 +543,13 @@ class QuemEDaCcoNaoPassaPelaAncora(unittest.TestCase):
         self._rodar(cx, isenta=True)
         self.assertEqual([st for st, _, _ in _linhas(cx, ORA)], ["OK"])
 
-    def test_com_a_matriz_o_incluir_continua(self):
-        """A matriz do Oracle cobre a pessoa: o incluir vem dela e fica."""
-        cx = _base(["CUSTOS"], [])
+    def test_da_cco_sem_oracle_e_nao_mapeado_na_matriz(self):
+        """Da CCO, sem Oracle e so' a CCO preve: "nao tem mapeado na matriz"
+        (Bruna, 24/09) — informativo, nao incluir."""
+        cx = _base(["A_RECEBER_1"], [])
         self._rodar(cx, isenta=True)
-        self.assertEqual(sorted(st for st, _, _ in _linhas(cx, ORA)),
-                         ["SEM_ACESSO", "SEM_ACESSO"])
+        self.assertEqual([(st, m.split(" |")[0]) for st, _, m in _linhas(cx, ORA)],
+                         [("NAO_MAPEADO", "NAO_MAPEADO_NA_MATRIZ_ORACLE_EBS")])
 
     def test_a_funcao_carimbada_e_a_da_pessoa(self):
         """⭐ EDISON (1759), validacao de 24/09: o mesmo Oracle esta' em duas

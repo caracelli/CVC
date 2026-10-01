@@ -165,6 +165,17 @@ class LigacaoNoPainel(unittest.TestCase):
         self.assertIn("paiRegistro: true", _funcao("exportarHistorico"))
         self.assertIn("paiRegistro: true", _funcao("exportarQuarentena"))
 
+    def test_consulta_usa_a_contagem_e_o_status_da_tela(self):
+        """Retorno de 01/10 (LETICIA THAIS 9130): a planilha dizia SICA_RA
+        "1 pendente" (e' Incluir acesso; a tela diz Pendencias 0) e o Oracle
+        "Sem mapeamento" como "Aderente". Status = pino da grade."""
+        corpo = _funcao("csExportar")
+        self.assertIn("_csPino(u).lbl", corpo)
+        self.assertIn("_csPino({divs: ds})", corpo)
+        self.assertIn("_nPend(u.divs)", corpo)
+        self.assertNotIn("u.divs.length, ultDt", corpo, "Pendencias = total de linhas")
+        self.assertNotIn("d.s === 'Pendente').length", corpo)
+
     def test_consulta_nao_perdeu_o_login_real(self):
         """Não-regressão do teste de 08/09 (export reflete a grid)."""
         self.assertIn("u.login", _funcao("csExportar"))
