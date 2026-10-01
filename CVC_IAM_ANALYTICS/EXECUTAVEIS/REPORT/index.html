@@ -8087,8 +8087,11 @@ function csExportar(){
 }
 
 function exportarInclusao(){
+  // "Sistema" (01/10/2026, Bruna): "vir uma linha para cada divergencia" —
+  // a pessoa com Oracle nao previsto E divergencia no SIG sai em duas linhas,
+  // e sem esta coluna nao dava para saber qual e' qual.
   const cols = ['Categoria','Usuário','Nome','Matrícula','Departamento','Gestor',
-                'Centro de Custo','Cargo','Tipo','Perfil Encontrado',
+                'Centro de Custo','Cargo','Sistema','Tipo','Perfil Encontrado',
                 'Perfil Esperado','Data','Status','Origem','Ticket Jira',
                 'Link do ticket','Descrição da resolução','Resolvido em'];
   const linhas = [], niveis = [];
@@ -8097,7 +8100,8 @@ function exportarInclusao(){
     u.divs.filter(divPassa).forEach((d, i) => {
       // perfil sai no Excel com a MESMA grafia da grid (maiúsculas, sem a
       // duplicata de grafia da matriz) — exportação replica a tela
-      linhas.push([d.vinc||'', u.login||'', u.n, u.m||'', u.d||'', u.gestor||'', u.cc||'', u.c||'', d.tl,
+      linhas.push([d.vinc||'', u.login||'', u.n, u.m||'', u.d||'', u.gestor||'', u.cc||'', u.c||'',
+                   d.sis||'', d.tl,
                    _perfLista(d.pe), _perfLista(d.pp), fmtDate(d.dt), d.s, d.o||'',
                    rc.ticket||'', rc.ticket_url||'', rc.descricao||'',
                    rc.em ? fmtDate(rc.em) : '']);
@@ -8105,13 +8109,13 @@ function exportarInclusao(){
     });
   });
   const formatos = [
-    {col:8, regras:[
+    {col:9, regras:[
       {quando:'Sem Acesso',     fundo:'DEECF9', texto:'004578'},
       {quando:'Divergente',     fundo:'FEF3E2', texto:'833C00'},
       {quando:'Em Análise',     fundo:'FFF3CD', texto:'856404'},
       {quando:'Sem Vínculo RH', fundo:'F0E6F6', texto:'5C2D91'}
     ]},
-    {col:12, regras:[
+    {col:13, regras:[
       {quando:'Pendente',  fundo:'FDE7E9', texto:'A4262C'},
       {quando:'Resolvido', fundo:'DFF6DD', texto:'107C10'}
     ]}

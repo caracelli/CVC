@@ -1136,7 +1136,14 @@ class ValidarAcessosSistema:
                 # CASO 3 — a matriz deste sistema nao cobre o cargo/CC dela.
                 # Independe do SYSTUR: nao ha esperado nenhum para comparar, e
                 # dizer "perfil fora do SYSTUR" seria acusar de divergencia
-                # quem a matriz sequer menciona. Informativo, nao pendencia.
+                # quem a matriz sequer menciona.
+                # VIROU PENDENCIA em 01/10/2026 (Bruna, caso LETICIA THAIS 9130,
+                # Relatorio de Despesas): "ele vem na pendencia por ter um perfil
+                # nao mapeado para ela". Mesmo motivo do "nao pode ter acesso e
+                # tem" dos outros sistemas (ACESSO_SEM_PREVISAO, 24/09). Ate'
+                # aqui era informativo (SEM_MAPEAMENTO_*, pedido de 23/09).
+                # Medido na base de 15/09: 282 pessoas, 276 so' com o Relatorio
+                # de Despesas; 94 entram na fila pela primeira vez.
                 if (mat, sistema_valor) not in self._ancora_tinha_mapa:
                     if not linhas[(mat, sistema_valor)]:
                         self._ancora_nao_mapeado += 1
@@ -1145,9 +1152,9 @@ class ValidarAcessosSistema:
                             "perfil_esperado": "",
                             "perfil_atual": ", ".join(sorted(tem)),
                             "acesso_manual": False,
-                            "status": StatusValidacao.NAO_MAPEADO.value,
+                            "status": StatusValidacao.EM_ANALISE.value,
                             "origem_matriz": "ANCORA_SYSTUR",
-                            "motivo_status": f"SEM_MAPEAMENTO_{sistema_valor}",
+                            "motivo_status": "ACESSO_SEM_PREVISAO",
                         })
                     # o lado do SYSTUR (caso 1) continua valendo — e' a falta
                     # que gera acao. Nao ha' `continue` aqui de proposito.

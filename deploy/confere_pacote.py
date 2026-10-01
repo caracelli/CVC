@@ -43,6 +43,7 @@ MARCADORES = [
     "SICA RA, SICA ESFERA ou SIGOT",  # 29/09: legenda de Outras funcoes
     "_ccoPrevisto",          # 01/10: CCO com perfis previstos sem alerta
     "_csPino({divs: ds})",   # 01/10: planilha da Consulta = status da tela
+    "'Cargo','Sistema','Tipo'",  # 01/10 v2: coluna Sistema na planilha de Pendencias
 ]
 
 # (marcador, em qual exe deve estar)

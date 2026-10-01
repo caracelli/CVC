@@ -40,6 +40,15 @@ class TestExportReflecteGrid(unittest.TestCase):
         self.assertNotRegex(corpo, r"\[\s*d\.vinc[^,]*,\s*u\.u\b",
                             "Inclusao voltou a exportar u.u (matricula) na coluna Usuario")
 
+    def test_inclusao_tem_a_coluna_sistema(self):
+        """01/10/2026 (Bruna): uma linha por divergencia — e cada linha diz
+        de qual sistema e'. A cor do Tipo e do Status anda junto (col 9 e 13)."""
+        corpo = _corpo_funcao(self.html, "exportarInclusao")
+        self.assertIn("'Cargo','Sistema','Tipo'", corpo)
+        self.assertIn("d.sis||'', d.tl", corpo)
+        self.assertIn("{col:9, regras", corpo)
+        self.assertIn("{col:13, regras", corpo)
+
     def test_consulta_usa_login_real_nao_matricula(self):
         corpo = _corpo_funcao(self.html, "csExportar")
         self.assertIn("u.login", corpo,

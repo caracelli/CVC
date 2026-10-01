@@ -373,8 +373,10 @@ class AMatrizNaoCobreOCargo(unittest.TestCase):
          vir o perfil que pode ter no systur e no ebs vir que nao esta
          mapeado, isso pode acontecer"
 
-    Nao e' pendencia: enquanto a matriz nao disser o que o cargo pode ter, nao
-    ha' o que incluir nem o que revogar. A falta que gera acao e' a do SYSTUR.
+    MUDOU EM 01/10/2026 (Bruna, caso LETICIA THAIS 9130): "ele vem na pendencia
+    por ter um perfil nao mapeado para ela". O acesso que a matriz nao preve
+    para o cargo vira pendencia em analise (ACESSO_SEM_PREVISAO, o "nao pode
+    ter acesso e tem"). Ate' 01/10 era informativo (SEM_MAPEAMENTO_*).
     Na base de 15/09 a matriz do Oracle cobre 307 dos 13.733 ativos — o caso e'
     a norma, nao a excecao.
     """
@@ -408,16 +410,16 @@ class AMatrizNaoCobreOCargo(unittest.TestCase):
 
     def test_o_caso_do_marcelo_inteiro(self):
         """⭐ Tem Oracle, nao tem SYSTUR, e a matriz do Oracle nao cobre o cargo.
-        Saem DUAS linhas: o perfil que ele pode ter no SYSTUR (pendencia, que e'
-        onde esta' a falta) e o Oracle como "Nao Mapeado" (informativo)."""
+        Saem DUAS linhas: o perfil que ele pode ter no SYSTUR (pendencia) e o
+        Oracle como pendencia "nao pode ter acesso e tem" (desde 01/10)."""
         cx = self._sem_matriz_de_oracle(
             [], ["CVC OIE BRASIL - Relatorio de Despesas"])
         uc = _rodar(cx)
 
         oracle = _linhas(cx, ORA)
         self.assertEqual(len(oracle), 1)
-        self.assertEqual(oracle[0][0], "NAO_MAPEADO")
-        self.assertIn("SEM_MAPEAMENTO_ORACLE_EBS", oracle[0][2])
+        self.assertEqual(oracle[0][0], "EM_ANALISE")
+        self.assertIn("ACESSO_SEM_PREVISAO", oracle[0][2])
         self.assertEqual(uc._ancora_nao_mapeado, 1)
 
         systur = _linhas(cx, SYS)
@@ -434,16 +436,16 @@ class AMatrizNaoCobreOCargo(unittest.TestCase):
         s.close()
         self.assertEqual(atual, ["CVC OIE BRASIL - Relatorio"])
 
-    def test_nao_mapeado_nao_e_pendencia(self):
-        """O status informativo e' o ponto: NAO_MAPEADO nao entra em
-        _STATUS_ACAO, entao a linha nao cobra acao de ninguem."""
+    def test_acesso_nao_mapeado_e_pendencia(self):
+        """Desde 01/10/2026: o Oracle que a matriz nao preve para o cargo
+        entra em _STATUS_ACAO — vai para a aba Pendencias e para a planilha."""
         cx = self._sem_matriz_de_oracle([], ["CVC OIE BRASIL"])
         _rodar(cx)
         s = cx.sessao()
         sit = [x.situacao_acao for x in s.query(ValidacaoAcessoModel)
                .filter_by(matricula="M1", sistema=ORA).all()]
         s.close()
-        self.assertEqual(sit, ["OK"])
+        self.assertEqual(sit, ["PENDENTE"])
 
     def test_com_perfil_no_systur_so_sai_a_linha_nao_mapeada(self):
         """Ela TEM perfil no SYSTUR, mas a matriz do Oracle nao cobre o cargo:
@@ -452,7 +454,10 @@ class AMatrizNaoCobreOCargo(unittest.TestCase):
         "fora do SYSTUR" por um acesso que a matriz sequer menciona."""
         cx = self._sem_matriz_de_oracle(["CUSTOS"], ["CVC AP BRASIL MASTER"])
         uc = _rodar(cx)
-        self.assertEqual([st for st, _, _ in _linhas(cx, ORA)], ["NAO_MAPEADO"])
+        # uma linha so', a do "nao pode ter e tem" (01/10) — sem acusar
+        # "perfil fora do SYSTUR", que pressupoe esperado para comparar
+        self.assertEqual([(st, m) for st, _, m in _linhas(cx, ORA)],
+                         [("EM_ANALISE", "ACESSO_SEM_PREVISAO")])
         self.assertEqual(uc._ancora_divergentes, 0)
         self.assertEqual(uc._ancora_sem_systur, 0)
 
