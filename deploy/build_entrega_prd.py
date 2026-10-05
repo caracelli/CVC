@@ -1,5 +1,5 @@
 """
-Monta o pacote de PRODUCAO — ENTREGA_PRD_v1.3.1.zip.
+Monta o pacote de PRODUCAO — ENTREGA_PRD_v<versao>.zip.
 
 Pasta CVC_IAM_ANALYTICS/ completa e LIMPA para o go-live:
   - EXECUTAVEIS/  (visualizador.exe, Processador.exe, launcher/ COM motor,
@@ -19,7 +19,8 @@ em runtime — nao precisa rebuildar so para mudar a versao.
 
 Uso:
     cd deploy
-    python build_entrega_prd.py
+    python build_entrega_prd.py                 # versao padrao (VERSAO abaixo)
+    python build_entrega_prd.py --versao 0.0.0  # go-live: o cliente ajusta depois
 """
 import shutil
 import sys as _sys
@@ -40,7 +41,7 @@ EXECS = APP / "EXECUTAVEIS"
 ENTREGA = RAIZ / "ENTREGA"
 STAGING = RAIZ / "_entrega_prd_staging"
 
-VERSAO = "1.3.1"
+VERSAO = "1.3.1"   # padrao; --versao sobrescreve
 # Producao usa o UNC real do cliente (o Z: era convencao de teste com subst).
 RAIZ_REDE = r"\\intra.cvc\fscvc\Processos_Antlia\CVC\CVC_IAM\ANALYTICS"
 
@@ -57,6 +58,10 @@ LEIA_ME_EXECS = EXECS / "LEIA-ME.md"
 
 ENTRADA_SUBDIRS = [
     "RH/ATIVOS", "RH/DESLIGADOS",
+    # Diretorio AD (config <diretorio_ad>): franqueados, prestadores e
+    # desligados. Faltavam aqui (05/10/2026) — o Processador as le.
+    "RH/AD", "SISTEMAS/AD_FRANQUEADOS", "SISTEMAS/AD_PRESTADORES",
+    "SISTEMAS/AD_DESLIGADOS",
     "SISTEMAS/SIGOT", "SISTEMAS/SICA_RA", "SISTEMAS/SICA_ESFERA",
     "SISTEMAS/SYSTUR", "SISTEMAS/IC", "SISTEMAS/SIG",
     "SISTEMAS/ORACLE_EBS",
@@ -66,6 +71,17 @@ ENTRADA_SUBDIRS = [
     # pelo codigo cru na tela — foi o retorno da area em 25/08/2026.
     "MATRIZES/PERFIS_SISTEMAS/SIG/DE_PARA",
 ]
+# Arquivos de REFERENCIA que viajam com o pacote (matrizes, nao extratos) — os
+# mesmos do pacote da Bruna (build_update_bruna.py): sem o de-para os perfis do
+# SIG aparecem pelo codigo; sem a matriz de lojas a regra do franqueado fica
+# inerte.
+REFERENCIAS = [
+    (RAIZ / "Arquivos_origem" / "ID_x_Perfis_SIG 19.08.xlsx",
+     "ENTRADA/MATRIZES/PERFIS_SISTEMAS/SIG/DE_PARA"),
+    (RAIZ / "Arquivos_origem" / "MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS.xlsx",
+     "ENTRADA/MATRIZES/PERFIS_SISTEMAS"),
+]
+
 DADOS_SUBDIRS = [
     "BANCO", "PROCESSADOS", "ERROS", "LOGS",
     "SAIDAS/DIVERGENCIAS", "SAIDAS/DESLIGADOS",
@@ -77,7 +93,8 @@ def checar_prerequisitos():
     base = [PRINCIPAL_VISUALIZADOR, PRINCIPAL_PROCESSADOR,
             LAUNCHER_ATUALIZADOR, LAUNCHER_VISUALIZADOR, LAUNCHER_PROCESSADOR,
             CONFIG_SRC, MOTIVOS_SRC, REPORT_DIR / "index.html"]
-    faltando = [str(p) for p in base if not p.exists()]
+    faltando = [str(p) for p in base + [o for o, _ in REFERENCIAS]
+                if not p.exists()]
     if faltando:
         print("FALHA — exes/arquivos ausentes:")
         for f in faltando:
@@ -101,7 +118,7 @@ def grava_config(destino: Path, versao: str, raiz_valor: str):
 
 def montar_executaveis(execs_destino: Path):
     """EXECUTAVEIS/ completo: 2 principais + 3 launchers (com motor) + REPORT +
-    CONFIG (versao 1.3.1, raiz UNC de producao)."""
+    CONFIG (versao do pacote, raiz UNC de producao)."""
     execs_destino.mkdir(parents=True, exist_ok=True)
     launcher_d = execs_destino / "launcher"
     launcher_d.mkdir(parents=True, exist_ok=True)
@@ -123,15 +140,19 @@ def montar_executaveis(execs_destino: Path):
 def montar(base: Path):
     raiz = base / "CVC_IAM_ANALYTICS"
     montar_executaveis(raiz / "EXECUTAVEIS")
-    # ENTRADA: so a estrutura, VAZIA
+    # ENTRADA: a estrutura, sem extratos — so as matrizes de referencia
     for sub in ENTRADA_SUBDIRS:
         (raiz / "ENTRADA" / sub).mkdir(parents=True, exist_ok=True)
+    for origem, destino in REFERENCIAS:
+        (raiz / destino).mkdir(parents=True, exist_ok=True)
+        shutil.copy2(origem, raiz / destino / origem.name)
     # DADOS: esqueleto, SEM banco
     for sub in DADOS_SUBDIRS:
         (raiz / "DADOS" / sub).mkdir(parents=True, exist_ok=True)
     # INTERACOES vazia
     (raiz / "INTERACOES").mkdir(parents=True, exist_ok=True)
-    (raiz / "LEIA-ME.txt").write_text(LEIA_ME, encoding="utf-8")
+    (raiz / "LEIA-ME.txt").write_text(LEIA_ME.replace("{versao}", VERSAO),
+                                      encoding="utf-8")
 
 
 def zipar(base: Path, alvo_zip: Path):
@@ -149,12 +170,13 @@ def zipar(base: Path, alvo_zip: Path):
 
 
 LEIA_ME = """\
-ENTREGA PRODUCAO - CVC IAM Analytics (v1.3.1)
-=============================================
+ENTREGA PRODUCAO - CVC IAM Analytics (v{versao})
+==================================================
 
 Pacote de PRODUCAO com a pasta CVC_IAM_ANALYTICS (programa + estrutura de
-dados VAZIA). Base limpa: nenhum dado, nenhum banco. O banco nasce no primeiro
-processamento.
+dados VAZIA). Nenhum dado, nenhum banco: o banco nasce no primeiro
+processamento. A ENTRADA ja traz as duas matrizes de referencia (de-para do
+SIG e matriz de lojas/franqueado).
 
 Caminho de rede (config.xml <raiz>):
   \\\\intra.cvc\\fscvc\\Processos_Antlia\\CVC\\CVC_IAM\\ANALYTICS
@@ -164,18 +186,24 @@ Caminho de rede (config.xml <raiz>):
 1. SUBIR A REDE (uma vez)
 ------------------------------------------------------------
 Extraia o zip e copie a pasta CVC_IAM_ANALYTICS para dentro da RAIZ de rede.
-O config ja vem com a <raiz> UNC correta e <versao>1.3.1</versao>.
+O config ja vem com a <raiz> UNC correta e <versao>{versao}</versao>.
 
 ------------------------------------------------------------
 2. DEPOSITAR OS ARQUIVOS DE PRODUCAO
 ------------------------------------------------------------
-Coloque os arquivos atuais nas pastas de ENTRADA:
-  RH ativos        -> ENTRADA\\RH\\ATIVOS
-  Mapeamento CCO   -> ENTRADA\\MATRIZES\\ORGANIZACIONAL
-  Matriz SYSTUR    -> ENTRADA\\MATRIZES\\PERFIS_SISTEMAS
-  Extrato SYSTUR   -> ENTRADA\\SISTEMAS\\SYSTUR
-(Escopo Fase 1 = SYSTUR. Demais sistemas/desligados/terceiros estao
- desativados no config e podem ser ligados nas proximas fases.)
+Coloque os arquivos atuais nas pastas de ENTRADA (subpastas por mes, como
+07-2026, sao aceitas):
+  RH ativos              -> ENTRADA\\RH\\ATIVOS
+  RH desligados          -> ENTRADA\\RH\\DESLIGADOS
+  Mapeamento CCO         -> ENTRADA\\MATRIZES\\ORGANIZACIONAL
+  Matrizes de perfil     -> ENTRADA\\MATRIZES\\PERFIS_SISTEMAS
+                            (SIGOT, SICA RA, SICA ESFERA, SYSTUR, IC, ORACLE EBS)
+  Extratos dos sistemas  -> ENTRADA\\SISTEMAS\\<SISTEMA>
+                            (SIGOT, SICA_RA, SICA_ESFERA, SYSTUR, IC, SIG,
+                             ORACLE_EBS)
+  Diretorio AD           -> ENTRADA\\SISTEMAS\\AD_FRANQUEADOS, AD_PRESTADORES e
+                            AD_DESLIGADOS
+Os 7 sistemas estao ativos no config.
 
 ------------------------------------------------------------
 3. PRIMEIRO PROCESSAMENTO (gera o banco)
@@ -183,10 +211,18 @@ Coloque os arquivos atuais nas pastas de ENTRADA:
 Rode uma vez (de uma maquina que enxergue a RAIZ de rede):
     <RAIZ>\\EXECUTAVEIS\\Processador.exe
 Ao fim: <RAIZ>\\DADOS\\BANCO\\iam_analytics.db criado; arquivos lidos
-movidos para PROCESSADOS. Log em DADOS\\LOGS\\.
+movidos para PROCESSADOS. Log em DADOS\\LOGS\\. Com varios meses de arquivos
+o primeiro processamento e' demorado (horas).
 
 ------------------------------------------------------------
-4. CADA MAQUINA-USUARIO
+4. AJUSTAR A VERSAO (depois do processamento)
+------------------------------------------------------------
+Em <RAIZ>\\EXECUTAVEIS\\CONFIG\\config.xml, troque <versao>{versao}</versao>
+pela versao oficial. As maquinas-usuario comparam a versao local com a da
+rede e se atualizam sozinhas quando ela muda.
+
+------------------------------------------------------------
+5. CADA MAQUINA-USUARIO
 ------------------------------------------------------------
 Copie a pasta EXECUTAVEIS (de dentro da RAIZ de rede) para um local
 (ex.: C:\\CVC\\EXECUTAVEIS) e rode o visualizador.exe DE LA. Ele auto-atualiza
@@ -196,6 +232,9 @@ http://127.0.0.1:8800/.
 
 
 def main():
+    global VERSAO
+    if "--versao" in sys.argv:
+        VERSAO = sys.argv[sys.argv.index("--versao") + 1]
     print("=== Build ENTREGA PRODUCAO (CVC_IAM_ANALYTICS limpo, v%s) ===" % VERSAO)
     checar_prerequisitos()
     _staging.limpar(STAGING)   # ver deploy/_staging.py — ignore_errors mentia

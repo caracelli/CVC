@@ -104,6 +104,9 @@ DENTRO_DOS_EXES = [
 ]
 
 
+REDE_ESPERADA = ""   # preenchido por --rede (pacote de producao)
+
+
 def sha(b):
     return hashlib.sha256(b).hexdigest()
 
@@ -195,11 +198,18 @@ def confere(caminho: Path):
         def tag(t):
             m = re.search(r"<%s>(.*?)</%s>" % (t, t), c, re.S)
             return m.group(1).strip() if m else "(ausente)"
-        raiz_vazia = bool(re.search(r"<raiz\s*/>|<raiz>\s*</raiz>", c))
         print(f"  config: versao .............. {tag('versao')}")
-        print(f"  config: raiz vazia (local) .. {'OK' if raiz_vazia else 'TEM RAIZ: ' + tag('raiz')}")
+        if REDE_ESPERADA:
+            # pacote de PRODUCAO (--rede): a raiz TEM de ser o UNC informado
+            m = re.search(r"<rede>.*?<raiz>(.*?)</raiz>", c, re.S)
+            raiz = (m.group(1).strip() if m else "")
+            raiz_ok = raiz == REDE_ESPERADA
+            print(f"  config: raiz de rede ........ {'OK' if raiz_ok else 'DIFERENTE'} ({raiz or 'vazia'})")
+        else:
+            raiz_ok = bool(re.search(r"<raiz\s*/>|<raiz>\s*</raiz>", c))
+            print(f"  config: raiz vazia (local) .. {'OK' if raiz_ok else 'TEM RAIZ: ' + tag('raiz')}")
         print(f"  config: gera_pendencia ...... {tag('gera_pendencia')}")
-        ok_tudo &= raiz_vazia
+        ok_tudo &= raiz_ok
 
     # O que nao pode viajar e' a CREDENCIAL, nao o arquivo: o build gera um
     # jira.xml modelo com <usuario>/<token> VAZIOS de proposito. A regra antiga
@@ -227,7 +237,14 @@ def confere(caminho: Path):
 if __name__ == "__main__":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     tudo = True
-    for arg in sys.argv[1:]:
+    args = sys.argv[1:]
+    # --rede <UNC>: pacote de PRODUCAO, a raiz do config tem de ser esse UNC
+    # (os pacotes de teste da Bruna exigem raiz VAZIA, o padrao).
+    if "--rede" in args:
+        i = args.index("--rede")
+        REDE_ESPERADA = args[i + 1]
+        del args[i:i + 2]
+    for arg in args:
         tudo &= confere(Path(arg))
     print("\n" + ("TODOS APROVADOS" if tudo else "HA PACOTE REPROVADO"))
     sys.exit(0 if tudo else 1)
