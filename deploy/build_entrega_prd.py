@@ -132,6 +132,11 @@ def montar_executaveis(execs_destino: Path):
     # Sem isso o painel cai no fallback de 2 motivos.
     if MOTIVOS_SRC.exists():
         shutil.copy2(MOTIVOS_SRC, execs_destino / "CONFIG" / "motivos_resolucao.xml")
+    # modelo do jira.xml (a infra copia para jira.xml na rede e preenche o
+    # token). So' o MODELO: a credencial nunca viaja no pacote.
+    jira_modelo = EXECS / "CONFIG" / "jira.xml.exemplo"
+    if jira_modelo.exists():
+        shutil.copy2(jira_modelo, execs_destino / "CONFIG" / "jira.xml.exemplo")
     shutil.copy2(LAUNCHER_ATUALIZADOR, launcher_d / "launcher_atualizador.exe")
     shutil.copy2(LAUNCHER_VISUALIZADOR, launcher_d / "launcher_visualizador.exe")
     shutil.copy2(LAUNCHER_PROCESSADOR, launcher_d / "launcher_processador.exe")
