@@ -29,8 +29,12 @@ EXCLUI_GLOB = ["*.exe", "*.zip", "*.pyc"]
 # MOCKUP/ fora (07/10/2026): prototipo antigo do painel, nao e' parte do
 # programa, e o _data2.js tem nome/matricula/cargo/perfis REAIS de funcionarios
 # (extracao da base) — dado pessoal nao vai para repositorio de codigo.
+# tests/ fora (07/10/2026, usuario): os testes usam CPFs reais como fixture
+# (test_leitor_terceiros, test_desligado_recontratado...) e citam pessoas por
+# nome e matricula. Ficam so' no nosso repositorio.
 EXCLUI_PREFIXO = ("Arquivos_origem/", "OLD/", "ENTREGA/", ".git/",
-                  "__pycache__/", "INTERACOES/", "CVC_IAM_ANALYTICS/MOCKUP/")
+                  "__pycache__/", "INTERACOES/", "CVC_IAM_ANALYTICS/MOCKUP/",
+                  "tests/")
 
 
 def _git(args):
