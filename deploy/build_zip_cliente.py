@@ -7,7 +7,7 @@ SEM:
   - caches: __pycache__/, *.pyc
   - dados/referencia: Arquivos_origem/, OLD/, ENTREGA/
 
-O conjunto de arquivos vem do git (tracked + novos nao-ignorados), entao tudo
+O conjunto de arquivos vem do git (so' o versionado), entao tudo
 que o .gitignore ja exclui (DADOS, INTERACOES, ENTRADA, executaveis...) fica de
 fora automaticamente. As paths no zip sao relativas a raiz do projeto, para
 descompactar POR CIMA da pasta do cliente.
@@ -26,21 +26,27 @@ SAIDA = RAIZ.parent / "PROJETO_CVC_CLIENTE.zip"
 
 EXCLUI_EXATO = {".gitignore", ".gitattributes"}
 EXCLUI_GLOB = ["*.exe", "*.zip", "*.pyc"]
+# MOCKUP/ fora (07/10/2026): prototipo antigo do painel, nao e' parte do
+# programa, e o _data2.js tem nome/matricula/cargo/perfis REAIS de funcionarios
+# (extracao da base) — dado pessoal nao vai para repositorio de codigo.
 EXCLUI_PREFIXO = ("Arquivos_origem/", "OLD/", "ENTREGA/", ".git/",
-                  "__pycache__/", "INTERACOES/")
+                  "__pycache__/", "INTERACOES/", "CVC_IAM_ANALYTICS/MOCKUP/")
 
 
 def _git(args):
-    r = subprocess.run(["git"] + args, cwd=str(RAIZ),
-                       capture_output=True, text=True)
+    # core.quotepath=off: sem isso o git devolve nome com acento ENTRE ASPAS
+    # ('"Arquivos_origem/...\303\247..."') e o filtro de prefixo nao pega.
+    r = subprocess.run(["git", "-c", "core.quotepath=off"] + args, cwd=str(RAIZ),
+                       capture_output=True, text=True, encoding="utf-8")
     return [l for l in r.stdout.splitlines() if l.strip()]
 
 
 def _listar_arquivos():
-    # tracked + novos (nao-ignorados) = estado atual versionavel do working tree
-    tracked = _git(["ls-files"])
-    novos = _git(["ls-files", "--others", "--exclude-standard"])
-    return sorted(set(tracked) | set(novos))
+    # SO' O QUE ESTA' NO GIT (07/10/2026). Antes entravam tambem os arquivos
+    # novos nao-ignorados, e com eles o lixo solto na raiz: vg_export.xlsx
+    # (exportacao do painel, com dado do cliente), vg_secoes.txt e logs.
+    # Tudo o que e' do projeto esta' commitado antes de cada entrega.
+    return sorted(set(_git(["ls-files"])))
 
 
 def _incluir(rel: str) -> bool:
