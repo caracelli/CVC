@@ -175,7 +175,11 @@
                  373 das 457 pessoas e 278 tem so ele — preenchendo aqui, a
                  pendencia do Oracle cai de 99 para 18 pessoas e os aderentes
                  sobem de 45 para 69, sem rebuild. -->
-            <perfis_isentos></perfis_isentos>
+            <!-- 07/10/2026 (Aplicacao_CVC_07_10): "Oracle - Desconsiderar o perfil:
+                 CVC OIE BRASIL - RELATORIO DE DESPESAS". Desde entao o isento sai
+                 inteiro da validacao do Oracle (nao e' "a mais", nem "nao pode ter
+                 e tem"). Casa por PREFIXO, sem acento e sem caixa. -->
+            <perfis_isentos>CVC OIE BRASIL - RELATORIO DE DESPESAS</perfis_isentos>
         </ancora_systur>
 
         <!-- CONTA DE SERVICO nos DESLIGADOS (retorno da area, 28 e 31/08/2026):

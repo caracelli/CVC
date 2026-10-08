@@ -97,10 +97,24 @@ def _ler_df_perfis(arquivo: Path) -> pd.DataFrame:
 
 
 def _ler_df_org(arquivo: Path) -> pd.DataFrame:
-    # No XLSX a linha 0 e' titulo fundido e o cabecalho real esta' na linha 1;
-    # no CSV (export) o cabecalho ja' vem na 1a linha. Mantemos essa distincao.
-    header = 1 if arquivo.suffix.lower() in (".xlsx", ".xls") else 0
-    return _normalizar_colunas(ler_tabela(arquivo, dtype=str, header=header))
+    # No XLSX antigo a linha 0 e' titulo fundido e o cabecalho real esta' na
+    # linha 1; no CSV (export) o cabecalho ja' vem na 1a linha.
+    # A MATRIZ OPERACAO de 05/10/2026 chegou SEM o titulo — cabecalho na 1a
+    # linha — e era rejeitada ("Coluna de centro de custo nao encontrada": o
+    # leitor tomava a 1a linha de dados como cabecalho). Agora, sem a coluna de
+    # centro de custo no cabecalho esperado, tenta a outra linha, como o leitor
+    # das matrizes de perfil ja' faz (_ler_df_perfis).
+    def _tem_cc(df):
+        cols = {str(c).upper() for c in df.columns}
+        return any(c in cols for c in LeitorMatrizOrganizacional._CAND_CC_COD)
+
+    xlsx = arquivo.suffix.lower() in (".xlsx", ".xls")
+    df = _normalizar_colunas(ler_tabela(arquivo, dtype=str, header=1 if xlsx else 0))
+    if not _tem_cc(df) and xlsx:
+        df0 = _normalizar_colunas(ler_tabela(arquivo, dtype=str, header=0))
+        if _tem_cc(df0):
+            return df0
+    return df
 
 
 class LeitorMatrizPerfis(LeitorArquivoBase):

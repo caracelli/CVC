@@ -15,7 +15,8 @@ import openpyxl
 
 from infraestrutura.leitores_arquivos.leitor_base import ler_tabela
 from infraestrutura.leitores_arquivos.leitor_rh import LeitorRh
-from infraestrutura.leitores_arquivos.leitor_matriz import LeitorMatrizPerfis
+from infraestrutura.leitores_arquivos.leitor_matriz import (
+    LeitorMatrizPerfis, LeitorMatrizOrganizacional)
 from dominio.objetos_valor.sistema import Sistema
 
 
@@ -138,6 +139,45 @@ class TestMatrizPerfisMultiformato(unittest.TestCase):
             por = {p.perfil for p in perfis}
             self.assertEqual(por, {"IC CONSULTA", "IC APROVADOR"},
                              f"matriz divergiu em {arq.name}")
+
+
+_CCO_HEADER = ["Código do Centro de Custo", "Nome do Centro de Custo",
+               "Nome Gestor", "Função", "Sistemas", "Perfis"]
+_CCO_LINHAS = [
+    ["01.03.02.19", "NUCLEO", "HELEN ANTONIA LA SPINA RUAS",
+     "Atendimento a fornecedores TREND N2", "Systur", "ATD_FOR_TREND_N2"],
+    ["01.03.02.19", "NUCLEO", "HELEN ANTONIA LA SPINA RUAS",
+     "Atendimento a fornecedores TREND N2", "Sigot", "Atd_For_TREND_N2"],
+]
+
+
+class TestMatrizCcoCabecalho(unittest.TestCase):
+    """MATRIZ OPERACAO de 05/10/2026 chegou SEM a linha de titulo e era
+    rejeitada ("Coluna de centro de custo nao encontrada"). As duas formas
+    tem de importar igual."""
+
+    def _ler(self, titulo):
+        base = tempfile.mkdtemp(prefix="cvc_mf_cco_")
+        pasta = os.path.join(base, "in"); os.makedirs(pasta)
+        _xlsx(os.path.join(pasta, "MATRIZ OPERACAO.xlsx"), _CCO_HEADER,
+              _CCO_LINHAS, titulo=titulo)
+        leitor = LeitorMatrizOrganizacional(
+            pasta_processados=os.path.join(base, "proc"),
+            pasta_erros=os.path.join(base, "err"))
+        regs, _ = leitor.ler(pasta)
+        return regs, os.listdir(os.path.join(base, "err")) if os.path.isdir(
+            os.path.join(base, "err")) else []
+
+    def test_com_titulo_na_1a_linha(self):
+        regs, erros = self._ler("MATRIZ OPERACAO")
+        self.assertEqual(len(regs), 2)
+        self.assertEqual(erros, [])
+
+    def test_sem_titulo_cabecalho_na_1a_linha(self):
+        regs, erros = self._ler(None)
+        self.assertEqual(len(regs), 2, "a matriz de 05/10 era rejeitada")
+        self.assertEqual(erros, [])
+        self.assertEqual({r["gestor"] for r in regs}, {"HELEN ANTONIA LA SPINA RUAS"})
 
 
 if __name__ == "__main__":

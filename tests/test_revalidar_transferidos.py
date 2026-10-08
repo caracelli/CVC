@@ -182,6 +182,26 @@ class TestMatriz(_Db):
         r = {(p, s) for _, p, s, _ in self._resultado()["22"]}
         self.assertIn(("P_CCO", "MANTEM"), r)
 
+    def test_cco_com_o_nome_do_sistema_como_a_planilha_escreve(self):
+        """07/10/2026 (Transferidos da ELAINE 33082): a CCO escreve "Systur" e
+        "Sigot"; o acesso e' SYSTUR/SIGOT. Com o nome cru o esperado nunca
+        casava — "falta" falso e o mesmo sistema em duas linhas na tela."""
+        self._seed(
+            MatrizCcoModel(cc="100", gestor="CHEFE B", sistema="Systur", perfil="P_CCO"),
+            MatrizCcoModel(cc="100", gestor="CHEFE B", sistema="Sigot", perfil="S_CCO"),
+            _ativo("23", gestor="CHEFE B"), _acesso("23", SYS, "P_CCO"),
+            _acesso("23", "SIGOT", "S_CCO"), _mov("23"))
+        RevalidarTransferidos(self.con).executar()
+        r = {(p, s) for _, p, s, _ in self._resultado()["23"]}
+        self.assertIn(("P_CCO", "MANTEM"), r)
+        self.assertIn(("S_CCO", "MANTEM"), r)
+        self.assertNotIn(("P_CCO", "FALTA"), r, "o nome cru 'Systur' nao casava")
+        c = sqlite3.connect(self.caminho)
+        sis = {x for (x,) in c.execute(
+            "SELECT DISTINCT sistema FROM revalidacao_transferido WHERE matricula='23'")}
+        c.close()
+        self.assertEqual(sis, {"SYSTUR", "SIGOT"})
+
 
 class TestComportamentoGeral(_Db):
 

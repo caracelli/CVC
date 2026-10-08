@@ -27,7 +27,7 @@ from loguru import logger
 
 from aplicacao.casos_de_uso.validar_acessos_sistema import (
     ValidarAcessosSistema, _SISTEMAS_PERFIL_APROXIMADO, _norm, _norm_perfil)
-from dominio.objetos_valor.sistema import Sistema
+from dominio.objetos_valor.sistema import Sistema, sistema_do_texto
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.schema import (
     AcessoSistema, RevalidacaoTransferidoModel, RhAtivo, TransferidoModel)
@@ -90,7 +90,16 @@ class RevalidarTransferidos:
                 pe.sistema.value].add(pe.perfil)
         cco = defaultdict(lambda: defaultdict(set))         # (cc,gestor) -> sis -> perfis
         for r in repo.obter_cco():
-            cco[(_norm(r["cc"]), _norm(r.get("gestor", "")))][r["sistema"]].add(r["perfil"])
+            # NOME PADRAO do sistema (retorno de 07/10/2026, Transferidos da
+            # ELAINE 33082): a CCO escreve "Sigot", "Systur", "Oracle EBS"... e
+            # os acessos usam SIGOT, SYSTUR, ORACLE_EBS. Com o nome cru o
+            # esperado da CCO nunca casava com o acesso — "falta" e "sobrou"
+            # falsos e o mesmo sistema em duas linhas na tela. Mesma conversao
+            # da validacao normal; sistema fora do projeto e' ignorado.
+            _se = sistema_do_texto(r["sistema"])
+            if _se is None:
+                continue
+            cco[(_norm(r["cc"]), _norm(r.get("gestor", "")))][_se.value].add(r["perfil"])
 
         # grupos do espelho do SIG (so CLT, so quem usa SIG)
         sig = Sistema.SIG.value

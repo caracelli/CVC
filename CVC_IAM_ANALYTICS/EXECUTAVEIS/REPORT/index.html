@@ -4296,6 +4296,7 @@ function proc(on){
 
 /* ── Enviar para quarentena (modal → grava interação QUARENTENA) ───────── */
 let _quarAlvo = null;
+const QUAR_MOTIVOS = ['Exceção', 'Férias/Cobertura de férias', 'Usuário sistêmico'];
 
 function quarentenar(uid, sistema, perfil){
   // Abre o formulário (prazo/ticket/título/motivo) — espelha abrirResolver.
@@ -4320,7 +4321,14 @@ function quarentenar(uid, sistema, perfil){
     + '<label>Título / descrição <span class="req">*</span></label>'
     + '<input id="quar-titulo" placeholder="ex: Aguardando retorno do gestor" '
     + 'autocomplete="off" maxlength="120">'
-    + '<label>Motivo (opcional)</label>'
+    // MOTIVO em lista (retorno de 07/10/2026, Aplicacao_CVC_07_10: "Trazer uma
+    // opcao Motivo e adicionar as opcoes: Excecao, Ferias/Cobertura de ferias,
+    // Usuario sistemico"). Vai no MESMO campo `motivo` ("Opcao — detalhe"),
+    // sem mudar o que o servidor grava nem o historico da quarentena.
+    + '<label>Motivo <span class="req">*</span></label>'
+    + '<select id="quar-motivo-op"><option value="">Selecione o motivo…</option>'
+    + QUAR_MOTIVOS.map(m => '<option>' + esc(m) + '</option>').join('') + '</select>'
+    + '<label>Detalhe (opcional)</label>'
     + '<textarea id="quar-motivo" placeholder="Detalhe do motivo (opcional)" '
     + 'maxlength="600"></textarea>'
     + '<div class="modal-err" id="quar-err"></div></div>'
@@ -4336,7 +4344,9 @@ async function confirmarQuarentena(){
   const dias   = parseInt(document.getElementById('quar-dias').value, 10);
   const ticket = document.getElementById('quar-ticket').value.trim();
   const titulo = document.getElementById('quar-titulo').value.trim();
-  const motivo = document.getElementById('quar-motivo').value.trim();
+  const motivoOp = document.getElementById('quar-motivo-op').value;
+  const detalhe = document.getElementById('quar-motivo').value.trim();
+  const motivo = motivoOp + (detalhe ? ' — ' + detalhe : '');
   const err = document.getElementById('quar-err');
   if(!dias || dias < 1){
     err.textContent = 'Informe a quantidade de dias (maior que zero).';
@@ -4349,6 +4359,10 @@ async function confirmarQuarentena(){
   if(!titulo){
     err.textContent = 'O título/descrição é obrigatório.';
     document.getElementById('quar-titulo').focus(); return;
+  }
+  if(!motivoOp){
+    err.textContent = 'Selecione o motivo da quarentena.';
+    document.getElementById('quar-motivo-op').focus(); return;
   }
   const u = _quarAlvo;
   fecharModal();

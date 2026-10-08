@@ -211,6 +211,23 @@ class ValidarAcessosSistema:
 
     def executar(self):
         ativos, acessos_por_matricula, sistemas_com_dados, perfis_por_chave, cco = self._carregar_dados()
+        # PERFIL DESCONSIDERADO (retorno de 07/10/2026, Aplicacao_CVC_07_10:
+        # "Oracle - Desconsiderar o perfil: CVC OIE BRASIL - RELATORIO DE
+        # DESPESAS"). Ate' aqui a lista <perfis_isentos> so' tirava o perfil da
+        # cobranca "fora do SYSTUR"; ele seguia contando como "a mais", como
+        # "nao pode ter e tem" (LETICIA 9130) e no "mais de um perfil". Agora
+        # sai da ENTRADA da validacao dos sistemas ancorados — o extrato no
+        # banco fica intacto. Medido na base de 15/09: 276 das 282 pessoas com
+        # Oracle nao previsto tinham SO' esse perfil.
+        if self._ancora_systur_isentos:
+            self._desconsiderados = 0
+            for _m, _lst in list(acessos_por_matricula.items()):
+                _fica = [(s, p) for s, p in _lst
+                         if not (s in self._ancora_systur and self._isento_da_ancora(p))]
+                self._desconsiderados += len(_lst) - len(_fica)
+                acessos_por_matricula[_m] = _fica
+            logger.info(f"[perfis desconsiderados] {self._desconsiderados} acesso(s) "
+                        f"fora da validacao ({', '.join(self._ancora_systur_isentos)}).")
         self._prov_deslig = 0   # contador da regra temporaria de provavel desligamento
         self._inclusao_suprimida = 0
         self._franq_aderentes = self._franq_divergentes = self._franq_excecao = 0

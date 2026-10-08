@@ -236,6 +236,35 @@ http://127.0.0.1:8800/.
 """
 
 
+LEIA_ME_ATUALIZACAO = """\
+ATUALIZACAO PRODUCAO - CVC IAM Analytics (v{versao})
+=====================================================
+
+So' a pasta EXECUTAVEIS. Nao traz banco, ENTRADA nem INTERACOES: nada do que
+ja esta na rede e' apagado.
+
+1. Feche o painel e o Processador em todas as maquinas.
+2. Copie a pasta EXECUTAVEIS do zip POR CIMA de <RAIZ>\\EXECUTAVEIS
+   (aceite substituir). O CONFIG\\jira.xml da rede NAO e' tocado.
+3. Devolva para a ENTRADA os arquivos que o processamento de 06/10 mandou
+   para DADOS\\ERROS, com o nome original (sem o carimbo de data/hora):
+     MATRIZ OPERACAO_20261005_114539.xlsx
+        -> ENTRADA\\MATRIZES\\ORGANIZACIONAL\\MATRIZ OPERACAO.xlsx
+     MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS_20261006_133742.xlsx
+        -> ENTRADA\\MATRIZES\\PERFIS_SISTEMAS\\MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS.xlsx
+     view_systur_06_10_2026_07-00_20261006_133814.csv
+        -> ENTRADA\\SISTEMAS\\SYSTUR\\10-2026\\view_systur_06_10_2026_07-00.csv
+   (Os view_systur de 05 a 14/09 que estao em ERROS sao antigos: deixe la'.)
+4. Rode <RAIZ>\\EXECUTAVEIS\\Processador.exe UMA vez, de UMA maquina so'.
+5. As maquinas-usuario se atualizam sozinhas porque a <versao> mudou
+   ({versao}). Para usar outra versao, troque em CONFIG\\config.xml antes do
+   passo 4.
+
+IMPORTANTE: apague instalacoes ANTIGAS do programa que apontem para a rede.
+Em 06/10 uma versao de junho rodou e mandou arquivos para ERROS.
+"""
+
+
 def main():
     global VERSAO
     if "--versao" in sys.argv:
@@ -247,6 +276,19 @@ def main():
     ENTREGA.mkdir(parents=True, exist_ok=True)
 
     inicio = datetime.now()
+    if "--atualizacao" in sys.argv:
+        # ATUALIZACAO da rede ja instalada (08/10/2026): SO' a pasta
+        # EXECUTAVEIS — nao toca no banco, na ENTRADA nem nas INTERACOES.
+        raiz = STAGING / "CVC_IAM_ANALYTICS"
+        montar_executaveis(raiz / "EXECUTAVEIS")
+        (raiz / "LEIA-ME_ATUALIZACAO.txt").write_text(
+            LEIA_ME_ATUALIZACAO.replace("{versao}", VERSAO), encoding="utf-8")
+        alvo = ENTREGA / f"ATUALIZACAO_PRD_v{VERSAO}.zip"
+        zipar(raiz, alvo)
+        print(f"  OK -> {alvo}  ({alvo.stat().st_size/1024/1024:.1f} MB)")
+        print(f"  versao={VERSAO}  raiz={RAIZ_REDE}  SO' EXECUTAVEIS")
+        shutil.rmtree(STAGING, ignore_errors=True)
+        return
     montar(STAGING)
 
     alvo = ENTREGA / f"ENTREGA_PRD_v{VERSAO}.zip"

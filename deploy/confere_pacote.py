@@ -44,6 +44,7 @@ MARCADORES = [
     "_ccoPrevisto",          # 01/10: CCO com perfis previstos sem alerta
     "_csPino({divs: ds})",   # 01/10: planilha da Consulta = status da tela
     "'Cargo','Sistema','Tipo'",  # 01/10 v2: coluna Sistema na planilha de Pendencias
+    "QUAR_MOTIVOS",          # 08/10: quarentena com Motivo em lista
 ]
 
 # (marcador, em qual exe deve estar)
@@ -101,6 +102,11 @@ DENTRO_DOS_EXES = [
     ("launcher/launcher_processador.exe", b"_SISTEMAS_IDENTIFICAM_FUNCAO"),
     # 01/10 (ajuste_01_10): CCO e' um mundo a parte
     ("launcher/launcher_processador.exe", b"_eh_cco"),
+    # 08/10 (Aplicacao_CVC_07_10): Relatorio de Despesas desconsiderado,
+    # CCO com cabecalho na 1a linha e Transferidos com nome de sistema padrao
+    ("launcher/launcher_processador.exe", b"_desconsiderados"),
+    ("launcher/launcher_processador.exe", b"_tem_cc"),
+    ("launcher/launcher_processador.exe", b"sistema_do_texto"),
 ]
 
 

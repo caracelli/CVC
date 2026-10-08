@@ -610,6 +610,20 @@ class PerfisIsentos(unittest.TestCase):
         _rodar(cx)
         self.assertEqual([st for st, _, _ in _linhas(cx, ORA)], ["EM_ANALISE"])
 
+    def test_isento_some_da_validacao_inteira(self):
+        """07/10/2026: desconsiderar = nem "a mais", nem "nao pode ter e tem".
+        So' o Relatorio, cargo que a matriz do Oracle nao cobre: antes virava
+        pendencia ACESSO_SEM_PREVISAO (LETICIA 9130); agora nao ha linha."""
+        cx = _base(["CUSTOS"], ["CVC GL CUSTOS", "CVC OIE BRASIL - RELATORIO"],
+                   com_cco=False)
+        _rodar(cx, isentos=["CVC OIE BRASIL"])
+        s = cx.sessao()
+        atual = [x.perfil_atual for x in s.query(ValidacaoAcessoModel)
+                 .filter_by(matricula="M1", sistema=ORA).all()]
+        s.close()
+        self.assertFalse(any("OIE" in (a or "") for a in atual),
+                         "o isento nao pode aparecer como perfil da pessoa")
+
     def test_a_isencao_casa_por_prefixo(self):
         cx = _base(["CUSTOS"], ["CVC GL CUSTOS",
                                 "CVC OIE BRASIL - RELATORIO DE DESPESAS"],
@@ -659,14 +673,16 @@ class OConfigEhAFonte(unittest.TestCase):
             raiz / "CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml")).carregar()
         self.assertEqual(cfg.validacao_ancora_systur_sistemas, ["ORACLE_EBS"])
 
-    def test_producao_nao_isenta_ninguem(self):
-        """Decisao de 23/09: "joga como pendencia". Se algum dia alguem
-        preencher isso, o teste avisa que a decisao mudou."""
+    def test_producao_desconsidera_o_relatorio_de_despesas(self):
+        """MUDOU EM 07/10/2026 (Aplicacao_CVC_07_10: "Oracle - Desconsiderar o
+        perfil: CVC OIE BRASIL - RELATORIO DE DESPESAS"). Ate' ali a decisao
+        de 23/09 era "joga como pendencia" e a lista ficava vazia."""
         from infraestrutura.configuracao.leitor_config import LeitorConfig
         raiz = Path(__file__).resolve().parent.parent
         cfg = LeitorConfig(str(
             raiz / "CVC_IAM_ANALYTICS/EXECUTAVEIS/CONFIG/config.xml")).carregar()
-        self.assertEqual(cfg.validacao_ancora_systur_isentos, [])
+        self.assertEqual(cfg.validacao_ancora_systur_isentos,
+                         ["CVC OIE BRASIL - RELATORIO DE DESPESAS"])
 
     def test_config_antigo_sem_a_chave_fica_desligado(self):
         cfg = self._cfg("<configuracao><versao>1.0.0</versao></configuracao>")
