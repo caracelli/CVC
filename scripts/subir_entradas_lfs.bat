@@ -58,10 +58,25 @@ if errorlevel 1 (
 )
 
 rem --- commit ----------------------------------------------------------------
-git add "%ARQ_GIT%"
+rem -f: forca a inclusao mesmo se um .gitignore GLOBAL da maquina ignorar
+rem *.zip — sem isso o add era recusado em silencio e o commit saia vazio
+rem ("Your branch is up to date"), o que aconteceu em 08/10.
+git check-ignore -q "%ARQ_GIT%" && (
+    echo Aviso: esta maquina ignora este arquivo por uma regra local:
+    git check-ignore -v "%ARQ_GIT%"
+    echo        Incluindo assim mesmo ^(git add -f^).
+)
+git add -f "%ARQ_GIT%"
+git diff --cached --quiet -- "%ARQ_GIT%"
+if not errorlevel 1 (
+    echo [ERRO] O arquivo nao entrou no commit.
+    echo        Ele e' igual ao que ja esta no GitHub, ou o git nao o enxerga.
+    echo        Mande a saida de:  git status -sb   e   dir "%ARQ%"
+    goto :fim_erro
+)
 git commit -m "arquivos de entrada da rede: %ARQ_GIT%"
 if errorlevel 1 (
-    echo [ERRO] Nada para commitar ^(o arquivo ja' estava enviado?^).
+    echo [ERRO] O commit falhou. Copie a mensagem acima e me mande.
     goto :fim_erro
 )
 
