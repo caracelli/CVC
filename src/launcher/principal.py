@@ -105,11 +105,66 @@ def _matar_processos_anteriores(alvo: str) -> None:
               f"apos varias tentativas de encerrar.")
 
 
+# ── Nao rodar da pasta de REDE (09/10/2026) ──────────────────────────────
+# Mesma funcao em src/launcher/principal.py, src/visualizador/main.py e
+# src/processador/main.py (tests/test_nao_roda_da_rede.py confere).
+# Rodado da rede, o exe fica preso (ninguem consegue atualizar a pasta) e o
+# painel usa <rede>\EXECUTAVEIS\DADOS\BANCO como "copia local" — um arquivo
+# so', na rede, para todos que abrem de la' — o que corrompe o banco.
+def _executando_da_rede(pasta, rede_raiz=""):
+    """True se `pasta` (onde o exe esta) fica numa pasta de rede: caminho
+    UNC, unidade mapeada (DRIVE_REMOTE) ou dentro de <rede><raiz>."""
+    import os as _os
+    try:
+        p = _os.path.abspath(str(pasta))
+    except Exception:
+        return False
+    if p.startswith("\\\\") or p.startswith("//"):
+        return True
+    if rede_raiz:
+        r = _os.path.normcase(_os.path.abspath(rede_raiz)).rstrip("\\/")
+        pn = _os.path.normcase(p)
+        if pn == r or pn.startswith(r + _os.sep):
+            return True
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            unidade = _os.path.splitdrive(p)[0]
+            if unidade and ctypes.windll.kernel32.GetDriveTypeW(unidade + "\\") == 4:
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def _avisar_rede(pasta, exe):
+    """Caixa de mensagem (os exes nao tem console) explicando o que fazer."""
+    msg = ("O CVC IAM Analytics nao pode ser aberto direto da pasta de rede.\n\n"
+           f"Pasta: {pasta}\n\n"
+           "Rodar da rede trava a atualizacao para todos e pode corromper o "
+           "banco.\n\n"
+           "Copie a pasta EXECUTAVEIS da rede para o seu computador (ex.: "
+           f"C:\\CVC_IAM\\EXECUTAVEIS) e abra o {exe} de la'. Os dados "
+           "continuam sendo lidos e gravados na rede.")
+    print(msg)
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, msg, "CVC IAM Analytics", 0x10)
+        except Exception:
+            pass
+
+
 def main() -> int:
     alvo = _alvo_pelo_nome()
     if not alvo:
         print(f"[principal] nao consegui detectar alvo a partir de "
               f"{sys.executable}")
+        return 1
+
+    _b = _base()
+    if _executando_da_rede(_b, _texto(_b / "CONFIG" / "config.xml", "rede/raiz")):
+        _avisar_rede(_b, f"{alvo}.exe".replace("processador.exe", "Processador.exe"))
         return 1
 
     # Antes de qualquer coisa: derruba instancias antigas do core deste alvo

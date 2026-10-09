@@ -112,6 +112,11 @@ DENTRO_DOS_EXES = [
     ("launcher/launcher_processador.exe", b"_garantir_journal_delete"),
     ("launcher/launcher_visualizador.exe", b"_copiar_banco_da_rede"),
     ("launcher/launcher_visualizador.exe", b"_processando_na_rede"),
+    # 09/10: nao roda da pasta de rede (principal, painel e Processador)
+    ("EXECUTAVEIS/Processador.exe", b"_executando_da_rede"),
+    ("EXECUTAVEIS/visualizador.exe", b"_executando_da_rede"),
+    ("launcher/launcher_visualizador.exe", b"_executando_da_rede"),
+    ("launcher/launcher_processador.exe", b"_executando_da_rede"),
 ]
 
 

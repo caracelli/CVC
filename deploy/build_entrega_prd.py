@@ -247,17 +247,33 @@ Corrige o "database disk image is malformed" do painel (09/10): o banco da
 rede passa a gravar no modo seguro para pasta de rede (sem WAL); o painel
 confere a copia antes de usar e nao copia durante o processamento.
 
-1. Feche o painel e o Processador em todas as maquinas.
+NOVO: painel e Processador NAO abrem mais direto da pasta de rede (mostram um
+aviso). Rodar da rede trava a pasta para todos e pode corromper o banco.
+Cada pessoa usa a SUA copia local de EXECUTAVEIS (ex.: C:\\CVC_IAM\\EXECUTAVEIS);
+os dados continuam sendo lidos e gravados na rede.
+
+1. Feche o painel e o Processador em todas as maquinas. Quem abriu da rede:
+   no Gerenciador de Tarefas, finalize launcher_visualizador.exe e
+   launcher_processador.exe (o painel continua rodando depois de fechar o
+   navegador). Sem saber quem abriu: RENOMEIE os .exe de <RAIZ>\\EXECUTAVEIS
+   e de <RAIZ>\\EXECUTAVEIS\\launcher para .exe.old_0910 (exe em uso pode ser
+   renomeado, so' nao sobrescrito) e apague os .old_0910 depois.
 2. Em <RAIZ>\\DADOS\\BANCO: se ainda existirem iam_analytics.db-wal e
    iam_analytics.db-shm, MOVA os dois para uma pasta _orfao_0910 (nao apague;
    nao mexa no iam_analytics.db). "Arquivo em uso" = algum painel aberto.
 3. Copie a pasta EXECUTAVEIS do zip POR CIMA de <RAIZ>\\EXECUTAVEIS
    (aceite substituir). O CONFIG\\jira.xml da rede NAO e' tocado.
-4. Rode <RAIZ>\\EXECUTAVEIS\\Processador.exe UMA vez, de UMA maquina so',
-   com TODOS os paineis fechados, e espere "Processamento finalizado".
-5. Abra o painel. As maquinas-usuario se atualizam sozinhas porque a
-   <versao> mudou ({versao}) e descartam a copia local corrompida. Para usar
-   outra versao, troque em CONFIG\\config.xml antes do passo 4.
+4. No SEU computador, copie <RAIZ>\\EXECUTAVEIS (ja atualizada) por cima da
+   sua copia LOCAL (ex.: C:\\CVC_IAM\\EXECUTAVEIS) e abra o Processador.exe
+   de la'. Ele processa na rede. Uma maquina so', com TODOS os paineis
+   fechados; espere "Processamento finalizado".
+5. Abra o painel (visualizador.exe da copia local).
+
+ATENCAO A VERSAO: as maquinas so' se atualizam sozinhas quando a <versao> do
+CONFIG\\config.xml da rede e' DIFERENTE da local. Este pacote vem com
+{versao}; se a rede ja estava em {versao}, as outras maquinas NAO puxam o
+codigo novo ate voce trocar a <versao> no config da rede (ex.: 1.0.3). Ate
+la', quem usar precisa copiar a EXECUTAVEIS nova para a maquina (passo 4).
 
 IMPORTANTE: apague instalacoes ANTIGAS do programa que apontem para a rede.
 """
