@@ -117,6 +117,8 @@ DENTRO_DOS_EXES = [
     ("EXECUTAVEIS/visualizador.exe", b"_executando_da_rede"),
     ("launcher/launcher_visualizador.exe", b"_executando_da_rede"),
     ("launcher/launcher_processador.exe", b"_executando_da_rede"),
+    # 09/10: aviso de base nova compara a rede com a anotacao da copia
+    ("launcher/launcher_visualizador.exe", b"_origem_path"),
 ]
 
 
