@@ -235,6 +235,30 @@ class AvisarQueHaBaseNova(unittest.TestCase):
         self.assertFalse(os.path.exists(vm.BANCO_LOCAL + ".novo"),
                          "o arquivo temporario nao pode ficar para tras")
 
+    def test_o_resumo_montado_no_cache_nao_vira_base_nova(self):
+        """⭐ 09/10/2026: "porque continua aparecendo ha uma carga mais
+        recente?". O painel escreve no cache logo depois de copiar (monta a
+        bi_divergencias); o cache crescia, o tamanho nunca mais batia com o da
+        rede e o aviso ficava ligado para sempre — mesmo depois de Atualizar."""
+        cx = sqlite3.connect(vm.BANCO_LOCAL)
+        cx.execute("CREATE TABLE bi_divergencias (x TEXT)")
+        cx.executemany("INSERT INTO bi_divergencias VALUES (?)",
+                       [("y" * 300,)] * 500)
+        cx.commit(); cx.close()
+        self.assertNotEqual(os.path.getsize(vm.BANCO_LOCAL),
+                            os.path.getsize(self.rede_db))
+        self.assertFalse(vm.base_da_rede_mudou())
+        self._nova_rodada()
+        self.assertTrue(vm.base_da_rede_mudou(), "rodada nova continua avisando")
+        vm.sincronizar_banco()
+        self.assertFalse(vm.base_da_rede_mudou())
+
+    def test_cache_antigo_sem_anotacao_recopia_uma_vez(self):
+        os.remove(vm.BANCO_LOCAL + ".origem")
+        self.assertTrue(vm.base_da_rede_mudou())
+        vm.sincronizar_banco()
+        self.assertFalse(vm.base_da_rede_mudou())
+
     def test_atualizar_traz_a_carga_nova(self):
         self._nova_rodada("carga 2")
         vm.sincronizar_banco()

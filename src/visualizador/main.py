@@ -800,30 +800,45 @@ def listar_motivos_resolucao():
 VG_JANELA_DIAS = 30
 
 
+def _assinatura_arquivo(rede_db: str) -> str:
+    """Tamanho + data do banco da rede (e do -wal, se houver). Barata: nao le
+    o conteudo. Levanta OSError se o arquivo nao existe."""
+    st = os.stat(rede_db)
+    maior = st.st_mtime
+    wal = rede_db + "-wal"
+    if os.path.exists(wal):
+        maior = max(maior, os.path.getmtime(wal))
+    return f"{int(maior)}.{st.st_size}"
+
+
+def _origem_path(local_db: str) -> str:
+    """Arquivo ao lado do cache local com a assinatura da rede NO MOMENTO da
+    copia."""
+    return local_db + ".origem"
+
+
 def _precisa_sincronizar(rede_db: str, local_db: str) -> bool:
     """True se o cache local esta defasado em relacao ao da rede.
 
-    Heuristica (rapida, sem ler o conteudo do arquivo):
-      - sem cache local            -> precisa copiar
-      - tamanhos diferentes        -> precisa copiar (o Processador re-escreveu)
-      - rede modificada apos cache -> precisa copiar
-      - caso contrario             -> cache em dia, pula a copia."""
+    09/10/2026 ("continua aparecendo ha uma carga mais recente"): antes
+    comparava o tamanho da REDE com o do CACHE LOCAL. So' que o painel escreve
+    no cache logo depois de copiar (monta a bi_divergencias, quarentena,
+    indices) — o cache cresce, os tamanhos nunca mais batem e o aviso de base
+    nova ficava ligado para sempre, mesmo depois de Atualizar.
+    Agora a copia anota a assinatura da rede em <cache>.origem e a comparacao
+    e' rede x anotacao:
+      - sem cache local ou sem anotacao -> precisa copiar
+      - assinatura da rede mudou        -> precisa copiar (Processador rodou)
+      - caso contrario                  -> cache em dia."""
     if not os.path.exists(local_db):
         return True
     try:
-        if os.path.getsize(rede_db) != os.path.getsize(local_db):
-            return True
-        # Em WAL, escritas recentes do Processador podem estar no .db-wal e
-        # ainda nao refletidas no .db (mtime/size do .db nao mudam). Por isso
-        # consideramos tambem o mtime do -wal da rede. (O Processador faz
-        # checkpoint ao fim, mas isto cobre a janela ate o checkpoint.)
-        def _mtime_max(p):
-            m = os.path.getmtime(p)
-            w = p + "-wal"
-            if os.path.exists(w):
-                m = max(m, os.path.getmtime(w))
-            return m
-        return _mtime_max(rede_db) > os.path.getmtime(local_db)
+        with open(_origem_path(local_db), encoding="utf-8") as f:
+            anotada = f.read().strip()
+    except OSError:
+        return True
+    try:
+        return _assinatura_arquivo(rede_db) != anotada
     except OSError:
         return True
 
@@ -900,7 +915,7 @@ def sincronizar_banco():
     # pode ser "em dia": descarta para recopiar.
     if os.path.exists(local_db) and not _banco_integro(local_db):
         print(f"  [banco] cache local corrompido — descartado: {local_db}")
-        for ext in ("", "-wal", "-shm", "-journal"):
+        for ext in ("", "-wal", "-shm", "-journal", ".origem"):
             try:
                 os.remove(local_db + ext)
             except OSError:
@@ -925,6 +940,10 @@ def sincronizar_banco():
         try:
             if os.path.exists(novo):
                 os.remove(novo)
+            try:
+                assinatura = _assinatura_arquivo(rede_db)   # ANTES da copia
+            except OSError:
+                assinatura = ""
             _copiar_banco_da_rede(rede_db, novo)
             if not _banco_integro(novo):
                 _SYNC_MOTIVO = ("A base da rede nao passou na verificacao de "
@@ -938,6 +957,11 @@ def sincronizar_banco():
                 if os.path.exists(local_db + ext):
                     os.remove(local_db + ext)
             os.replace(novo, local_db)        # troca atomica no mesmo volume
+            try:
+                with open(_origem_path(local_db), "w", encoding="utf-8") as f:
+                    f.write(assinatura)
+            except OSError as e:
+                print(f"  [banco] aviso: nao gravei {_origem_path(local_db)} ({e!r})")
             print(f"  [banco] sincronizado da rede: {rede_db}")
             return local_db
         except Exception as e:
@@ -978,13 +1002,7 @@ def _assinatura_base_rede():
     if not REDE_RAIZ:
         return ""
     try:
-        rede = _rede_db_path()
-        st = os.stat(rede)
-        maior = st.st_mtime
-        wal = rede + "-wal"
-        if os.path.exists(wal):
-            maior = max(maior, os.path.getmtime(wal))
-        return f"{int(maior)}.{st.st_size}"
+        return _assinatura_arquivo(_rede_db_path())
     except OSError:
         return ""
 
