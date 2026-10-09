@@ -54,15 +54,67 @@ class ConexaoBancoDados:
                 f"({e!r}). Remova/renomeie o arquivo manualmente e rode de novo.")
             raise
 
+    def _garantir_journal_delete(self):
+        """Banco da REDE sem WAL (09/10/2026, "database disk image is malformed").
+
+        WAL nao funciona em pasta de rede: o -shm nao e' compartilhado entre
+        maquinas. Na rede ficou um iam_analytics.db-wal ORFAO (de uma gravacao
+        das 10:18) ao lado de um .db integro gravado depois (11:00) em modo
+        classico. Quem abrisse o banco aplicava o -wal velho por cima do .db
+        novo — e o painel copiava um banco corrompido.
+
+        - .db em modo classico (cabecalho byte 18 == 1) com -wal ao lado: o
+          -wal e' orfao. Vai para '.orfao_<data>' (nao apaga), com o -shm.
+        - .db em WAL (byte 18 == 2): o -wal e' legitimo. journal_mode=DELETE
+          consolida no .db e remove o -wal.
+        Daqui para frente o banco fica sempre em journal_mode=DELETE."""
+        import sqlite3
+        p = Path(self._caminho)
+        wal = Path(str(p) + "-wal")
+        try:
+            if not p.exists() or p.stat().st_size < 100:
+                return
+            with open(p, "rb") as f:
+                cab = f.read(20)
+        except OSError:
+            return
+        if cab[:16] != _MAGIC_SQLITE:
+            return
+        if cab[18] == 1 and wal.exists():
+            carimbo = f"{datetime.now():%Y%m%d_%H%M%S}"
+            for ext in ("-wal", "-shm"):
+                orf = Path(str(p) + ext)
+                if orf.exists():
+                    try:
+                        shutil.move(str(orf), str(orf) + f".orfao_{carimbo}")
+                    except OSError as e:
+                        logger.error(f"Nao consegui mover o '{orf.name}' orfao "
+                                     f"({e!r}). Feche o painel em todas as "
+                                     f"maquinas e rode de novo.")
+                        raise
+            logger.warning(f"'{wal.name}' orfao ao lado de um banco em modo "
+                           f"classico — movido para '.orfao_{carimbo}' (ele "
+                           f"corromperia o banco ao ser aplicado).")
+        self._engine.dispose()
+        con = sqlite3.connect(str(p), timeout=30)
+        try:
+            modo = con.execute("PRAGMA journal_mode=DELETE").fetchone()[0]
+            if str(modo).lower() != "delete":
+                logger.warning(f"journal_mode ficou '{modo}' (esperado delete)")
+        finally:
+            con.close()
+
     def inicializar(self):
         self._garantir_banco_valido()
+        self._garantir_journal_delete()
         Base.metadata.create_all(self._engine)
         self._migrar()
         logger.info("Banco de dados inicializado.")
 
     def checkpoint(self):
-        """Consolida o WAL no .db (TRUNCATE). O banco fica em journal_mode=WAL
-        (setado por dobrar_interacoes); sem checkpoint, escritas ficam no
+        """Consolida o WAL no .db (TRUNCATE). Desde 09/10/2026 o banco fica em
+        journal_mode=DELETE (ver _garantir_journal_delete) e isto vira no-op;
+        fica por seguranca para bancos antigos. Em WAL, sem checkpoint, escritas ficam no
         .db-wal e o .db nao muda de tamanho/mtime — entao o Visualizador, que
         decide recopiar o cache por tamanho/mtime do .db, nao detecta a
         atualizacao e mostra dado velho. Chamado ao fim do processamento.

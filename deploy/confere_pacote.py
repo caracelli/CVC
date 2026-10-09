@@ -107,6 +107,11 @@ DENTRO_DOS_EXES = [
     ("launcher/launcher_processador.exe", b"_desconsiderados"),
     ("launcher/launcher_processador.exe", b"_tem_cc"),
     ("launcher/launcher_processador.exe", b"sistema_do_texto"),
+    # 09/10: "database disk image is malformed" — banco da rede sem WAL,
+    # painel copia o .db (ignora -wal orfao) e confere a copia
+    ("launcher/launcher_processador.exe", b"_garantir_journal_delete"),
+    ("launcher/launcher_visualizador.exe", b"_copiar_banco_da_rede"),
+    ("launcher/launcher_visualizador.exe", b"_processando_na_rede"),
 ]
 
 

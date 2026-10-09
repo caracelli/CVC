@@ -243,25 +243,23 @@ ATUALIZACAO PRODUCAO - CVC IAM Analytics (v{versao})
 So' a pasta EXECUTAVEIS. Nao traz banco, ENTRADA nem INTERACOES: nada do que
 ja esta na rede e' apagado.
 
+Corrige o "database disk image is malformed" do painel (09/10): o banco da
+rede passa a gravar no modo seguro para pasta de rede (sem WAL); o painel
+confere a copia antes de usar e nao copia durante o processamento.
+
 1. Feche o painel e o Processador em todas as maquinas.
-2. Copie a pasta EXECUTAVEIS do zip POR CIMA de <RAIZ>\\EXECUTAVEIS
+2. Em <RAIZ>\\DADOS\\BANCO: se ainda existirem iam_analytics.db-wal e
+   iam_analytics.db-shm, MOVA os dois para uma pasta _orfao_0910 (nao apague;
+   nao mexa no iam_analytics.db). "Arquivo em uso" = algum painel aberto.
+3. Copie a pasta EXECUTAVEIS do zip POR CIMA de <RAIZ>\\EXECUTAVEIS
    (aceite substituir). O CONFIG\\jira.xml da rede NAO e' tocado.
-3. Devolva para a ENTRADA os arquivos que o processamento de 06/10 mandou
-   para DADOS\\ERROS, com o nome original (sem o carimbo de data/hora):
-     MATRIZ OPERACAO_20261005_114539.xlsx
-        -> ENTRADA\\MATRIZES\\ORGANIZACIONAL\\MATRIZ OPERACAO.xlsx
-     MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS_20261006_133742.xlsx
-        -> ENTRADA\\MATRIZES\\PERFIS_SISTEMAS\\MATRIZ DE PERFIL DE ACESSO SYSTUR - LOJAS.xlsx
-     view_systur_06_10_2026_07-00_20261006_133814.csv
-        -> ENTRADA\\SISTEMAS\\SYSTUR\\10-2026\\view_systur_06_10_2026_07-00.csv
-   (Os view_systur de 05 a 14/09 que estao em ERROS sao antigos: deixe la'.)
-4. Rode <RAIZ>\\EXECUTAVEIS\\Processador.exe UMA vez, de UMA maquina so'.
-5. As maquinas-usuario se atualizam sozinhas porque a <versao> mudou
-   ({versao}). Para usar outra versao, troque em CONFIG\\config.xml antes do
-   passo 4.
+4. Rode <RAIZ>\\EXECUTAVEIS\\Processador.exe UMA vez, de UMA maquina so',
+   com TODOS os paineis fechados, e espere "Processamento finalizado".
+5. Abra o painel. As maquinas-usuario se atualizam sozinhas porque a
+   <versao> mudou ({versao}) e descartam a copia local corrompida. Para usar
+   outra versao, troque em CONFIG\\config.xml antes do passo 4.
 
 IMPORTANTE: apague instalacoes ANTIGAS do programa que apontem para a rede.
-Em 06/10 uma versao de junho rodou e mandou arquivos para ERROS.
 """
 
 

@@ -770,6 +770,60 @@ def _precisa_sincronizar(rede_db: str, local_db: str) -> bool:
         return True
 
 
+# Motivo da ultima copia recusada (lido por atualizar_base para a tela).
+_SYNC_MOTIVO = ""
+_LOCK_STALE_S = 30 * 60      # trava do Processador mais velha que isso = morta
+
+
+def _processando_na_rede(rede_db: str) -> bool:
+    """True se o Processador esta' gravando o banco da rede agora
+    (_processando.lock recente ao lado do .db). Copiar no meio da escrita
+    pega um banco pela metade."""
+    lock = os.path.join(os.path.dirname(rede_db), "_processando.lock")
+    try:
+        return (time.time() - os.path.getmtime(lock)) < _LOCK_STALE_S
+    except OSError:
+        return False
+
+
+def _banco_integro(caminho: str) -> bool:
+    """quick_check do SQLite (1-2 s num banco de ~60 MB)."""
+    try:
+        c = sqlite3.connect(f"file:{caminho}?mode=ro", uri=True, timeout=15)
+        try:
+            r = c.execute("PRAGMA quick_check").fetchone()
+        finally:
+            c.close()
+        return bool(r) and str(r[0]).lower() == "ok"
+    except Exception:
+        return False
+
+
+def _copiar_banco_da_rede(rede_db: str, novo: str):
+    """Copia o banco da rede para `novo`.
+
+    09/10/2026 ("database disk image is malformed"): na rede ficou um
+    iam_analytics.db-wal ORFAO ao lado de um .db integro em modo classico. O
+    backup do SQLite aplicava o -wal velho e a copia saia corrompida. Agora:
+      - .db em modo classico (cabecalho byte 18 == 1): copia o ARQUIVO .db,
+        sem passar pelo SQLite — um -wal ao lado e' ignorado;
+      - .db em WAL (byte 18 == 2, bancos antigos): backup SQLite, como antes."""
+    with open(rede_db, "rb") as f:
+        cab = f.read(20)
+    if len(cab) == 20 and cab[18] == 1:
+        import shutil
+        shutil.copyfile(rede_db, novo)
+        return
+    src = sqlite3.connect(f"file:{rede_db}?mode=ro", uri=True, timeout=15)
+    dst = sqlite3.connect(novo, timeout=15)
+    try:
+        with dst:
+            src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
+
+
 def sincronizar_banco():
     """Modo rede: copia o iam_analytics.db da rede para um cache local
     (backup SQLite consistente) so se houver diferenca de tamanho/mtime — caso
@@ -781,8 +835,23 @@ def sincronizar_banco():
     rede_db = os.path.abspath(rede_db)
     if not REDE_RAIZ:
         return rede_db                        # modo local: le direto
+    global _SYNC_MOTIVO
+    _SYNC_MOTIVO = ""
     local_db = BANCO_LOCAL                    # BASE\DADOS\BANCO\iam_analytics.db
-    if os.path.exists(rede_db):
+    # Cache local corrompido (ex.: copiado de um banco com -wal orfao) nao
+    # pode ser "em dia": descarta para recopiar.
+    if os.path.exists(local_db) and not _banco_integro(local_db):
+        print(f"  [banco] cache local corrompido — descartado: {local_db}")
+        for ext in ("", "-wal", "-shm", "-journal"):
+            try:
+                os.remove(local_db + ext)
+            except OSError:
+                pass
+    if os.path.exists(rede_db) and _processando_na_rede(rede_db):
+        _SYNC_MOTIVO = ("Processamento em andamento na rede. Aguarde terminar "
+                        "e clique em Atualizar de novo.")
+        print("  [banco] processamento em andamento na rede — nao copia agora")
+    elif os.path.exists(rede_db):
         if not _precisa_sincronizar(rede_db, local_db):
             print(f"  [banco] cache local em dia (rede inalterada): {local_db}")
             return local_db
@@ -798,14 +867,18 @@ def sincronizar_banco():
         try:
             if os.path.exists(novo):
                 os.remove(novo)
-            src = sqlite3.connect(f"file:{rede_db}?mode=ro", uri=True, timeout=15)
-            dst = sqlite3.connect(novo, timeout=15)
-            try:
-                with dst:
-                    src.backup(dst)
-            finally:
-                dst.close()
-                src.close()
+            _copiar_banco_da_rede(rede_db, novo)
+            if not _banco_integro(novo):
+                _SYNC_MOTIVO = ("A base da rede nao passou na verificacao de "
+                                "integridade. Os dados continuam os da ultima "
+                                "carga; avise o responsavel pelo Processador.")
+                raise sqlite3.DatabaseError("copia da rede nao passou no quick_check")
+            # -wal/-shm do cache ANTERIOR seriam aplicados no banco novo (o
+            # mesmo defeito da rede em 09/10). Saem antes da troca; se algum
+            # estiver preso, nao troca (o cache anterior continua valendo).
+            for ext in ("-wal", "-shm"):
+                if os.path.exists(local_db + ext):
+                    os.remove(local_db + ext)
             os.replace(novo, local_db)        # troca atomica no mesmo volume
             print(f"  [banco] sincronizado da rede: {rede_db}")
             return local_db
@@ -863,6 +936,8 @@ def base_da_rede_mudou() -> bool:
     if not REDE_RAIZ:
         return False
     try:
+        if _processando_na_rede(_rede_db_path()):
+            return False      # so' avisa quando o Processador terminar
         return _precisa_sincronizar(_rede_db_path(), BANCO_LOCAL)
     except Exception:
         return False
@@ -883,6 +958,8 @@ def atualizar_base():
             sincronizar_banco()
         except Exception as e:
             return False, f"Falha ao copiar da rede: {e}"
+        if _SYNC_MOTIVO:
+            return False, _SYNC_MOTIVO
         if base_da_rede_mudou():
             # a copia nao pegou (rede caiu no meio): nao mente para a tela
             return False, ("Nao foi possivel atualizar agora — a rede nao "

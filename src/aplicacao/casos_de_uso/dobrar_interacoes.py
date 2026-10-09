@@ -281,7 +281,9 @@ class DobrarInteracoes:
 
         c = sqlite3.connect(self._banco, timeout=15)
         try:
-            c.execute("PRAGMA journal_mode=WAL")
+            # Banco da REDE: nunca WAL (o -shm nao e' compartilhado em SMB;
+            # um -wal orfao corrompeu o banco em 09/10/2026).
+            c.execute("PRAGMA journal_mode=DELETE")
             c.execute("PRAGMA busy_timeout=8000")
             c.executescript(_SQL_QUAR)
             c.executescript(_SQL_HIST)
