@@ -9,7 +9,7 @@
          <raiz> vazio = modo local (dev / maquina unica).
          A <versao> acima governa o auto-update local x rede dos executaveis. -->
     <rede>
-        <raiz>\\intra.cvc\fscvc\Processos_Antlia\CVC\CVC_IAM\ANALYTICS</raiz>
+        <raiz>\\intra.cvc\fscvc\Processos_Antlia\CVC\CVC_IAM_ANALYTICS</raiz>
         <entrada>ENTRADA</entrada>
         <banco_dados>DADOS/BANCO/iam_analytics.db</banco_dados>
         <saidas>DADOS/SAIDAS</saidas>

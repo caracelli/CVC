@@ -43,7 +43,7 @@ STAGING = RAIZ / "_entrega_prd_staging"
 
 VERSAO = "1.3.1"   # padrao; --versao sobrescreve
 # Producao usa o UNC real do cliente (o Z: era convencao de teste com subst).
-RAIZ_REDE = r"\\intra.cvc\fscvc\Processos_Antlia\CVC\CVC_IAM\ANALYTICS"
+RAIZ_REDE = r"\\intra.cvc\fscvc\Processos_Antlia\CVC\CVC_IAM_ANALYTICS"
 
 LAUNCHER_DIR = EXECS / "launcher"
 PRINCIPAL_VISUALIZADOR = EXECS / "visualizador.exe"
@@ -184,7 +184,7 @@ processamento. A ENTRADA ja traz as duas matrizes de referencia (de-para do
 SIG e matriz de lojas/franqueado).
 
 Caminho de rede (config.xml <raiz>):
-  \\\\intra.cvc\\fscvc\\Processos_Antlia\\CVC\\CVC_IAM\\ANALYTICS
+  \\\\intra.cvc\\fscvc\\Processos_Antlia\\CVC\\CVC_IAM_ANALYTICS
 (Nos passos abaixo, "a RAIZ de rede" = esse caminho.)
 
 ------------------------------------------------------------
