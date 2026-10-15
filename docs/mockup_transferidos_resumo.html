@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transferidos — mockup</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--navy:#1F2D5C;--navy-l:#2C3D72;--navy-d:#172143;--gold:#F5B800;--gold-l:#FFCE3A;
+  --ok:#1E7B43;--inc:#2980B9;--exc:#B33A3A;--troca:#B9770E;--cinza:#8A9099;}
+body{font-family:'Segoe UI',Tahoma,sans-serif;color:#252423;min-height:100vh;
+  background:radial-gradient(1100px 520px at 88% -10%,rgba(245,184,0,.13),transparent 62%),
+             linear-gradient(158deg,#EEF1F7 0%,#E3E8F1 55%,#DAE0EC 100%);}
+.header{height:62px;background:linear-gradient(125deg,#2C3D72 0%,#1F2D5C 52%,#172143 100%);
+  border-bottom:2px solid var(--gold);display:flex;align-items:center;padding:0 32px;color:#fff;
+  font:700 17px 'Segoe UI';gap:14px;}
+.header small{font:600 12px Arial;color:#FFCE3A;letter-spacing:.04em;}
+.tabs{display:flex;gap:2px;padding:0 32px;background:#fff;border-bottom:1px solid #DDE3EE;}
+.tab{padding:11px 16px;font:600 13px 'Segoe UI';color:#5A6376;}
+.tab.active{color:var(--navy);border-bottom:3px solid var(--gold);}
+.wrap{padding:16px 32px 40px;}
+.aviso{background:#FFF8E1;border:1px solid #E8D28A;color:#6B5200;border-radius:8px;
+  padding:10px 14px;font:600 12.5px Arial;margin-bottom:12px;line-height:1.5;}
+.card{background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(20,28,55,.07),0 5px 14px rgba(20,28,55,.10);overflow:hidden;}
+.kpis{padding:10px 14px;font:600 12.5px Arial;color:#3A4156;border-bottom:1px solid #EEF1F7;}
+table.lst{border-collapse:collapse;width:100%;font-size:12px;}
+.lst thead th{background:var(--navy);color:#fff;font:700 11px Arial;text-align:left;padding:8px 9px;
+  border-right:1px solid #2C3D72;}
+.lst td{padding:7px 9px;border-bottom:1px solid #EEF1F7;vertical-align:top;}
+.lst tr.pessoa:hover td{background:#FAFBFE;}
+.tg{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;cursor:pointer;
+  border:1px solid #D7DCE5;border-radius:5px;font:700 13px Arial;color:var(--navy);background:#EEF2F9;user-select:none;}
+.h-sis{display:inline-block;font:700 10px Arial;color:var(--navy);background:#EEF2F9;border:1px solid #DCE3EF;
+  border-radius:4px;padding:2px 6px;white-space:nowrap;}
+.h-reab{display:inline-block;font:800 9px Arial;letter-spacing:.03em;color:#fff;background:#5C2D91;
+  border-radius:4px;padding:2px 6px;}
+.badge{display:inline-block;padding:2px 8px;border-radius:5px;font:600 11px Arial;}
+.b-rev{background:#FFF3CD;color:#856404;} .b-ok{background:#DFF6DD;color:#107C10;}
+.b-sem{background:#EEF0F4;color:#5B6472;}
+tr.sub>td{background:#FBFCFE;border-bottom:1px solid #E3E8F2;padding:10px 14px 14px 46px;}
+.mov-tit{display:inline-block;font:700 9.5px Arial;letter-spacing:.4px;text-transform:uppercase;
+  color:#5C2D91;margin-right:10px;}
+.mov-par{display:inline-flex;align-items:center;gap:6px;margin:0 14px 3px 0;font-size:12px;}
+.mov-par b{color:#5C2D91;}
+.mov-de{color:#8A94A6;text-decoration:line-through;} .mov-para{color:var(--navy);font-weight:600;}
+
+/* ── o RESUMO (padrão da Consulta) ── */
+.res{margin-top:10px;background:#fff;border:1px solid #E7EBF2;border-radius:8px;}
+.res-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid #EEF1F7;}
+.res-tit{font:700 12.5px 'Segoe UI';color:var(--navy);}
+.res-cont{font:500 12px 'Segoe UI';color:#3A3F4C;}
+.res-cont b{font-weight:700;}
+.veredito{margin-left:auto;font:700 11.5px Arial;padding:3px 10px;border-radius:12px;}
+.v-ok{background:#DFF6DD;color:#107C10;} .v-acao{background:#FDECEC;color:var(--exc);}
+.lin{display:grid;grid-template-columns:110px 118px 1fr;gap:10px;align-items:start;
+  padding:7px 12px;border-top:1px solid #F4F6FA;font-size:12.5px;}
+.lin:first-of-type{border-top:none;}
+.st{font:700 11.5px Arial;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.st::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor;}
+.st.ok{color:var(--ok);} .st.troca{color:var(--troca);} .st.inc{color:var(--inc);}
+.st.exc{color:var(--exc);} .st.nada{color:var(--cinza);} .st.nada::before{background:none;border:1.5px solid currentColor;}
+.txt{color:#3A4156;line-height:1.55;}
+.txt .p{font-weight:700;color:#1F2D5C;}
+.txt small{color:#6B7280;}
+.acao{display:block;}
+.acao .e{color:var(--exc);font-weight:700;} .acao .i{color:var(--inc);font-weight:700;}
+.tambem{display:block;margin-top:3px;padding:3px 8px;border-left:3px solid #CFE6D8;background:#F6FBF8;
+  color:#5A616E;font-size:12px;}
+.tambem b{color:#3A4156;}
+.nada-txt{color:var(--cinza);}
+.ver{margin:8px 12px 10px;font:600 12px Arial;color:var(--navy);cursor:pointer;background:none;border:none;}
+.ver:hover{text-decoration:underline;}
+
+/* ── detalhe em abas ── */
+.det{display:none;border-top:1px solid #EEF1F7;padding:0 12px 12px;}
+.det.on{display:block;}
+.dtabs{display:flex;gap:2px;border-bottom:1px solid #E3E8F2;margin:8px 0 8px;}
+.dtab{padding:6px 12px;font:600 12px 'Segoe UI';color:#5A6376;cursor:pointer;border-bottom:2px solid transparent;}
+.dtab.active{color:var(--navy);border-bottom-color:var(--gold);}
+.dpane{display:none;} .dpane.on{display:block;}
+table.dt{border-collapse:collapse;width:100%;font:12px Arial;}
+.dt th{background:#F1F4FA;color:var(--navy);font:700 11px Arial;text-align:left;padding:6px 9px;border:1px solid #E3E8F2;}
+.dt td{padding:6px 9px;border:1px solid #E3E8F2;vertical-align:top;}
+.cap{color:#7B8294;font-size:11.5px;margin:0 0 6px;}
+
+.legenda{display:flex;gap:6px 22px;flex-wrap:wrap;margin:0 0 12px;font-size:12px;color:#3A4156;}
+.legenda>span{white-space:nowrap;}
+.legenda .st{margin-right:6px;}
+</style>
+</head>
+<body>
+<div class="header">CVC IAM Analytics <small>MOCKUP · aba Transferidos · dados fictícios</small></div>
+<div class="tabs"><div class="tab">Visão Geral</div><div class="tab">Pendências</div><div class="tab">Consulta</div>
+  <div class="tab">Aderentes</div><div class="tab">Desligados</div><div class="tab active">Transferidos</div></div>
+
+<div class="wrap">
+  <div class="aviso">Proposta da chamada de 15/10. Hoje, ao abrir a pessoa, aparece a tabela de 4 colunas
+    (Sistema | Tem atualmente | Mapeando nova área | Incluir/excluir/alterar). Nesta proposta, ela dá lugar a um
+    <b>resumo por sistema no padrão da Consulta</b>, com uma situação por sistema, e o detalhe fica em abas.
+    Clique no <b>+</b> de cada pessoa.</div>
+
+  <div class="legenda">
+    <span><span class="st ok">Aderente</span>já tem um perfil permitido na nova área, nada a fazer</span>
+    <span><span class="st troca">Trocar</span>excluir o perfil atual e incluir o da nova área</span>
+    <span><span class="st inc">Incluir</span>não tem e a nova área prevê</span>
+    <span><span class="st exc">Excluir</span>tem, mas a nova área não prevê</span>
+    <span><span class="st nada">Sem mapeamento</span>a matriz não prevê nada, nada a fazer</span>
+  </div>
+
+  <div class="card">
+    <div class="kpis">1 a revisar · 2 aderentes · 1 sem acesso · 4 transferidos</div>
+    <table class="lst">
+      <thead><tr><th style="width:34px"></th><th>Matrícula</th><th>Nome</th><th>Cargo</th><th>Centro de custo</th>
+        <th>Gestor</th><th>Mudou</th><th>Situação</th></tr></thead>
+      <tbody id="corpo"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+/* Dados fictícios. Cada sistema tem: st (ok|troca|inc|exc|nada), tem, prev (opções da nova área),
+   tambem (outras opções que pode ter), fun (função CCO). */
+const P = [
+ {m:'30123', n:'MARIANA SOUZA LIMA', cargo:'ANALISTA CONTABIL PL', cc:'CONTABILIDADE', g:'PATRICIA ALVES',
+  mudou:'Cargo + CC', de_para:[['Cargo','ASSISTENTE FISCAL','ANALISTA CONTABIL PL'],['Centro de custo','FISCAL','CONTABILIDADE']],
+  sis:[
+   {s:'IC', st:'ok', tem:['CADASTRO'], prev:['CADASTRO','CONSULTA'], tambem:['CONSULTA'], fun:'Contabilidade'},
+   {s:'SYSTUR', st:'ok', tem:['CUSTOS'], prev:['CUSTOS','INTERCOMPANY','A_RECEBER_1'], tambem:['INTERCOMPANY','A_RECEBER_1'], fun:'Contabilidade'},
+   {s:'ORACLE_EBS', st:'ok', tem:['CVC GL ANALISTA'], prev:['CVC GL ANALISTA'], tambem:[], fun:'Contabilidade'},
+   {s:'SIG', st:'nada'},{s:'SIGOT', st:'nada'},{s:'SICA_RA', st:'nada'},{s:'SICA_ESFERA', st:'nada'}]},
+ {m:'41877', n:'RAFAEL OLIVEIRA SANTOS', cargo:'ANALISTA FINANCEIRO JR', cc:'CONTAS A RECEBER', g:'MARCOS PEREIRA',
+  mudou:'Cargo + Gestor + CC', de_para:[['Cargo','CONSULTOR DE VENDAS','ANALISTA FINANCEIRO JR'],['Gestor','JULIANA ROCHA','MARCOS PEREIRA'],['Centro de custo','LOJA SHOPPING ABC','CONTAS A RECEBER']],
+  sis:[
+   {s:'SYSTUR', st:'troca', tem:['VENDAS_LOJA'], prev:['A_RECEBER_1','A_RECEBER_2'], tambem:[], fun:'A Receber 1'},
+   {s:'SICA_RA', st:'exc', tem:['AGENTE'], prev:[], tambem:[]},
+   {s:'IC', st:'inc', tem:[], prev:['CONSULTA'], tambem:[], fun:'A Receber 1'},
+   {s:'ORACLE_EBS', st:'ok', tem:['CVC AR CONSULTA'], prev:['CVC AR CONSULTA','CVC AR ANALISTA'], tambem:['CVC AR ANALISTA'], fun:'A Receber 1'},
+   {s:'SIG', st:'nada'},{s:'SIGOT', st:'nada'},{s:'SICA_ESFERA', st:'nada'}]},
+ {m:'25510', n:'CAMILA FERREIRA COSTA', cargo:'SUPERVISOR DE OPERACOES', cc:'OPERACOES NACIONAL', g:'RENATO DIAS',
+  mudou:'Gestor', de_para:[['Gestor','FABIO MENDES','RENATO DIAS']],
+  sis:[
+   {s:'SIGOT', st:'ok', tem:['SUPERVISOR'], prev:['SUPERVISOR'], tambem:[]},
+   {s:'SYSTUR', st:'ok', tem:['OPERACOES'], prev:['OPERACOES'], tambem:[]},
+   {s:'IC', st:'nada'},{s:'ORACLE_EBS', st:'nada'},{s:'SIG', st:'nada'},{s:'SICA_RA', st:'nada'},{s:'SICA_ESFERA', st:'nada'}]},
+ {m:'52004', n:'BRUNO ALMEIDA RIBEIRO', cargo:'AUXILIAR ADMINISTRATIVO', cc:'FACILITIES', g:'SANDRA LOPES',
+  mudou:'CC', de_para:[['Centro de custo','RECEPCAO','FACILITIES']], semAcesso:true, sis:[]},
+];
+const ORD = {troca:0, exc:1, inc:2, ok:3, nada:4};
+const ROT = {ok:'Aderente', troca:'Trocar', inc:'Incluir', exc:'Excluir', nada:'Sem mapeamento'};
+const abertos = new Set(['30123','41877']);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lista = a => a.map(x => `<span class="p">${esc(x)}</span>`).join(' ou ');
+
+function linhaSis(x){
+  let t = '';
+  if (x.st === 'ok'){
+    t = `tem <span class="p">${esc(x.tem.join(', '))}</span> <small>· permitido na nova área${x.fun?' (função '+esc(x.fun)+')':''}</small>`;
+    if (x.tambem.length) t += `<span class="tambem">pode ter também: <b>${esc(x.tambem.join(', '))}</b>`
+      + ` <small>· não precisa incluir, o que ela tem já atende</small></span>`;
+  } else if (x.st === 'troca'){
+    t = `<span class="acao"><span class="e">Excluir</span> <span class="p">${esc(x.tem.join(', '))}</span> <small>· era da área anterior</small></span>`
+      + `<span class="acao"><span class="i">Incluir</span> ${x.prev.length>1?'um de: ':''}${lista(x.prev)}`
+      + ` <small>· previsto na nova área${x.fun?' (função '+esc(x.fun)+')':''}</small></span>`;
+  } else if (x.st === 'inc'){
+    t = `<span class="acao"><span class="i">Incluir</span> ${x.prev.length>1?'um de: ':''}${lista(x.prev)}`
+      + ` <small>· não tem, e a nova área prevê${x.fun?' (função '+esc(x.fun)+')':''}</small></span>`;
+  } else if (x.st === 'exc'){
+    t = `<span class="acao"><span class="e">Excluir</span> <span class="p">${esc(x.tem.join(', '))}</span>`
+      + ` <small>· a nova área não prevê acesso a este sistema</small></span>`;
+  }
+  return `<div class="lin"><span><span class="h-sis">${esc(x.s)}</span></span>`
+       + `<span class="st ${x.st}">${ROT[x.st]}</span><span class="txt">${t}</span></div>`;
+}
+
+function detalhe(p){
+  const id = 'd'+p.m;
+  const comTem = p.sis.filter(x => x.tem && x.tem.length);
+  const comPrev = p.sis.filter(x => x.prev && x.prev.length);
+  const semMap = p.sis.filter(x => x.st === 'nada' || x.st === 'exc');
+  const funs = {};
+  p.sis.forEach(x => { if (x.fun) (funs[x.fun] = funs[x.fun] || []).push(x); });
+  const tab = (rows, cols) => rows.length
+    ? `<table class="dt"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`
+    : '<div class="cap">Nada aqui.</div>';
+  const panes = [
+    ['Tem hoje', '<div class="cap">Acessos encontrados nos extratos, com o login de cada sistema.</div>'
+      + tab(comTem.map(x => `<tr><td><span class="h-sis">${x.s}</span></td><td>${esc(x.tem.join(', '))}</td><td>${p.m}.${x.s.toLowerCase()}</td></tr>`), ['Sistema','Perfil','Login'])],
+    ['Previsto na nova área', '<div class="cap">Matriz de perfis e Mapeamento CCO para o novo cargo, centro de custo e gestor.</div>'
+      + tab(comPrev.map(x => `<tr><td><span class="h-sis">${x.s}</span></td><td>${esc(x.prev.join(' · '))}</td><td>${esc(x.fun||'—')}</td><td>${x.fun?'CCO':'Cargo'}</td></tr>`), ['Sistema','Perfis previstos','Função','Matriz'])],
+    ['Sem mapeamento', '<div class="cap">Sistemas em que a matriz não prevê nada para a nova área.</div>'
+      + tab(semMap.map(x => `<tr><td><span class="h-sis">${x.s}</span></td><td>${x.tem&&x.tem.length?'tem hoje: <b>'+esc(x.tem.join(', '))+'</b>':'<span class="nada-txt">não tem, nada a fazer</span>'}</td></tr>`), ['Sistema','Situação'])],
+    ['Funções previstas', '<div class="cap">Funções do Mapeamento CCO da nova equipe, com os acessos que formam cada uma.</div>'
+      + tab(Object.keys(funs).map(f => `<tr><td><b>${esc(f)}</b></td><td>${funs[f].map(x => `<span class="h-sis">${x.s}</span> ${esc(x.prev.join(' / '))} <b style="color:${x.st==='ok'?'var(--ok)':'var(--inc)'}">${x.st==='ok'?'tem':'falta'}</b>`).join('<br>')}</td></tr>`), ['Função','Acessos'])],
+  ];
+  return `<button class="ver" onclick="tgDet('${id}',this)">ver detalhe ▸</button>`
+    + `<div class="det" id="${id}"><div class="dtabs">`
+    + panes.map((x,i) => `<div class="dtab${i?'':' active'}" onclick="aba('${id}',${i})">${x[0]}</div>`).join('')
+    + `</div>` + panes.map((x,i) => `<div class="dpane${i?'':' on'}">${x[1]}</div>`).join('') + `</div>`;
+}
+
+function resumo(p){
+  const sis = p.sis.slice().sort((a,b) => (ORD[a.st]-ORD[b.st]) || a.s.localeCompare(b.s));
+  const n = k => sis.filter(x => x.st === k).length;
+  const cores = {ok:'var(--ok)', troca:'var(--troca)', inc:'var(--inc)', exc:'var(--exc)', nada:'var(--cinza)'};
+  const cont = ['troca','exc','inc','ok','nada'].filter(k => n(k))
+    .map(k => `<b style="color:${cores[k]}">${n(k)}</b> ${ROT[k].toLowerCase()}${k==='ok'&&n(k)>1?'s':''}`).join(' · ');
+  const acoes = n('troca') + n('inc') + n('exc');
+  const ver = acoes
+    ? `<span class="veredito v-acao">${acoes} ${acoes>1?'ações':'ação'} a fazer</span>`
+    : `<span class="veredito v-ok">✓ Aderente na nova área, nada a alterar</span>`;
+  const ativos = sis.filter(x => x.st !== 'nada');
+  const nada = sis.filter(x => x.st === 'nada');
+  return `<div class="res"><div class="res-hd"><span class="res-tit">Resumo por sistema</span>`
+    + `<span class="res-cont">${cont}</span>${ver}</div>`
+    + ativos.map(linhaSis).join('')
+    + (nada.length ? `<div class="lin"><span></span><span class="st nada">Sem mapeamento</span>`
+        + `<span class="txt nada-txt">${nada.map(x=>`<span class="h-sis" style="color:#7B8294">${x.s}</span>`).join(' ')}`
+        + ` <small>· a matriz não prevê nada para a nova área, nada a fazer</small></span></div>` : '')
+    + detalhe(p) + `</div>`;
+}
+
+function pinta(){
+  let h = '';
+  P.forEach(p => {
+    const ab = abertos.has(p.m);
+    const sit = p.semAcesso ? '<span class="badge b-sem">Sem acesso</span>'
+      : p.sis.some(x => ['troca','inc','exc'].includes(x.st)) ? '<span class="badge b-rev">Revisar</span>'
+      : '<span class="badge b-ok">Aderente</span>';
+    h += `<tr class="pessoa"><td><span class="tg" onclick="tg('${p.m}')">${ab?'−':'+'}</span></td>`
+      + `<td>${p.m}</td><td>${esc(p.n)}</td><td>${esc(p.cargo)}</td><td>${esc(p.cc)}</td><td>${esc(p.g)}</td>`
+      + `<td><span class="h-reab">${esc(p.mudou)}</span></td><td>${sit}</td></tr>`;
+    if (ab){
+      h += `<tr class="sub"><td colspan="8"><span class="mov-tit">movimentação em 01/10/2026</span>`
+        + p.de_para.map(d => `<span class="mov-par"><b>${d[0]}</b><span class="mov-de">${esc(d[1])}</span>`
+            + `<span style="color:#5C2D91;font-weight:700">→</span><span class="mov-para">${esc(d[2])}</span></span>`).join('')
+        + (p.semAcesso ? `<div class="res"><div class="res-hd"><span class="res-tit">Resumo por sistema</span>`
+            + `<span class="veredito v-ok" style="background:#EEF0F4;color:#5B6472">Sem acesso em nenhum sistema, nada a revisar</span></div></div>`
+            : resumo(p))
+        + `</td></tr>`;
+    }
+  });
+  document.getElementById('corpo').innerHTML = h;
+}
+function tg(m){ abertos.has(m) ? abertos.delete(m) : abertos.add(m); pinta(); }
+function tgDet(id, b){ const d = document.getElementById(id); d.classList.toggle('on');
+  b.textContent = d.classList.contains('on') ? 'ocultar detalhe ▾' : 'ver detalhe ▸'; }
+function aba(id, i){ const d = document.getElementById(id);
+  d.querySelectorAll('.dtab').forEach((t,k) => t.classList.toggle('active', k===i));
+  d.querySelectorAll('.dpane').forEach((t,k) => t.classList.toggle('on', k===i)); }
+pinta();
+</script>
+</body>
+</html>

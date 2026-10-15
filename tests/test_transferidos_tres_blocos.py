@@ -108,121 +108,175 @@ REG = {
 
 
 @unittest.skipUnless(NODE, "Node não disponível nesta máquina")
-class TresBlocosNaTela(unittest.TestCase):
+class ResumoPorSistema(unittest.TestCase):
+    """15/10/2026 — RESUMO POR SISTEMA (chamada com a Bruna; mockup aprovado).
+
+    MUDOU DE PROPÓSITO: a tabela de 4 colunas de 23/09 (Sistema | Tem
+    atualmente | Mapeando nova área | Incluir/excluir/alterar) deu lugar a um
+    resumo no padrão da Consulta. "A visualização ficou boa, mas não está
+    atendendo 100% ao processo": a pessoa com IC CADASTRO, que a nova área
+    permite, aparecia com CONSULTA em "falta" e "Incluir". Agora cada sistema
+    tem UMA situação — Aderente (+ "pode ter também"), Trocar, Incluir,
+    Excluir, Sem mapeamento — e o detalhe vai para abas. O que os testes de
+    23/09 garantiam e continua valendo (login por sistema, todos os sistemas
+    na foto, a ação no sistema certo, "validado" sem diferença, contadores da
+    revalidação) foi reescrito aqui sobre o formato novo."""
+
+    def _js(self, corpo, multi_fora=("ORACLE_EBS",)):
+        return (_BASE_JS
+                + f"const DB = {{meta: {{multi_perfil_fora: {json.dumps(list(multi_fora))}}}}};\n"
+                + f"{_funcao('_acessosPorSistema')}\n{_funcao('_transfResumoSis')}\n"
+                + f"{_funcao('_transfMultiFora')}\n{_funcao('_transfAcoes')}\n"
+                + f"{_funcao('_transfDetalhe')}\n" + corpo)
 
     def _detalhe(self, reg):
-        js = (_BASE_JS
-              + f"{_funcao('_acessosPorSistema')}\n{_funcao('_perfisCel')}\n"
-              + f"{_funcao('_transfChave')}\n{_funcao('_transfTit')}\n"
-              + f"{_funcao('_transfItem')}\n{_funcao('_transfDetalhe')}\n"
-              + f"const d = {json.dumps(reg)};\n"
-              + "console.log(_transfDetalhe(d, d.acessos, d.sobrou||[]));")
-        return _node(js)
+        return _node(self._js(f"const d = {json.dumps(reg)};\n"
+                              "console.log(_transfDetalhe(d, d.acessos, d.sobrou||[]));"))
 
-    # ── formato de 23/09/2026 ────────────────────────────────────────────
-    # A area voltou ao tema: "Transferidos: Trazer em linhas ao inves de em uma
-    # unica linha / Se der pra trazer em colunas pode ser tbm", com o desenho
-    # Sistema | Tem atualmente | mapeando nova area | Incluir/excluir/alterar
-    # acesso.
-    #
-    # As TRES PERGUNTAS de 17/09 continuam as mesmas — o que ele tem, o que a
-    # nova area preve, o que mudar. O que mudou foi a LEITURA: eram tres blocos
-    # de texto corrido dentro de uma celula (o "uma unica linha" que ela
-    # reclamou) e viraram uma linha por sistema, uma coluna por pergunta.
-    # Os testes abaixo trocaram de forma pelo mesmo motivo; o CONTEUDO que eles
-    # garantem e' o mesmo.
+    def _resumo(self, reg):
+        out = _node(self._js(f"const d = {json.dumps(reg)};\n"
+                             "console.log(JSON.stringify(_transfResumoSis(d, _sisTodos(), _transfMultiFora())));"))
+        return {x["s"]: x for x in json.loads(out)}
 
-    def test_as_tres_perguntas_viraram_as_colunas_que_ela_desenhou(self):
+    def _linha(self, html, sis):
+        m = re.search(r'<div class="tr-lin"><span><span class="h-sis">' + sis
+                      + r'</span>.*?(?=<div class="tr-lin">|<div class="tr-nota">|<button)', html, re.S)
+        self.assertTrue(m, f"linha do {sis} não encontrada")
+        return m.group(0)
+
+    # ── o caso da chamada ──────────────────────────────────────────────
+    def test_tem_o_permitido_e_aderente_e_o_resto_e_pode_ter_tambem(self):
+        """⭐ O caso da Bruna: tem IC CADASTRO, a nova área prevê CADASTRO ou
+        CONSULTA. Não falta nada — CONSULTA é "pode ter também"."""
+        reg = dict(REG, acessos=[{"sis": "IC_INTEGRADOR_CONTABIL", "login": "u1",
+                                  "perfil": "IC_CADASTRO", "dt": ""}],
+                   reval={"MANTEM": 1, "SOBROU": 0, "EXCESSO": 0, "FALTA": 1},
+                   mantem=[{"sis": "IC_INTEGRADOR_CONTABIL", "perfil": "IC_CADASTRO", "fun": ""}],
+                   sobrou=[], excesso=[],
+                   falta=[{"sis": "IC_INTEGRADOR_CONTABIL", "perfil": "IC CONSULTA", "fun": ""}])
+        r = self._resumo(reg)["IC_INTEGRADOR_CONTABIL"]
+        self.assertEqual(r["st"], "ok")
+        self.assertEqual([x["perfil"] for x in r["tambem"]], ["IC CONSULTA"])
+        self.assertEqual(r["incluir"], [])
+        html = self._detalhe(reg)
+        linha = self._linha(html, "IC_INTEGRADOR_CONTABIL")
+        self.assertIn("Aderente", linha)
+        self.assertIn("pode ter também", linha)
+        self.assertNotIn("Incluir", linha)
+        self.assertIn("Aderente na nova área, nada a alterar", html)
+
+    def test_sem_o_permitido_a_regra_e_trocar(self):
+        """"Se ele não tiver o acesso, tem que excluir o que ele tem e colocar o
+        novo": SOBROU + FALTA no mesmo sistema = Trocar."""
+        reg = dict(REG, acessos=[{"sis": "SYSTUR", "login": "u1", "perfil": "VENDAS", "dt": ""}],
+                   mantem=[], excesso=[],
+                   sobrou=[{"sis": "SYSTUR", "perfil": "VENDAS", "fun": ""}],
+                   falta=[{"sis": "SYSTUR", "perfil": "A_RECEBER_1", "fun": "A Receber 1"},
+                          {"sis": "SYSTUR", "perfil": "A_RECEBER_2", "fun": "A Receber 1"}])
+        r = self._resumo(reg)["SYSTUR"]
+        self.assertEqual(r["st"], "troca")
+        self.assertTrue(r["umDe"], "só um perfil por sistema: incluir UM das opções")
+        linha = self._linha(self._detalhe(reg), "SYSTUR")
+        self.assertIn("Trocar", linha)
+        self.assertIn("Excluir", linha)
+        self.assertIn("Incluir</span> um de:", linha)
+        self.assertIn("A Receber 1", linha, "a função da CCO precisa aparecer")
+
+    def test_fora_do_padrao_sem_o_permitido_tambem_e_troca(self):
+        reg = dict(REG, acessos=[{"sis": "SYSTUR", "login": "u1", "perfil": "X", "dt": ""}],
+                   mantem=[], sobrou=[], excesso=[{"sis": "SYSTUR", "perfil": "X"}],
+                   falta=[{"sis": "SYSTUR", "perfil": "CUSTOS", "fun": ""}])
+        r = self._resumo(reg)["SYSTUR"]
+        self.assertEqual(r["st"], "troca")
+        self.assertEqual([x["perfil"] for x in r["excluir"]], ["X"])
+
+    def test_oracle_cada_perfil_e_um_acesso(self):
+        """multi_perfil_fora: no Oracle ter um perfil não dispensa os outros —
+        o que falta continua sendo Incluir, não "pode ter também"."""
+        reg = dict(REG, acessos=[{"sis": "ORACLE_EBS", "login": "u1", "perfil": "A", "dt": ""}],
+                   mantem=[{"sis": "ORACLE_EBS", "perfil": "A"}], sobrou=[], excesso=[],
+                   falta=[{"sis": "ORACLE_EBS", "perfil": "B", "fun": ""},
+                          {"sis": "ORACLE_EBS", "perfil": "C", "fun": ""}])
+        r = self._resumo(reg)["ORACLE_EBS"]
+        self.assertEqual(r["st"], "inc")
+        self.assertFalse(r["umDe"])
+        self.assertEqual(r["tambem"], [])
+
+    def test_sig_espelho_cada_perfil_e_um_acesso(self):
+        reg = dict(REG, acessos=[{"sis": "SIG", "login": "u1", "perfil": "A", "dt": ""}],
+                   mantem=[{"sis": "SIG", "perfil": "A", "origem": "ESPELHO"}], sobrou=[], excesso=[],
+                   falta=[{"sis": "SIG", "perfil": "B", "origem": "ESPELHO", "fun": ""}])
+        self.assertEqual(self._resumo(reg)["SIG"]["st"], "inc")
+
+    def test_a_acao_cai_no_sistema_certo(self):
+        """Era a ação de antes e continua: o SIGOT tem o que excluir, o
+        Oracle o que incluir, o SYSTUR nada."""
         html = self._detalhe(REG)
-        for coluna in ("Sistema", "Tem atualmente", "Mapeando nova área",
-                       "Incluir/excluir/alterar acesso"):
-            self.assertIn(f"<th>{coluna}</th>", html)
-        i1 = html.index("<th>Tem atualmente</th>")
-        i2 = html.index("<th>Mapeando nova área</th>")
-        i3 = html.index("<th>Incluir/excluir/alterar acesso</th>")
-        self.assertLess(i1, i2)
-        self.assertLess(i2, i3)
+        self.assertIn("Excluir", self._linha(html, "SIGOT"))
+        self.assertNotIn("Excluir", self._linha(html, "ORACLE_EBS"))
+        self.assertIn("Incluir", self._linha(html, "ORACLE_EBS"))
+        self.assertNotIn("Incluir", self._linha(html, "SYSTUR"))
+        self.assertIn("Controle de pagamentos AP/AR", html, "a função do CCO precisa aparecer")
 
-    def test_uma_linha_por_sistema_inclusive_os_vazios(self):
-        """⭐ O coracao do pedido. A area quer uma FOTO: o sistema em que nao ha'
-        nada a fazer e' informacao, nao ausencia dela."""
+    def test_sistema_sem_extrato_nao_vira_acao(self):
+        """Opera Operacional: a CCO prevê, mas não há extrato (fora de escopo).
+        Igual à Consulta: informativo, fora da contagem de ações."""
+        reg = dict(REG, acessos=[], mantem=[], sobrou=[], excesso=[],
+                   falta=[{"sis": "OPERA_OPERACIONAL", "perfil": "P1", "fun": ""}])
+        self.assertEqual(self._resumo(reg)["OPERA_OPERACIONAL"]["st"], "sext")
+        html = self._detalhe(reg)
+        self.assertIn("Sem extrato", html)
+        self.assertNotIn("a fazer</span>", html.replace("nada a fazer", ""))
+
+    # ── o que já valia e continua ──────────────────────────────────────
+    def test_todos_os_sistemas_aparecem_inclusive_os_vazios(self):
+        """A área pediu uma FOTO: o sistema sem nada é informação."""
         html = self._detalhe(REG)
         for sis in ("ORACLE_EBS", "SICA_RA", "SICA_ESFERA", "SIGOT",
                     "IC_INTEGRADOR_CONTABIL", "SYSTUR", "SIG"):
-            self.assertIn(f'<td class="tr-sis">{sis}', html)
+            self.assertIn(f">{sis}</span>", html)
+        self.assertIn("Sem mapeamento", html)
 
     def test_o_login_de_cada_sistema_nao_se_perde(self):
-        """Quase se perdeu na troca de formato (23/09): o bloco antigo mostrava
-        "login: X" por sistema e a primeira versao da tabela o deixou de fora.
-        E' por ele que se acha a conta DENTRO do sistema — sem isso a analista
-        sabe o que revogar, mas nao em qual conta."""
         html = self._detalhe(REG)
         self.assertIn("login: CORPC90000416", html)
         self.assertIn("login: corpc90000416", html)
 
-    def test_a_acao_usa_as_palavras_dela(self):
-        """O cabecalho que ela escreveu e' "Incluir/excluir/alterar acesso" —
-        a coluna fala "Excluir"/"Incluir", nao mais "revogar"."""
-        html = self._detalhe(REG)
-        self.assertIn("Excluir", html)
-        self.assertIn("Incluir", html)
-        self.assertIn("Controle de pagamentos AP/AR", html,
-                      "a função do CCO precisa aparecer")
-
-    def test_a_acao_cai_na_linha_do_sistema_certo(self):
-        """Sem isto a tabela seria so' enfeite: o SIGOT e' que tem o acesso a
-        excluir, e o Oracle o a incluir."""
-        html = self._detalhe(REG)
-        linhas = dict(re.findall(
-            r'<td class="tr-sis">([A-Z_]+)(?:<div[^>]*>.*?</div>)?</td>'
-            r'(.*?)</tr>', html, re.S))
-        self.assertIn("Excluir", linhas["SIGOT"])
-        self.assertNotIn("Excluir", linhas["ORACLE_EBS"])
-        self.assertIn("Incluir", linhas["ORACLE_EBS"])
-        self.assertNotIn("Incluir", linhas["SYSTUR"])
-
-    def test_o_que_ele_tem_continua_listado_por_sistema(self):
-        """O que já existia não pode sumir: a lista por sistema continua."""
-        html = self._detalhe(REG)
-        self.assertIn("SYSTUR", html)
-        self.assertIn("SIGOT", html)
-
-    def test_contadores_da_revalidacao_continuam(self):
+    def test_contadores_da_revalidacao_continuam_no_detalhe(self):
         html = self._detalhe(REG)
         self.assertIn("mantêm", html)
         self.assertIn("sobraram da anterior", html)
         self.assertIn("faltando na nova", html)
 
-    def test_muitos_perfis_no_mesmo_sistema(self):
-        """Na base do cliente isso e' comum (o FILIPE tem 21 acessos so' no
-        Oracle, a GILDA 46 no total).
+    def test_detalhe_em_quatro_abas(self):
+        html = self._detalhe(REG)
+        for aba in ("Tem hoje", "Previsto na nova área", "Sem mapeamento", "Funções previstas"):
+            self.assertIn(f">{aba}</div>", html)
 
-        MUDOU DE PROPOSITO em 23/09: ate' aqui a lista dobrava em "+N perfis"
-        porque era texto corrido e ficava ilegivel. Na tabela cada perfil e'
-        uma linha DENTRO da celula do sistema — dobrar seria desfazer o pedido
-        ("trazer em linhas ao inves de em uma unica linha")."""
-        reg = dict(REG, acessos=[
-            {"sis": "ORACLE_EBS", "login": "CORPC1", "perfil": f"CVC GL PERFIL {i}",
-             "dt": "2026-09-15"} for i in range(6)])
-        html = self._detalhe(reg)
-        linha = re.search(r'<td class="tr-sis">ORACLE_EBS(?:<div[^>]*>.*?</div>)?</td>(.*?)</tr>',
-                          html, re.S).group(1)
+    def test_veredito_conta_as_acoes(self):
+        self.assertIn("2 ações a fazer", self._detalhe(REG))
+
+    def test_muitos_perfis_recolhem(self):
+        """O Oracle chega a 45 perfis numa pessoa: a linha não pode estourar."""
+        reg = dict(REG, acessos=[{"sis": "ORACLE_EBS", "login": "c", "perfil": f"P{i}", "dt": ""}
+                                 for i in range(6)],
+                   mantem=[{"sis": "ORACLE_EBS", "perfil": f"P{i}"} for i in range(6)])
+        linha = self._linha(self._detalhe(reg), "ORACLE_EBS")
+        self.assertIn("6 perfis", linha)
         for i in range(6):
-            self.assertIn(f"CVC GL PERFIL {i}", linha,
-                          "cada perfil precisa aparecer, um por linha")
-        self.assertEqual(linha.count('class="tr-cel-i"'), 6 + (6 + 1) + 1,
-                         "coluna 'tem': os 6; coluna 'nova area': os 6 que ele "
-                         "mantem MAIS o que falta; coluna 'acao': o incluir. "
-                         "O que falta conta duas vezes de proposito — ele e' "
-                         "previsto na nova area E gera acao.")
+            self.assertIn(f"P{i}", linha, "recolhido, mas nenhum some")
 
-    def test_sem_diferenca_diz_validado(self):
-        """"Se a pessoa não tiver alterações... trazer ok apenas para validação"."""
-        reg = dict(REG, sobrou=[], falta=[], reval={"MANTEM": 2, "SOBROU": 0,
-                                                    "EXCESSO": 0, "FALTA": 0})
-        html = self._detalhe(reg)
-        self.assertIn("Validado", html)
-        self.assertNotIn("o que precisa alterar", html)
+    def test_banco_anterior_sem_lista_mantem(self):
+        """Sem `mantem` (visualizador novo, banco velho): o que tem e não sobrou,
+        mantém — a conta de antes."""
+        r = self._resumo(REG)
+        self.assertEqual(r["SYSTUR"]["st"], "ok")
+        self.assertEqual(r["SIGOT"]["st"], "exc")
+
+    def test_selo_da_linha(self):
+        out = _node(self._js(f"const d = {json.dumps(REG)};\n"
+                             "console.log(_transfAcoes(d), _transfAcoes(Object.assign({}, d, {sem_acesso: true})));"))
+        self.assertEqual(out.split(), ["2", "null"])
 
 
 @unittest.skipUnless(NODE, "Node não disponível nesta máquina")
@@ -269,6 +323,27 @@ class PlanilhaAlinhadaComATela(unittest.TestCase):
         self.assertEqual(falta[0][fc], "Controle de pagamentos AP/AR")
 
 
+    def test_opcao_de_sistema_aderente_nao_sai_como_incluir(self):
+        """15/10: na planilha, a outra opção do sistema em que ela já é
+        aderente sai como "pode ter também", não "falta (incluir)"."""
+        reg = dict(REG, mantem=[{"sis": "SYSTUR", "perfil": "INTEGRADOR_CONTABIL"}],
+                   falta=REG["falta"] + [{"sis": "SYSTUR", "perfil": "CUSTOS", "fun": ""}])
+        cap = self._export(reg)
+        ic = cap["cols"].index("Situação do acesso")
+        pc = cap["cols"].index("Perfil")
+        sit = {l[pc]: l[ic] for l in cap["linhas"] if l[pc]}
+        self.assertEqual(sit["CUSTOS"], "pode ter também (não precisa incluir)")
+        self.assertEqual(sit["CVC AP BRASIL Consulta"], "falta (incluir)")
+
+    def test_fora_do_padrao_nao_sai_como_mantem(self):
+        reg = dict(REG, excesso=[{"sis": "SYSTUR", "perfil": "INTEGRADOR_CONTABIL"}])
+        cap = self._export(reg)
+        ic = cap["cols"].index("Situação do acesso")
+        pc = cap["cols"].index("Perfil")
+        sit = {l[pc]: l[ic] for l in cap["linhas"] if l[pc]}
+        self.assertEqual(sit["INTEGRADOR_CONTABIL"], "fora do padrão")
+
+
 class FuncaoNoVeredito(unittest.TestCase):
     """O servidor precisa achar a função do CCO pelo (cc, gestor) da pessoa."""
 
@@ -305,6 +380,22 @@ class FuncaoNoVeredito(unittest.TestCase):
         pessoa = d["lista"][0]
         self.assertEqual(pessoa["falta"][0]["fun"],
                          "Atendimento a fornecedores  CVC e VISUAL")
+
+    def test_mantem_e_excesso_vao_como_lista(self):
+        """O resumo por sistema (15/10) precisa saber, sistema a sistema, se a
+        pessoa já tem um perfil previsto: MANTEM e EXCESSO vão como lista."""
+        c = sqlite3.connect(self.db)
+        try:
+            c.execute("INSERT INTO revalidacao_transferido (matricula, sistema, perfil, "
+                      "situacao, origem) VALUES ('M1','SYSTUR','P1','MANTEM','MATRIZ/CCO'),"
+                      "('M1','SYSTUR','P9','EXCESSO','MATRIZ/CCO')")
+            c.commit()
+        finally:
+            c.close()
+        p = vm.listar_transferidos()["lista"][0]
+        self.assertEqual([x["perfil"] for x in p["mantem"]], ["P1"])
+        self.assertEqual([x["perfil"] for x in p["excesso"]], ["P9"])
+        self.assertEqual(p["reval"]["MANTEM"], 1)
 
     def test_sem_cco_o_campo_fica_vazio_sem_quebrar(self):
         c = sqlite3.connect(self.db)

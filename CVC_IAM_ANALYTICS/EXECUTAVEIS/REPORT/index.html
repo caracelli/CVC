@@ -68,6 +68,54 @@ body{
 .tr-cel-i{padding:1px 0;line-height:1.45;}
 .tr-cel-vazio{color:#AEB5C2;}
 .tr-login{font:400 11px Arial;color:#6B7280;margin-top:2px;}
+/* Transferidos — RESUMO POR SISTEMA (mockup aprovado pela Bruna, 15/10/2026):
+   no padrão da Consulta, uma situação por sistema (Aderente / Trocar / Incluir /
+   Excluir / Sem mapeamento), veredito no topo e o detalhe em abas. */
+.tr-res{margin:6px 0 4px;background:#fff;border:1px solid #E7EBF2;border-radius:8px;max-width:1100px;}
+.tr-res-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid #EEF1F7;}
+.tr-res-tit{font:700 12.5px 'Segoe UI';color:#1F2D5C;}
+.tr-res-cont{font:500 12px 'Segoe UI';color:#3A3F4C;}
+.tr-res-cont b{font-weight:700;}
+.tr-ver{margin-left:auto;font:700 11.5px Arial;padding:3px 10px;border-radius:12px;}
+.tr-ver.ok{background:#DFF6DD;color:#107C10;} .tr-ver.acao{background:#FDECEC;color:#B33A3A;}
+.tr-ver.neutro{background:#EEF0F4;color:#5B6472;}
+.tr-lin{display:grid;grid-template-columns:150px 128px minmax(0,1fr);gap:10px;align-items:start;
+  padding:7px 12px;border-top:1px solid #F4F6FA;font-size:12.5px;}
+.tr-res-hd + .tr-lin{border-top:none;}
+.tr-st{font:700 11.5px Arial;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.tr-st::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor;}
+.tr-st.ok{color:#1E7B43;} .tr-st.troca{color:#B9770E;} .tr-st.inc{color:#2980B9;}
+.tr-st.exc{color:#B33A3A;} .tr-st.nada,.tr-st.sext{color:#8A9099;}
+.tr-st.nada::before,.tr-st.sext::before{background:none;border:1.5px solid currentColor;}
+.tr-txt{color:#3A4156;line-height:1.55;min-width:0;overflow-wrap:anywhere;}
+/* lista longa (o Oracle chega a 45 perfis): total + "+" para abrir, como as funções da Consulta */
+.tr-mais{display:inline;}
+.tr-mais>summary{display:inline;cursor:pointer;list-style:none;font-weight:700;color:#1F2D5C;}
+.tr-mais>summary::-webkit-details-marker{display:none;}
+.tr-mais>summary::after{content:' +';color:#7B8294;}
+.tr-mais[open]>summary::after{content:' −';}
+.tr-mais-l{display:block;margin:3px 0 2px 10px;padding-left:8px;border-left:2px solid #E3E8F2;font-size:12px;}
+.tr-txt .p{font-weight:700;color:#1F2D5C;}
+.tr-txt small{color:#6B7280;}
+.tr-acao{display:block;}
+.tr-acao .e{color:#B33A3A;font-weight:700;} .tr-acao .i{color:#2980B9;font-weight:700;}
+.tr-tambem{display:block;margin-top:3px;padding:3px 8px;border-left:3px solid #CFE6D8;
+  background:#F6FBF8;color:#5A616E;font-size:12px;}
+.tr-tambem b{color:#3A4156;}
+.tr-fora{display:block;margin-top:3px;color:#856404;font-size:12px;}
+.tr-nada{color:#8A9099;}
+.tr-nota{padding:2px 12px 0;color:#7B8294;font-size:11.5px;font-style:italic;}
+.tr-vd{margin:8px 12px 10px;font:600 12px Arial;color:#1F2D5C;cursor:pointer;background:none;border:none;}
+.tr-vd:hover{text-decoration:underline;}
+.tr-det{display:none;border-top:1px solid #EEF1F7;padding:0 12px 12px;}
+.tr-det.on{display:block;}
+.tr-dtabs{display:flex;gap:2px;border-bottom:1px solid #E3E8F2;margin:8px 0;}
+.tr-dtab{padding:6px 12px;font:600 12px 'Segoe UI';color:#5A6376;cursor:pointer;border-bottom:2px solid transparent;}
+.tr-dtab.active{color:#1F2D5C;border-bottom-color:#F5B800;}
+.tr-dpane{display:none;} .tr-dpane.on{display:block;}
+.tr-cap{color:#7B8294;font-size:11.5px;margin:0 0 6px;}
+.tr-selo{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;font:700 10px Arial;white-space:nowrap;}
+.tr-selo.ok{background:#DFF6DD;color:#107C10;} .tr-selo.acao{background:#FDECEC;color:#B33A3A;}
 .hdr-titles{display:flex;flex-direction:column;}
 .hdr-title{font-size:21px;font-weight:700;color:#fff;line-height:1.25;letter-spacing:.2px;}
 .hdr-sub{font-size:12px;color:#AEB8D4;}
@@ -5759,98 +5807,224 @@ function _transfItem(sis, perfil, fun, estado, cor){
        + (fun ? ` <small style="color:#6B7280;">(${esc(fun)})</small>` : '')
        + ` <b style="color:${cor};">${estado}</b></span>`;
 }
-function _transfDetalhe(d, acessos, sobrou){
-  const falta = d.falta || [], rv = d.reval;
-  const sobrouSet = new Set(sobrou.map(s => _transfChave(s.sis, s.perfil)));
-  let h = '';
-  // contadores da revalidação — igual ao que já estava
-  if(rv && (sobrou.length || falta.length)){
-    const par = d.pares ? ` <small style="color:#6B7280;">(equipe de ${d.pares[0]} → ${d.pares[1]} pessoas)</small>` : '';
-    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
-      + `<span class="mov-tit">revalidação pós-transferência</span>`
-      + `<span class="rev-kpi rev-k-mantem">${rv.MANTEM||0} mantêm</span>`
-      + `<span class="rev-kpi rev-k-sobrou">${rv.SOBROU||0} sobraram da anterior</span>`
-      + `<span class="rev-kpi rev-k-exc">${rv.EXCESSO||0} fora do padrão</span>`
-      + `<span class="rev-kpi rev-k-falta">${rv.FALTA||0} faltando na nova</span>${par}`
-      + `</td></tr>`;
-  }
-  /* UMA LINHA POR SISTEMA (retorno da área, 23/09/2026): "Trazer em linhas ao
-     invés de em uma única linha / Se der pra trazer em colunas pode ser tbm",
-     com o desenho Sistema | Tem atualmente | mapeando nova área |
-     incluir/excluir/alterar acesso.
+/* RESUMO POR SISTEMA (chamada com a Bruna em 15/10/2026; mockup aprovado).
 
-     São as MESMAS três perguntas do pedido de 17/09 — o que ele tem, o que a
-     nova área prevê, o que mudar — que antes saíam como três blocos de texto
-     corrido dentro de uma célula. Agora cada sistema é uma linha e cada
-     pergunta é uma coluna, então dá para ler na horizontal: "no EBS, ele tem
-     isto, deveria ter aquilo, e a ação é esta".
+   "A visualização ficou boa, mas não está atendendo 100% ao processo." O caso
+   dela: a pessoa tem IC CADASTRO, que a nova área permite, e a tabela de 4
+   colunas mostrava CONSULTA como "falta" e "Incluir". Não falta: o que ela tem
+   já atende. E quando ela NÃO tem o perfil permitido, a regra tem que ficar
+   clara: excluir o atual e incluir o novo.
 
-     Percorre TODOS os sistemas, não só os que têm algo: a área pediu uma
-     "foto", e o sistema sem nada é informação ("no SICA Esfera não há nada a
-     fazer"), não ausência de informação. */
-  const mantem = [];
-  acessos.forEach(a => {
-    if(!sobrouSet.has(_transfChave(a.sis, a.perfil))) mantem.push(a);
+   Agora cada sistema ganha UMA situação, no padrão da Consulta:
+   - Aderente: tem um perfil previsto na nova área. As outras opções previstas
+     viram "pode ter também" (não precisa incluir), porque só pode haver um
+     perfil por sistema. Exceção: sistemas de multi_perfil_fora (Oracle: cada
+     perfil é um acesso) e o SIG (espelho do grupo: o padrão são todos), em que
+     o que falta continua sendo inclusão.
+   - Trocar: não tem perfil previsto e tem um da área anterior (ou fora do
+     padrão), e a nova área prevê outro → excluir o atual, incluir o novo.
+   - Incluir / Excluir: só uma das duas ações.
+   - Sem mapeamento: a nova área não prevê nada no sistema.
+   - Sem extrato: a nova área prevê, mas o sistema não tem extrato (Opera
+     Operacional, fora de escopo) — não dá para conferir; informativo, igual
+     à Consulta, e fora da contagem de ações.
+   Os dados são os mesmos da revalidação (Card 23): MANTEM, SOBROU, EXCESSO e
+   FALTA por acesso. Muda a LEITURA. Autocontida: os testes a extraem sozinha. */
+function _transfResumoSis(d, sistemas, multiFora){
+  const N = x => String(x || '').trim().toUpperCase();
+  const fora = (multiFora || []).map(N);
+  const doSis = (lst, s) => (lst || []).filter(x => N(x.sis) === N(s));
+  const uniq = arr => Array.from(new Set(arr.filter(Boolean)));
+  const universo = new Set((sistemas || []).map(N));
+  // Banco anterior (sem a lista MANTEM): o que ela tem e não sobrou, mantém —
+  // a mesma conta que a tela fazia antes.
+  const semMantem = !Array.isArray(d.mantem);
+  const nomes = uniq((sistemas || []).concat((d.acessos || []).map(a => a.sis),
+                     (d.falta || []).map(f => f.sis), (d.sobrou || []).map(f => f.sis)))
+                .filter(s => s && s !== '—');
+  return nomes.map(s => {
+    const acs = doSis(d.acessos, s);
+    const tem = uniq(acs.map(a => a.perfil || ''));
+    const login = uniq(acs.map(a => a.login || '')).join(', ');
+    const S = doSis(d.sobrou, s), E = doSis(d.excesso, s), F = doSis(d.falta, s);
+    const ks = new Set(S.concat(E).map(x => N(x.perfil)));
+    const M = semMantem
+      ? (d.reval ? tem.filter(p => !ks.has(N(p))).map(p => ({sis: s, perfil: p, fun: ''})) : [])
+      : doSis(d.mantem, s);
+    const multi = fora.includes(N(s))
+      || M.concat(S, E, F).some(x => x.origem === 'ESPELHO');
+    let excluir = S.slice(), foraPad = E.slice();
+    // perfil único por sistema: o que está fora do padrão é o que sai na troca
+    if (!M.length && !multi && F.length && E.length) { excluir = excluir.concat(E); foraPad = []; }
+    const aderente = M.length && !multi;
+    const incluir = aderente ? [] : F;
+    const tambem = aderente ? F : [];
+    const semExtrato = universo.size && !universo.has(N(s)) && !acs.length;
+    const st = semExtrato ? 'sext'
+             : excluir.length && incluir.length ? 'troca'
+             : incluir.length ? 'inc'
+             : excluir.length ? 'exc'
+             : M.length ? 'ok' : 'nada';
+    return {s: s, st: st, tem: tem, login: login, mantem: M, excluir: excluir,
+            incluir: incluir, tambem: tambem, fora: foraPad, multi: multi,
+            umDe: !multi && incluir.length > 1};
   });
-  const porSis = {};
-  const _addCel = (sis, campo, item) => {
-    const s = sis || '—';
-    (porSis[s] = porSis[s] || {tem:[], nova:[], acao:[]})[campo].push(item);
-  };
-  acessos.forEach(a => _addCel(a.sis, 'tem', esc(a.perfil || '—')));
-  mantem.forEach(a => _addCel(a.sis, 'nova',
-    `${esc(a.perfil || '—')} <b style="color:#1E7B43;">tem</b>`));
-  falta.forEach(f => _addCel(f.sis, 'nova',
-    `${esc(f.perfil || '—')}${f.fun ? ` <small style="color:#6B7280;">(${esc(f.fun)})</small>` : ''}`
-    + ` <b style="color:#2980B9;">falta</b>`));
-  sobrou.forEach(s => _addCel(s.sis, 'acao',
-    `<b style="color:#B33A3A;">Excluir</b> ${esc(s.perfil || '—')}`
-    + `${s.fun ? ` <small style="color:#6B7280;">(${esc(s.fun)})</small>` : ''}`));
-  falta.forEach(f => _addCel(f.sis, 'acao',
-    `<b style="color:#2980B9;">Incluir</b> ${esc(f.perfil || '—')}`
-    + `${f.fun ? ` <small style="color:#6B7280;">(${esc(f.fun)})</small>` : ''}`));
-
+}
+function _transfMultiFora(){
+  return (typeof DB !== 'undefined' && DB && DB.meta && DB.meta.multi_perfil_fora) || [];
+}
+/* Selo da linha da pessoa: quantos sistemas pedem ação (0 = aderente). */
+function _transfAcoes(d){
+  if (d.sem_acesso || !d.reval) return null;
+  return _transfResumoSis(d, _sisTodos(), _transfMultiFora())
+    .filter(x => x.st === 'troca' || x.st === 'inc' || x.st === 'exc').length;
+}
+function _transfDetAba(id, i){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.querySelectorAll('.tr-dtab').forEach((t, k) => t.classList.toggle('active', k === i));
+  el.querySelectorAll('.tr-dpane').forEach((t, k) => t.classList.toggle('on', k === i));
+}
+function _transfDetTg(id, b){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('on');
+  b.textContent = el.classList.contains('on') ? 'ocultar detalhe ▾' : 'ver detalhe ▸';
+}
+function _transfDetalhe(d, acessos, sobrou){
+  const rv = d.reval;
+  const _TRANSF_ST = {ok:'Aderente', troca:'Trocar', inc:'Incluir', exc:'Excluir',
+                      nada:'Sem mapeamento', sext:'Sem extrato'};
+  const _TRANSF_ORD = {troca:0, exc:1, inc:2, ok:3, sext:4, nada:5};
+  const linhasSis = _transfResumoSis(d, _sisTodos(), _transfMultiFora());
   // O LOGIN por sistema vem de `_acessosPorSistema`, a mesma função que a
-  // Desligados e os exports usam. Ele estava no bloco antigo e não pode se
-  // perder na troca de formato: é por ele que se acha a conta no sistema.
+  // Desligados e os exports usam: é por ele que se acha a conta no sistema.
   const loginDe = {};
-  _acessosPorSistema(acessos).forEach(g => { if(g.login) loginDe[g.sis] = g.login; });
+  _acessosPorSistema(acessos).forEach(g => { if (g.login) loginDe[g.sis] = g.login; });
+  linhasSis.forEach(x => { if (loginDe[x.s]) x.login = loginDe[x.s]; });
+  const perfis = (lst, sep) => lst.length <= 4
+    ? lst.map(x => `<span class="p">${esc(x.perfil || '—')}</span>`).join(sep || ', ')
+    : `<details class="tr-mais"><summary>${lst.length} perfis</summary><span class="tr-mais-l">`
+      + lst.map(x => esc(x.perfil || '—')).join('<br>') + `</span></details>`;
+  const funDe = lst => {
+    const f = Array.from(new Set(lst.map(x => x.fun).filter(Boolean)));
+    return f.length ? ` <small>(função ${esc(f.join(', '))})</small>` : '';
+  };
+  const linha = x => {
+    let t = '';
+    if (x.mantem.length)
+      t += `<div class="tr-acao">tem ${perfis(x.mantem)} <small>· permitido na nova área</small>${funDe(x.mantem)}</div>`;
+    if (x.excluir.length)
+      t += `<div class="tr-acao"><span class="e">Excluir</span> ${perfis(x.excluir)} <small>· `
+        + (x.incluir.length ? 'não é previsto na nova área'
+           : x.mantem.length ? 'era da área anterior' : 'a nova área não prevê acesso a este sistema')
+        + `</small></div>`;
+    if (x.st === 'sext')
+      t += `<div class="tr-nada">a nova área prevê ${perfis(x.incluir)}${funDe(x.incluir)}`
+        + ` <small>· o sistema não tem extrato, não dá para conferir</small></div>`;
+    else if (x.incluir.length)
+      t += `<div class="tr-acao"><span class="i">Incluir</span> `
+        + (x.umDe ? 'um de: ' + perfis(x.incluir, ' ou ') : perfis(x.incluir))
+        + ` <small>· ${x.tem.length ? 'previsto na nova área' : 'não tem, e a nova área prevê'}</small>${funDe(x.incluir)}</div>`;
+    if (x.tambem.length)
+      t += `<div class="tr-tambem">pode ter também: <b>${perfis(x.tambem)}</b>`
+        + ` <small>· não precisa incluir, o que tem já atende</small></div>`;
+    if (x.fora.length)
+      t += `<div class="tr-fora">também tem ${perfis(x.fora)}`
+        + ` <small>· fora do padrão das duas áreas (a regra geral trata)</small></div>`;
+    if (x.st === 'nada')
+      t += `<div class="tr-nada">tem hoje: <b style="color:#5A616E;">${perfis(x.tem.map(p => ({perfil: p})))}</b>`
+        + ` <small>· a nova área não prevê acesso a este sistema</small></div>`;
+    return `<div class="tr-lin"><span><span class="h-sis">${esc(x.s)}</span>`
+      + (x.login ? `<div class="tr-login">login: ${esc(x.login)}</div>` : '') + `</span>`
+      + `<span class="tr-st ${x.st}">${_TRANSF_ST[x.st]}</span><div class="tr-txt">${t}</div></div>`;
+  };
+  const ord = linhasSis.slice().sort((a, b) => (_TRANSF_ORD[a.st] - _TRANSF_ORD[b.st]) || a.s.localeCompare(b.s));
+  const ativos = ord.filter(x => x.st !== 'nada' || x.tem.length);
+  const vazios = ord.filter(x => x.st === 'nada' && !x.tem.length);
+  const n = k => linhasSis.filter(x => x.st === k).length;
+  const cores = {ok:'#1E7B43', troca:'#B9770E', inc:'#2980B9', exc:'#B33A3A', nada:'#8A9099', sext:'#8A9099'};
+  const cont = ['troca','exc','inc','ok','sext','nada'].filter(k => n(k))
+    .map(k => `<b style="color:${cores[k]};">${n(k)}</b> ${_TRANSF_ST[k].toLowerCase()}${k === 'ok' && n(k) > 1 ? 's' : ''}`)
+    .join(' · ');
+  const acoes = n('troca') + n('inc') + n('exc');
+  const ver = d.sem_acesso
+    ? `<span class="tr-ver neutro">Sem acesso hoje — nada a revisar</span>`
+    : !rv ? ''
+    : acoes ? `<span class="tr-ver acao">${acoes} ${acoes > 1 ? 'ações' : 'ação'} a fazer</span>`
+    : `<span class="tr-ver ok">✓ Aderente na nova área, nada a alterar</span>`;
 
-  const sistemas = Array.from(new Set(_sisTodos().concat(Object.keys(porSis))))
-                        .filter(s => s && s !== '—').sort();
-  if(sistemas.length){
-    h += _transfTit(1, `foto por sistema (${acessos.length} acesso(s) hoje)`);
-    const cel = (lst) => lst && lst.length
-      ? lst.map(x => `<div class="tr-cel-i">${x}</div>`).join('')
-      : '<span class="tr-cel-vazio">—</span>';
-    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
-      + `<table class="tr-foto"><thead><tr>`
-      + `<th>Sistema</th><th>Tem atualmente</th>`
-      + `<th>Mapeando nova área</th><th>Incluir/excluir/alterar acesso</th>`
-      + `</tr></thead><tbody>`
-      + sistemas.map(s => {
-          const g = porSis[s] || {tem:[], nova:[], acao:[]};
-          const lg = loginDe[s]
-            ? `<div class="tr-login">login: ${esc(loginDe[s])}</div>` : '';
-          return `<tr><td class="tr-sis">${esc(s)}${lg}</td>`
-               + `<td>${cel(g.tem)}</td><td>${cel(g.nova)}</td>`
-               + `<td>${cel(g.acao)}</td></tr>`;
-        }).join('')
-      + `</tbody></table></td></tr>`;
-  }
-  if(falta.length){
-    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
-      + `<div class="rev-lista rev-info"><i>A inclusão já aparece nas pendências.</i>`
-      + `</div></td></tr>`;
-  }
-  if(!(sobrou.length || falta.length) && rv){
-    // "se a pessoa não tiver alterações... trazer ok apenas para validação"
-    h += `<tr class="sub"><td></td><td></td><td colspan="7">`
-      + `<div class="rev-lista rev-info"><span class="badge b-ok">OK</span> `
-      + `<b>Validado:</b> os acessos da nova área já estão aderentes — nada a alterar.`
-      + `</div></td></tr>`;
-  }
-  return h;
+  let h = `<div class="tr-res"><div class="tr-res-hd"><span class="tr-res-tit">Resumo por sistema</span>`
+    + `<span class="tr-res-cont">${cont}</span>${ver}</div>`
+    + ativos.map(linha).join('')
+    + (vazios.length ? `<div class="tr-lin"><span></span><span class="tr-st nada">Sem mapeamento</span>`
+        + `<span class="tr-txt tr-nada">${vazios.map(x => `<span class="h-sis" style="color:#7B8294;">${esc(x.s)}</span>`).join(' ')}`
+        + ` <small>· a nova área não prevê acesso, nada a fazer</small></span></div>` : '');
+  if (linhasSis.some(x => x.st === 'inc' || x.st === 'troca'))
+    h += `<div class="tr-nota">As inclusões também aparecem na aba Pendências.</div>`;
+
+  // ── detalhe em abas ──
+  const id = 'trd-' + String(d.m).replace(/[^A-Za-z0-9_-]/g, '_');
+  const tab = (rows, cols) => rows.length
+    ? `<table class="tr-foto"><thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>`
+      + `<tbody>${rows.join('')}</tbody></table>`
+    : '<div class="tr-cap">Nada aqui.</div>';
+  const N = x => String(x || '').trim().toUpperCase();
+  const sitAc = (s, p) => {
+    const x = linhasSis.find(l => N(l.s) === N(s));
+    if (!x) return '';
+    if (x.mantem.some(m => N(m.perfil) === N(p))) return '<b style="color:#1E7B43;">previsto na nova área</b>';
+    if ((sobrou || []).some(m => N(m.sis) === N(s) && N(m.perfil) === N(p))) return '<b style="color:#B33A3A;">sobrou da área anterior</b>';
+    if (x.excluir.concat(x.fora).some(m => N(m.perfil) === N(p))) return '<b style="color:#856404;">fora do padrão</b>';
+    return '<span style="color:#8A9099;">sem previsão na nova área</span>';
+  };
+  const contRv = rv
+    ? `<div class="tr-cap">Revalidação: ${rv.MANTEM||0} mantêm · ${rv.SOBROU||0} sobraram da anterior · `
+      + `${rv.EXCESSO||0} fora do padrão · ${rv.FALTA||0} faltando na nova`
+      + (d.pares ? ` (equipe de ${d.pares[0]} → ${d.pares[1]} pessoas no SIG)` : '') + `</div>` : '';
+  const acsOrd = (acessos || []).slice().sort((a, b) => String(a.sis).localeCompare(String(b.sis)));
+  const previstos = [];
+  linhasSis.forEach(x => {
+    x.mantem.forEach(m => previstos.push([x, m, 'tem']));
+    x.incluir.forEach(f => previstos.push([x, f, x.st === 'sext' ? 'sext' : 'falta']));
+    x.tambem.forEach(f => previstos.push([x, f, 'tambem']));
+  });
+  const EST = {tem: '<b style="color:#1E7B43;">tem</b>', falta: '<b style="color:#2980B9;">falta</b>',
+               tambem: '<span style="color:#5A616E;">pode ter também</span>',
+               sext: '<span style="color:#8A9099;">sem extrato</span>'};
+  const funcoes = {};
+  previstos.forEach(p => { if (p[1].fun) (funcoes[p[1].fun] = funcoes[p[1].fun] || []).push(p); });
+  const abas = [
+    ['Tem hoje', contRv + tab(acsOrd.map(a => `<tr><td class="tr-sis">${esc(a.sis || '—')}</td>`
+        + `<td>${esc(a.perfil || '—')}</td><td>${esc(a.login || '')}</td><td>${sitAc(a.sis, a.perfil)}</td></tr>`),
+        ['Sistema', 'Perfil', 'Login', 'Situação'])],
+    ['Previsto na nova área', '<div class="tr-cap">Matriz de perfis (cargo e centro de custo) e Mapeamento CCO '
+        + '(centro de custo e gestor); no SIG, o padrão da equipe.</div>'
+        + tab(previstos.map(([x, it, e]) => `<tr><td class="tr-sis">${esc(x.s)}</td><td>${esc(it.perfil || '—')}</td>`
+          + `<td>${esc(it.fun || '—')}</td><td>${it.origem === 'ESPELHO' ? 'Espelho do SIG' : (it.fun ? 'CCO' : 'Matriz')}</td>`
+          + `<td>${EST[e]}</td></tr>`), ['Sistema', 'Perfil', 'Função', 'Origem', 'Situação'])],
+    ['Sem mapeamento', '<div class="tr-cap">Sistemas em que a nova área não prevê acesso.</div>'
+        + tab(ord.filter(x => x.st === 'nada' || (x.st === 'exc' && !x.mantem.length)).map(x =>
+            `<tr><td class="tr-sis">${esc(x.s)}</td><td>${x.tem.length
+              ? 'tem hoje: <b>' + esc(x.tem.join(', ')) + '</b>' + (x.st === 'exc' ? ' — <b style="color:#B33A3A;">excluir</b>' : '')
+              : '<span class="tr-nada">não tem — nada a fazer</span>'}</td></tr>`), ['Sistema', 'Situação'])],
+    ['Funções previstas', Object.keys(funcoes).length
+        ? '<div class="tr-cap">Funções do Mapeamento CCO da nova equipe e os acessos que formam cada uma.</div>'
+          + tab(Object.keys(funcoes).sort().map(f => {
+              const its = funcoes[f];
+              const t = its.filter(p => p[2] === 'tem').length;
+              return `<tr><td><b>${esc(f)}</b><div class="tr-login">tem ${t} de ${its.length}</div></td><td>`
+                + its.map(([x, it, e]) => `<span class="h-sis">${esc(x.s)}</span> ${esc(it.perfil || '—')} ${EST[e]}`).join('<br>')
+                + `</td></tr>`;
+            }), ['Função', 'Acessos'])
+        : '<div class="tr-cap">Sem funções do Mapeamento CCO para a nova equipe: o previsto vem da matriz por cargo.</div>'],
+  ];
+  h += `<button class="tr-vd" onclick="_transfDetTg('${id}', this)">ver detalhe ▸</button>`
+    + `<div class="tr-det" id="${id}"><div class="tr-dtabs">`
+    + abas.map((a, i) => `<div class="tr-dtab${i ? '' : ' active'}" onclick="_transfDetAba('${id}', ${i})">${a[0]}</div>`).join('')
+    + `</div>` + abas.map((a, i) => `<div class="tr-dpane${i ? '' : ' on'}">${a[1]}</div>`).join('')
+    + `</div></div>`;
+  return `<tr class="sub"><td></td><td></td><td colspan="7">${h}</td></tr>`;
 }
 
 function pintarTransferidos(){
@@ -5878,8 +6052,13 @@ function pintarTransferidos(){
     // Card 23 — dos acessos marcados para revisão, quantos só faziam sentido
     // na função/equipe anterior. É o número acionável: "olhe estes", não "olhe tudo".
     const sobrou = d.sobrou || [];
-    const selo = sobrou.length
-      ? ` <span class="rev-sobrou" title="Acessos que eram padrão na função/equipe anterior e não são na nova — candidatos a revogar">${sobrou.length} sobrou</span>` : '';
+    // Selo pelo RESUMO POR SISTEMA (15/10/2026): quantos sistemas pedem ação
+    // (trocar/incluir/excluir) ou "aderente". Substitui o "N sobrou", que
+    // contava só metade da história — quem só precisava INCLUIR ficava sem selo.
+    const nAcoes = _transfAcoes(d);
+    const selo = nAcoes === null ? ''
+      : nAcoes ? ` <span class="tr-selo acao" title="Sistemas com algo a trocar, incluir ou excluir">${nAcoes} ${nAcoes===1?'ação':'ações'}</span>`
+      : ` <span class="tr-selo ok" title="Já tem os perfis previstos na nova área">aderente</span>`;
     const cel = !acessos.length ? '—'
       : `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="transfToggle(this)"
            title="Clique para ver os acessos a revisar">${acessos.length} ${acessos.length===1?'acesso':'acessos'} ${aberto?'▾':'▸'}</span>${selo}`;
@@ -5999,8 +6178,21 @@ function exportarTransferidos(){
     const _chave = (s, p) => String(s||'').trim().toUpperCase() + '|'
                            + String(p||'').trim().toUpperCase();
     const sobrouSet = new Set((d.sobrou || []).map(s => _chave(s.sis, s.perfil)));
+    const excessoSet = new Set((d.excesso || []).map(s => _chave(s.sis, s.perfil)));
     const sitAcesso = (sis, perfil) =>
-      sobrouSet.has(_chave(sis, perfil)) ? 'sobrou (revogar)' : 'mantém';
+      sobrouSet.has(_chave(sis, perfil)) ? 'sobrou (revogar)'
+      : excessoSet.has(_chave(sis, perfil)) ? 'fora do padrão' : 'mantém';
+    // Resumo por sistema (15/10/2026): no sistema em que a pessoa JÁ TEM um
+    // perfil previsto na nova área, as outras opções não são inclusão — "pode
+    // ter também". Exceto Oracle (multi_perfil_fora) e SIG (espelho), em que
+    // cada perfil é um acesso. Mesma regra de _transfResumoSis, aqui inline
+    // pelo mesmo motivo da _chave acima.
+    const _fora = ((typeof DB !== 'undefined' && DB && DB.meta && DB.meta.multi_perfil_fora) || [])
+                    .map(x => String(x).trim().toUpperCase());
+    const _sisN = x => String(x || '').trim().toUpperCase();
+    const aderenteSis = new Set((d.mantem || [])
+      .filter(m => m.origem !== 'ESPELHO' && !_fora.includes(_sisN(m.sis)))
+      .map(m => _sisN(m.sis)));
 
     linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'', '', '', '', '', '']);
     niveis.push(0);
@@ -6022,7 +6214,9 @@ function exportarTransferidos(){
     // isto a planilha continuava contando só metade da história
     (d.falta || []).forEach(f => {
       linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'',
-                   f.sis || '', '', f.perfil || '', 'falta (incluir)', f.fun || '']);
+                   f.sis || '', '', f.perfil || '',
+                   aderenteSis.has(_sisN(f.sis)) ? 'pode ter também (não precisa incluir)'
+                                                 : 'falta (incluir)', f.fun || '']);
       niveis.push(1);
     });
   });

@@ -3876,10 +3876,14 @@ def _revalidacao_transferidos(c, matriculas):
     for r in linhas:
         d = out.setdefault(r["matricula"], {
             "resumo": {"MANTEM": 0, "SOBROU": 0, "EXCESSO": 0, "FALTA": 0},
-            "sobrou": [], "falta": [], "pares": None})
+            "sobrou": [], "falta": [], "mantem": [], "excesso": [], "pares": None})
         sit = r["situacao"]
         d["resumo"][sit] = d["resumo"].get(sit, 0) + 1
-        if sit in ("SOBROU", "FALTA"):
+        # MANTEM e EXCESSO tambem vao como LISTA (resumo por sistema, mockup
+        # aprovado pela Bruna em 15/10): a tela precisa saber, sistema a
+        # sistema, se a pessoa ja tem um perfil previsto na nova area
+        # (Aderente) ou se tem um perfil fora do padrao que vira troca.
+        if sit in ("SOBROU", "FALTA", "MANTEM", "EXCESSO"):
             d[sit.lower()].append({"sis": r["sistema"], "perfil": r["perfil"],
                                    "origem": r["origem"] or ""})
         if r["pares_antes"] is not None and d["pares"] is None:
@@ -3957,13 +3961,16 @@ def listar_transferidos():
             _fmap = _cco_fun.get(
                 (((info["cc"] if info else "") or "").strip().upper(),
                  ((info["gestor"] if info else "") or "").strip().upper()), {})
-            for _lst in (rv.get("sobrou") or [], rv.get("falta") or []):
+            for _lst in (rv.get("sobrou") or [], rv.get("falta") or [],
+                         rv.get("mantem") or [], rv.get("excesso") or []):
                 for _it in _lst:
                     _it["fun"] = _fmap.get((_it.get("perfil") or "").strip().upper(), "")
             out.append({
                 "reval": rv.get("resumo"),
                 "sobrou": rv.get("sobrou", []),
                 "falta": rv.get("falta", []),
+                "mantem": rv.get("mantem", []),
+                "excesso": rv.get("excesso", []),
                 "pares": rv.get("pares"),
                 "m": mat,
                 "n": (info["nome"] if info else "") or (acessos[0].get("login") or ""),
@@ -4054,6 +4061,7 @@ def _transferidos_sem_acesso(ja_listados):
             # mesmo formato das demais linhas da aba
             "reval": rv.get("resumo"), "sobrou": rv.get("sobrou", []),
             "falta": rv.get("falta", []), "pares": rv.get("pares"),
+            "mantem": rv.get("mantem", []), "excesso": rv.get("excesso", []),
             "acessos": [], "sit": "Sem acesso", "sem_acesso": True,
         })
     return out
