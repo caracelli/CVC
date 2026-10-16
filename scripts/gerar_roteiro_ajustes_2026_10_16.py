@@ -79,7 +79,7 @@ def main():
     h1(doc, "2. Instalação na rede")
     par(doc,
         "O banco já vem processado (BANCO_PROCESSADO_2026-10-16.zip): base da rede de 13/10 "
-        "com os extratos até 15/10, mais o RH de 16/10, com as regras novas. O processamento "
+        "com os extratos até 15/10, mais o RH e o SIG de 14 a 16/10, com as regras novas. O processamento "
         "da rede de 15/10 (iniciado às 17:17) não terminou e deixou um journal aberto; este "
         "banco o substitui. A versão dos executáveis continua 1.0.3: nenhuma máquina se "
         "atualiza sozinha.")
@@ -89,8 +89,9 @@ def main():
         "iam_analytics.db, o iam_analytics.db-journal e o _processando.lock. Não apague o "
         "journal sozinho: sem ele o banco antigo fica corrompido.",
         "Copie o iam_analytics.db do BANCO_PROCESSADO_2026-10-16.zip para <raiz>\\DADOS\\BANCO.",
-        "Não mexa na pasta INTERACOES nem na ENTRADA (os 2 arquivos de SIG de 14 e 15/10 "
-        "continuam lá e entram no próximo processamento).",
+        "Não mexa na pasta INTERACOES. Em ENTRADA\\SISTEMAS\\SIG\\10-2026, mova os 3 arquivos "
+        "view_sig_14_10, view_sig_15_10 e view_sig_16_10 para a subpasta PROCESSADOS: eles já "
+        "estão no banco novo (se ficarem, o próximo processamento os importa de novo, à toa).",
         "Copie a pasta EXECUTAVEIS do ATUALIZACAO_PRD_v1.0.3.zip por cima da EXECUTAVEIS da "
         "rede. Como a versão é a mesma, as máquinas não se atualizam sozinhas.",
         "Se existir a pasta <raiz>\\EXECUTAVEIS\\DADOS, apague ou renomeie: é um cache antigo "
