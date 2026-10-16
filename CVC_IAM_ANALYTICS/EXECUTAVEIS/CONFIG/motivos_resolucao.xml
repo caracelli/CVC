@@ -3,9 +3,10 @@
      "Resolver pendência" do painel). Esta lista é ATUALIZADA JUNTO COM A VERSÃO
      do sistema (fica em EXECUTAVEIS/CONFIG, que faz auto-update pela <versao>).
      Para adicionar/alterar um motivo, edite os <motivo> abaixo. A ordem aqui é a
-     ordem no combobox. -->
+     ordem no combobox.
+     16/10/2026 (Bruna): "para pendencias precisa deixar somente acesso
+     indevido" — Exceção e Transferência de Área saíram da lista. Tratativas já
+     gravadas com eles continuam no histórico e nos gráficos. -->
 <motivos_resolucao>
-    <motivo>Exceção</motivo>
-    <motivo>Transferência de Área</motivo>
     <motivo>Acesso Indevido</motivo>
 </motivos_resolucao>

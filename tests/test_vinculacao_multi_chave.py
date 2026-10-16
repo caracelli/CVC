@@ -229,5 +229,90 @@ class TestConstruirUniverso(unittest.TestCase):
         self.assertEqual(u[1].nome, "")
 
 
+
+class TestEmailContraCpfCompleto(unittest.TestCase):
+    """Bruna, 16/10/2026: "essa usuaria ainda ta vindo com um perfil que ela
+    nao tem". A conta SIST00207 ("VISUAL TURISMO", CPF de outra pessoa) tinha o
+    e-mail da ALEXANDRA e vinculava a ela. Com CPF COMPLETO que nao bate, o
+    e-mail so vale se o nome da conta confirmar a pessoa."""
+
+    def setUp(self):
+        self.svc = ServicoVinculacaoMultiChave([
+            _f("90000266", cpf="28698880827", email="alexandra.dias@cvccorp.com.br",
+               nome="ALEXANDRA RODRIGUES DE LIMA DIAS"),
+            _f("33040", cpf="11111111111", email="felippe.sato@cvccorp.com.br",
+               nome="FELIPPE HIDEO SILVA SATO"),
+        ])
+
+    def test_conta_de_servico_com_outro_cpf_nao_vincula_pelo_email(self):
+        r = self.svc.vincular(cpf="57025898740", email="alexandra.dias@cvccorp.com.br",
+                              nome="VISUAL TURISMO")
+        self.assertIsNone(r.matricula)
+        self.assertNotEqual(r.metodo, METODO_EMAIL)
+
+    def test_nome_abreviado_confirma(self):
+        r = self.svc.vincular(cpf="40734689950", email="felippe.sato@cvccorp.com.br",
+                              nome="FELIPPE SATO")
+        self.assertEqual((r.metodo, r.matricula), (METODO_EMAIL, "33040"))
+
+    def test_nome_truncado_confirma(self):
+        svc = ServicoVinculacaoMultiChave([_f("90000376", cpf="22222222222",
+            email="e@x.com", nome="EDUARDO RAEL LOPES DE SOUZA OLIVEIRA")])
+        r = svc.vincular(cpf="67607586091", email="e@x.com",
+                         nome="EDUARDO RAEL LOPES DE SOUZA OLIVE")
+        self.assertEqual(r.matricula, "90000376")
+
+    def test_sobrenome_igual_nao_basta(self):
+        svc = ServicoVinculacaoMultiChave([_f("32536", cpf="33333333333",
+            email="c@x.com", nome="CINTHIA THESOURO DE AZEVEDO")])
+        r = svc.vincular(cpf="34914365081", email="c@x.com",
+                         nome="CAMILA CAROLINA SILVA AZEVEDO")
+        self.assertIsNone(r.matricula)
+
+    def test_conta_sem_cpf_continua_vinculando_pelo_email(self):
+        r = self.svc.vincular(email="alexandra.dias@cvccorp.com.br", nome="VISUAL TURISMO")
+        self.assertEqual((r.metodo, r.matricula), (METODO_EMAIL, "90000266"))
+
+    def test_cpf_mascarado_nao_conta_como_completo(self):
+        r = self.svc.vincular(cpf="39328XXX", email="alexandra.dias@cvccorp.com.br",
+                              nome="QUALQUER")
+        self.assertEqual(r.matricula, "90000266")
+
+    def test_cpf_de_preenchimento_nao_contradiz(self):
+        r = self.svc.vincular(cpf="00000000000", email="alexandra.dias@cvccorp.com.br")
+        self.assertEqual(r.matricula, "90000266")
+
+    def test_cpf_certo_continua_mandando(self):
+        r = self.svc.vincular(cpf="28698880827", email="outro@x.com", nome="VISUAL TURISMO")
+        self.assertEqual((r.metodo, r.matricula), (METODO_CPF, "90000266"))
+
+
+class TestContaDeServicoNuncaVincula(unittest.TestCase):
+    """Bruna, 16/10/2026: "contas sistemicas e de robos deve ficar sempre em
+    pendencias". Login com prefixo de conta de servico nao vincula, nem pelo
+    CPF, nem pelo e-mail do criador."""
+
+    def setUp(self):
+        self.svc = ServicoVinculacaoMultiChave(
+            [_f("34532656", cpf="12345678901", email="lucas@cvc.com", nome="LUCAS BORGES DA SILVA")],
+            prefixos_conta_servico=["SIST"])
+
+    def test_robo_com_email_do_criador_nao_vincula(self):
+        r = self.svc.vincular(email="lucas@cvc.com", nome="ROBO RPA", login="SIST00212")
+        self.assertIsNone(r.matricula)
+        self.assertEqual(r.metodo, METODO_NAO_VINCULADO)
+
+    def test_robo_nem_com_cpf_do_criador(self):
+        r = self.svc.vincular(cpf="12345678901", login="sist0598")
+        self.assertIsNone(r.matricula)
+
+    def test_conta_pessoal_continua_vinculando(self):
+        r = self.svc.vincular(email="lucas@cvc.com", login="CORPC34532656")
+        self.assertEqual(r.matricula, "34532656")
+
+    def test_sem_prefixo_configurado_nada_muda(self):
+        svc = ServicoVinculacaoMultiChave([_f("M1", email="a@x.com")])
+        self.assertEqual(svc.vincular(email="a@x.com", login="SIST1").matricula, "M1")
+
 if __name__ == "__main__":
     unittest.main()

@@ -350,6 +350,18 @@ body{
   border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,193,66,.22);}
 .modal-bd textarea{resize:vertical;min-height:64px;}
 .modal-err{color:#C0392B;font:600 10.5px Arial;margin:8px 0 0;min-height:14px;}
+/* Escolha das pendências no "Resolver" (Bruna, 16/10/2026: "quando tiver duas
+   pendências... deixar claro qual está sendo tratada, ou selecionar"). */
+.res-sel{border:1px solid #E3E8F2;border-radius:7px;background:#FAFBFE;margin:0 0 14px;}
+.res-sel-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:7px 10px;border-bottom:1px solid #EEF1F7;font:600 11.5px Arial;color:#3A3F4C;}
+.res-sel-hd a{color:#1F2D5C;cursor:pointer;text-decoration:underline;font-weight:600;}
+.modal-bd label.res-sel-i{display:flex;align-items:flex-start;gap:8px;margin:0;padding:6px 10px;
+  border-top:1px solid #F4F6FA;font:400 12px Arial;color:#3A4156;cursor:pointer;}
+.modal-bd label.res-sel-i:first-of-type{border-top:none;}
+.modal-bd .res-sel-i input{width:auto;margin:2px 0 0;flex:none;}
+.res-sel-i b{color:#1F2D5C;}
+.res-sel-i small{color:#6B7280;}
 /* Escolha do formato de exportacao (agrupado x analitico) */
 .exp-op{border:1px solid #D7DCE5;border-radius:8px;padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:border-color .12s,background .12s;}
 .exp-op:hover{border-color:#2F6FB0;background:#F4F8FC;}
@@ -772,19 +784,34 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .vg-sug b{color:var(--navy);}
 
 /* ── Aba Quarentena ─────────────────────────────────────────────────── */
-.quar-toolbar{flex:none;display:flex;align-items:center;}
+.quar-toolbar{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;}
+/* barra das abas Transferidos/Desligados/Quarentena (16/10/2026): sem `gap` o
+   contador encostava na busca e no "Limpar filtros", e sem nowrap o contador,
+   a base de ativos e o "Exportar Excel" quebravam em duas linhas. Quem cede
+   espaco agora e' a busca; faltando, a barra desce uma linha inteira. */
+/* a quebra de linha da barra usa o tamanho DE PARTIDA: com os 380px da
+   busca o "Exportar Excel" descia sozinho mesmo havendo espaco */
+.quar-toolbar .conf-busca{flex:1 1 200px;min-width:170px;max-width:380px;}
+.quar-toolbar .btn-exp{flex:none;}
 .seg{
   padding:8px 22px;border:1px solid #C9D2E3;background:#fff;color:var(--navy);
   font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
+  /* grupo de 3-4 botoes (Transferidos, Desligados): sem quebrar o rotulo
+     ("A / Revisar") nem encolher quando a barra aperta (16/10/2026) */
+  white-space:nowrap;flex:none;
 }
 .seg:first-child{border-radius:8px 0 0 8px;}
-.seg+.seg{border-radius:0 8px 8px 0;border-left:none;}
+/* So' o ULTIMO do grupo arredonda a direita. Antes `.seg+.seg` arredondava
+   todo botao depois do primeiro — feito para 2 botoes (Quarentena); com 4,
+   os do meio viravam pilulas soltas (retorno de 16/10/2026). */
+.seg+.seg{border-radius:0;border-left:none;}
+.seg+.seg:not(:has(+ .seg)){border-radius:0 8px 8px 0;}
 .seg:hover{background:#EEF1F8;}
 .seg.active{
   background:linear-gradient(180deg,#2C3D72,#1F2D5C);color:#fff;
   border-color:var(--navy);box-shadow:0 4px 14px rgba(31,45,92,.42);
 }
-.quar-count{font-size:12px;color:#5A6377;margin-left:14px;font-weight:600;}
+.quar-count{font-size:12px;color:#5A6377;margin-left:4px;font-weight:600;white-space:nowrap;}
 .qbtn-out{
   background:linear-gradient(180deg,#2C3D72,#1F2D5C);color:#fff;border:0;
   border-radius:7px;cursor:pointer;font-size:10.5px;font-weight:700;padding:5px 12px;
@@ -796,9 +823,9 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 
 /* ── Botão Exportar Excel ───────────────────────────────────────────── */
 .exp-bar{flex:none;display:flex;justify-content:flex-end;align-items:center;}
-.lista-total{margin-right:auto;font-size:12.5px;color:#5A6377;}
+.lista-total{margin-right:auto;font-size:12.5px;color:#5A6377;white-space:nowrap;}
 .btn-exp{
-  display:inline-flex;align-items:center;gap:7px;
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
   background:linear-gradient(180deg,#1E8449,#176B3A);color:#fff;
   border:0;border-radius:8px;cursor:pointer;
   font-size:12px;font-weight:700;padding:8px 16px;
@@ -808,7 +835,7 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .btn-exp:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(23,107,58,.5);filter:brightness(1.1);}
 .btn-exp:active{transform:translateY(0);}
 .btn-exp svg{display:block;}
-.pp-wrap{display:flex;align-items:center;gap:6px;margin-right:14px;font-size:12px;color:#5A6377;}
+.pp-wrap{display:flex;align-items:center;gap:6px;margin-right:14px;font-size:12px;color:#5A6377;white-space:nowrap;}
 .pp-wrap select{font:600 12px 'Segoe UI',sans-serif;color:#1F2D5C;background:#fff;
   border:1px solid #C9D2E3;border-radius:6px;padding:4px 7px;cursor:pointer;}
 .pager{display:flex;align-items:center;gap:5px;margin-right:16px;}
@@ -900,6 +927,9 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 .atl-btn:hover{background:#EEF1F8;border-color:var(--navy);}
 .atl-btn[disabled]{opacity:.45;cursor:not-allowed;}
 .atl-btn .caret{font-size:9px;opacity:.7;margin-left:3px;}
+/* botoes de filtro ("Limpar filtros", "Meus filtros", "Salvar filtro") nao
+   quebram o rotulo quando a barra aperta (16/10/2026) */
+.atl-btn{white-space:nowrap;flex:none;}
 .atl-btn .badge-n{
   background:var(--gold);color:var(--navy);border-radius:9px;
   padding:1px 6px;font:800 10px 'Segoe UI';margin-left:3px;
@@ -954,20 +984,23 @@ tr.sub-row td{background:#F3F5F9;color:#555;}
 /* ── Aba Consulta (busca livre + tabela agregada + drawer drill-down) ─ */
 #pg-consulta{padding:16px;display:none;flex-direction:column;gap:12px;}
 #pg-consulta.active{display:flex;}
-.cs-topbar{flex:none;display:flex;align-items:center;gap:10px;
+.cs-topbar{flex:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;row-gap:8px;
   position:relative;z-index:50;
   background:rgba(255,255,255,.72);
   -webkit-backdrop-filter:blur(12px) saturate(150%);
   backdrop-filter:blur(12px) saturate(150%);
   border:1px solid rgba(255,255,255,.65);
   border-radius:10px;padding:8px 12px;box-shadow:var(--sh-1);}
-.cs-busca-wrap{flex:1;min-width:260px;position:relative;display:flex;
+.cs-busca-wrap{flex:1;min-width:150px;position:relative;display:flex;
   align-items:center;background:#fff;border:1px solid #C9D2E3;border-radius:8px;
   padding:5px 10px;transition:border-color .15s,box-shadow .15s;}
 .cs-busca-wrap:focus-within{border-color:var(--navy);
   box-shadow:0 0 0 3px rgba(31,45,92,.10);}
 .cs-busca-ico{color:#7B8294;font-size:14px;margin-right:6px;}
-#cs-busca{flex:1;border:none;outline:none;background:transparent;
+/* min-width:0 + text-overflow: o input tem largura intrinseca (~170px) e,
+   com a caixa encolhida, o texto de ajuda vazava por cima do "Itens por
+   pagina" (16/10/2026) */
+#cs-busca{flex:1;min-width:0;width:100%;text-overflow:ellipsis;border:none;outline:none;background:transparent;
   font:500 13px 'Segoe UI';color:var(--navy);padding:5px 0;}
 #cs-busca::placeholder{color:#A0A6B8;}
 #cs-busca-clear{background:none;border:none;color:#7B8294;font:700 18px Arial;
@@ -1644,7 +1677,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
       <button class="seg active" data-view="tratar" onclick="deslView(this)">Com Acesso / Tratar</button>
       <button class="seg"        data-view="ok"     onclick="deslView(this)">Aderente / OK</button>
       <button class="seg"        data-view="servico" onclick="deslView(this)"
-              title="Contas de serviço (robôs/automações) que casaram com uma pessoa desligada pelo e-mail de quem as cadastrou. Não entram na revogação — ficam aqui para conferência.">Contas de serviço</button>
+              title="Contas de serviço (robôs/automações) ligadas a uma pessoa desligada. Desde 16/10/2026 as contas de robô (login SIST…) não se ligam a ninguém: vão para Pendências como Usuário Não Encontrado.">Contas de serviço</button>
       <button class="seg"        data-view="todos"  onclick="deslView(this)">Todos</button>
       <span class="quar-count" id="desl-count"></span>
       <input id="desl-busca" class="conf-busca" placeholder="Buscar matrícula, nome, cargo, sistema…"
@@ -4495,6 +4528,7 @@ function _btnResSis(u, d, nSis, primeiroDoSis){
   return h;
 }
 let _resSistema = '';   // sistema alvo da resolução ('' = pessoa inteira)
+let _resItens = [];     // pendências oferecidas no modal: [{sis, pf, rot}]
 let _resPerfil  = '';   // acesso (perfil) alvo ('' = o sistema inteiro)
 /* Identidade do acesso na grid: o perfil ENCONTRADO, ou o ESPERADO quando não
    há encontrado. Mesmo critério do backend (_perfil_div). */
@@ -4512,16 +4546,43 @@ function abrirResolver(uid, sistema, perfil){
     : _resSistema
       ? u.divs.filter(d => d.sis === _resSistema && abertas(d))
       : u.divs.filter(abertas);
+  /* MAIS DE UMA PENDÊNCIA (Bruna, 16/10/2026): o botão da linha da pessoa
+     resolvia todas sem mostrar quais ("se clica no primeiro ele acaba
+     resolvendo as duas pendências"). Agora o modal lista cada pendência
+     (sistema · acesso) para escolher — nenhuma vem marcada, para nada ser
+     resolvido sem querer; "marcar todas" mantém o atalho. Uma por ACESSO, na
+     mesma identidade da sub-linha (_perfChave): o "Em Análise" com várias
+     opções é um acesso só. */
+  const _vistos = new Set();
+  _resItens = [];
+  alvo.forEach(d => {
+    const k = (d.sis || '') + '##' + _perfChave(d);
+    if (_vistos.has(k)) return;
+    _vistos.add(k);
+    _resItens.push({sis: d.sis || '', pf: _perfChave(d), rot: d.a || d.tl || ''});
+  });
+  const escolher = !_resPerfil && _resItens.length > 1;
   const escopo = _resPerfil
     ? ' · acesso <b>' + esc(_resPerfil) + '</b> no <b>' + esc(_resSistema) + '</b>'
-    : _resSistema
-      ? ' · sistema <b>' + esc(_resSistema) + '</b> (' + alvo.length + ' pendência(s))'
-      : ' · ' + alvo.length + ' pendência(s) marcada(s) como resolvida(s)';
+    : escolher
+      ? ' · ' + _resItens.length + ' pendências' + (_resSistema ? ' no <b>' + esc(_resSistema) + '</b>' : '')
+        + ' — escolha quais resolver'
+      : _resItens.length === 1
+        ? ' · acesso <b>' + esc(_resItens[0].pf || '—') + '</b> no <b>' + esc(_resItens[0].sis) + '</b>'
+        : ' · ' + alvo.length + ' pendência(s)';
+  const lista = !escolher ? '' :
+    '<div class="res-sel"><div class="res-sel-hd"><span>Pendências a resolver</span>'
+    + '<a onclick="_resMarcarTodas()">marcar todas</a></div>'
+    + _resItens.map((x, i) => '<label class="res-sel-i"><input type="checkbox" class="res-chk" value="' + i + '">'
+        + '<span><b>' + esc(x.sis || '—') + '</b> · ' + esc(_resRotuloPerfis(x.pf))
+        + (x.rot ? ' <small>(' + esc(x.rot) + ')</small>' : '') + '</span></label>').join('')
+    + '</div>';
   _modal(
     '<div class="modal-hd"><h3>Resolver pendência(s)'
     + (_resPerfil ? ' — este acesso' : _resSistema ? ' — por sistema' : '') + '</h3>'
     + '<p>' + esc(u.n) + ' — ' + esc(u.u) + escopo + '</p></div>'
     + '<div class="modal-bd">'
+    + lista
     + _campoTratativa('res', true)
     + '<div class="modal-err" id="res-err"></div></div>'
     + '<div class="modal-ft">'
@@ -4545,7 +4606,8 @@ function abrirResolver(uid, sistema, perfil){
    Agora: nunca fica vazio (cai numa lista mínima que destrava) e o motivo da
    falha aparece na própria tela, para dar o que reportar. */
 let _MOTIVOS_RES = null;
-const _MOTIVOS_FALLBACK = ['Exceção', 'Transferência de Área', 'Acesso Indevido'];
+// Bruna, 16/10/2026: na pendência fica só "Acesso Indevido" (igual ao XML)
+const _MOTIVOS_FALLBACK = ['Acesso Indevido'];
 
 /* Dois caminhos de tratativa (regra nova, 05/08):
      RESOLVER      — o analista informa o ticket que JÁ existe; grava na base.
@@ -4619,14 +4681,29 @@ async function abrirChamadoJiraPendencia(){
   const btn    = document.getElementById('btn-jira');
   if(!motivo){ if(err) err.textContent = 'Selecione o motivo — ele é o título do chamado.'; return; }
   if(!desc){ if(err) err.textContent = 'Descreva o parecer — ele é a descrição do chamado.'; return; }
+  // Escolha das pendências (16/10/2026): o chamado segue o que foi marcado —
+  // uma pendência, ou todas (o escopo do botão). Parte delas não cabe num
+  // chamado só: o resolver gravaria uma tratativa por acesso.
+  const _chks = Array.from(document.querySelectorAll('.res-chk'));
+  let jSis = _resSistema || '', jPf = _resPerfil || '';
+  if(_chks.length){
+    const marc = _chks.filter(c => c.checked);
+    if(!marc.length){ if(err) err.textContent = 'Marque a(s) pendência(s) do chamado.'; return; }
+    if(marc.length === 1 && _chks.length > 1){
+      const it = _resItens[+marc[0].value]; jSis = it.sis; jPf = it.pf;
+    } else if(marc.length < _chks.length){
+      if(err) err.textContent = 'Para abrir o chamado, marque uma pendência ou todas.';
+      return;
+    }
+  }
   if(err) err.textContent = '';
   if(btn){ btn.disabled = true; btn.textContent = 'Abrindo…'; }
   try{
     const r = await fetch('/api/abrir-chamado', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({fluxo:'pendencia', id:_resAlvo.u, descricao:desc,
-                            motivo:motivo, sistema:_resSistema || '',
-                            perfil:_resPerfil || ''})
+                            motivo:motivo, sistema:jSis,
+                            perfil:jPf})
     });
     const j = await r.json();
     if(j && j.ok){
@@ -4788,8 +4865,35 @@ function _carregarMotivos(idSel){
 
 function _preencherMotivos(){ _carregarMotivos('res-motivo'); }
 
+/* Rótulo curto do acesso na lista do Resolver: o SIG traz dezenas de perfis
+   numa linha só (FERNANDA 30804, 31 perfis) e a lista ficava ilegível. */
+function _resRotuloPerfis(pf){
+  const ps = String(pf || '').split(',').map(x => x.trim()).filter(Boolean);
+  if (!ps.length) return '—';
+  return ps.length <= 2 ? ps.join(', ') : ps.slice(0, 2).join(', ') + ' +' + (ps.length - 2) + ' perfis';
+}
+function _resMarcarTodas(){
+  const cs = Array.from(document.querySelectorAll('.res-chk'));
+  const todas = cs.every(c => c.checked);
+  cs.forEach(c => { c.checked = !todas; });
+}
+/* Alvos da resolução: null = o escopo inteiro do botão (pessoa ou sistema),
+   como sempre foi; senão a lista [{sis, pf}] dos acessos marcados. */
+function _resAlvosMarcados(){
+  const cs = Array.from(document.querySelectorAll('.res-chk'));
+  if (!cs.length) return null;
+  const marc = cs.filter(c => c.checked).map(c => _resItens[+c.value]);
+  return marc.length === cs.length ? null : marc;
+}
 async function confirmarResolucao(){
   if(!_resAlvo) return;
+  const _chks = document.querySelectorAll('.res-chk');
+  if(_chks.length && !Array.from(_chks).some(c => c.checked)){
+    const e = document.getElementById('res-err');
+    if(e) e.textContent = 'Marque a(s) pendência(s) que está resolvendo.';
+    return;
+  }
+  const _alvos = _resAlvosMarcados();
   const ticket = document.getElementById('res-ticket').value.trim();
   const url    = document.getElementById('res-url').value.trim();
   const desc   = document.getElementById('res-desc').value.trim();
@@ -4802,12 +4906,20 @@ async function confirmarResolucao(){
   proc(true);
   let msg;
   try{
-    const r = await fetch('/api/resolver', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({id:uid, ticket:ticket, ticket_url:url, descricao:desc,
-                            motivo:motivo, sistema:sis, perfil:pf})
-    });
-    const j = await r.json();
+    // todas marcadas (ou uma só): uma chamada no escopo do botão, como antes;
+    // parte delas: uma chamada por acesso marcado, com a mesma tratativa
+    const envios = _alvos ? _alvos.map(a => ({sistema: a.sis, perfil: a.pf}))
+                          : [{sistema: sis, perfil: pf}];
+    let j = null;
+    for (const e of envios){
+      const r = await fetch('/api/resolver', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({id:uid, ticket:ticket, ticket_url:url, descricao:desc,
+                              motivo:motivo, sistema:e.sistema, perfil:e.perfil})
+      });
+      j = await r.json();
+      if(!(j && j.ok)) break;
+    }
     if(j && j.ok){
       invalidarCacheAPI();   // a via rapida abaixo NAO passa por refreshDB
       if(j.dados){
@@ -4815,7 +4927,9 @@ async function confirmarResolucao(){
         DB.sis_dist = j.dados.sis_dist; DB.users = j.dados.users;
       } else { await refreshDB(); }
       renderMatrix(); aplicarKPIs();
-      msg = (pf ? 'Acesso ' + pf + ' (' + sis + ') de ' + uid
+      msg = (_alvos ? _alvos.length + ' pendência(s) de ' + uid + ' ('
+                     + _alvos.map(a => a.sis + ' · ' + a.pf).join('; ') + ')'
+           : pf ? 'Acesso ' + pf + ' (' + sis + ') de ' + uid
                 : sis ? 'Pendências de ' + uid + ' no sistema ' + sis
                       : 'Pendência(s) de ' + uid)
           + ' resolvida(s) sob o ticket ' + ticket + '.';
@@ -5735,8 +5849,10 @@ async function renderTransferidos(){
     const elBase = document.getElementById('transf-base-rh');
     if (elBase) {
       const M = DB.meta || {};
-      elBase.textContent = M.rh_ativos_em
-        ? '· base de ativos: ' + M.rh_ativos_em
+      // curto na barra (quebrava em duas linhas); o arquivo vai na dica
+      elBase.textContent = M.rh_ativos_em ? '· base RH: ' + M.rh_ativos_em : '';
+      elBase.title = M.rh_ativos_em
+        ? 'Base de ativos do RH: ' + M.rh_ativos_em
           + (M.rh_ativos_arquivo ? ' (' + M.rh_ativos_arquivo + ')' : '')
         : '';
     }
@@ -5839,13 +5955,16 @@ function _transfResumoSis(d, sistemas, multiFora){
   // Banco anterior (sem a lista MANTEM): o que ela tem e não sobrou, mantém —
   // a mesma conta que a tela fazia antes.
   const semMantem = !Array.isArray(d.mantem);
-  const nomes = uniq((sistemas || []).concat((d.acessos || []).map(a => a.sis),
+  const nomes = uniq((sistemas || []).concat((d.acessos || []).filter(a => !a.desconsiderado).map(a => a.sis),
                      (d.falta || []).map(f => f.sis), (d.sobrou || []).map(f => f.sis)))
                 .filter(s => s && s !== '—');
   return nomes.map(s => {
-    const acs = doSis(d.acessos, s);
+    const todos = doSis(d.acessos, s);
+    // perfil desconsiderado (config <perfis_isentos>, 16/10/2026): fica fora
+    // do resumo, como fica fora da validação; o detalhe ainda o mostra
+    const acs = todos.filter(a => !a.desconsiderado);
     const tem = uniq(acs.map(a => a.perfil || ''));
-    const login = uniq(acs.map(a => a.login || '')).join(', ');
+    const login = uniq(todos.map(a => a.login || '')).join(', ');
     const S = doSis(d.sobrou, s), E = doSis(d.excesso, s), F = doSis(d.falta, s);
     const ks = new Set(S.concat(E).map(x => N(x.perfil)));
     const M = semMantem
@@ -5970,7 +6089,8 @@ function _transfDetalhe(d, acessos, sobrou){
       + `<tbody>${rows.join('')}</tbody></table>`
     : '<div class="tr-cap">Nada aqui.</div>';
   const N = x => String(x || '').trim().toUpperCase();
-  const sitAc = (s, p) => {
+  const sitAc = (s, p, a) => {
+    if (a && a.desconsiderado) return '<span style="color:#8A9099;">desconsiderado (perfil padrão)</span>';
     const x = linhasSis.find(l => N(l.s) === N(s));
     if (!x) return '';
     if (x.mantem.some(m => N(m.perfil) === N(p))) return '<b style="color:#1E7B43;">previsto na nova área</b>';
@@ -5996,7 +6116,7 @@ function _transfDetalhe(d, acessos, sobrou){
   previstos.forEach(p => { if (p[1].fun) (funcoes[p[1].fun] = funcoes[p[1].fun] || []).push(p); });
   const abas = [
     ['Tem hoje', contRv + tab(acsOrd.map(a => `<tr><td class="tr-sis">${esc(a.sis || '—')}</td>`
-        + `<td>${esc(a.perfil || '—')}</td><td>${esc(a.login || '')}</td><td>${sitAc(a.sis, a.perfil)}</td></tr>`),
+        + `<td>${esc(a.perfil || '—')}</td><td>${esc(a.login || '')}</td><td>${sitAc(a.sis, a.perfil, a)}</td></tr>`),
         ['Sistema', 'Perfil', 'Login', 'Situação'])],
     ['Previsto na nova área', '<div class="tr-cap">Matriz de perfis (cargo e centro de custo) e Mapeamento CCO '
         + '(centro de custo e gestor); no SIG, o padrão da equipe.</div>'
@@ -6179,8 +6299,11 @@ function exportarTransferidos(){
                            + String(p||'').trim().toUpperCase();
     const sobrouSet = new Set((d.sobrou || []).map(s => _chave(s.sis, s.perfil)));
     const excessoSet = new Set((d.excesso || []).map(s => _chave(s.sis, s.perfil)));
+    const descSet = new Set((d.acessos || []).filter(a => a.desconsiderado)
+                               .map(a => _chave(a.sis, a.perfil)));
     const sitAcesso = (sis, perfil) =>
-      sobrouSet.has(_chave(sis, perfil)) ? 'sobrou (revogar)'
+      descSet.has(_chave(sis, perfil)) ? 'desconsiderado (perfil padrão)'
+      : sobrouSet.has(_chave(sis, perfil)) ? 'sobrou (revogar)'
       : excessoSet.has(_chave(sis, perfil)) ? 'fora do padrão' : 'mantém';
     // Resumo por sistema (15/10/2026): no sistema em que a pessoa JÁ TEM um
     // perfil previsto na nova área, as outras opções não são inclusão — "pode

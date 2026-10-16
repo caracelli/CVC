@@ -374,7 +374,8 @@ def _executar(caminho_config: Path) -> int:
             ).executar()
 
         # Card 7 — Vincular acessos ao RH por CPF
-        VincularAcessosRh(conexao=conexao).executar()
+        VincularAcessosRh(conexao=conexao,
+                          prefixos_conta_servico=cfg.conta_servico_prefixos).executar()
 
         # Card 8 — Analisar divergencias
         AnalisarDivergencias(
@@ -410,7 +411,10 @@ def _executar(caminho_config: Path) -> int:
         # Card 23 — revalidacao POS-TRANSFERENCIA. Depois do AnalisarDivergencias
         # (que grava a tabela `transferidos` com o de/para) e da validacao, para
         # usar o mesmo criterio de "esperado" de cada sistema.
-        RevalidarTransferidos(conexao=conexao).executar()
+        RevalidarTransferidos(
+            conexao=conexao,
+            ancora_systur_sistemas=cfg.validacao_ancora_systur_sistemas,
+            ancora_systur_isentos=cfg.validacao_ancora_systur_isentos).executar()
 
         # Ciclo de vida (Pendencia -> Resolvido -> Aderente) — idempotente/blindado.
         # Depois da validacao (validacao_acessos) e da dobra (resolucoes, acima).
