@@ -25,7 +25,10 @@ from infraestrutura.repositorios.repositorio_funcionario_sqlite import Repositor
 
 class VincularAcessosRh:
 
-    def __init__(self, conexao: ConexaoBancoDados):
+    def __init__(self, conexao: ConexaoBancoDados, prefixos_conta_servico=()):
+        # contas de servico/robo nunca vinculam (16/10/2026) — ver
+        # ServicoVinculacaoMultiChave
+        self._prefixos_conta_servico = list(prefixos_conta_servico or ())
         self._repo_acesso = RepositorioAcessoSqlite(conexao)
         self._repo_func = RepositorioFuncionarioSqlite(conexao)
 
@@ -52,7 +55,8 @@ class VincularAcessosRh:
         funcionarios.extend(self._repo_func.obter_desligados())
         universo = construir_universo(funcionarios)
 
-        contagem = self._repo_acesso.vincular_multi_chave(universo)
+        contagem = self._repo_acesso.vincular_multi_chave(
+            universo, self._prefixos_conta_servico)
 
         # Log estruturado por metodo (auditavel)
         total = sum(contagem.values()) or 1

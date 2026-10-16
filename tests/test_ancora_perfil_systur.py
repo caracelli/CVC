@@ -474,9 +474,10 @@ class QuemEDaCcoNaoPassaPelaAncora(unittest.TestCase):
     oracle x systur". Ser da CCO = o (cc, gestor) da pessoa existe na CCO.
     Medido na base de 15/09: 57 das 457 pessoas com Oracle."""
 
-    def _rodar(self, cx, isenta):
+    def _rodar(self, cx, isenta, sem_matriz_informativo=False):
         uc = ValidarAcessosSistema(cx, ancora_systur_sistemas=[ORA],
-                                   ancora_isenta_cco=isenta)
+                                   ancora_isenta_cco=isenta,
+                                   cco_sem_matriz_informativo=sem_matriz_informativo)
         uc.executar()
         return uc
 
@@ -520,12 +521,21 @@ class QuemEDaCcoNaoPassaPelaAncora(unittest.TestCase):
         uc = self._rodar(cx, isenta=False)
         self.assertEqual(uc._ancora_sem_systur, 1)
 
-    def test_so_a_cco_preve_e_nao_tem_o_acesso_vira_nao_mapeado(self):
-        """⭐ Bruna, 24/09: "colocar que nao tem mapeado na matriz". A matriz
-        do Oracle nao cobre a pessoa, so' a CCO da equipe cita; ela nao tem
-        Oracle. Nada de "incluir": uma linha informativa."""
+    def test_so_a_cco_preve_e_nao_tem_o_acesso_vira_incluir(self):
+        """⭐ MUDOU DE PROPOSITO em 16/10/2026 (Bruna, caso CLAUDIA 90001433:
+        "se a pessoa ta no CCO ele olha so' para base do CCO"). Da CCO, sem
+        Oracle e so' a CCO preve: e' INCLUIR, como em qualquer outro sistema
+        da CCO — nao mais "nao tem mapeado na matriz"."""
         cx = _base(["A_RECEBER_1"], [], com_matriz=False)
         uc = self._rodar(cx, isenta=True)
+        self.assertEqual([(st, esp) for st, esp, _ in _linhas(cx, ORA)],
+                         [("SEM_ACESSO", "CVC AR BRASIL")])
+        self.assertEqual(uc._ancora_cco_sem_matriz, 0)
+
+    def test_regra_de_24_09_continua_alcancavel(self):
+        """Nao-regressao: com a chave ligada volta o informativo de 24/09."""
+        cx = _base(["A_RECEBER_1"], [], com_matriz=False)
+        uc = self._rodar(cx, isenta=True, sem_matriz_informativo=True)
         self.assertEqual(_linhas(cx, ORA),
                          [("NAO_MAPEADO", "CVC AR BRASIL",
                            "NAO_MAPEADO_NA_MATRIZ_ORACLE_EBS")])
@@ -535,7 +545,7 @@ class QuemEDaCcoNaoPassaPelaAncora(unittest.TestCase):
         """⭐ ROSE (2752), validacao de 24/09: sem a funcao na linha, o bloco
         "Funcoes previstas" perdia o Oracle e dizia "completa"."""
         cx = _base(["A_RECEBER_1"], [], com_matriz=False)
-        self._rodar(cx, isenta=True)
+        self._rodar(cx, isenta=True, sem_matriz_informativo=True)
         s = cx.sessao()
         fun = [x.funcao for x in s.query(ValidacaoAcessoModel)
                .filter_by(matricula="M1", sistema=ORA).all()]
@@ -548,12 +558,15 @@ class QuemEDaCcoNaoPassaPelaAncora(unittest.TestCase):
         self._rodar(cx, isenta=True)
         self.assertEqual([st for st, _, _ in _linhas(cx, ORA)], ["OK"])
 
-    def test_da_cco_sem_oracle_e_nao_mapeado_na_matriz(self):
-        """Da CCO, sem Oracle e so' a CCO preve: "nao tem mapeado na matriz"
-        (Bruna, 24/09) — informativo, nao incluir."""
+    def test_da_cco_sem_oracle_e_incluir(self):
+        """MUDOU DE PROPOSITO em 16/10/2026: da CCO, sem Oracle, o que a CCO
+        preve e' incluir (era "nao tem mapeado na matriz", 24/09)."""
         cx = _base(["A_RECEBER_1"], [])
         self._rodar(cx, isenta=True)
-        self.assertEqual([(st, m.split(" |")[0]) for st, _, m in _linhas(cx, ORA)],
+        self.assertEqual([st for st, _, _ in _linhas(cx, ORA)], ["SEM_ACESSO"])
+        cx2 = _base(["A_RECEBER_1"], [])
+        self._rodar(cx2, isenta=True, sem_matriz_informativo=True)
+        self.assertEqual([(st, m.split(" |")[0]) for st, _, m in _linhas(cx2, ORA)],
                          [("NAO_MAPEADO", "NAO_MAPEADO_NA_MATRIZ_ORACLE_EBS")])
 
     def test_a_funcao_carimbada_e_a_da_pessoa(self):

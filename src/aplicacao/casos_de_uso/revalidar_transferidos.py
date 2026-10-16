@@ -42,9 +42,20 @@ _MIN_PARES = 2
 
 class RevalidarTransferidos:
 
-    def __init__(self, conexao: ConexaoBancoDados):
+    def __init__(self, conexao: ConexaoBancoDados,
+                 ancora_systur_sistemas=None, ancora_systur_isentos=None):
         self._conexao = conexao
         self._limiar = ValidarAcessosSistema._SIG_LIMIAR_ESPELHO
+        # PERFIL DESCONSIDERADO tambem aqui (Bruna, 16/10/2026: "esse perfil
+        # se colocou em padrao: CVC OIE BRASIL - Relatorio de Despesas, nos
+        # transferidos tambem?"). Desde 07/10 a validacao normal tira os
+        # <perfis_isentos> da entrada dos sistemas ancorados (Oracle); a
+        # revalidacao nao lia a lista e o perfil aparecia na aba Transferidos
+        # como "fora do padrao". Mesmas chaves do config, mesmo casamento
+        # (_norm + PREFIXO) de ValidarAcessosSistema._isento_da_ancora.
+        self._ancorados = {str(x).strip().upper()
+                           for x in (ancora_systur_sistemas or []) if str(x).strip()}
+        self._isentos = [_norm(x) for x in (ancora_systur_isentos or []) if str(x).strip()]
 
     # ------------------------------------------------------------------
     def executar(self) -> int:
@@ -79,9 +90,16 @@ class RevalidarTransferidos:
     def _carregar(self, sessao):
         ativos = sessao.query(RhAtivo).all()
         acessos = defaultdict(lambda: defaultdict(set))     # mat -> sis -> perfis
+        desconsiderados = 0
         for a in sessao.query(AcessoSistema).all():
             if a.matricula_vinculada and a.perfil:
+                if self._isento(a.sistema, a.perfil):
+                    desconsiderados += 1
+                    continue
                 acessos[a.matricula_vinculada][a.sistema].add(a.perfil)
+        if self._isentos:
+            logger.info(f"[revalidacao] {desconsiderados} acesso(s) desconsiderado(s) "
+                        f"({', '.join(self._isentos)}).")
 
         repo = RepositorioMatrizSqlite(self._conexao)
         matriz = defaultdict(lambda: defaultdict(set))      # (cc,cargo) -> sis -> perfis
@@ -113,6 +131,12 @@ class RevalidarTransferidos:
                 full[(cc, g, cg)].append(f.matricula)
                 wide[(cc, g)].append(f.matricula)
         return acessos, matriz, cco, full, wide
+
+    def _isento(self, sistema, perfil) -> bool:
+        if not self._isentos or str(sistema or "").strip().upper() not in self._ancorados:
+            return False
+        p = _norm(perfil)
+        return any(p.startswith(i) for i in self._isentos)
 
     # ------------------------------------------------------------------
     def _padrao_sig(self, mats, acessos, excluir) -> Tuple[Set[str], int]:

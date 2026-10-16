@@ -106,8 +106,17 @@ class ValidarAcessosSistema:
                  ancora_systur_isentos=None,
                  matriz_tem_precedencia: bool = True,
                  cco_pela_funcao: bool = True,
-                 ancora_isenta_cco: bool = True):
+                 ancora_isenta_cco: bool = True,
+                 cco_sem_matriz_informativo: bool = False):
         self._conexao = conexao
+        # QUEM ESTA NA CCO, SO' A CCO — inclusive no Oracle (Bruna, 16/10/2026,
+        # caso CLAUDIA 90001433: "se a pessoa ta no CCO ele olha so' para base
+        # do CCO, fora isso ai sim as outras regras fazem sentido"). Ate' aqui
+        # (regra de 24/09) o Oracle previsto SO' pela CCO, para quem nao tinha
+        # Oracle, virava "nao tem mapeado na matriz" (informativo) em vez de
+        # "Incluir". Desligado por padrao; True volta a regra de 24/09 (e serve
+        # para medir o efeito).
+        self._cco_sem_matriz_informativo = bool(cco_sem_matriz_informativo)
         # Regras da matriz do franqueado (lista de RegraFranqueado). Vazio/None
         # = regra desligada e o franqueado segue so' no espelho, como antes de
         # 02/09 — a matriz e' um ARQUIVO do cliente, entao a ausencia dele nao
@@ -536,7 +545,8 @@ class ValidarAcessosSistema:
             # "colocar que nao tem mapeado na matriz" — em vez de sugerir incluir
             # o Oracle so' porque a CCO da equipe cita. Informativo, nao pendencia.
             # Medido na base de 15/09: 50 pessoas, nenhuma com Oracle hoje.
-            if _da_cco:
+            # DESLIGADA em 16/10/2026 — ver _cco_sem_matriz_informativo.
+            if _da_cco and self._cco_sem_matriz_informativo:
                 for _s in self._ancora_systur:
                     _ls = [r for r in regs_func if r.get("sistema") == _s]
                     if not _ls or not all(

@@ -471,6 +471,24 @@ def _multi_perfil_fora():
     return [p.strip().upper() for p in bruto.split(",") if p.strip()]
 
 
+def _perfis_desconsiderados():
+    """(sistemas, prefixos) de <validacao><ancora_systur>: os perfis que a
+    validacao do Processador desconsidera nos sistemas ancorados (07/10/2026,
+    "Oracle - Desconsiderar o perfil: CVC OIE BRASIL - RELATORIO DE
+    DESPESAS"). Aqui so' para a aba Transferidos marcar o acesso igual
+    (16/10/2026). Prefixos normalizados como _nrm (sem acento e sem caixa)."""
+    if not os.path.exists(CONFIG_PATH):
+        return set(), []
+    try:
+        raiz = ET.parse(CONFIG_PATH).getroot()
+        sis = raiz.findtext("validacao/ancora_systur/sistemas") or ""
+        isen = raiz.findtext("validacao/ancora_systur/perfis_isentos") or ""
+    except Exception:
+        return set(), []
+    return ({x.strip().upper() for x in sis.split(",") if x.strip()},
+            [_nrm(x) for x in isen.split(",") if x.strip()])
+
+
 def _ler_ocioso():
     """Segundos sem heartbeat ate o watchdog encerrar. 0 desliga.
 
@@ -3922,6 +3940,17 @@ def listar_transferidos():
                     campos_por_mat[mat] = m.group(1) if m else ""
         except Exception as e:
             print(f"  [transf] divergencias indisponivel: {e!r}")
+
+        # Perfil desconsiderado (16/10/2026): o acesso continua na lista, mas
+        # marcado — a tela o tira do resumo e o mostra como "desconsiderado"
+        # no detalhe, em vez de "fora do padrao".
+        _dsis, _dpref = _perfis_desconsiderados()
+        if _dpref:
+            for _acs in por_mat.values():
+                for _a in _acs:
+                    if (_a["sis"].upper() in _dsis
+                            and any(_nrm(_a["perfil"]).startswith(x) for x in _dpref)):
+                        _a["desconsiderado"] = True
 
         out = []
         # dados de RH (ativos) por matricula p/ enriquecer nome/cargo/CC/gestor

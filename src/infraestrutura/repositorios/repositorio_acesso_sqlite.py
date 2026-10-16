@@ -124,12 +124,13 @@ class RepositorioAcessoSqlite(IRepositorioAcesso):
             sessao.commit()
         return count
 
-    def vincular_multi_chave(self, funcionarios: List[FuncionarioRef]) -> Dict[str, int]:
+    def vincular_multi_chave(self, funcionarios: List[FuncionarioRef],
+                             prefixos_conta_servico=()) -> Dict[str, int]:
         """Cascata completa de matching multi-chave. Devolve contagem por metodo.
 
         Usado quando o sistema tem CPF mascarado/ausente (SICA_RA) ou queremos
         cobertura maior que o simples CPF exato."""
-        servico = ServicoVinculacaoMultiChave(funcionarios)
+        servico = ServicoVinculacaoMultiChave(funcionarios, prefixos_conta_servico)
         contagem: Dict[str, int] = {}
         with self._conexao.sessao() as sessao:
             rows = sessao.query(AcessoSistema).all()

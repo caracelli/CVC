@@ -58,6 +58,9 @@ ORDEM_METODOS = (
 )
 
 _MIN_DIG_PARCIAL = 5     # minimo de digitos contiguos pra considerar CPF parcial
+# E-mail x CPF divergente (16/10/2026) — ver _nomes_compativeis
+_PARTICULAS = frozenset({"DE", "DA", "DO", "DAS", "DOS", "E"})
+_TOKEN_SIMILAR = 0.85    # 'BERTACII' x 'BERTACI', 'OLIVE' (truncado) x 'OLIVEIRA'
 _FUZZY_THRESHOLD = 0.92  # similaridade minima do difflib pra entrar como candidato
 
 
@@ -137,11 +140,23 @@ def normalizar_nome(v) -> str:
 class ServicoVinculacaoMultiChave:
     """Indexa o universo de funcionarios uma vez e resolve N vinculos em O(1)."""
 
-    def __init__(self, funcionarios: Iterable[FuncionarioRef]):
+    def __init__(self, funcionarios: Iterable[FuncionarioRef],
+                 prefixos_conta_servico: Iterable[str] = ()):
+        # CONTA DE SERVICO / ROBO NUNCA E' DE UMA PESSOA (Bruna, 16/10/2026:
+        # "contas sistemicas e de robos deve ficar sempre em pendencias porque
+        # vamos analisar elas e ai certamente vao pra quarentena depois").
+        # O robo e' cadastrado com o e-mail de quem o criou, e o e-mail o
+        # vinculava a essa pessoa: os perfis dele viravam acessos dela (LUCAS
+        # 34532656, 5 robos e 42 perfis "sem previsao"; ALEXANDRA 90000266,
+        # SIST00207). Login com estes prefixos (<conta_servico><prefixos_login>)
+        # nao vincula: fica "Sem vinculo RH", que e' pendencia.
+        self._prefixos_servico = tuple(
+            normalizar_login(p) for p in (prefixos_conta_servico or ()) if str(p).strip())
         self._por_cpf: Dict[str, List[str]] = defaultdict(list)
         self._por_email: Dict[str, List[str]] = defaultdict(list)
         self._por_login: Dict[str, List[str]] = defaultdict(list)
         self._por_nome: Dict[str, List[str]] = defaultdict(list)
+        self._nome_por_mat: Dict[str, str] = {}
         # (cpf_parcial, nome) -> matriculas
         self._por_parcial_nome: Dict[Tuple[str, str], List[str]] = defaultdict(list)
         # Indice por primeiro token do nome -> lista de (nome_completo, matricula).
@@ -168,6 +183,7 @@ class ServicoVinculacaoMultiChave:
                 self._por_login[f.login].append(f.matricula)
             if f.nome:
                 self._por_nome[f.nome].append(f.matricula)
+                self._nome_por_mat[f.matricula] = f.nome
                 token = f.nome.split(" ", 1)[0] if f.nome else ""
                 if token:
                     self._nomes_por_token[token].append((f.nome, f.matricula))
@@ -189,7 +205,10 @@ class ServicoVinculacaoMultiChave:
             return ResultadoVinculacao(
                 lembrado.metodo, lembrado.score, lembrado.matricula,
                 list(lembrado.candidatos) if lembrado.candidatos else None)
-        resultado = self._resolver(cpf, email, nome, cpf_mascarado, login)
+        if self._prefixos_servico and normalizar_login(login).startswith(self._prefixos_servico):
+            resultado = ResultadoVinculacao(METODO_NAO_VINCULADO, SCORE_NAO_VINCULADO, matricula=None)
+        else:
+            resultado = self._resolver(cpf, email, nome, cpf_mascarado, login)
         self._memo[chave] = resultado
         return ResultadoVinculacao(
             resultado.metodo, resultado.score, resultado.matricula,
@@ -212,8 +231,27 @@ class ServicoVinculacaoMultiChave:
                 return ResultadoVinculacao(METODO_CPF, SCORE_CPF, cand[0], candidatos=cand)
 
         # 2) Email exato
+        # ...MAS NAO CONTRA UM CPF COMPLETO (Bruna, 16/10/2026: "essa usuaria
+        # ainda ta vindo com um perfil que ela nao tem"). A conta SIST00207 do
+        # SYSTUR ("VISUAL TURISMO", outro CPF) tinha o e-mail da ALEXANDRA
+        # (90000266) e virou dela — o PERFIL_CONSULTA "a mais". Na base de
+        # 09/10, 55 contas com CPF completo de outra pessoa vincularam por
+        # e-mail: robos e contas de servico cadastrados com o e-mail de quem os
+        # administra ("BRCVCSRVVM AEREO", "ROBO RPA", "TESTE OPERA"...) e contas
+        # de outra pessoa ("CASSIA PANDORI" -> CLAUDIA GONCALVES). Se o CPF
+        # completo nao bateu no passo 1, o e-mail so vale quando o NOME da
+        # conta confirma a pessoa — nome abreviado/truncado continua valendo
+        # ("FELIPPE SATO" = FELIPPE HIDEO SILVA SATO). Conta SEM CPF segue como
+        # sempre: o e-mail basta.
+        # CPF de preenchimento ('00000000000', '99999999999') nao identifica
+        # ninguem: nao contradiz o e-mail.
+        cpf_contradiz = (bool(cpf_n) and len(cpf_n) == 11 and cpf_n.isdigit()
+                         and len(set(cpf_n)) > 1)
         if email_n:
             cand = self._por_email.get(email_n, [])
+            if cpf_contradiz:
+                cand = [m for m in cand
+                        if _nomes_compativeis(nome_n, self._nome_por_mat.get(m, ""))]
             if len(cand) == 1:
                 return ResultadoVinculacao(METODO_EMAIL, SCORE_EMAIL, cand[0])
             if len(cand) > 1:
@@ -287,6 +325,26 @@ class ServicoVinculacaoMultiChave:
             if len(vistos) >= max_n:
                 break
         return vistos
+
+
+def _nomes_compativeis(nome_conta: str, nome_rh: str) -> bool:
+    """O nome da conta confirma a pessoa do RH? Ja normalizados. Pelo menos 2
+    nomes em comum (ou todos, se um dos lados tiver menos), ignorando
+    particulas e tolerando grafia proxima/truncada. Sem nome nao confirma."""
+    a = [t for t in (nome_conta or "").split() if t not in _PARTICULAS]
+    b = [t for t in (nome_rh or "").split() if t not in _PARTICULAS]
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+
+    def _casa(t):
+        return any(t == u or (len(t) >= 4 and len(u) >= 4 and (
+            u.startswith(t) or t.startswith(u)
+            or difflib.SequenceMatcher(None, t, u).ratio() >= _TOKEN_SIMILAR))
+            for u in b)
+    comuns = sum(1 for t in a if _casa(t))
+    return comuns >= min(2, len(a), len(b))
 
 
 # ---- helpers utilitarios --------------------------------------------------
