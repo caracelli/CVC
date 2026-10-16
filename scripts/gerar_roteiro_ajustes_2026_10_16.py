@@ -76,29 +76,38 @@ def main():
         "não quebram mais em telas menores.",
     ], estilo="List Bullet")
 
-    h1(doc, "2. Reprocessar a rede (manual)")
+    h1(doc, "2. Instalação na rede")
     par(doc,
-        "A versão continua 1.0.3, a mesma da rede: nenhuma máquina se atualiza sozinha. O "
-        "reprocessamento é feito à mão, por uma pessoa, com a EXECUTAVEIS deste pacote.")
+        "O banco já vem processado (BANCO_PROCESSADO_2026-10-16.zip): base da rede de 13/10 "
+        "com os extratos até 15/10, mais o RH de 16/10, com as regras novas. O processamento "
+        "da rede de 15/10 (iniciado às 17:17) não terminou e deixou um journal aberto; este "
+        "banco o substitui. A versão dos executáveis continua 1.0.3: nenhuma máquina se "
+        "atualiza sozinha.")
     lista(doc, [
-        "Feche o Processador em todas as máquinas (o painel pode continuar aberto).",
-        "Extraia a pasta EXECUTAVEIS do zip numa pasta LOCAL (ex.: C:\\CVC_IAM_1016\\EXECUTAVEIS). "
-        "O Processador não abre direto da pasta de rede: rodado de lá, ele mostra um aviso e "
-        "não processa.",
-        "Abra o Processador.exe dessa pasta local. Ele lê e grava os dados da rede, como sempre. "
-        "Espere “Processamento finalizado”.",
-        "Nos painéis abertos, clique em Atualizar para carregar a base nova.",
+        "Feche os painéis e garanta que ninguém esteja rodando o Processador.",
+        "Em <raiz>\\DADOS\\BANCO, mova JUNTOS para uma pasta de backup (ex.: _antes_1610) o "
+        "iam_analytics.db, o iam_analytics.db-journal e o _processando.lock. Não apague o "
+        "journal sozinho: sem ele o banco antigo fica corrompido.",
+        "Copie o iam_analytics.db do BANCO_PROCESSADO_2026-10-16.zip para <raiz>\\DADOS\\BANCO.",
+        "Não mexa na pasta INTERACOES nem na ENTRADA (os 2 arquivos de SIG de 14 e 15/10 "
+        "continuam lá e entram no próximo processamento).",
+        "Copie a pasta EXECUTAVEIS do ATUALIZACAO_PRD_v1.0.3.zip por cima da EXECUTAVEIS da "
+        "rede. Como a versão é a mesma, as máquinas não se atualizam sozinhas.",
+        "Se existir a pasta <raiz>\\EXECUTAVEIS\\DADOS, apague ou renomeie: é um cache antigo "
+        "de quando o painel era aberto direto da rede.",
+        "Abra os painéis e clique em Atualizar.",
     ])
     par(doc,
-        "O reprocessamento é necessário: a vinculação dos robôs, a regra da CCO no Oracle e o "
-        "perfil padrão nos Transferidos são calculados pelo Processador.", size=9.5)
+        "PRÓXIMO PROCESSAMENTO: quem for processar precisa usar os executáveis novos — copie a "
+        "EXECUTAVEIS da rede (já atualizada) por cima da sua cópia local antes de abrir o "
+        "Processador.exe. Com o Processador antigo, as regras antigas voltam (robôs atribuídos "
+        "às pessoas, EBS da CCO como informativo).", size=9.5)
     par(doc,
-        "Os painéis das máquinas continuam na versão atual até a próxima atualização de versão. "
-        "Eles já mostram os dados novos: robôs em Pendências, a ALEXANDRA aderente e o EBS da "
-        "CLAUDIA como inclusão. As mudanças de tela (escolher a pendência no Resolver, motivo só "
-        "“Acesso Indevido”, o “Relatório de Despesas” marcado como desconsiderado e o layout das "
-        "barras) aparecem quando o painel novo for instalado. Para ver tudo agora numa máquina, "
-        "abra o visualizador.exe da mesma pasta local.", size=9.5)
+        "Os painéis das máquinas mostram os dados novos já com a versão atual (robôs em "
+        "Pendências, ALEXANDRA aderente, EBS da CLAUDIA como inclusão). As mudanças de tela "
+        "(escolher a pendência no Resolver, motivo só “Acesso Indevido”, “Relatório de "
+        "Despesas” desconsiderado nos Transferidos e o layout das barras) aparecem em quem "
+        "copiar a EXECUTAVEIS nova para a máquina.", size=9.5)
 
     h1(doc, "3. O que conferir")
     lista(doc, [
