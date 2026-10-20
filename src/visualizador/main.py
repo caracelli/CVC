@@ -3816,6 +3816,38 @@ import re as _re_transf
 _RE_CAMPOS = _re_transf.compile(r"Mudança de (.+?) —")
 
 
+def _base_validacao(c, matriculas):
+    """Base que validou cada pessoa: "CCO", "Matriz", "Matriz franqueado" ou
+    "Espelho" (Bruna, 19/10/2026: "em movimentados, acrescentar uma coluna se a
+    pessoa e' do CCO e/matriz"). Sai de `validacao_acessos.origem_matriz`, o
+    mesmo dado que o motor gravou — quem esta' na CCO e' validado so' por ela.
+    Vazio = a pessoa nao tem previsao em base nenhuma."""
+    if not matriculas:
+        return {}
+    origens = {}
+    try:
+        qm = ",".join("?" * len(matriculas))
+        for r in c.execute(
+                "SELECT matricula, origem_matriz FROM validacao_acessos "
+                f"WHERE matricula IN ({qm}) AND COALESCE(origem_matriz,'')<>''",
+                list(matriculas)):
+            origens.setdefault(r["matricula"], set()).add(str(r["origem_matriz"]).upper())
+    except Exception as e:
+        print(f"  [transf] base da validacao indisponivel: {e!r}")
+        return {}
+    out = {}
+    for m, o in origens.items():
+        if "CCO" in o:
+            out[m] = "CCO"
+        elif any(x.startswith("MATRIZ_FRANQ") for x in o):
+            out[m] = "Matriz franqueado"
+        elif "MATRIZ" in o:
+            out[m] = "Matriz"
+        elif any(x.startswith("ESPELHO") for x in o):
+            out[m] = "Espelho"
+    return out
+
+
 def _transferidos_depara(c, matriculas):
     """Le a tabela `transferidos` (de/para do movimento) para as matriculas dadas.
 
@@ -3970,6 +4002,7 @@ def listar_transferidos():
         # par, o resto da aba segue igual.
         depara = _transferidos_depara(c, list(por_mat))
         reval = _revalidacao_transferidos(c, list(por_mat))
+        base_de = _base_validacao(c, list(por_mat))
         # FUNCAO da CCO para cada acesso do veredito. Retorno da area (17/09):
         # "qual a matriz de acessos (cco ou sistema), qual a funcao?" — sem isso
         # a analista ve "CVC AP BRASIL Consulta" e nao sabe de que funcao veio.
@@ -4008,6 +4041,7 @@ def listar_transferidos():
                 "cc": (info["cc"] if info else "") or "",
                 "gestor": (info["gestor"] if info else "") or "",
                 "campos": campos_por_mat.get(mat, "") or dp.get("campos", ""),
+                "base": base_de.get(mat, ""),
                 "de_para": dp.get("pares", []),
                 "dt_mov": dp.get("dt", ""),
                 "acessos": acessos,
@@ -4068,6 +4102,7 @@ def _transferidos_sem_acesso(ja_listados):
         # espera e elas nao tem). Sem isto a linha sairia com formato diferente
         # das outras — e a informacao mais util sobre elas se perderia.
         reval = _revalidacao_transferidos(c, mats)
+        base_de = _base_validacao(c, mats)
     except Exception as e:
         print(f"  [transf] sem-acesso indisponivel: {e!r}")
         return []
@@ -4085,6 +4120,7 @@ def _transferidos_sem_acesso(ja_listados):
             "cargo": r["cargo_atual"] or "", "depto": "",
             "cc": r["centro_custo_atual"] or "", "gestor": r["gestor_atual"] or "",
             "campos": r["campos_mudados"] or "",
+            "base": base_de.get(mat, ""),
             "de_para": dp.get("pares", []),
             "dt_mov": r["data_transferencia"] or "",
             # mesmo formato das demais linhas da aba

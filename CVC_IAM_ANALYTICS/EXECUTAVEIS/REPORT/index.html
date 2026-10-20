@@ -116,6 +116,13 @@ body{
 .tr-cap{color:#7B8294;font-size:11.5px;margin:0 0 6px;}
 .tr-selo{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;font:700 10px Arial;white-space:nowrap;}
 .tr-selo.ok{background:#DFF6DD;color:#107C10;} .tr-selo.acao{background:#FDECEC;color:#B33A3A;}
+/* coluna Base (CCO x Matriz), pedido de 19/10/2026 */
+.tr-base{display:inline-block;padding:1px 8px;border-radius:9px;font:700 10.5px Arial;
+  background:#EEF2F9;color:#1F2D5C;white-space:nowrap;}
+.tr-base.cco{background:#FFF4D6;color:#8A5A00;}
+/* com a coluna Base, a etiqueta longa de Mudanca ("CARGO, CENTRO DE CUSTO,
+   DEPARTAMENTO, GESTOR") empurrava a Situacao para fora da tela: quebra linha */
+#transf-tbl .h-reab{white-space:normal;line-height:1.35;}
 .hdr-titles{display:flex;flex-direction:column;}
 .hdr-title{font-size:21px;font-weight:700;color:#fff;line-height:1.25;letter-spacing:.2px;}
 .hdr-sub{font-size:12px;color:#AEB8D4;}
@@ -1747,6 +1754,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
             <col style="width:170px">
             <col style="width:120px">
             <col style="width:170px">
+            <col style="width:72px">
             <col style="width:150px">
             <col style="width:120px">
             <col style="width:110px">
@@ -1754,7 +1762,9 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
           <thead><tr>
             <th data-nf></th>
             <th>Matrícula</th><th>Nome</th><th>Cargo</th>
-            <th>Centro de Custo</th><th>Gestor</th><th>Mudança</th>
+            <th>Centro de Custo</th><th>Gestor</th>
+            <th title="Base que valida a pessoa: CCO (centro de custo + gestor na matriz CCO) ou Matriz de perfis do cargo">Base</th>
+            <th>Mudança</th>
             <th>Acessos</th><th>Situação</th>
           </tr></thead>
           <tbody id="transf-body"></tbody>
@@ -5913,7 +5923,7 @@ function _transfChave(s, p){
   return String(s||'').trim().toUpperCase() + '|' + String(p||'').trim().toUpperCase();
 }
 function _transfTit(n, txt, extra){
-  return `<tr class="sub"><td></td><td></td><td colspan="7">`
+  return `<tr class="sub"><td></td><td></td><td colspan="8">`
        + `<span class="mov-tit">${n} · ${txt}</span>${extra||''}</td></tr>`;
 }
 /* Um acesso do bloco 2/3: sistema · perfil, com a função da CCO quando existe
@@ -6144,7 +6154,7 @@ function _transfDetalhe(d, acessos, sobrou){
     + abas.map((a, i) => `<div class="tr-dtab${i ? '' : ' active'}" onclick="_transfDetAba('${id}', ${i})">${a[0]}</div>`).join('')
     + `</div>` + abas.map((a, i) => `<div class="tr-dpane${i ? '' : ' on'}">${a[1]}</div>`).join('')
     + `</div></div>`;
-  return `<tr class="sub"><td></td><td></td><td colspan="7">${h}</td></tr>`;
+  return `<tr class="sub"><td></td><td></td><td colspan="8">${h}</td></tr>`;
 }
 
 function pintarTransferidos(){
@@ -6157,7 +6167,7 @@ function pintarTransferidos(){
 
   let h = '';
   if(!pag.length){
-    h = `<tr><td colspan="9" style="text-align:center;padding:22px;color:#6B7280;">`
+    h = `<tr><td colspan="10" style="text-align:center;padding:22px;color:#6B7280;">`
       + (_transfFalhou
           ? '<b style="color:#B33A3A;">Não foi possível carregar os transferidos.</b> '
             + 'A lista não está vazia — a leitura falhou. Troque de aba e volte, ou '
@@ -6217,13 +6227,15 @@ function pintarTransferidos(){
     h += `<tr>
       <td>${podeAbrir ? `<span class="h-sis h-sisclick" data-m="${esc(d.m)}" onclick="transfToggle(this)">${aberto?'−':'+'}</span>` : ''}</td>
       <td>${esc(d.m)}</td><td>${esc(d.n)||'—'}</td><td>${esc(d.cargo)||'—'}</td>
-      <td>${esc(d.cc)||'—'}</td><td>${esc(d.gestor)||'—'}</td><td>${campos}</td>
+      <td>${esc(d.cc)||'—'}</td><td>${esc(d.gestor)||'—'}</td>
+      <td>${d.base ? `<span class="tr-base${d.base === 'CCO' ? ' cco' : ''}">${esc(d.base)}</span>` : '—'}</td>
+      <td>${campos}</td>
       <td>${cel}</td><td>${sit}</td></tr>`;
     if(aberto){
       if(pares.length){
         h += `<tr class="sub">
           <td></td><td></td>
-          <td colspan="7"><span class="mov-tit">movimentação${d.dt_mov?' em '+fmtDate(d.dt_mov):''}</span>`
+          <td colspan="8"><span class="mov-tit">movimentação${d.dt_mov?' em '+fmtDate(d.dt_mov):''}</span>`
           + pares.map(p => `<span class="mov-par"><b>${esc(p.campo)}</b>`
               + `<span class="mov-de">${esc(p.de)||'(vazio)'}</span>`
               + `<span class="mov-seta">→</span>`
@@ -6271,6 +6283,9 @@ function exportarTransferidos(){
      Duas colunas ao FIM (as anteriores não mudam de posição, para não quebrar
      filtro salvo de quem já usa a planilha) e as linhas do que falta incluir. */
   cols.push('Situação do acesso','Função (CCO)');
+  // Base que valida a pessoa (CCO x Matriz), 19/10/2026 — no FIM, para nao
+  // mover as colunas de quem ja' filtra a planilha
+  cols.push('Base');
   const C_SIT = cols.indexOf('Situação');
 
   const linhas = [], niveis = [];
@@ -6317,7 +6332,8 @@ function exportarTransferidos(){
       .filter(m => m.origem !== 'ESPELHO' && !_fora.includes(_sisN(m.sis)))
       .map(m => _sisN(m.sis)));
 
-    linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'', '', '', '', '', '']);
+    const base = d.base || '';
+    linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'', '', '', '', '', '', base]);
     niveis.push(0);
 
     _acessosPorSistema(d.acessos).forEach(g => {
@@ -6325,11 +6341,11 @@ function exportarTransferidos(){
       linhas.push([...ident(), ...depara, fmtDate(g.dt), sit, t.ticket||'', t.motivo||'',
                    g.sis, g.login,
                    g.perfis.length > 1 ? g.perfis.length + ' perfis' : umPerfil,
-                   umPerfil ? sitAcesso(g.sis, umPerfil) : '', '']);
+                   umPerfil ? sitAcesso(g.sis, umPerfil) : '', '', base]);
       niveis.push(1);
       if(g.lista.length > 1) g.lista.forEach(a => {
         linhas.push([...ident(), ...depara, fmtDate(a.dt), sit, t.ticket||'', t.motivo||'',
-                     g.sis, a.login, a.perfil, sitAcesso(g.sis, a.perfil), '']);
+                     g.sis, a.login, a.perfil, sitAcesso(g.sis, a.perfil), '', base]);
         niveis.push(2);
       });
     });
@@ -6339,7 +6355,7 @@ function exportarTransferidos(){
       linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'',
                    f.sis || '', '', f.perfil || '',
                    aderenteSis.has(_sisN(f.sis)) ? 'pode ter também (não precisa incluir)'
-                                                 : 'falta (incluir)', f.fun || '']);
+                                                 : 'falta (incluir)', f.fun || '', base]);
       niveis.push(1);
     });
   });

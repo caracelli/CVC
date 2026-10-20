@@ -305,7 +305,9 @@ class PlanilhaAlinhadaComATela(unittest.TestCase):
         cap = self._export(REG)
         self.assertEqual(cap["cols"][:6],
                          ["Matrícula", "Nome", "Cargo", "Centro de Custo", "Gestor", "Mudança"])
-        self.assertEqual(cap["cols"][-2:], ["Situação do acesso", "Função (CCO)"])
+        # 19/10/2026: "Base" (CCO x Matriz) entrou NO FIM, depois das que ja'
+        # existiam — nenhuma coluna antiga muda de posicao
+        self.assertEqual(cap["cols"][-3:], ["Situação do acesso", "Função (CCO)", "Base"])
 
     def test_planilha_diz_manter_revogar_e_incluir(self):
         cap = self._export(REG)
@@ -396,6 +398,21 @@ class FuncaoNoVeredito(unittest.TestCase):
         self.assertEqual([x["perfil"] for x in p["mantem"]], ["P1"])
         self.assertEqual([x["perfil"] for x in p["excesso"]], ["P9"])
         self.assertEqual(p["reval"]["MANTEM"], 1)
+
+    def test_base_cco_ou_matriz(self):
+        """19/10/2026 (Bruna): coluna dizendo se a pessoa e' da CCO ou da Matriz,
+        pela origem que o motor gravou na validacao."""
+        c = sqlite3.connect(self.db)
+        try:
+            c.execute("INSERT INTO validacao_acessos (matricula, sistema, perfil_esperado, "
+                      "status, origem_matriz) VALUES ('M1','SYSTUR','P1','OK','CCO')")
+            c.commit()
+        finally:
+            c.close()
+        self.assertEqual(vm.listar_transferidos()["lista"][0]["base"], "CCO")
+
+    def test_sem_validacao_a_base_fica_vazia(self):
+        self.assertEqual(vm.listar_transferidos()["lista"][0]["base"], "")
 
     def test_sem_cco_o_campo_fica_vazio_sem_quebrar(self):
         c = sqlite3.connect(self.db)
