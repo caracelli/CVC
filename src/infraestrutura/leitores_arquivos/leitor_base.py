@@ -202,6 +202,30 @@ def ler_tabela(arquivo, dtype=str, header=0, skiprows=0,
                        header=header, skiprows=skiprows, on_bad_lines="skip")
 
 
+# Movimentos de arquivo desta execucao (origem, destino). O Processador em modo
+# COPIA LOCAL (20/10/2026) publica o banco so' no fim: se cair antes, devolve
+# os arquivos ao lugar com `desfazer_movimentos`, para nao ficarem em
+# PROCESSADOS sem estar no banco da rede.
+MOVIMENTOS: list = []
+
+
+def desfazer_movimentos() -> int:
+    """Move de volta, do mais recente ao mais antigo, os arquivos registrados
+    em MOVIMENTOS. Devolve quantos voltaram."""
+    n = 0
+    while MOVIMENTOS:
+        origem, destino = MOVIMENTOS.pop()
+        try:
+            if Path(destino).exists() and not Path(origem).exists():
+                shutil.move(str(destino), str(origem))
+                n += 1
+        except Exception as e:
+            logger.error(f"Nao consegui devolver '{destino}' para '{origem}': {e!r}")
+    if n:
+        logger.warning(f"{n} arquivo(s) devolvido(s) a ENTRADA (processamento nao publicado).")
+    return n
+
+
 class LeitorArquivoBase:
 
     def __init__(
@@ -271,6 +295,7 @@ class LeitorArquivoBase:
         sufixo = datetime.now().strftime("%Y%m%d_%H%M%S")
         novo_nome = f"{arquivo.stem}_{sufixo}{arquivo.suffix}"
         shutil.move(str(arquivo), str(destino / novo_nome))
+        MOVIMENTOS.append((str(arquivo), str(destino / novo_nome)))
         logger.info(f"Movido para processados: {destino}")
 
     def mover_para_erros(self, arquivo: Path, erro: str):
@@ -279,6 +304,7 @@ class LeitorArquivoBase:
         sufixo = datetime.now().strftime("%Y%m%d_%H%M%S")
         novo_nome = f"{arquivo.stem}_{sufixo}{arquivo.suffix}"
         shutil.move(str(arquivo), str(destino / novo_nome))
+        MOVIMENTOS.append((str(arquivo), str(destino / novo_nome)))
         logger.error(f"Movido para erros: {arquivo.name} — {erro}")
 
     # Amostra por PONTO do arquivo. Ler so o comeco engana em export grande:

@@ -153,10 +153,25 @@ class DobrarInteracoes:
     """Consolida as interacoes da rede nas tabelas de quarentena do banco."""
 
     def __init__(self, caminho_banco: str, pasta_interacoes: str,
-                 quarentena_dias: int = 90):
+                 quarentena_dias: int = 90, remover_ao_dobrar: bool = True):
         self._banco = caminho_banco
         self._pasta = pasta_interacoes
         self._dias = quarentena_dias
+        # Processamento em COPIA LOCAL (20/10/2026): o banco dobrado so' vale
+        # quando for publicado na rede. Ate' la' as pastas *_processando ficam
+        # (sao a garantia de que nenhuma interacao se perde se o Processador
+        # cair antes de publicar) e o Processador as remove com
+        # `remover_pastas_dobradas` depois da publicacao.
+        self._remover = remover_ao_dobrar
+        self._dobradas: list = []
+
+    def remover_pastas_dobradas(self) -> None:
+        for proc in self._dobradas:
+            try:
+                shutil.rmtree(proc)
+            except Exception as e:
+                logger.warning(f"Dobra: nao foi possivel remover {proc}: {e!r}")
+        self._dobradas = []
 
     def executar(self) -> None:
         if not self._pasta:
@@ -165,11 +180,17 @@ class DobrarInteracoes:
         base = Path(self._pasta)
         proc = base.with_name(base.name + "_processando")
 
-        # 1. Recuperacao: pasta _processando orfa de uma execucao interrompida
-        if proc.exists():
-            logger.warning(
-                f"Dobra: pasta orfa '{proc.name}' de execucao anterior — recuperando.")
-            self._dobrar(proc)
+        # 1. Recuperacao: pasta(s) _processando orfa(s) de execucao interrompida
+        #    (em copia local podem ser varias: INTERACOES_processando_<hora>)
+        for orfa in sorted(base.parent.glob(base.name + "_processando*")):
+            if orfa.is_dir():
+                logger.warning(
+                    f"Dobra: pasta orfa '{orfa.name}' de execucao anterior — recuperando.")
+                self._dobrar(orfa)
+        if not self._remover:
+            # cada execucao em copia local usa um nome proprio: a pasta da
+            # execucao anterior pode continuar existindo ate' a publicacao
+            proc = base.with_name(base.name + f"_processando_{datetime.now():%Y%m%d_%H%M%S}")
 
         # 2-3. Rename atomico INTERACOES -> INTERACOES_processando + nova pasta vazia
         if not base.exists():
@@ -192,10 +213,13 @@ class DobrarInteracoes:
         interacoes = ler_todas(str(proc))
         if interacoes:
             self._aplicar(interacoes)
-        try:
-            shutil.rmtree(proc)
-        except Exception as e:
-            logger.warning(f"Dobra: nao foi possivel remover {proc}: {e!r}")
+        if not self._remover:
+            self._dobradas.append(proc)
+        else:
+            try:
+                shutil.rmtree(proc)
+            except Exception as e:
+                logger.warning(f"Dobra: nao foi possivel remover {proc}: {e!r}")
         logger.info(
             f"Dobra: {len(interacoes)} interacao(es) consolidada(s) de '{proc.name}'.")
 

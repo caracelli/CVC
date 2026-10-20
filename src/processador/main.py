@@ -1,5 +1,7 @@
 ﻿import os
+import shutil
 import sys
+import tempfile
 import traceback
 from pathlib import Path
 
@@ -10,6 +12,9 @@ if not getattr(sys, "frozen", False):
 
 from infraestrutura.configuracao.leitor_config import LeitorConfig
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
+from infraestrutura.banco_dados.processamento_local import (
+    BatimentoLock, preparar_copia_local, publicar)
+from infraestrutura.leitores_arquivos import leitor_base
 from infraestrutura.ui_web import janela_processador as ui
 from aplicacao.casos_de_uso.importar_rh import ImportarRh
 from aplicacao.casos_de_uso.importar_diretorio_ad import ImportarDiretorioAd
@@ -188,21 +193,27 @@ def _verificar_e_criar_lock(banco_path):
     """Lock de processamento na pasta do banco (rede). Impede duas execucoes
     simultaneas do Processador (escrita concorrente corromperia o banco).
 
-    Devolve (prosseguir, lock_path):
-      - (False, None) -> ja ha processamento em andamento (lock recente): abortar.
-      - (True, Path)  -> lock adquirido (remover no fim).
-      - (True, None)  -> nao deu pra criar o lock; segue SEM trava (nao bloqueia
-                          o processamento legitimo por causa de uma rede so-leitura).
-    Um lock antigo (provavel execucao interrompida) e' assumido apos STALE_MIN
-    minutos, para nao travar todos para sempre se o Processador cair no meio.
-    STALE_MIN deve ser MAIOR que o maior tempo de processamento real (o log
-    "Processamento finalizado em Xs" da a perspectiva pra calibrar).
+    Devolve (prosseguir, lock_path, conteudo_fixo):
+      - (False, None, "") -> ha processamento em andamento: abortar.
+      - (True, Path, txt) -> lock adquirido (remover no fim). `txt` sao as linhas
+                             fixas (inicio, usuario, maquina) para o batimento.
+      - (True, None, "")  -> nao deu pra criar o lock; segue SEM trava (nao
+                             bloqueia o processamento por uma rede so-leitura).
+
+    SINAL DE VIDA (20/10/2026). Ate' aqui o lock valia por IDADE: depois de 20
+    min era "antigo" e o proximo assumia. Um processamento normal na rede ja'
+    levava 19,6 min (13/10); em 15/10 as execucoes das 14:29 e 17:16 assumiram
+    o lock com a das 13:56 ainda viva, e varios Processadores gravaram no mesmo
+    banco ao mesmo tempo — a padronizacao foi de 21 s para 7.566 s e o banco
+    ficou com um -journal quente. Agora o dono reescreve o lock a cada minuto
+    (BatimentoLock); o lock so' e' abandonado apos BATIMENTO_MIN sem sinal.
+    Lock de versao anterior (sem batimento) segue a regra antiga de 20 min.
     """
     import getpass
+    import socket
     from datetime import datetime
-    STALE_MIN = 20   # run real ~1min local (medido); ~3-8min na rede (SMB). 20min
-                     # da margem confortavel sem travar horas. O log "finalizado
-                     # em Xs" mostra o tempo real pra recalibrar se preciso.
+    BATIMENTO_MIN = 10   # sem sinal de vida ha' 10 min = dono caiu
+    LEGADO_MIN = 20      # lock sem "batimento=" (versao anterior)
     lock = banco_path.parent / "_processando.lock"
     agora = datetime.now()
     if lock.exists():
@@ -212,25 +223,32 @@ def _verificar_e_criar_lock(banco_path):
             idade_min = (agora - ts).total_seconds() / 60
         except Exception:
             info, idade_min = "(ilegivel)", 99999
-        if idade_min < STALE_MIN:
+        com_batimento = "batimento=" in info
+        limite = BATIMENTO_MIN if com_batimento else LEGADO_MIN
+        quem = " ".join(l for l in info.splitlines()[1:] if l.startswith(("usuario=", "maquina=", "inicio=")))
+        if idade_min < limite:
             logger.error(
-                f"Processamento JA EM ANDAMENTO na rede (iniciado em {info}). "
-                f"Abortando para nao conflitar o banco. Se tiver CERTEZA de que "
-                f"ninguem esta rodando, apague '{lock.name}' em {lock.parent} e "
-                f"rode novamente.")
-            return False, None
+                f"Processamento JA EM ANDAMENTO na rede ({quem or info}; ultimo sinal "
+                f"ha' {idade_min:.0f} min). Abortando para nao conflitar o banco. "
+                f"Espere a mensagem 'Processamento finalizado' de quem esta' rodando. "
+                f"Se tiver CERTEZA de que ninguem esta rodando, apague '{lock.name}' "
+                f"em {lock.parent} e rode novamente.")
+            return False, None, ""
         logger.warning(
-            f"Lock de processamento antigo ({info}, ~{idade_min:.0f} min) — provavel "
-            f"execucao interrompida. Assumindo e prosseguindo.")
+            f"Lock de processamento sem sinal de vida ha' ~{idade_min:.0f} min "
+            f"({quem or info}) — execucao interrompida. Assumindo e prosseguindo.")
     try:
         lock.parent.mkdir(parents=True, exist_ok=True)
-        lock.write_text(
-            f"{agora.isoformat(timespec='seconds')}\n"
-            f"usuario={getpass.getuser()}\n", encoding="utf-8")
-        return True, lock
+        fixo = (f"inicio={agora.isoformat(timespec='seconds')}\n"
+                f"usuario={getpass.getuser()}\n"
+                f"maquina={socket.gethostname()}\n")
+        lock.write_text(f"{agora.isoformat(timespec='seconds')}\n"
+                        f"batimento={agora.isoformat(timespec='seconds')}\n{fixo}",
+                        encoding="utf-8")
+        return True, lock, fixo
     except Exception as e:
         logger.warning(f"Nao foi possivel criar o lock ({e!r}) — seguindo sem trava.")
-        return True, None
+        return True, None, ""
 
 
 def _sistemas_em_escopo(cfg) -> set:
@@ -279,24 +297,47 @@ def _executar(caminho_config: Path) -> int:
     pasta_proc = str(app_raiz / cfg.processados)
     pasta_err = str(app_raiz / cfg.erros)
 
-    conexao = ConexaoBancoDados(str(app_raiz / cfg.banco_dados))
-    conexao.inicializar()
-
     from datetime import datetime as _dt
     _inicio = _dt.now()
+    banco_rede = app_raiz / cfg.banco_dados
     # Lock de processamento na rede: impede duas execucoes simultaneas do
-    # Processador (escrita concorrente corromperia o banco). Liberado no finally.
-    prosseguir, lock = _verificar_e_criar_lock(app_raiz / cfg.banco_dados)
+    # Processador (escrita concorrente corromperia o banco). Verificado ANTES
+    # de abrir o banco — antes, o `inicializar` ja' mexia no banco da rede
+    # mesmo quando havia outro Processador rodando. Liberado no finally.
+    prosseguir, lock, lock_fixo = _verificar_e_criar_lock(banco_rede)
     if not prosseguir:
         return 1
+    batimento = BatimentoLock(lock, lock_fixo).iniciar() if lock else None
+
+    # COPIA LOCAL (20/10/2026): em modo rede, processa numa copia do banco na
+    # maquina e publica no fim (ver processamento_local). CVC_PROCESSAR_NA_REDE=1
+    # volta ao comportamento anterior (gravar direto na rede).
+    copia_local = bool(cfg.rede_raiz) and os.environ.get("CVC_PROCESSAR_NA_REDE") != "1"
+    banco_trabalho = banco_rede
+    publicado = not copia_local
+    dobra = None
+    conexao = None
+    # pasta PROPRIA desta execucao (nada compartilhado entre execucoes na
+    # mesma maquina); apagada no fim
+    pasta_local = (Path(tempfile.gettempdir()) / "CVC_IAM_PROCESSADOR"
+                   / f"{_inicio:%Y%m%d_%H%M%S}_{os.getpid()}")
+    leitor_base.MOVIMENTOS.clear()
     try:
+        if copia_local:
+            banco_trabalho = preparar_copia_local(banco_rede, pasta_local)
+
+        conexao = ConexaoBancoDados(str(banco_trabalho))
+        conexao.inicializar()
+
         # Dobra das interacoes (.jsonl) nas tabelas de quarentena. Em modo rede a
         # pasta esta na raiz compartilhada; em modo local, dentro do app_raiz.
-        DobrarInteracoes(
-            caminho_banco=str(app_raiz / cfg.banco_dados),
+        dobra = DobrarInteracoes(
+            caminho_banco=str(banco_trabalho),
             pasta_interacoes=str(app_raiz / cfg.rede_interacoes),
             quarentena_dias=cfg.visualizador_quarentena_dias,
-        ).executar()
+            remover_ao_dobrar=not copia_local,
+        )
+        dobra.executar()
 
         # Diretorio AD (franqueados/prestadores) — base PRINCIPAL de identidade
         # (decisao da area, 22/07): entra ANTES do RH. Da dono aos acessos
@@ -440,11 +481,33 @@ def _executar(caminho_config: Path) -> int:
         # (ele decide recopiar o cache por tamanho/mtime do .db).
         conexao.checkpoint()
 
+        if copia_local:
+            publicar(banco_trabalho, banco_rede)
+            publicado = True
+            dobra.remover_pastas_dobradas()
+
         _dur = (_dt.now() - _inicio).total_seconds()
         logger.success(
             f"Processamento finalizado em {_dur:.0f}s ({_dur/60:.1f} min).")
         return 0
     finally:
+        if not publicado:
+            # caiu antes de publicar: o banco da rede ficou intacto. Os arquivos
+            # ja' movidos voltam a ENTRADA e as interacoes ficam nas pastas
+            # INTERACOES_processando* para a proxima execucao.
+            n = leitor_base.desfazer_movimentos()
+            logger.error(
+                f"Processamento NAO concluido — banco da rede mantido como estava; "
+                f"{n} arquivo(s) devolvido(s) a ENTRADA. Rode de novo.")
+        if conexao is not None:
+            try:
+                conexao._engine.dispose()
+            except Exception:
+                pass
+        if copia_local:
+            shutil.rmtree(pasta_local, ignore_errors=True)
+        if batimento:
+            batimento.parar()
         if lock:
             try:
                 lock.unlink()
