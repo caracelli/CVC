@@ -84,19 +84,18 @@ o analista marca quais vão para a quarentena.</p>
 <tr><td><span class="tag ana">CCO, SIG previsto na função</span></td><td>segue a validação de hoje (perfil divergente / a mais)</td><td><b>16</b> pessoas</td><td class="cz">—</td></tr>
 <tr><td><span class="tag ok">CCO, SIG não previsto, OPERA previsto</span></td><td>conta SIG ativa <b>só com COM_INFORMATIVOS</b> → <b>não</b> é pendência (exemplo 1)</td><td><b>16</b> pessoas saem</td><td>AIRTON DUARTE DA SILVA (90000993)</td></tr>
 <tr><td><span class="tag exc">CCO, SIG não previsto, OPERA previsto</span></td><td>conta SIG ativa com outros perfis → <b>pendência</b> (exemplo 2)</td><td><b>1</b> pessoa</td><td>ANA CLAUDIA CORREIA LITIERI (90001185)</td></tr>
-<tr><td><span class="tag exc">Login com SHOP</span></td><td>qualquer pessoa; ver ponto a validar abaixo</td><td><b>164</b> contas</td><td>acasadoshop — ANDREA CASADO, 16 perfis</td></tr>
-<tr><td><span class="tag exc">Duplicidade</span></td><td>mesmo nome ou CPF com conta ativa e conta bloqueada; ignora quando a bloqueada só tem COM_INFORMATIVOS</td><td><b>41</b> pessoas (34 envolvem conta SHOP); 17 ignoradas</td><td>EDINALVA LIBORIO PINHEIRO: epinheiro (ativa, 96 perfis) × ediribeiro (bloqueada, 21)</td></tr>
+<tr><td><span class="tag exc">Login com SHOP</span></td><td>pessoa <b>ativa</b> no RH; conta ativa, ou bloqueada com perfis além de COM_INFORMATIVOS (bloqueada só com COM_INFORMATIVOS não vem)</td><td><b>43</b> contas (de 331 com SHOP)</td><td>acasadoshop — ANDREA CASADO, bloqueada com 16 perfis</td></tr>
+<tr><td><span class="tag exc">Duplicidade</span></td><td>pessoa <b>ativa</b> com dois ou mais logins "ativos" (mesmo nome ou CPF): ativo, ou bloqueado com perfis além de COM_INFORMATIVOS. Bloqueado só com COM_INFORMATIVOS não conta</td><td><b>49</b> pessoas (36 já entram pelo SHOP)</td><td>EDINALVA LIBORIO PINHEIRO: epinheiro (ativa, 96 perfis) × ediribeiro (bloqueada, 21)</td></tr>
 <tr><td><span class="tag cz">Não é CCO</span></td><td>sem SHOP e sem duplicidade → <b>não</b> aparece (exemplo 3)</td><td><b>250</b> pessoas saem</td><td>VILMA PAES SANCHES (90000927)</td></tr>
 </table>
 <div class="kpis"><div class="kpi"><b>266</b><span>pessoas com pendência de SIG hoje</span></div>
 <div class="kpi menos"><b>−250</b><span>saem (não são CCO)</span></div>
-<div class="kpi mais"><b>+172</b><span>entram (CCO + SHOP + duplicidade sem SHOP)</span></div></div>
-<div class="pt"><b>Para validar:</b><br>
-1. <b>SHOP:</b> as 331 contas com SHOP no login estão <b>todas bloqueadas</b>. Proposta: entra em pendência a conta SHOP
-bloqueada que ainda tem perfil além de COM_INFORMATIVOS (164 contas), como na regra da duplicidade; as
-167 só com COM_INFORMATIVOS ficam de fora. Está certo?<br>
-2. <b>CCO sem SIG e sem OPERA previstos</b> na função, com conta SIG ativa com perfis: proposta é entrar como pendência
-(hoje há 1 caso).</div>
+<div class="kpi mais"><b>+58</b><span>entram (CCO + SHOP + duplicidade)</span></div></div>
+<div class="pt"><b>Confirmado em 22/10:</b> o SIG só tem matriz na CCO. Na <b>Consulta</b> e em <b>Pendências</b> vale só o que
+está mapeado (quem não é CCO deixa de ter SIG em "Necessário análise" — ex.: ALEXANDRA, 90000266), mais SHOP e duplicidade de
+pessoa ativa. CCO sem SIG e sem OPERA previstos, com conta SIG com perfis, entra como pendência (1 caso).
+Em <b>Transferidos</b> e <b>Desligados</b> olhamos tudo: conta bloqueada só com COM_INFORMATIVOS = sem acesso;
+bloqueada com outros perfis = "ativa" (pode ser só bloqueio de senha) e sempre aparece.</div>
 </div></div>
 
 <div class="caso"><h2>4. Transferidos</h2><div class="corpo">
@@ -139,6 +138,14 @@ não aparecem.</p>
 <h3 class="sub">4.7 Bloco "Ação" também nos Transferidos</h3>
 <p class="regra">Ao abrir um transferido, o mesmo bloco do item 1 aparece já com a função/cargo <b>novo</b> como destino:
 o que incluir, excluir e manter em cada sistema por causa da mudança.</p>
+</div></div>
+
+<div class="caso"><h2>5. Desligados — SIG bloqueado com perfis <small>aviso</small></h2><div class="corpo">
+<p class="regra">Pela mesma regra, conta SIG de pessoa desligada que está bloqueada mas ainda tem perfis além de
+COM_INFORMATIVOS passa a aparecer em Desligados para tratar. Hoje a aba tem <b>0</b> a tratar; com a regra,
+<b>404</b> pessoas. A maioria saiu há anos:</p>
+<table style="max-width:420px"><tr><th>Desligamento</th><th>Pessoas</th></tr><tr><td>2008–2016</td><td>45</td></tr><tr><td>2017–2019</td><td>236</td></tr><tr><td>2020–2024</td><td>25</td></tr><tr><td>sem data</td><td>98</td></tr></table>
+<div class="pt">Se preferir trazer só os desligados a partir de uma data, é só informar. Sem data de corte, entram todos.</div>
 </div></div>
 </div>
 <script>
