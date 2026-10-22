@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ajustes de 21/10</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1F2D5C;--gold:#F5B800;--ok:#1E7B43;--inc:#2980B9;--exc:#B33A3A;--ana:#B9770E;--cinza:#8A9099}
+body{font-family:'Segoe UI',Tahoma,sans-serif;color:#252423;background:linear-gradient(158deg,#EEF1F7,#DAE0EC);min-height:100vh}
+.hd{background:linear-gradient(125deg,#2C3D72,#1F2D5C 52%,#172143);border-bottom:2px solid var(--gold);color:#fff;padding:16px 32px}
+.hd h1{font:700 19px 'Segoe UI'} .hd p{font:600 12px Arial;color:#FFCE3A;margin-top:3px}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 24px 48px}
+.intro{background:#fff;border-radius:10px;padding:14px 18px;font-size:13px;color:#3A4156;line-height:1.6;box-shadow:0 1px 2px rgba(20,28,55,.07),0 5px 14px rgba(20,28,55,.1)}
+.caso{background:#fff;border-radius:10px;margin-top:18px;overflow:hidden;box-shadow:0 1px 2px rgba(20,28,55,.07),0 5px 14px rgba(20,28,55,.1)}
+.caso>h2{font:700 15px 'Segoe UI';color:#fff;background:var(--navy);padding:10px 16px}
+.caso>h2 small{font:600 11.5px Arial;color:#FFCE3A;margin-left:8px}
+.corpo{padding:14px 16px}
+.regra{font-size:12.5px;color:#3A4156;line-height:1.55;margin-bottom:12px}
+h3.sub{font:700 12.5px 'Segoe UI';color:var(--navy);margin:16px 0 6px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:10px 0}
+.kpi{background:#F7F9FC;border-radius:9px;padding:9px 13px;border-left:4px solid var(--navy)}
+.kpi b{display:block;font:700 21px 'Segoe UI';color:var(--navy)} .kpi span{font-size:11.5px;color:#5A6376}
+.kpi.menos{border-color:var(--exc)} .kpi.menos b{color:var(--exc)} .kpi.mais{border-color:var(--ana)} .kpi.mais b{color:var(--ana)}
+.sis{display:inline-block;font:700 10px Arial;color:var(--navy);background:#EEF2F9;border:1px solid #DCE3EF;border-radius:4px;padding:1px 6px}
+.cz{color:var(--cinza)}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+th{background:#F1F4FA;color:var(--navy);font:700 11px Arial;text-align:left;padding:6px 8px;border:1px solid #E3E8F2}
+td{padding:6px 8px;border:1px solid #E3E8F2;vertical-align:top}
+.tag{display:inline-block;font:700 10.5px Arial;border-radius:10px;padding:2px 8px}
+.tag.inc{background:#E3F1FB;color:var(--inc)} .tag.exc{background:#FDECEC;color:var(--exc)} .tag.ok{background:#DFF6DD;color:var(--ok)}
+.tag.ana{background:#FFF4CE;color:var(--ana)} .tag.cz{background:#F1F2F4;color:#6B7280}
+.tela{border:1px solid #DCE3EF;border-radius:10px;overflow:hidden;max-width:620px}
+.tela .tt{padding:12px 16px;border-bottom:1px solid #EEF1F6}
+.tela .tt b{font:700 16px 'Segoe UI';color:var(--navy)} .tela .tt div{font-size:12px;color:#6B7280}
+.abas{display:flex;gap:18px;padding:0 16px;border-bottom:1px solid #EEF1F6;font-size:13px;color:#6B7280}
+.abas span{padding:9px 0} .abas .on{color:var(--navy);font-weight:700;border-bottom:3px solid var(--gold)}
+.tela .in{padding:12px 16px;font-size:12.5px}
+select,input{font:13px 'Segoe UI';border:1px solid #CBD3E1;border-radius:6px;padding:6px 8px;background:#fff}
+.ss{display:grid;grid-template-columns:110px 1fr 170px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed #EEF1F6}
+.ss label{font:700 12.5px 'Segoe UI';color:var(--navy)} .ss .rec{font-size:11.5px;color:#3A4156}
+.chk{display:flex;gap:8px;align-items:flex-start;padding:6px 10px;border:1px solid #E3E8F2;border-radius:6px;margin-top:6px;font-size:12.5px}
+.pt{background:#FFF8E1;border-left:4px solid var(--gold);padding:10px 14px;border-radius:6px;font-size:12.5px;line-height:1.55;margin-top:12px}
+.pt b{color:var(--navy)}
+.filtros th input{width:100%;font-size:11px;padding:3px 5px;margin-top:4px}
+.risco{text-decoration:line-through;color:var(--exc)}
+.exp td,.exp th{white-space:nowrap}
+.lista{font-size:12.5px;line-height:1.7;padding-left:18px}
+</style></head><body>
+<div class="hd"><h1>CVC IAM Analytics — ajustes pedidos em 21/10</h1>
+<p>Mockup para validação · dados reais do processamento de 19/10 · nada foi alterado no painel ainda</p></div>
+<div class="wrap">
+<div class="intro">Cada bloco abaixo é um item do documento <b>Aplicação 21/10</b>, já com as respostas de 22/10
+(SHOP e duplicidade valem para todos; status por sistema sempre com os 7). Os números vêm da base de 19/10.
+Os pontos em <b style="color:#B9770E">amarelo</b> precisam da sua confirmação.</div>
+
+<div class="caso"><h2>1. Consulta — nova aba "Ação" <small>simular a troca de função</small></h2><div class="corpo">
+<p class="regra">O analista escolhe uma das funções que a pessoa pode ter (as funções da equipe dela na CCO:
+mesmo centro de custo + gestor) e o painel mostra, por sistema, o que <b>incluir</b>, o que <b>excluir</b> e o
+que pode <b>manter</b>. Exemplo real do documento: <b>RICARDO HENRIQUE PALOMARES ARROIO</b> (34532244), hoje na função
+<b>Contas a Pagar I</b>. Troque a função na lista para ver o resultado.</p>
+<div class="tela"><div class="tt"><b>RICARDO HENRIQUE PALOMARES ARROIO</b><div>matr 34532244 · ANALISTA FINANCEIRO PL · 01.06.04.01</div></div>
+<div class="abas"><span>Identidade</span><span>Acessos</span><span>Histórico</span><span>Quarentena</span><span class="on">Ação</span></div>
+<div class="in"><div style="margin-bottom:8px">Função atual: <b>Contas a Pagar I</b></div>
+<label style="font-size:12px;color:#5A6376">Trocar para a função:</label><br>
+<select id="selF" style="width:100%;margin:4px 0 10px"></select>
+<div id="resF"></div></div></div>
+</div></div>
+
+<div class="caso"><h2>2. Quarentena <small>motivo e escolha dos sistemas</small></h2><div class="corpo">
+<p class="regra">Sai o motivo <b class="risco">Férias/Cobertura de férias</b>. Quando a pessoa tem pendência em mais
+de um sistema, o "Enviar para quarentena" passa a ter os mesmos checkboxes do "Resolver pendência":
+o analista marca quais vão para a quarentena.</p>
+<div class="tela"><div class="tt"><b>Enviar para quarentena</b><div>USUARIO SISTEMICO BRCVCSRVSYSINT — BRCVCSRVSYSINT · 2 pendências — escolha quais</div></div>
+<div class="in">
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#5A6376"><span>Pendências que vão para a quarentena</span><a style="color:#2980B9">marcar todas</a></div>
+<div class="chk"><input type="checkbox" checked><div><span class="sis">SYSTUR</span> TI_ESPECIALISTA_DE_SISTEMAS <span class="cz">(Usuário Não Encontrado)</span></div></div>
+<div class="chk"><input type="checkbox"><div><span class="sis">IC_INTEGRADOR_CONTABIL</span> IC_APROVADOR <span class="cz">(Usuário Não Encontrado)</span></div></div>
+<div style="margin-top:12px">Quantidade de dias * <span class="cz">(máx. 90)</span><br><input style="width:100%" placeholder="ex: 30"></div>
+<div style="margin-top:8px">Motivo *<br><select style="width:100%"><option>Selecione o motivo...</option><option>Exceção</option><option>Usuário sistêmico</option></select></div>
+</div></div>
+</div></div>
+
+<div class="caso"><h2>3. Pendências — nova regra do SIG</h2><div class="corpo">
+<p class="regra">O SIG passa a entrar em Pendências só nestes casos:</p>
+<table><tr><th>Caso</th><th>Regra</th><th>Na base de 19/10</th><th>Exemplo real</th></tr>
+<tr><td><span class="tag ana">CCO, SIG previsto na função</span></td><td>segue a validação de hoje (perfil divergente / a mais)</td><td><b>16</b> pessoas</td><td class="cz">—</td></tr>
+<tr><td><span class="tag ok">CCO, SIG não previsto, OPERA previsto</span></td><td>conta SIG ativa <b>só com COM_INFORMATIVOS</b> → <b>não</b> é pendência (exemplo 1)</td><td><b>16</b> pessoas saem</td><td>AIRTON DUARTE DA SILVA (90000993)</td></tr>
+<tr><td><span class="tag exc">CCO, SIG não previsto, OPERA previsto</span></td><td>conta SIG ativa com outros perfis → <b>pendência</b> (exemplo 2)</td><td><b>1</b> pessoa</td><td>ANA CLAUDIA CORREIA LITIERI (90001185)</td></tr>
+<tr><td><span class="tag exc">Login com SHOP</span></td><td>qualquer pessoa; ver ponto a validar abaixo</td><td><b>164</b> contas</td><td>acasadoshop — ANDREA CASADO, 16 perfis</td></tr>
+<tr><td><span class="tag exc">Duplicidade</span></td><td>mesmo nome ou CPF com conta ativa e conta bloqueada; ignora quando a bloqueada só tem COM_INFORMATIVOS</td><td><b>41</b> pessoas (34 envolvem conta SHOP); 17 ignoradas</td><td>EDINALVA LIBORIO PINHEIRO: epinheiro (ativa, 96 perfis) × ediribeiro (bloqueada, 21)</td></tr>
+<tr><td><span class="tag cz">Não é CCO</span></td><td>sem SHOP e sem duplicidade → <b>não</b> aparece (exemplo 3)</td><td><b>250</b> pessoas saem</td><td>VILMA PAES SANCHES (90000927)</td></tr>
+</table>
+<div class="kpis"><div class="kpi"><b>266</b><span>pessoas com pendência de SIG hoje</span></div>
+<div class="kpi menos"><b>−250</b><span>saem (não são CCO)</span></div>
+<div class="kpi mais"><b>+172</b><span>entram (CCO + SHOP + duplicidade sem SHOP)</span></div></div>
+<div class="pt"><b>Para validar:</b><br>
+1. <b>SHOP:</b> as 331 contas com SHOP no login estão <b>todas bloqueadas</b>. Proposta: entra em pendência a conta SHOP
+bloqueada que ainda tem perfil além de COM_INFORMATIVOS (164 contas), como na regra da duplicidade; as
+167 só com COM_INFORMATIVOS ficam de fora. Está certo?<br>
+2. <b>CCO sem SIG e sem OPERA previstos</b> na função, com conta SIG ativa com perfis: proposta é entrar como pendência
+(hoje há 1 caso).</div>
+</div></div>
+
+<div class="caso"><h2>4. Transferidos</h2><div class="corpo">
+<h3 class="sub">4.1 Filtro em todas as colunas</h3>
+<table class="filtros"><tr><th>Matrícula<input placeholder="filtrar"></th><th>Nome<input placeholder="filtrar"></th><th>Cargo<input placeholder="filtrar"></th>
+<th>Centro de Custo<input placeholder="filtrar"></th><th>Gestor<input placeholder="filtrar"></th><th>Base<input placeholder="CCO / Matriz"></th><th>Mudança<input placeholder="cargo, gestor..."></th><th>Situação<input placeholder="filtrar"></th></tr>
+<tr><td>90000321</td><td>JULIA DE JESUS DA SILVA</td><td>ASSISTENTE SUPORTE VENDAS</td><td>01.03.02.19</td><td>ANDREIA CRISTIANE BARBOSA D AGUA</td><td>CCO</td><td><span class="tag ana">CENTRO DE CUSTO, GESTOR</span></td><td>Revisar</td></tr></table>
+
+<h3 class="sub">4.2 Mudança de departamento não conta mais</h3>
+<p class="regra">Só centro de custo, cargo e gestor. A Julia, hoje "centro de custo, departamento, gestor", passa a
+"centro de custo, gestor". Na base de 19/10, 79 dos 238 transferidos têm departamento entre as mudanças;
+<b>0</b> mudaram <b>só</b> de departamento, então ninguém sai da lista: muda apenas o texto da coluna Mudança.</p>
+
+<h3 class="sub">4.3 SIG entra nos Transferidos</h3>
+<p class="regra">Conta SIG com qualquer perfil diferente de COM_INFORMATIVOS entra na revisão, ativa ou bloqueada.
+Na base de 19/10: <b>39</b> transferidos com SIG. A Julia tem <b>41</b> perfis de SIG que hoje
+não aparecem.</p>
+
+<h3 class="sub">4.4 Tela de tratativa: status do apontamento e status por sistema</h3>
+<div class="tela"><div class="tt"><b>Revisar acesso de transferido</b><div>JULIA DE JESUS DA SILVA — 90000321 · mudança de centro de custo, gestor</div></div>
+<div class="in">
+<div>Status do apontamento *<br><select style="width:260px"><option>Pendente</option><option>Em andamento</option><option>Resolvido</option></select>
+<div class="cz" style="font-size:11.5px">O apontamento nasce Pendente.</div></div>
+<div style="margin-top:8px">Parecer *<br><textarea style="width:100%;height:50px;font:13px 'Segoe UI';border:1px solid #CBD3E1;border-radius:6px;padding:6px" placeholder="O que foi verificado e o que foi decidido"></textarea></div>
+<div style="margin-top:6px;font-size:12px;color:#5A6376">Chamado no Jira (opcional): Nº e link do ticket</div>
+<div style="margin-top:12px;font:700 12px Arial;color:var(--navy)">STATUS POR SISTEMA <span class="cz" style="font-weight:400">(os 7, sempre; ao lado, o que o painel recomenda)</span></div>
+<div class="ss"><label>IC</label><div class="rec"><span class="cz">sem acesso / sem ação</span></div><select><option>Selecione...</option><option>Mantido</option><option>Alterado</option><option>Sem atuação</option><option>Excluído</option></select></div><div class="ss"><label>SICA RA</label><div class="rec">SUPORTE COMERCIAL → <b>Manter</b></div><select><option>Selecione...</option><option>Mantido</option><option>Alterado</option><option>Sem atuação</option><option>Excluído</option></select></div><div class="ss"><label>SICA ESFERA</label><div class="rec"><span class="cz">sem acesso / sem ação</span></div><select><option>Selecione...</option><option>Mantido</option><option>Alterado</option><option>Sem atuação</option><option>Excluído</option></select></div><div class="ss"><label>SIGOT</label><div class="rec"><span class="cz">sem acesso / sem ação</span></div><select><option>Selecione...</option><option>Mantido</option><option>Alterado</option><option>Sem atuação</option><option>Excluído</option></select></div><div class="ss"><label>SYSTUR</label><div class="rec">SUPORTE_AO_CLIENTE → <b>Manter</b></div><select><option>Selecione...</option><option>Mantido</option><option>Alterado</option><option>Sem atuação</option><option>Excluído</option></select></div><div class="ss"><label>SIG</label><div class="rec">41 perfis (ex.: ACESSO_CARRO_NAC_CADASTRO_DE_EMISSORES) → <b>Revisar</b></div><select><option>Selecione...</option><option>Mantido</option><option>Alterado</option><option>Sem atuação</option><option>Excluído</option></select></div><div class="ss"><label>ORACLE</label><div class="rec">CVC AP BRASIL Cadastro de Fornecedor → <b>Manter</b></div><select><option>Selecione...</option><option>Mantido</option><option>Alterado</option><option>Sem atuação</option><option>Excluído</option></select></div>
+</div></div>
+
+<h3 class="sub">4.5 Tratados: filtro por período</h3>
+<p class="regra">Na aba Tratados, filtro <b>de</b> / <b>até</b> pela data em que o apontamento foi tratado:
+<input type="date"> até <input type="date"></p>
+
+<h3 class="sub">4.6 Exportação</h3>
+<p class="regra">Uma linha por sistema e acesso, no modelo do documento, com o de/para da mudança e o que o analista marcou:</p>
+<div style="overflow-x:auto"><table class="exp"><tr><th>Nome</th><th>Login</th><th>Sistema</th><th>Acessos atuais</th><th>Tratativa recomendada</th><th>Tratativa execução</th>
+<th>Centro de custo (de → para)</th><th>Gestor (de → para)</th><th>Cargo (de → para)</th><th>Data da tratativa</th></tr><tr><td>JULIA DE JESUS DA SILVA</td><td>—</td><td>IC</td><td>—</td><td>Sem ação</td><td class="cz">(o que o analista marcar)</td><td>01.10.01.02 → 01.03.02.19</td><td>— → ANDREIA CRISTIANE BARBOSA D AGUA</td><td>ASSISTENTE SUPORTE VENDAS → ASSISTENTE SUPORTE VENDAS</td><td class="cz">dd/mm/aaaa</td></tr><tr><td>JULIA DE JESUS DA SILVA</td><td>corpc90000321</td><td>SICA RA</td><td>SUPORTE COMERCIAL</td><td>Manter</td><td class="cz">(o que o analista marcar)</td><td>01.10.01.02 → 01.03.02.19</td><td>— → ANDREIA CRISTIANE BARBOSA D AGUA</td><td>ASSISTENTE SUPORTE VENDAS → ASSISTENTE SUPORTE VENDAS</td><td class="cz">dd/mm/aaaa</td></tr><tr><td>JULIA DE JESUS DA SILVA</td><td>—</td><td>SICA ESFERA</td><td>—</td><td>Sem ação</td><td class="cz">(o que o analista marcar)</td><td>01.10.01.02 → 01.03.02.19</td><td>— → ANDREIA CRISTIANE BARBOSA D AGUA</td><td>ASSISTENTE SUPORTE VENDAS → ASSISTENTE SUPORTE VENDAS</td><td class="cz">dd/mm/aaaa</td></tr><tr><td>JULIA DE JESUS DA SILVA</td><td>—</td><td>SIGOT</td><td>—</td><td>Sem ação</td><td class="cz">(o que o analista marcar)</td><td>01.10.01.02 → 01.03.02.19</td><td>— → ANDREIA CRISTIANE BARBOSA D AGUA</td><td>ASSISTENTE SUPORTE VENDAS → ASSISTENTE SUPORTE VENDAS</td><td class="cz">dd/mm/aaaa</td></tr><tr><td>JULIA DE JESUS DA SILVA</td><td>CORPC90000321</td><td>SYSTUR</td><td>SUPORTE_AO_CLIENTE</td><td>Manter</td><td class="cz">(o que o analista marcar)</td><td>01.10.01.02 → 01.03.02.19</td><td>— → ANDREIA CRISTIANE BARBOSA D AGUA</td><td>ASSISTENTE SUPORTE VENDAS → ASSISTENTE SUPORTE VENDAS</td><td class="cz">dd/mm/aaaa</td></tr><tr><td>JULIA DE JESUS DA SILVA</td><td>jjesus</td><td>SIG</td><td>41 perfis (ex.: ACESSO_CARRO_NAC_CADASTRO_DE_EMISSORES)</td><td>Revisar</td><td class="cz">(o que o analista marcar)</td><td>01.10.01.02 → 01.03.02.19</td><td>— → ANDREIA CRISTIANE BARBOSA D AGUA</td><td>ASSISTENTE SUPORTE VENDAS → ASSISTENTE SUPORTE VENDAS</td><td class="cz">dd/mm/aaaa</td></tr><tr><td>JULIA DE JESUS DA SILVA</td><td>CORPC90000321</td><td>ORACLE</td><td>CVC AP BRASIL Cadastro de Fornecedor</td><td>Manter</td><td class="cz">(o que o analista marcar)</td><td>01.10.01.02 → 01.03.02.19</td><td>— → ANDREIA CRISTIANE BARBOSA D AGUA</td><td>ASSISTENTE SUPORTE VENDAS → ASSISTENTE SUPORTE VENDAS</td><td class="cz">dd/mm/aaaa</td></tr></table></div>
+<p class="regra" style="margin-top:6px">Também vão no arquivo: matrícula, status do apontamento, parecer, ticket, base (CCO / Matriz) e analista.</p>
+
+<h3 class="sub">4.7 Bloco "Ação" também nos Transferidos</h3>
+<p class="regra">Ao abrir um transferido, o mesmo bloco do item 1 aparece já com a função/cargo <b>novo</b> como destino:
+o que incluir, excluir e manter em cada sistema por causa da mudança.</p>
+</div></div>
+</div>
+<script>
+const D = {"funcoes": {"Pagamentos Nacionais": {"SYSTUR": ["PAGAMENTOS_NACIONAIS_CP"], "SIGOT": ["Pagamentos Nacionais_CP"], "SIG": ["ACESSO_HOTEL_NAC_HOTEIS", "ACESSO_SISTEMA_BACKOFFICE", "ATD_HOTEIS_NACIONAIS", "CAD_FORNECEDORES_LEITURA"], "ORACLE_EBS": ["CVC - Help Desk de Despesas com Internet", "CVC AP BRASIL Consulta", "CVC AP BRASIL Pagamento", "CVC AP NOVA VISUAL Consulta", "CVC AP NOVA VISUAL Pagamento", "CVC AP SUBMARINO Consulta", "CVC AP SUBMARINO Pagamento", "CVC AP VISUAL Consulta"]}, "Pagamentos Internacionais": {"SYSTUR": ["PAGAMENTOS_INTERNACIONAIS_CP"], "SIGOT": ["Pagamentos Internacionais_CP"], "ORACLE_EBS": ["CVC AP BRASIL Consulta", "CVC AP BRASIL Pagamento", "CVC AP NOVA VISUAL Consulta", "CVC AP NOVA VISUAL Pagamento", "CVC AP SUBMARINO Consulta", "CVC AP SUBMARINO Pagamento", "CVC AP VISUAL Consulta"]}, "Suporte ao Caixa": {"SYSTUR": ["SUPORTE _AO_CAIXA_CP"], "SIGOT": ["Suporte ao Caixa_CP"], "ORACLE_EBS": ["CVC AP BRASIL Consulta", "CVC AP BRASIL Pagamento", "CVC AP NOVA VISUAL Consulta", "CVC AP NOVA VISUAL Pagamento", "CVC AP SUBMARINO Consulta", "CVC AP SUBMARINO Pagamento", "CVC AP VISUAL Consulta"]}, "Baixa Adiantamentos a fornecedores N1": {"SYSTUR": ["BAIXA_ATD_FOR_N1"], "SIGOT": ["Baixa_Atd_For_N1"], "ORACLE_EBS": ["CVC - Help Desk de Despesas com Internet", "CVC AP BRASIL Consulta", "CVC AP BRASIL Pagamento", "CVC AP NOVA VISUAL Consulta", "CVC AP NOVA VISUAL Pagamento", "CVC AP SUBMARINO Consulta", "CVC AP SUBMARINO Pagamento"], "OPERA_OPERACIONAL": ["BAIXA_ATD_FOR_N1"], "SIG": ["ACESSO_HOTEL_NAC_ALT_FORMA_PAGAMENTO", "ACESSO_SISTEMA_BACKOFFICE", "ATD_HOTEIS_NACIONAIS", "ATD_HTL_ALTERAR_PGTO_RESERVA_FOR"]}, "Adiantamentos a fornecedores N2": {"SYSTUR": ["ATD_FOR_N2"], "SIGOT": ["Atd_For_N2"], "ORACLE_EBS": ["CVC - Help Desk de Despesas com Internet", "CVC AP BRASIL Cadastro de Fornecedor", "CVC AP BRASIL Consulta", "CVC AP BRASIL Master", "CVC AP NOVA VISUAL Cadastro de Fornecedor", "CVC AP NOVA VISUAL Consulta", "CVC AP NOVA VISUAL Master", "CVC AP SUBMARINO Cadastro de Fornecedor", "CVC AP SUBMARINO Consulta", "CVC AP SUBMARINO Master"], "OPERA_OPERACIONAL": ["ATD_FOR_N2"], "SIG": ["ACESSO_HOTEL_NAC_ALT_FORMA_PAGAMENTO", "ACESSO_SISTEMA_BACKOFFICE", "ATD_HOTEIS_NACIONAIS", "ATD_HTL_ALTERAR_PGTO_RESERVA_FOR"]}, "Adiantamento + Conciliação bancária": {"SYSTUR": ["ATD_CONC_BANC"], "ORACLE_EBS": ["CVC AP BRASIL Consulta", "CVC AP BRASIL Pagamento", "CVC AP NOVA VISUAL Consulta", "CVC AP SUBMARINO Consulta", "CVC AR BRASIL Consulta Fiscal", "CVC AR NOVA VISUAL Consulta Fiscal", "CVC AR SUBMARINO Consulta Fiscal"]}, "Contas a Pagar I": {"SYSTUR": ["CP_I"], "SIGOT": ["CP_I"], "ORACLE_EBS": ["CVC - Help Desk de Despesas com Internet", "CVC AP BRASIL Consulta", "CVC AP BRASIL Master", "CVC AP NOVA VISUAL Consulta", "CVC AP NOVA VISUAL Master", "CVC AP SUBMARINO Consulta", "CVC AP SUBMARINO Master", "CVC AP VISUAL Consulta", "CVC GL BRASIL Consulta", "CVC GL NOVA VISUAL Consulta", "CVC GL SUBMARINO Consulta"], "OPERA_OPERACIONAL": ["CP_I"], "SIG": ["ACESSO_HOTEL_NAC_ALT_FORMA_PAGAMENTO", "ACESSO_SISTEMA_BACKOFFICE", "ATD_HOTEIS_NACIONAIS", "ATD_HTL_ALTERAR_PGTO_RESERVA_FOR"]}, "Pagamentos Nacionais I": {"SYSTUR": ["PGTOS_NACIONAIS_CP_I"], "SIGOT": ["PGTOS_NACIONAIS_CP_I"], "SIG": ["ACESSO_HOTEL_NAC_HOTEIS", "ACESSO_SISTEMA_BACKOFFICE", "ATD_HOTEIS_NACIONAIS", "CAD_FORNECEDORES_LEITURA"], "ORACLE_EBS": ["CVC - Help Desk de Despesas com Internet", "CVC AP BRASIL Consulta", "CVC AP BRASIL Pagamento", "CVC AP NOVA VISUAL Consulta", "CVC AP NOVA VISUAL Pagamento", "CVC AP SUBMARINO Consulta", "CVC AP SUBMARINO Pagamento", "CVC AP VISUAL Consulta"], "OPERA_OPERACIONAL": ["PGTOS_NACIONAIS_CP_I"]}}, "tem": {"ORACLE_EBS": ["CVC - Help Desk de Despesas com Internet", "CVC AP BRASIL Consulta", "CVC AP BRASIL Master", "CVC AP NOVA VISUAL Consulta", "CVC AP NOVA VISUAL Master", "CVC AP SUBMARINO Consulta", "CVC AP SUBMARINO Master", "CVC AP VISUAL Consulta", "CVC GL BRASIL Consulta", "CVC GL NOVA VISUAL Consulta", "CVC GL SUBMARINO Consulta"], "SYSTUR": ["CP_I"]}, "atual": "Contas a Pagar I", "alvo": "Adiantamento + Conciliação bancária"};
+const sel = document.getElementById('selF'), res = document.getElementById('resF');
+Object.keys(D.funcoes).sort().forEach(f => {
+  const o = document.createElement('option'); o.value = f;
+  o.textContent = f + (f === D.atual ? '  (atual)' : ''); if (f === D.alvo) o.selected = true; sel.appendChild(o); });
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]);
+function desenhar() {
+  const alvo = D.funcoes[sel.value] || {};
+  const sistemas = [...new Set([...Object.keys(alvo), ...Object.keys(D.tem)])].sort();
+  let h = '<table><tr><th>Sistema</th><th>Incluir</th><th>Excluir</th><th>Manter</th></tr>';
+  let ni = 0, ne = 0;
+  sistemas.forEach(s => {
+    const quer = new Set(alvo[s] || []), tem = new Set(D.tem[s] || []);
+    const inc = [...quer].filter(p => !tem.has(p)), exc = [...tem].filter(p => !quer.has(p)), man = [...tem].filter(p => quer.has(p));
+    ni += inc.length; ne += exc.length;
+    const cel = (l, c) => l.length ? l.map(p => '<span class="tag ' + c + '" style="margin:1px 2px;display:inline-block">' + esc(p) + '</span>').join('') : '<span class="cz">—</span>';
+    const obs = (s === 'OPERA_OPERACIONAL') ? ' <span class="cz">(sem extrato)</span>' : '';
+    h += '<tr><td><span class="sis">' + s + '</span>' + obs + '</td><td>' + cel(inc, 'inc') + '</td><td>' + cel(exc, 'exc') + '</td><td>' + cel(man, 'ok') + '</td></tr>';
+  });
+  res.innerHTML = '<div style="font-size:12px;margin-bottom:4px"><b>' + ni + '</b> a incluir · <b>' + ne + '</b> a excluir</div>' + h + '</table>';
+}
+sel.onchange = desenhar; desenhar();
+</script></body></html>
