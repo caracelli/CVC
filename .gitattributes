@@ -9,3 +9,4 @@ Arquivos_origem/ENTRADAS.zip filter=lfs diff=lfs merge=lfs -text
 Arquivos_origem/*.zip filter=lfs diff=lfs merge=lfs -text
 Arquivos_origem/ENTRADAs.zip filter=lfs diff=lfs merge=lfs -text
 Arquivos_origem/ENTRADA.zip filter=lfs diff=lfs merge=lfs -text
+Arquivos_origem/Aplicação_21_10.docx filter=lfs diff=lfs merge=lfs -text
