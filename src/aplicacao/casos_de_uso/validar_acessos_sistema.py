@@ -107,8 +107,19 @@ class ValidarAcessosSistema:
                  matriz_tem_precedencia: bool = True,
                  cco_pela_funcao: bool = True,
                  ancora_isenta_cco: bool = True,
-                 cco_sem_matriz_informativo: bool = False):
+                 cco_sem_matriz_informativo: bool = False,
+                 sig_so_matriz: bool = False):
         self._conexao = conexao
+        # SIG SO' PELA MATRIZ (Bruna, Aplicacao_21_10 e conversa de 22/10/2026):
+        # "o SIG nao tem matriz a nao ser que seja CCO; para consulta e
+        # pendencia vamos olhar somente o que tiver mapeado na matriz". Ligado:
+        # sai o espelho do SIG (CLT e prestador/terceiro), a CCO sem SIG previsto
+        # vira pendencia (_sig_cco_sem_previsao) e entram SHOP e duplicidade
+        # (_validar_sig_shop_duplicidade). Desligado = espelho, como antes.
+        self._sig_so_matriz = bool(sig_so_matriz)
+        self._contas_sig: Dict[str, Dict] = {}
+        self._sig_cco_opera_info = 0
+        self._sig_cco_pendencia = 0
         # QUEM ESTA NA CCO, SO' A CCO — inclusive no Oracle (Bruna, 16/10/2026,
         # caso CLAUDIA 90001433: "se a pessoa ta no CCO ele olha so' para base
         # do CCO, fora isso ai sim as outras regras fazem sentido"). Ate' aqui
@@ -596,13 +607,19 @@ class ValidarAcessosSistema:
                     "motivo_status": "SEM_EXPECTATIVA_RELEVANTE",
                 })
 
+            if self._sig_so_matriz and _eh_cco:
+                regs_func = self._sig_cco_sem_previsao(
+                    func, regs_func, acessos_por_matricula, sistemas_com_dados)
             if any(r.get("sistema") == Sistema.SIG.value for r in regs_func):
                 self._sig_pela_cco.add(func.matricula)
             registros.extend(regs_func)
 
-        # SIG: validacao por ESPELHO dinamico (so CLT; terceiros vao no proprio)
+        # SIG: validacao por ESPELHO dinamico (so CLT; terceiros vao no proprio).
+        # Com sig_so_matriz o espelho sai e entram SHOP e duplicidade.
         registros.extend(self._validar_sig_espelho(
             ativos, acessos_por_matricula, sistemas_com_dados))
+        if self._sig_so_matriz and Sistema.SIG.value in sistemas_com_dados:
+            registros.extend(self._validar_sig_shop_duplicidade(ativos))
         # FRANQUEADO: matriz propria (cargo x tipo de loja).
         regs_franq = self._validar_franqueado_matriz(
             ativos, acessos_por_matricula, sistemas_com_dados)
@@ -932,6 +949,24 @@ class ValidarAcessosSistema:
             if sit_conta.indefinida(a.situacao):
                 self._status_indefinido.add((a.matricula_vinculada, a.sistema))
 
+        # CONTAS DO SIG, inclusive as BLOQUEADAS (login -> situacoes, perfis,
+        # nome, cpf, matricula). As regras de SHOP e duplicidade olham a conta
+        # bloqueada: bloqueada com perfis alem de COM_INFORMATIVOS e' conta
+        # "viva" (Bruna, 22/10/2026: "pode ter acontecido um bloqueio de senha").
+        self._contas_sig = {}
+        for a in acessos_db:
+            if a.sistema != Sistema.SIG.value or not a.usuario:
+                continue
+            k = self._contas_sig.setdefault(a.usuario, {
+                "ativa": False, "perfis": set(), "nome": a.nome_usuario or "",
+                "cpf": a.cpf or "", "matricula": a.matricula_vinculada or ""})
+            if not sit_conta.sem_acesso_efetivo(a.situacao):
+                k["ativa"] = True
+            if a.perfil:
+                k["perfis"].add(a.perfil)
+            if a.matricula_vinculada and not k["matricula"]:
+                k["matricula"] = a.matricula_vinculada
+
         # sistemas que têm registros de acesso no banco
         sistemas_com_dados: Set[str] = {a.sistema for a in acessos_db}
 
@@ -1254,6 +1289,10 @@ class ValidarAcessosSistema:
         Oracle (a ancora ja' cobre, e o "nao mapeado" dele e' decisao de 23/09).
         Medido na base de 15/09: 7 pessoas."""
         fora = set(self._ancora_systur) | _SISTEMAS_SO_CCO
+        # SIG so' pela matriz (22/10/2026): fora da CCO o SIG nao tem previsao
+        # e nao e' cobrado aqui — a CCO ja' respondeu em _sig_cco_sem_previsao.
+        if self._sig_so_matriz:
+            fora.add(Sistema.SIG.value)
         com_linha = {(r.get("matricula"), r.get("sistema")) for r in registros}
         novos: List[Dict] = []
         self._acesso_sem_previsao_n = 0
@@ -1576,7 +1615,7 @@ class ValidarAcessosSistema:
         Excesso => Em Analise (governanca de acesso excessivo).
         """
         SIG = Sistema.SIG.value
-        if SIG not in sistemas_com_dados:
+        if SIG not in sistemas_com_dados or self._sig_so_matriz:
             return []
 
         # SIG espelho e' so para CLT; terceiro/franqueado/prestador tem espelho
@@ -1660,6 +1699,147 @@ class ValidarAcessosSistema:
             else:
                 regs.append(self._reg_sig(f, esp_str, ", ".join(sorted(u)),
                                           StatusValidacao.OK))                            # Aderente
+        return regs
+
+    # ------------------------------------------------------------------
+    # SIG SO' PELA MATRIZ (Bruna, Aplicacao_21_10 e conversa de 22/10/2026)
+    # ------------------------------------------------------------------
+    _SIG_INFORMATIVO = "COM_INFORMATIVOS"
+
+    def _sig_so_informativo(self, perfis) -> bool:
+        return {_norm(p) for p in perfis if p} <= {_norm(self._SIG_INFORMATIVO)}
+
+    def _sig_viva(self, conta: Dict) -> bool:
+        """Conta 'viva' no conceito da area: ativa, ou bloqueada que ainda tem
+        perfil alem de COM_INFORMATIVOS (pode ser so' bloqueio de senha)."""
+        return conta["ativa"] or not self._sig_so_informativo(conta["perfis"])
+
+    def _sig_cco_sem_previsao(self, func, regs_func: List[Dict],
+                              acessos_por_matricula, sistemas_com_dados) -> List[Dict]:
+        """Pessoa da CCO cuja funcao NAO preve SIG, com conta SIG ativa.
+
+        Documento de 21/10: "Se a origem e' CCO e o sistema SIG nao estiver
+        mapeado para funcao, mas o Opera esta, e' permitido ter (...) desde que
+        o usuario esteja com status ativo e o perfil COM_INFORMATIVO; se estiver
+        com mais perfis (...) deve ser listado como pendencia". E 22/10: CCO sem
+        SIG e sem OPERA previstos, com conta SIG com perfis = pendencia.
+
+        Substitui a linha ACESSO_FORA_DA_FUNCAO do SIG (o mesmo caso visto pela
+        outra ponta) para a regra do OPERA valer nela tambem."""
+        SIG = Sistema.SIG.value
+        if SIG not in sistemas_com_dados:
+            return regs_func
+        previsto = any(r.get("sistema") == SIG
+                       and r.get("motivo_status") != "ACESSO_FORA_DA_FUNCAO"
+                       for r in regs_func)
+        if previsto:
+            return regs_func
+        regs_func = [r for r in regs_func
+                     if not (r.get("sistema") == SIG
+                             and r.get("motivo_status") == "ACESSO_FORA_DA_FUNCAO")]
+        tem = sorted({p for s, p in acessos_por_matricula.get(func.matricula, ())
+                      if s == SIG and p})
+        if not tem:
+            return regs_func
+        opera = any(r.get("sistema") == Sistema.OPERA_OPERACIONAL.value for r in regs_func)
+        if opera and self._sig_so_informativo(tem):
+            self._sig_cco_opera_info += 1
+            return regs_func
+        self._sig_cco_pendencia += 1
+        return regs_func + [self._registro_base(func) | {
+            "sistema": SIG,
+            "perfil_esperado": "",
+            "perfil_atual": ", ".join(tem),
+            "acesso_manual": False,
+            "status": StatusValidacao.EM_ANALISE.value,
+            "origem_matriz": "CCO",
+            "motivo_status": ("SIG_NAO_PREVISTO_OPERA_PREVISTO" if opera
+                              else "SIG_NAO_PREVISTO_NA_FUNCAO"),
+        }]
+
+    def _validar_sig_shop_duplicidade(self, ativos) -> List[Dict]:
+        """Pendencias do SIG que valem para TODOS (nao so' CCO), sempre de
+        pessoa ATIVA no RH (Bruna, 22/10/2026):
+
+          - LOGIN SHOP: ativo esta' errado (sempre pendencia); bloqueado com
+            perfis alem de COM_INFORMATIVOS tambem vem; bloqueado so' com
+            COM_INFORMATIVOS nao.
+          - DUPLICIDADE: "nao podemos ter duas pessoas ativas" — dois ou mais
+            logins VIVOS (ver _sig_viva) com o mesmo CPF ou o mesmo nome.
+
+        O login vai no proprio motivo ('SIG_LOGIN_SHOP:<login>',
+        'SIG_DUPLICIDADE:<l1>,<l2>'): a validacao nao tem coluna de login e o
+        painel precisa mostrar QUAL conta."""
+        por_mat = {f.matricula: f for f in ativos
+                   if f.matricula not in self._desatualizados}
+        regs: List[Dict] = []
+        self._sig_shop = 0
+        for login in sorted(self._contas_sig):
+            c = self._contas_sig[login]
+            if "SHOP" not in login.upper() or c["matricula"] not in por_mat:
+                continue
+            if not self._sig_viva(c):
+                continue
+            self._sig_shop += 1
+            regs.append(self._registro_base(por_mat[c["matricula"]]) | {
+                "sistema": Sistema.SIG.value,
+                "perfil_esperado": "",
+                "perfil_atual": ", ".join(sorted(c["perfis"])),
+                "acesso_manual": False,
+                "status": StatusValidacao.EM_ANALISE.value,
+                "origem_matriz": "",
+                "motivo_status": f"SIG_LOGIN_SHOP:{login}",
+            })
+
+        # grupos por CPF valido e por nome; logins vivos ligados por uniao
+        grupos: Dict[str, Set[str]] = defaultdict(set)
+        for login, c in self._contas_sig.items():
+            if not self._sig_viva(c):
+                continue
+            cpf = "".join(ch for ch in (c["cpf"] or "") if ch.isdigit())
+            if len(cpf) == 11 and len(set(cpf)) > 1:
+                grupos["C" + cpf].add(login)
+            if _norm(c["nome"]):
+                grupos["N" + _norm(c["nome"])].add(login)
+        pai: Dict[str, str] = {}
+
+        def raiz(x):
+            while pai.setdefault(x, x) != x:
+                x = pai[x]
+            return x
+        for ls in grupos.values():
+            ls = sorted(ls)
+            for l in ls[1:]:
+                pai[raiz(l)] = raiz(ls[0])
+        casos: Dict[str, Set[str]] = defaultdict(set)
+        for l in list(pai):
+            casos[raiz(l)].add(l)
+        self._sig_duplicidade = 0
+        for ls in sorted(casos.values(), key=lambda s: sorted(s)):
+            if len(ls) < 2:
+                continue
+            mats = sorted({self._contas_sig[l]["matricula"] for l in ls} & set(por_mat))
+            if not mats:
+                continue
+            self._sig_duplicidade += 1
+            ordem = sorted(ls)
+            situ = lambda l: "ativo" if self._contas_sig[l]["ativa"] else "bloqueado"
+            regs.append(self._registro_base(por_mat[mats[0]]) | {
+                "sistema": Sistema.SIG.value,
+                "perfil_esperado": "",
+                "perfil_atual": "; ".join(
+                    f"{l} ({situ(l)}, {len(self._contas_sig[l]['perfis'])} perfis)"
+                    for l in ordem),
+                "acesso_manual": False,
+                "status": StatusValidacao.EM_ANALISE.value,
+                "origem_matriz": "",
+                "motivo_status": "SIG_DUPLICIDADE:" + ",".join(ordem),
+            })
+        logger.info(
+            f"[sig] so' pela matriz: CCO sem SIG previsto -> {self._sig_cco_pendencia} "
+            f"pendencia(s), {self._sig_cco_opera_info} liberada(s) pelo OPERA "
+            f"(so' COM_INFORMATIVOS); login SHOP -> {self._sig_shop}; "
+            f"duplicidade -> {self._sig_duplicidade}.")
         return regs
 
     # ------------------------------------------------------------------
@@ -1890,6 +2070,9 @@ class ValidarAcessosSistema:
 
         regs: List[Dict] = []
         for sistema in sorted(sistemas_com_dados):
+            # SIG so' pela matriz (CCO): o espelho dos pares nao responde por ele
+            if self._sig_so_matriz and sistema == Sistema.SIG.value:
+                continue
             # perfis desse sistema por terceiro, chaveados pela forma NORMALIZADA
             # (_norm: caixa, acento, espaco). Retorno da area em 09/09 ("Testes
             # 2.pdf"): 'gestao de acessos' x 'GESTAO DE ACESSOS' caia em Em

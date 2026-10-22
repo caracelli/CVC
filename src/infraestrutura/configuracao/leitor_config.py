@@ -108,6 +108,12 @@ class Configuracao:
     saida_logs: str
     visualizador_sistema: str
     visualizador_quarentena_dias: int
+    # SIG SO' PELA MATRIZ (Bruna, 21-22/10/2026): o SIG so' tem matriz na CCO.
+    # Consulta e Pendencias olham so' o que a CCO mapeia (sai o espelho), mais
+    # login SHOP e duplicidade de login. Transferidos e Desligados olham TODAS
+    # as contas: bloqueada com perfis alem de COM_INFORMATIVOS conta como viva.
+    # Default False = comportamento anterior (espelho).
+    validacao_sig_so_matriz: bool = False
 
 
 def _ad_caminhos(root) -> List[str]:
@@ -268,4 +274,5 @@ class LeitorConfig:
             visualizador_sistema=root.findtext("visualizador/sistema", ""),
             visualizador_quarentena_dias=int(
                 root.findtext("visualizador/quarentena_dias", "90") or "90"),
+            validacao_sig_so_matriz=_bool("validacao/sig/so_matriz", "false"),
         )

@@ -162,8 +162,9 @@ class TestLeituraPainel(_Db):
                    _acesso("21"))
         AnalisarDivergencias(self.con).executar()
         pares = self._ler(["21"])["21"]["pares"]
-        self.assertEqual({p["campo"] for p in pares},
-                         {"departamento", "centro de custo"})
+        # 22/10/2026 (Bruna, Aplicacao_21_10): departamento NAO dispara mais a revisao —
+        # "considerar apenas CENTRO de CUSTO, CARGO e GESTOR".
+        self.assertEqual({p["campo"] for p in pares}, {"centro de custo"})
 
     def test_banco_sem_a_tabela_nao_quebra(self):
         """Painel novo sobre banco de Processador antigo: sem `transferidos`

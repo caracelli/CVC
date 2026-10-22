@@ -75,8 +75,10 @@ class TestRegraGeneralizada(unittest.TestCase):
     def test_cargo_dispara(self):
         self.assertTrue(self._t(cargo_desc="COORDENADOR").precisa_revisao_acessos)
 
-    def test_departamento_dispara(self):
-        self.assertTrue(self._t(dep="COMERCIAL").precisa_revisao_acessos)
+    def test_departamento_sozinho_nao_dispara(self):
+        # 22/10/2026 (Bruna, Aplicacao_21_10): departamento NAO dispara mais a revisao —
+        # "considerar apenas CENTRO de CUSTO, CARGO e GESTOR".
+        self.assertFalse(self._t(dep="COMERCIAL").precisa_revisao_acessos)
 
     def test_nada_mudou_nao_dispara(self):
         self.assertFalse(self._t().precisa_revisao_acessos)
@@ -125,13 +127,23 @@ class TestDetector(_Db):
         self.assertEqual(DetectarTransferidos(self.con).executar(), [])
 
     def test_apenas_a_mudanca_mais_recente_por_pessoa(self):
-        self._seed(_ativo("10", dep="COMERCIAL"),
-                   _hist("10", "departamento", {"departamento": "TI"}, snap="2026-05-01"),
-                   _hist("10", "departamento", {"departamento": "RH"}, snap="2026-07-01"))
+        self._seed(_ativo("10", gestor="C3"),
+                   _hist("10", "gestor", {"gestor": "C1"}, snap="2026-05-01"),
+                   _hist("10", "gestor", {"gestor": "C2"}, snap="2026-07-01"))
         ts = DetectarTransferidos(self.con).executar()
         self.assertEqual(len(ts), 1)
-        # vence a mais recente (2026-07): anterior = RH
-        self.assertEqual(ts[0].cargo_anterior.departamento, "RH")
+        # vence a mais recente (2026-07): anterior = C2
+        self.assertEqual(ts[0].gestor_anterior, "C2")
+
+    def test_mudanca_so_de_departamento_nao_conta(self):
+        """A mais recente mexeu SO' no departamento (22/10/2026: nao conta mais):
+        vale a mudanca relevante anterior — aqui, a de gestor."""
+        self._seed(_ativo("10", gestor="C2", dep="COMERCIAL"),
+                   _hist("10", "gestor", {"gestor": "C1"}, snap="2026-05-01"),
+                   _hist("10", "departamento", {"departamento": "TI"}, snap="2026-07-01"))
+        ts = DetectarTransferidos(self.con).executar()
+        self.assertEqual(len(ts), 1)
+        self.assertEqual(ts[0].gestor_anterior, "C1")
 
 
 # ---- E2E: AnalisarDivergencias gera ACESSO_TRANSFERIDO -------------------

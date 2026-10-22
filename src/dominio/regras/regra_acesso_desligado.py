@@ -9,6 +9,7 @@ from ..objetos_valor.tipo_divergencia import TipoDivergencia
 # de um desligado NAO e' irregularidade de acesso — ja esta revogada. Ex.: o SIG
 # traz ~58% das contas como BLOQUEADO.
 from ..objetos_valor.situacao_conta import conta_ativa as _conta_ativa
+from ..objetos_valor.sistema import Sistema
 
 
 def _norm_cpf(valor: Optional[str]) -> str:
@@ -57,7 +58,15 @@ class RegraAcessoDesligado:
     que a area quer ver.
     """
 
-    def __init__(self, prefixos_conta_servico: Optional[Sequence[str]] = None):
+    # SIG (Bruna, 22/10/2026): "status pessoa bloqueada + com perfis diferentes
+    # de informativos = a pessoa esta 'ativa' — o que pode ter acontecido e' um
+    # bloqueio de senha; esses casos devem sempre trazer em desligados".
+    _SIG_INFORMATIVO = "COM_INFORMATIVOS"
+
+    def __init__(self, prefixos_conta_servico: Optional[Sequence[str]] = None,
+                 sig_bloqueada_com_perfis_viva: bool = False):
+        self._sig_bloqueada_viva = bool(sig_bloqueada_com_perfis_viva)
+        self.sig_bloqueadas_vivas = 0
         # auditoria: acessos que sairam por serem o MESMO login de quem esta ativo
         self.recontratados_suprimidos = 0
         # auditoria: acessos MANTIDOS por serem login diferente de quem voltou
@@ -147,12 +156,29 @@ class RegraAcessoDesligado:
             if lg and lg not in login_para_matricula:
                 login_para_matricula[lg] = d.matricula
 
+        # SIG: login BLOQUEADO que ainda tem perfil alem de COM_INFORMATIVOS
+        # conta como vivo (ver _SIG_INFORMATIVO). Decidido por LOGIN, nao por
+        # linha: o extrato traz uma linha por perfil.
+        sig_vivos = set()
+        self.sig_bloqueadas_vivas = 0
+        if self._sig_bloqueada_viva:
+            sig = Sistema.SIG
+            for _ac in acessos:
+                if (_ac.sistema == sig and _ac.usuario
+                        and not _conta_ativa(_ac.situacao)
+                        and (_ac.perfil or "").strip().upper() not in ("", self._SIG_INFORMATIVO)):
+                    sig_vivos.add(_ac.usuario)
+
         divergencias = []
         for acesso in acessos:
             # So conta desligado com acesso REALMENTE ativo — conta bloqueada/
-            # inativa ja esta revogada, nao e' divergencia.
+            # inativa ja esta revogada, nao e' divergencia. Excecao: o SIG
+            # bloqueado com perfis (acima), menos o proprio COM_INFORMATIVOS.
             if not _conta_ativa(acesso.situacao):
-                continue
+                if not (acesso.usuario in sig_vivos and acesso.sistema == Sistema.SIG
+                        and (acesso.perfil or "").strip().upper() != self._SIG_INFORMATIVO):
+                    continue
+                self.sig_bloqueadas_vivas += 1
 
             mat_vinc = acesso.matricula_vinculada
 

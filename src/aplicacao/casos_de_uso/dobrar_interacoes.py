@@ -117,9 +117,22 @@ CREATE TABLE IF NOT EXISTS tratamentos_transferido (
   nome TEXT,
   tratado_por TEXT,
   tratado_em TEXT,
-  dobrado_em TEXT
+  dobrado_em TEXT,
+  status_apontamento TEXT,
+  status_sistemas TEXT
 )
 """
+
+# STATUS DO APONTAMENTO e STATUS POR SISTEMA na tratativa do transferido (Bruna,
+# Aplicacao_21_10, mockup aprovado em 22/10/2026). Aditivo para bancos antigos.
+_COLS_TRAT_TRANSF = [("status_apontamento", "TEXT"), ("status_sistemas", "TEXT")]
+
+
+def _migrar_colunas_trat_transf(c):
+    existentes = {r[1] for r in c.execute("PRAGMA table_info(tratamentos_transferido)")}
+    for nome, tipo in _COLS_TRAT_TRANSF:
+        if existentes and nome not in existentes:
+            c.execute(f"ALTER TABLE tratamentos_transferido ADD COLUMN {nome} {tipo}")
 
 _SQL_CHAMADOS = """
 CREATE TABLE IF NOT EXISTS chamados_abertos (
@@ -314,6 +327,7 @@ class DobrarInteracoes:
             c.executescript(_SQL_RES)
             c.executescript(_SQL_TRAT_DESL)
             c.executescript(_SQL_TRAT_TRANSF)
+            _migrar_colunas_trat_transf(c)
             c.executescript(_SQL_CHAMADOS)
             c.executescript(_SQL_ATALHOS)
             _migrar_colunas_quar(c)
@@ -368,11 +382,14 @@ class DobrarInteracoes:
                 c.execute(
                     "INSERT OR REPLACE INTO tratamentos_transferido (registro_id,"
                     "ticket,ticket_url,descricao,motivo,nome,tratado_por,tratado_em,"
-                    "dobrado_em) VALUES (?,?,?,?,?,?,?,?,?)",
+                    "dobrado_em,status_apontamento,status_sistemas) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                     [rid, it.get("ticket") or "", it.get("ticket_url") or "",
                      it.get("descricao") or "", it.get("motivo") or "",
                      it.get("nome") or "", it.get("usuario") or "",
-                     (it.get("data_acao") or "").replace("T", " "), agora])
+                     (it.get("data_acao") or "").replace("T", " "), agora,
+                     it.get("status_apontamento") or "",
+                     json.dumps(it.get("status_sistemas") or {}, ensure_ascii=False)])
                 n_transf += 1
 
             # INSERT OR IGNORE (nao REPLACE, como os de cima): se o registro ja

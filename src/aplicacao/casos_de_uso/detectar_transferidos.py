@@ -18,9 +18,11 @@ from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.schema import Historico
 from infraestrutura.repositorios.repositorio_funcionario_sqlite import RepositorioFuncionarioSqlite
 
-# Campos cuja mudanca dispara revisao de acesso (== os comparados no CDC).
+# Campos cuja mudanca dispara revisao de acesso. DEPARTAMENTO saiu em
+# 22/10/2026 (Bruna, Aplicacao_21_10: "Nao trazer alteracoes de departamento.
+# Considerar apenas CENTRO de CUSTO, CARGO e GESTOR").
 _CAMPOS_REVISAO = {"cargo_codigo", "cargo_descricao", "centro_custo_codigo",
-                   "departamento", "gestor"}
+                   "gestor"}
 
 
 class DetectarTransferidos:

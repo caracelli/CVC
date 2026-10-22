@@ -27,6 +27,9 @@ from loguru import logger
 
 from aplicacao.casos_de_uso.validar_acessos_sistema import (
     ValidarAcessosSistema, _SISTEMAS_PERFIL_APROXIMADO, _norm, _norm_perfil)
+from dominio.objetos_valor import situacao_conta as sit_conta
+
+_SIG_INFORMATIVO = ValidarAcessosSistema._SIG_INFORMATIVO
 from dominio.objetos_valor.sistema import Sistema, sistema_do_texto
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.schema import (
@@ -43,8 +46,16 @@ _MIN_PARES = 2
 class RevalidarTransferidos:
 
     def __init__(self, conexao: ConexaoBancoDados,
-                 ancora_systur_sistemas=None, ancora_systur_isentos=None):
+                 ancora_systur_sistemas=None, ancora_systur_isentos=None,
+                 sig_so_matriz: bool = False):
         self._conexao = conexao
+        # SIG SO' PELA MATRIZ (Bruna, 22/10/2026): "para transferidos e
+        # desligados olhamos o todo". O esperado do SIG vem da CCO (sai o
+        # espelho); conta SIG bloqueada com perfis alem de COM_INFORMATIVOS conta
+        # como viva; o COM_INFORMATIVOS nao entra na conta; e o SIG aparece
+        # SEMPRE ("se tiver perfil diferente de com informativos, trazer"),
+        # mesmo sem esperado nos dois momentos.
+        self._sig_so_matriz = bool(sig_so_matriz)
         self._limiar = ValidarAcessosSistema._SIG_LIMIAR_ESPELHO
         # PERFIL DESCONSIDERADO tambem aqui (Bruna, 16/10/2026: "esse perfil
         # se colocou em padrao: CVC OIE BRASIL - Relatorio de Despesas, nos
@@ -91,12 +102,24 @@ class RevalidarTransferidos:
         ativos = sessao.query(RhAtivo).all()
         acessos = defaultdict(lambda: defaultdict(set))     # mat -> sis -> perfis
         desconsiderados = 0
+        sig = Sistema.SIG.value
+        contas_sig = {}                                     # login -> (mat, viva, perfis)
         for a in sessao.query(AcessoSistema).all():
             if a.matricula_vinculada and a.perfil:
                 if self._isento(a.sistema, a.perfil):
                     desconsiderados += 1
                     continue
+                if self._sig_so_matriz and a.sistema == sig:
+                    c = contas_sig.setdefault(a.usuario, [a.matricula_vinculada, False, set()])
+                    if not sit_conta.sem_acesso_efetivo(a.situacao):
+                        c[1] = True
+                    c[2].add(a.perfil)
+                    continue
                 acessos[a.matricula_vinculada][a.sistema].add(a.perfil)
+        for mat, ativa, perfis in contas_sig.values():
+            fora_info = {p for p in perfis if _norm(p) != _norm(_SIG_INFORMATIVO)}
+            if ativa or fora_info:
+                acessos[mat][sig] |= fora_info
         if self._isentos:
             logger.info(f"[revalidacao] {desconsiderados} acesso(s) desconsiderado(s) "
                         f"({', '.join(self._isentos)}).")
@@ -120,9 +143,8 @@ class RevalidarTransferidos:
             cco[(_norm(r["cc"]), _norm(r.get("gestor", "")))][_se.value].add(r["perfil"])
 
         # grupos do espelho do SIG (so CLT, so quem usa SIG)
-        sig = Sistema.SIG.value
         full, wide = defaultdict(list), defaultdict(list)
-        for f in ativos:
+        for f in ([] if self._sig_so_matriz else ativos):
             if (getattr(f, "tipo_vinculo", "") or "").upper() in _VINCULOS_ESPELHO:
                 continue
             if acessos.get(f.matricula, {}).get(sig):
@@ -162,8 +184,9 @@ class RevalidarTransferidos:
         for sis, ps in matriz.get((_norm(cc), _norm(cargo)), {}).items():
             out[sis] |= ps
         for sis, ps in cco.get((_norm(cc), _norm(gestor)), {}).items():
-            # SIG nao usa CCO (e' espelho) — mesma excecao da validacao normal
-            if sis and _norm(sis) != Sistema.SIG.value:
+            # SIG nao usa CCO (e' espelho) — mesma excecao da validacao normal.
+            # Com sig_so_matriz e' o contrario: a CCO e' a unica matriz do SIG.
+            if sis and (self._sig_so_matriz or _norm(sis) != Sistema.SIG.value):
                 out[sis] |= ps
         return out
 
@@ -185,7 +208,7 @@ class RevalidarTransferidos:
         velho[sig] |= sig_velho
 
         def _reg(sistema, perfil, situacao):
-            espelho = sistema == sig
+            espelho = sistema == sig and not self._sig_so_matriz
             return {"matricula": mat, "nome": t.nome or "", "sistema": sistema,
                     "perfil": perfil, "situacao": situacao,
                     "origem": "ESPELHO" if espelho else "MATRIZ/CCO",
@@ -206,7 +229,7 @@ class RevalidarTransferidos:
             esp_v = {_chave(sistema, p) for p in velho.get(sistema, set())}
             # Sistema sem esperado em NENHUM dos dois momentos: a revalidacao nao
             # tem o que dizer (a regra geral ja trata). Nao inventamos veredito.
-            if not esp_n and not esp_v:
+            if not esp_n and not esp_v and not (self._sig_so_matriz and sistema == sig):
                 continue
             for perfil in sorted(perfis):
                 k = _chave(sistema, perfil)

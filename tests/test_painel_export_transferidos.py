@@ -104,9 +104,11 @@ class ExportTransferidosIdentificaTodaLinha(unittest.TestCase):
 
     def test_de_para_virou_coluna_por_campo(self):
         """'Abrir os nomes em colunas, não em linhas' — o pedido literal."""
-        for rot in ("Cargo", "Departamento", "Centro de Custo", "Gestor"):
+        for rot in ("Cargo", "Centro de Custo", "Gestor"):
             self.assertIn(f"{rot} (De)", self.cols)
             self.assertIn(f"{rot} (Para)", self.cols)
+        # 22/10/2026 (Aplicacao_21_10): "Nao trazer alteracoes de departamento"
+        self.assertNotIn("Departamento (De)", self.cols)
         pai = self.x["linhas"][0]
         self.assertEqual(pai[self.cols.index("Gestor (De)")],
                          "ADRIANA CELESTINO DA SILVA")

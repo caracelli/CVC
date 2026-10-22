@@ -307,7 +307,12 @@ class PlanilhaAlinhadaComATela(unittest.TestCase):
                          ["Matrícula", "Nome", "Cargo", "Centro de Custo", "Gestor", "Mudança"])
         # 19/10/2026: "Base" (CCO x Matriz) entrou NO FIM, depois das que ja'
         # existiam — nenhuma coluna antiga muda de posicao
-        self.assertEqual(cap["cols"][-3:], ["Situação do acesso", "Função (CCO)", "Base"])
+        # 22/10/2026: a tratativa (status do apontamento e o que foi executado por
+        # sistema) tambem entrou no fim, depois da "Base".
+        i = cap["cols"].index("Base")
+        self.assertEqual(cap["cols"][i - 2:i + 1], ["Situação do acesso", "Função (CCO)", "Base"])
+        self.assertEqual(cap["cols"][i + 1:], ["Status do apontamento", "Tratativa execução",
+                                               "Parecer", "Tratado por", "Tratado em"])
 
     def test_planilha_diz_manter_revogar_e_incluir(self):
         cap = self._export(REG)

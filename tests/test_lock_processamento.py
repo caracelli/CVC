@@ -21,7 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from processador.main import _verificar_e_criar_lock
-from infraestrutura.banco_dados.processamento_local import BatimentoLock
+from infraestrutura.banco_dados.processamento_local import BatimentoLock, ProcessamentoCancelado
 
 
 def _ha(minutos):
@@ -103,6 +103,54 @@ class TestLockProcessamento(unittest.TestCase):
         idade = (datetime.now() - datetime.fromisoformat(primeira)).total_seconds()
         self.assertLess(idade, 5)
         self.assertIn("usuario=", lock.read_text(encoding="utf-8"))
+
+
+class TestCancelarApagandoOLock(unittest.TestCase):
+    """20/10/2026 — o lock e' o "arquivo de processando": apagado, o
+    Processador para no proximo passo e nao o recria."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="lock_cancel_")
+        self.banco = Path(self.tmp) / "BANCO" / "iam_analytics.db"
+        _, self.lock, self.fixo = _verificar_e_criar_lock(self.banco)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_com_o_lock_no_lugar_segue(self):
+        BatimentoLock(self.lock, self.fixo).conferir("Importacao RH")
+
+    def test_lock_apagado_para_no_proximo_passo(self):
+        b = BatimentoLock(self.lock, self.fixo)
+        self.lock.unlink()
+        with self.assertRaises(ProcessamentoCancelado) as cm:
+            b.conferir("Validacao")
+        self.assertIn("Validacao", str(cm.exception))
+
+    def test_batimento_nao_recria_lock_apagado(self):
+        b = BatimentoLock(self.lock, self.fixo, intervalo=0.05).iniciar()
+        self.lock.unlink()
+        time.sleep(0.3)
+        b.parar()
+        self.assertFalse(self.lock.exists(), "o sinal de vida recriaria o arquivo apagado")
+        self.assertTrue(b.perdido)
+
+    def test_lock_tomado_por_outra_execucao_tambem_para(self):
+        b = BatimentoLock(self.lock, self.fixo)
+        outro = f"{_ha(0)}\nbatimento={_ha(0)}\ninicio={_ha(0)}\nusuario=outra\nmaquina=X\n"
+        self.lock.write_text(outro, encoding="utf-8")
+        with self.assertRaises(ProcessamentoCancelado):
+            b.conferir()
+        b.liberar()
+        self.assertEqual(self.lock.read_text(encoding="utf-8"), outro,
+                         "nao apaga nem sobrescreve o lock de outra execucao")
+
+    def test_fim_normal_apaga_o_proprio_lock(self):
+        b = BatimentoLock(self.lock, self.fixo, intervalo=0.05).iniciar()
+        time.sleep(0.15)
+        b.conferir()
+        b.liberar()
+        self.assertFalse(self.lock.exists())
 
 
 if __name__ == "__main__":

@@ -12,7 +12,9 @@ from infraestrutura.repositorios.repositorio_transferido_sqlite import Repositor
 
 class AnalisarDivergencias:
 
-    def __init__(self, conexao: ConexaoBancoDados, prefixos_conta_servico=None):
+    def __init__(self, conexao: ConexaoBancoDados, prefixos_conta_servico=None,
+                 sig_so_matriz: bool = False):
+        self._sig_so_matriz = bool(sig_so_matriz)
         # Prefixos de login de CONTA DE SERVICO (config validacao/conta_servico).
         # Vazio = regra desligada.
         self._prefixos_conta_servico = prefixos_conta_servico or []
@@ -38,7 +40,8 @@ class AnalisarDivergencias:
         self._repo_transf.salvar_lote(transferidos)
 
         servico = ServicoAnaliseDivergencias(
-            perfis_esperados, prefixos_conta_servico=self._prefixos_conta_servico)
+            perfis_esperados, prefixos_conta_servico=self._prefixos_conta_servico,
+            sig_so_matriz=self._sig_so_matriz)
         divergencias = servico.analisar(
             acessos=acessos,
             ativos=ativos,

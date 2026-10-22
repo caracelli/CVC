@@ -1249,6 +1249,24 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
 }
 .ph h2{font-size:23px;font-weight:800;color:var(--navy);}
 .ph p{font-size:14px;max-width:450px;text-align:center;line-height:1.7;}
+/* Transferidos: filtro por coluna, período e status por sistema (22/10/2026) */
+.transf-filtros th{padding:3px 4px !important;background:#F6F8FC !important}
+.transf-filtros input{width:100%;min-width:0;font-size:11px;padding:3px 5px;border:1px solid #CBD3E1;border-radius:4px}
+.transf-periodo{font-size:12px;color:#5A6376;white-space:nowrap}
+.transf-periodo input{font-size:12px;padding:3px 4px;border:1px solid #CBD3E1;border-radius:5px}
+.tt-sis{display:grid;grid-template-columns:90px 1fr 150px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed #EEF1F6;font-size:12.5px}
+.tt-sis b{color:#1F2D5C}
+.tt-rec{font-size:11.5px;color:#5A6376}
+.tt-sis-sel{font-size:12.5px;padding:4px 6px}
+.tt-ver{margin-top:10px;padding:8px 10px;background:#F6F8FC;border-radius:6px;font-size:12.5px;line-height:1.6}
+@media(max-width:560px){.tt-sis{grid-template-columns:1fr}}
+/* aba "Ação" (simular troca de função, 22/10/2026) */
+.acao-sel{width:100%;margin:4px 0 6px;font:13px 'Segoe UI',sans-serif;border:1px solid #CBD3E1;border-radius:6px;padding:6px 8px;background:#fff}
+.acao-tb{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.acao-tb th:first-child,.acao-tb td:first-child{width:118px}
+.acao-tb th{background:#F1F4FA;color:#1F2D5C;font:700 11px Arial;text-align:left;padding:5px 7px;border:1px solid #E3E8F2}
+.acao-tb td{padding:5px 7px;border:1px solid #E3E8F2;vertical-align:top;white-space:normal;overflow:visible;text-overflow:clip}
+.acao-p{display:inline-block;max-width:100%;white-space:normal;overflow-wrap:anywhere;font:600 10.5px Arial;border-radius:9px;padding:2px 7px;margin:1px 2px}
 </style>
 </head>
 <body>
@@ -1649,6 +1667,7 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
         <button class="cs-drawer-tab" data-cstab="acessos" onclick="csDrawerTab('acessos')">Acessos</button>
         <button class="cs-drawer-tab" data-cstab="hist" onclick="csDrawerTab('hist')">Histórico</button>
         <button class="cs-drawer-tab" data-cstab="quar" onclick="csDrawerTab('quar')">Quarentena</button>
+        <button class="cs-drawer-tab" data-cstab="acao" id="cs-tab-acao" onclick="csDrawerTab('acao')" style="display:none">Ação</button>
       </div>
       <div class="cs-drawer-bd" id="cs-drawer-body">—</div>
     </div>
@@ -1735,12 +1754,16 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
               title="Filtra pelo campo que mudou no movimento">
         <option value="">Toda mudança</option>
         <option value="cargo">Cargo</option>
-        <option value="departamento">Departamento</option>
         <option value="centro de custo">Centro de Custo</option>
         <option value="gestor">Gestor</option>
       </select>
       <input id="transf-busca" class="conf-busca" placeholder="Buscar matrícula, nome, cargo, gestor, mudança…"
              oninput="transfBuscar()">
+      <!-- periodo da tratativa (Bruna, Aplicacao_21_10: "na tela tratados, ter a
+           opcao de filtrar datas de apontamentos") -->
+      <span class="transf-periodo" id="transf-periodo" style="display:none" title="Data em que o apontamento foi tratado">
+        Tratado de <input type="date" id="transf-de" onchange="transfBuscar()">
+        até <input type="date" id="transf-ate" onchange="transfBuscar()"></span>
       <button class="btn-exp" style="margin-left:auto;" onclick="exportarTransferidos()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>Exportar Excel</button>
     </div>
     <div class="exp-bar"><span class="pp-wrap">Itens por página:<select id="transf-pp" onchange="transfPP(this.value)"><option>50</option><option>100</option><option>200</option><option>500</option><option>1000</option></select></span><span class="pager" id="transf-pager"></span><span class="lista-total" id="transf-total"></span></div>
@@ -1766,6 +1789,19 @@ td.cs-email-cel{font-size:11px;color:#3A3F4C;overflow-wrap:anywhere;}
             <th title="Base que valida a pessoa: CCO (centro de custo + gestor na matriz CCO) ou Matriz de perfis do cargo">Base</th>
             <th>Mudança</th>
             <th>Acessos</th><th>Situação</th>
+          </tr>
+          <!-- filtro em todas as colunas (Bruna, Aplicacao_21_10) -->
+          <tr class="transf-filtros">
+            <th data-nf></th>
+            <th><input data-tf="m" placeholder="filtrar" oninput="transfFiltroCol(this)"></th>
+            <th><input data-tf="n" placeholder="filtrar" oninput="transfFiltroCol(this)"></th>
+            <th><input data-tf="cargo" placeholder="filtrar" oninput="transfFiltroCol(this)"></th>
+            <th><input data-tf="cc" placeholder="filtrar" oninput="transfFiltroCol(this)"></th>
+            <th><input data-tf="gestor" placeholder="filtrar" oninput="transfFiltroCol(this)"></th>
+            <th><input data-tf="base" placeholder="CCO/Matriz" oninput="transfFiltroCol(this)"></th>
+            <th><input data-tf="campos" placeholder="cargo, gestor…" oninput="transfFiltroCol(this)"></th>
+            <th><input data-tf="acessos" placeholder="sistema, perfil" oninput="transfFiltroCol(this)"></th>
+            <th><input data-tf="sit" placeholder="revisar, em andamento…" oninput="transfFiltroCol(this)"></th>
           </tr></thead>
           <tbody id="transf-body"></tbody>
         </table>
@@ -2477,7 +2513,11 @@ function motIcone(mot){
    do motor, não é inferido aqui. */
 function tipoBadge(t, tl, mot, cod){
   const multi = /MAIS_DE_UM_PERFIL/.test(cod || '');
-  const txt = multi ? 'Mais de um perfil' : (tl || t);
+  // SIG só pela matriz (22/10/2026): o rótulo diz qual regra trouxe a linha
+  const sig = /^SIG_LOGIN_SHOP:/.test(cod || '') ? 'Login SHOP'
+            : /^SIG_DUPLICIDADE:/.test(cod || '') ? 'Duplicidade'
+            : /^SIG_NAO_PREVISTO/.test(cod || '') ? 'SIG fora da função' : '';
+  const txt = multi ? 'Mais de um perfil' : (sig || tl || t);
   const dica = multi ? ' title="Usuário com mais de um perfil no mesmo sistema. '
                      + 'A regra da área permite apenas um, então a linha entrou '
                      + 'como pendência para análise."' : '';
@@ -4387,7 +4427,9 @@ function proc(on){
 
 /* ── Enviar para quarentena (modal → grava interação QUARENTENA) ───────── */
 let _quarAlvo = null;
-const QUAR_MOTIVOS = ['Exceção', 'Férias/Cobertura de férias', 'Usuário sistêmico'];
+// "Férias/Cobertura de férias" saiu em 22/10/2026 (Bruna, Aplicacao_21_10).
+const QUAR_MOTIVOS = ['Exceção', 'Usuário sistêmico'];
+let _quarItens = [];    // pendências oferecidas no modal: [{sis, pf, rot}]
 
 function quarentenar(uid, sistema, perfil){
   // Abre o formulário (prazo/ticket/título/motivo) — espelha abrirResolver.
@@ -4396,14 +4438,37 @@ function quarentenar(uid, sistema, perfil){
   const u = DB.users.find(x => String(x.u) === String(uid));
   const sis = sistema || '', pf = (sistema && perfil) ? perfil : '';
   _quarAlvo = (u ? u.u : uid) + (sis ? '##' + sis : '') + (pf ? '##' + pf : '');
+  /* ESCOLHER O QUE VAI PARA A QUARENTENA (Bruna, Aplicacao_21_10: "colocar o
+     check igual no resolver pendências quando tiver mais de um sistema").
+     Mesma lista do Resolver: uma por acesso, nada marcado de início. */
+  const _vq = new Set();
+  _quarItens = [];
+  if (u && !pf) {
+    u.divs.filter(d => d.s === 'Pendente' && d.sis && (!sis || d.sis === sis)).forEach(d => {
+      const k = d.sis + '##' + _perfChave(d);
+      if (_vq.has(k)) return;
+      _vq.add(k);
+      _quarItens.push({sis: d.sis, pf: _perfChave(d), rot: d.a || d.tl || ''});
+    });
+  }
+  const escolher = _quarItens.length > 1;
   const nome = (u ? (u.n + ' — ' + u.u) : uid)
     + (sis ? ' · sistema ' + esc(sis) : '')
-    + (pf ? ' · acesso ' + esc(pf) : '');
+    + (pf ? ' · acesso ' + esc(pf) : '')
+    + (escolher ? ' · ' + _quarItens.length + ' pendências — escolha quais' : '');
+  const lista = !escolher ? '' :
+    '<div class="res-sel"><div class="res-sel-hd"><span>Pendências que vão para a quarentena</span>'
+    + '<a onclick="_quarMarcarTodas()">marcar todas</a></div>'
+    + _quarItens.map((x, i) => '<label class="res-sel-i"><input type="checkbox" class="quar-chk" value="' + i + '">'
+        + '<span><b>' + esc(x.sis) + '</b> · ' + esc(_resRotuloPerfis(x.pf))
+        + (x.rot ? ' <small>(' + esc(x.rot) + ')</small>' : '') + '</span></label>').join('')
+    + '</div>';
   _modal(
     '<div class="modal-hd"><h3>Enviar para quarentena'
     + (pf ? ' — este acesso' : sis ? ' — por sistema' : '') + '</h3>'
     + '<p>' + esc(nome) + '</p></div>'
     + '<div class="modal-bd">'
+    + lista
     + '<label>Quantidade de dias <span class="req">*</span> <span style="color:#7B8294;font-weight:400;">(máx. 90)</span></label>'
     + '<input id="quar-dias" type="number" min="1" max="90" step="1" placeholder="ex: 30" '
     + 'autocomplete="off" inputmode="numeric">'
@@ -4430,8 +4495,30 @@ function quarentenar(uid, sistema, perfil){
   setTimeout(() => { const i = document.getElementById('quar-dias'); if(i) i.focus(); }, 60);
 }
 
+function _quarMarcarTodas(){
+  const cs = Array.from(document.querySelectorAll('.quar-chk'));
+  const todas = cs.every(c => c.checked);
+  cs.forEach(c => { c.checked = !todas; });
+}
+/* Alvos: todas marcadas (ou sem lista) = o escopo do botão, como sempre foi;
+   só parte = um alvo por acesso marcado (usuario##sistema##perfil). */
+function _quarAlvos(){
+  const cs = Array.from(document.querySelectorAll('.quar-chk'));
+  if (!cs.length) return [_quarAlvo];
+  const marc = cs.filter(c => c.checked);
+  if (marc.length === cs.length) return [_quarAlvo];
+  const base = String(_quarAlvo).split('##')[0];
+  return marc.map(c => { const x = _quarItens[+c.value]; return base + '##' + x.sis + '##' + x.pf; });
+}
 async function confirmarQuarentena(){
   if(!_quarAlvo) return;
+  const _qchk = document.querySelectorAll('.quar-chk');
+  if(_qchk.length && !Array.from(_qchk).some(c => c.checked)){
+    const e = document.getElementById('quar-err');
+    if(e) e.textContent = 'Marque a(s) pendência(s) que vão para a quarentena.';
+    return;
+  }
+  const _alvosQ = _quarAlvos();
   const dias   = parseInt(document.getElementById('quar-dias').value, 10);
   const ticket = document.getElementById('quar-ticket').value.trim();
   const titulo = document.getElementById('quar-titulo').value.trim();
@@ -4462,7 +4549,7 @@ async function confirmarQuarentena(){
   try{
     const r = await fetch('/api/quarentena', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({usuarios:[u], origem:'Inclusão / Alteração',
+      body: JSON.stringify({usuarios:_alvosQ, origem:'Inclusão / Alteração',
         dias:dias, ticket:ticket, titulo:titulo, motivo:motivo})
     });
     const j = await r.json();
@@ -5837,10 +5924,15 @@ const _transfExp = new Set();
 function transfPP(v){ _transfPP = parseInt(v,10)||50; _transfPag = 1; pintarTransferidos(); }
 function transfIr(p){ _transfPag = p; pintarTransferidos(); }
 function transfBuscar(){ _transfPag = 1; pintarTransferidos(); }
+function _transfMostrarPeriodo(){
+  const el = document.getElementById('transf-periodo');
+  if (el) el.style.display = _transfView === 'tratados' ? '' : 'none';
+}
 function transfView(btn){
   document.querySelectorAll('#pg-transf .seg').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   _transfView = btn.dataset.view; _transfPag = 1;
+  _transfMostrarPeriodo();
   pintarTransferidos();
 }
 function transfToggle(el){
@@ -5883,8 +5975,23 @@ async function renderTransferidos(){
   pintarTransferidos();
 }
 
+let _transfColFilt = {};   // filtro por coluna: {campo: texto}
+function transfFiltroCol(el){
+  const v = (el.value || '').trim().toLowerCase();
+  if (v) _transfColFilt[el.dataset.tf] = v; else delete _transfColFilt[el.dataset.tf];
+  transfBuscar();
+}
+/* Texto de cada coluna para o filtro — o mesmo que a célula mostra. */
+function _transfTxtCol(d, c){
+  if (c === 'acessos') return (d.acessos || []).map(a => a.sis + ' ' + a.login + ' ' + a.perfil).join(' ');
+  if (c === 'sit') return d.sem_acesso ? 'sem acesso' : d.tratado ? 'tratado'
+                        : (d.status_apont === 'Em andamento' ? 'em andamento' : 'revisar');
+  return String(d[c] || '');
+}
 function _transfFiltrados(){
   const q = (document.getElementById('transf-busca')?.value || '').trim().toLowerCase();
+  const de = document.getElementById('transf-de')?.value || '';
+  const ate = document.getElementById('transf-ate')?.value || '';
   // campo que mudou (cargo/departamento/centro de custo/gestor) — casa com
   // de_para[].campo, que é a mesma fonte do de/para do Excel
   const campo = (document.getElementById('transf-campo')?.value || '').toLowerCase();
@@ -5897,6 +6004,13 @@ function _transfFiltrados(){
     else if(d.sem_acesso && _transfView !== 'todos') return false;
     if(_transfView === 'revisar' && tratado) return false;
     if(_transfView === 'tratados' && !tratado) return false;
+    for (const c in _transfColFilt)
+      if (!_transfTxtCol(d, c).toLowerCase().includes(_transfColFilt[c])) return false;
+    // periodo: so' vale na visao Tratados (pela data da tratativa)
+    if (_transfView === 'tratados' && (de || ate)) {
+      const em = String((d.tratamento && d.tratamento.em) || '').slice(0, 10);
+      if (!em || (de && em < de) || (ate && em > ate)) return false;
+    }
     if(!q) return true;
     const alvo = [d.m, d.n, d.cargo, d.cc, d.gestor, d.campos,
                   (d.acessos||[]).map(a => a.sis+' '+a.login+' '+a.perfil).join(' ')
@@ -5980,7 +6094,8 @@ function _transfResumoSis(d, sistemas, multiFora){
     const M = semMantem
       ? (d.reval ? tem.filter(p => !ks.has(N(p))).map(p => ({sis: s, perfil: p, fun: ''})) : [])
       : doSis(d.mantem, s);
-    const multi = fora.includes(N(s))
+    // SIG: a função prevê um CONJUNTO de perfis (CCO; antes, o espelho)
+    const multi = fora.includes(N(s)) || N(s) === 'SIG'
       || M.concat(S, E, F).some(x => x.origem === 'ESPELHO');
     let excluir = S.slice(), foraPad = E.slice();
     // perfil único por sistema: o que está fora do padrão é o que sai na troca
@@ -6208,7 +6323,9 @@ function pintarTransferidos(){
         + `stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/>`
         + `<path d="M21 21l-4.3-4.3"/></svg></button>`;
     } else {
-      sit = `<span class="badge b-em-analise">Revisar</span>`
+      sit = (d.status_apont === 'Em andamento'
+              ? `<span class="badge b-em-analise" style="background:#E3F1FB;color:#2980B9" title="Tratativa em andamento — clique em tratar para continuar">Em andamento</span>`
+              : `<span class="badge b-em-analise">Revisar</span>`)
         + `<button class="btn-res ico-res" title="Tratar — revisar acesso e abrir chamado" `
         + `onclick="abrirTratarTransferido('${esc(d.m)}')">`
         + `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" `
@@ -6272,7 +6389,9 @@ function exportarTransferidos(){
      E o de/para virou COLUNA por campo: com uma linha por usuário dá para
      filtrar por Gestor ou CC e trabalhar a lista inteira de uma vez, em vez
      de abrir um a um. */
-  const CAMPOS = [['cargo','Cargo'], ['departamento','Departamento'],
+  // Departamento saiu em 22/10/2026 (Bruna: "considerar apenas centro de custo,
+  // cargo e gestor").
+  const CAMPOS = [['cargo','Cargo'],
                   ['centro de custo','Centro de Custo'], ['gestor','Gestor']];
   const cols = ['Matrícula','Nome','Cargo','Centro de Custo','Gestor','Mudança'];
   CAMPOS.forEach(([,rot]) => cols.push(rot+' (De)', rot+' (Para)'));
@@ -6286,6 +6405,10 @@ function exportarTransferidos(){
   // Base que valida a pessoa (CCO x Matriz), 19/10/2026 — no FIM, para nao
   // mover as colunas de quem ja' filtra a planilha
   cols.push('Base');
+  // TRATATIVA (Bruna, Aplicacao_21_10, modelo da planilha): status do apontamento,
+  // o que o analista executou em cada sistema (Mantido / Alterado / Sem atuação /
+  // Excluído) e quem tratou. "Situação do acesso" acima é a tratativa RECOMENDADA.
+  cols.push('Status do apontamento', 'Tratativa execução', 'Parecer', 'Tratado por', 'Tratado em');
   const C_SIT = cols.indexOf('Situação');
 
   const linhas = [], niveis = [];
@@ -6333,29 +6456,42 @@ function exportarTransferidos(){
       .map(m => _sisN(m.sis)));
 
     const base = d.base || '';
-    linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'', '', '', '', '', '', base]);
+    const stAp = d.sem_acesso ? '' : (t.status || (d.tratado ? 'Resolvido' : 'Pendente'));
+    const exe = sis => ((t.sistemas || {})[sis] || '');
+    const trat = sis => [stAp, sis == null ? '' : exe(sis), t.descricao || '', t.por || '', t.em || ''];
+    linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'', '', '', '', '', '', base, ...trat(null)]);
     niveis.push(0);
+    const _sisComLinha = new Set();
 
     _acessosPorSistema(d.acessos).forEach(g => {
       const umPerfil = g.perfis.length === 1 ? (g.perfis[0] || '') : '';
+      _sisComLinha.add(_sisN(g.sis));
       linhas.push([...ident(), ...depara, fmtDate(g.dt), sit, t.ticket||'', t.motivo||'',
                    g.sis, g.login,
                    g.perfis.length > 1 ? g.perfis.length + ' perfis' : umPerfil,
-                   umPerfil ? sitAcesso(g.sis, umPerfil) : '', '', base]);
+                   umPerfil ? sitAcesso(g.sis, umPerfil) : '', '', base, ...trat(g.sis)]);
       niveis.push(1);
       if(g.lista.length > 1) g.lista.forEach(a => {
         linhas.push([...ident(), ...depara, fmtDate(a.dt), sit, t.ticket||'', t.motivo||'',
-                     g.sis, a.login, a.perfil, sitAcesso(g.sis, a.perfil), '', base]);
+                     g.sis, a.login, a.perfil, sitAcesso(g.sis, a.perfil), '', base, ...trat(g.sis)]);
         niveis.push(2);
       });
     });
     // o que a nova função/equipe tem e a pessoa não: na tela é o bloco 3; sem
     // isto a planilha continuava contando só metade da história
     (d.falta || []).forEach(f => {
+      _sisComLinha.add(_sisN(f.sis));
       linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'',
                    f.sis || '', '', f.perfil || '',
                    aderenteSis.has(_sisN(f.sis)) ? 'pode ter também (não precisa incluir)'
-                                                 : 'falta (incluir)', f.fun || '', base]);
+                                                 : 'falta (incluir)', f.fun || '', base, ...trat(f.sis)]);
+      niveis.push(1);
+    });
+    // sistema marcado na tratativa sem acesso nem inclusão (ex.: "Sem atuação")
+    Object.keys(t.sistemas || {}).forEach(s => {
+      if (_sisComLinha.has(_sisN(s))) return;
+      linhas.push([...ident(), ...depara, dtMov, sit, t.ticket||'', t.motivo||'',
+                   s, '', '', '', '', base, ...trat(s)]);
       niveis.push(1);
     });
   });
@@ -6372,12 +6508,18 @@ function abrirTratarTransferido(m){
   const d = _transfRecs.find(x => String(x.m) === String(m));
   if(!d) return;
   _transfTratAlvo = d;
+  const ant = d.tratamento || {};
+  const stAnt = ant.status && ant.status !== 'Resolvido' ? ant.status : 'Pendente';
   _modal(
     '<div class="modal-hd"><h3>Revisar acesso de transferido</h3>'
     + '<p>' + esc(d.n||d.m) + ' — ' + esc(d.m) + ' · mudança de ' + (esc(d.campos)||'cadastro')
     + '</p></div>'
     + '<div class="modal-bd">'
+    + '<label>Status do apontamento <span class="req">*</span></label>'
+    + '<select id="tt-status">' + TRANSF_STATUS.map(s => '<option' + (s === stAnt ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>'
+    + '<div style="color:#7B8294;font-size:11.5px;margin-top:2px">O apontamento nasce Pendente. Só "Resolvido" leva para Tratados.</div>'
     + _campoTratativa('tt', false)
+    + _transfStatusSistemas(d, ant.sistemas || {})
     + '<div class="modal-err" id="tt-err"></div></div>'
     + '<div class="modal-ft">'
     + '<button class="mf-cancel" onclick="fecharModal()">Cancelar</button>'
@@ -6386,6 +6528,39 @@ function abrirTratarTransferido(m){
     + '<button class="mf-ok" onclick="confirmarTratamentoTransferido()">Resolver</button>'
     + '</div>');
   setTimeout(() => { const i = document.getElementById('tt-desc'); if(i) i.focus(); }, 60);
+  if (ant.descricao) { const i = document.getElementById('tt-desc'); if (i) i.value = ant.descricao; }
+  if (ant.ticket) { const i = document.getElementById('tt-ticket'); if (i) i.value = ant.ticket; }
+}
+
+/* STATUS POR SISTEMA (Bruna, Aplicacao_21_10; sempre os 7 — 22/10/2026). Ao lado
+   de cada sistema, o que o painel RECOMENDA (resumo por sistema); o analista marca
+   o que EXECUTOU: Mantido, Alterado, Sem atuação ou Excluído. */
+const TRANSF_STATUS = ['Pendente', 'Em andamento', 'Resolvido'];
+const TRANSF_SETE = [['IC_INTEGRADOR_CONTABIL','IC'], ['SICA_RA','SICA RA'], ['SICA_ESFERA','SICA ESFERA'],
+                     ['SIGOT','SIGOT'], ['SYSTUR','SYSTUR'], ['SIG','SIG'], ['ORACLE_EBS','ORACLE']];
+const TRANSF_EXEC = ['Mantido', 'Alterado', 'Sem atuação', 'Excluído'];
+const _TRANSF_REC = {ok: 'Manter', troca: 'Alterar (trocar perfil)', inc: 'Incluir',
+                     exc: 'Excluir', nada: 'Sem ação', sext: 'Sem extrato'};
+function _transfStatusSistemas(d, marcado){
+  const res = {};
+  try { _transfResumoSis(d, TRANSF_SETE.map(x => x[0]), _transfMultiFora())
+          .forEach(r => { res[String(r.s).toUpperCase()] = r; }); } catch(e) {}
+  const linhas = TRANSF_SETE.map(([s, rot]) => {
+    const r = res[s];
+    // tem perfil fora do padrão e nada a incluir/excluir: é revisão, não "sem ação"
+    const rec = !r ? 'Sem acesso'
+              : (r.st === 'nada' && r.fora && r.fora.length) ? 'Revisar (fora do padrão)'
+              : (_TRANSF_REC[r.st] || '');
+    const tem = r && r.tem && r.tem.length ? r.tem.length + ' perfil(is) hoje' : 'sem acesso hoje';
+    const opts = '<option value="">Selecione…</option>'
+      + TRANSF_EXEC.map(o => '<option' + (marcado[s] === o ? ' selected' : '') + '>' + o + '</option>').join('');
+    return '<div class="tt-sis"><b>' + rot + '</b>'
+      + '<span class="tt-rec">' + esc(tem) + ' · recomendado: <b>' + esc(rec) + '</b></span>'
+      + '<select class="tt-sis-sel" data-sis="' + s + '">' + opts + '</select></div>';
+  }).join('');
+  return '<label style="margin-top:10px">Status por sistema</label>'
+    + '<div style="color:#7B8294;font-size:11.5px;margin-bottom:4px">Informe o que foi feito em cada sistema.</div>'
+    + linhas;
 }
 
 async function confirmarTratamentoTransferido(){
@@ -6395,13 +6570,17 @@ async function confirmarTratamentoTransferido(){
   const desc   = document.getElementById('tt-desc').value.trim();
   const motivo = '';   // transferido nao tem motivo (ver _campoTratativa)
   if(!_validarTratativa('tt', motivo, desc)) return;
+  const status = (document.getElementById('tt-status') || {}).value || 'Pendente';
+  const sistemas = {};
+  document.querySelectorAll('.tt-sis-sel').forEach(s => { if (s.value) sistemas[s.dataset.sis] = s.value; });
   const mid = _transfTratAlvo.m;
   fecharModal(); proc(true);
   let msg;
   try{
     const r = await fetch('/api/tratar-transferido', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({id:mid, ticket:ticket, ticket_url:url, descricao:desc, motivo:motivo})
+      body: JSON.stringify({id:mid, ticket:ticket, ticket_url:url, descricao:desc, motivo:motivo,
+                            status:status, status_sistemas:sistemas})
     });
     const j = await r.json();
     if(j && j.ok){
@@ -6413,7 +6592,7 @@ async function confirmarTratamentoTransferido(){
           + (k.sem_acesso ? ` · ${k.sem_acesso} sem acesso` : '');
       }
       pintarTransferidos();
-      msg = 'Revisão de ' + mid + ' registrada sob o ticket ' + ticket + '.';
+      msg = 'Revisão de ' + mid + ' registrada (' + status + ')' + (ticket ? ' sob o ticket ' + ticket : '') + '.';
     } else { msg = 'Falha ao tratar: ' + ((j && j.erro) || 'desconhecida'); }
   }catch(e){ msg = 'Sem conexão com o visualizador — ele pode ter sido encerrado.'; }
   finally{ await proc(false); }
@@ -6424,6 +6603,14 @@ function verTratamentoTransferido(m){
   const d = _transfRecs.find(x => String(x.m) === String(m));
   if(!d || !d.tratamento) return;
   _modalResolucao((d.n||d.m) + ' — ' + d.m, d.tratamento);
+  const s = d.tratamento.sistemas || {};
+  const bd = document.querySelector('#modal-card .modal-bd');
+  if (bd && (d.tratamento.status || Object.keys(s).length)) {
+    bd.insertAdjacentHTML('beforeend', '<div class="tt-ver"><b>Status do apontamento:</b> '
+      + esc(d.tratamento.status || 'Resolvido') + '<br>'
+      + TRANSF_SETE.filter(([k]) => s[k]).map(([k, rot]) => '<b>' + rot + ':</b> ' + esc(s[k])).join(' · ')
+      + '</div>');
+  }
 }
 
 /* ── Render Sem Vínculo RH ────────────────────────────────────────────── */
@@ -8260,6 +8447,11 @@ function csAbrirDrawer(uid, aba){
   document.getElementById('cs-drawer-nome').textContent = u.n || u.u;
   document.getElementById('cs-drawer-meta').textContent =
     `${u.m ? 'matr ' + u.m : 'sem matrícula'} · ${u.c || '—'} · ${u.cc || '—'}`;
+  // aba "Ação" so' para quem tem mais de uma funcao na equipe da CCO
+  const _tabAcao = document.getElementById('cs-tab-acao');
+  if (_tabAcao) _tabAcao.style.display = _acaoEquipe(u) ? '' : 'none';
+  if (_csTab === 'acao' && !_acaoEquipe(u)) _csTab = 'ident';
+  _acaoAlvo = '';
   // Sincroniza tabs visuais
   document.querySelectorAll('.cs-drawer-tab').forEach(t =>
     t.classList.toggle('active', t.dataset.cstab === _csTab));
@@ -8355,7 +8547,75 @@ function csRenderDrawerBody(){
     body.innerHTML = '<div class="cs-empty">⏱️ Histórico de quarentena '
       + 'e resoluções aparece aqui.</div>';
   }
+  else if (_csTab === 'acao') {
+    body.innerHTML = _acaoHtml(u, _acaoAlvo, 'csAcaoTroca');
+  }
 }
+
+/* ABA "AÇÃO" — simular a troca de função (Bruna, Aplicacao_21_10; mockup aprovado
+   em 22/10/2026). "Se ele for trocar para a função X: Systur CP_I — Excluir,
+   Systur ATD_CONC_BANC — Incluir (...) e assim por diante, listando o que ele tem
+   que a nova função não tem e o que ele tem e pode manter."
+   As funções são as da EQUIPE dela na CCO (centro de custo + gestor), enviadas
+   uma vez em DB.meta.eq; u.tem são os acessos ATIVOS dela. Só os sistemas que a
+   CCO da equipe cobre entram na conta: sistema fora da CCO (ex.: IC) não vira
+   "excluir" só porque a função não o cita. */
+let _acaoAlvo = '';
+function _acaoEquipe(u){
+  const eq = (typeof DB !== 'undefined' && DB && DB.meta && DB.meta.eq) || {};
+  return (u && u.eq != null && eq[u.eq]) || null;
+}
+function _acaoNrm(s){
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase().replace(/\s+/g, ' ').trim();
+}
+function _acaoAtuais(u){
+  return [...new Set(((u && u.divs) || []).map(d => d.fun).filter(Boolean))];
+}
+function _acaoCalc(eqFun, alvo, tem){
+  const sisEq = new Set();
+  Object.values(eqFun).forEach(l => l.forEach(([s]) => sisEq.add(s)));
+  const quer = {}, tenho = {};
+  (eqFun[alvo] || []).forEach(([s, p]) => { (quer[s] = quer[s] || new Map()).set(_acaoNrm(p), p); });
+  (tem || []).forEach(([s, p]) => { if (sisEq.has(s)) (tenho[s] = tenho[s] || new Map()).set(_acaoNrm(p), p); });
+  const sistemas = [...new Set([...Object.keys(quer), ...Object.keys(tenho)])].sort();
+  return sistemas.map(s => {
+    const q = quer[s] || new Map(), h = tenho[s] || new Map();
+    return {sis: s,
+            inc: [...q.keys()].filter(k => !h.has(k)).map(k => q.get(k)),
+            exc: [...h.keys()].filter(k => !q.has(k)).map(k => h.get(k)),
+            man: [...h.keys()].filter(k => q.has(k)).map(k => h.get(k))};
+  });
+}
+function _acaoHtml(u, alvo, onTroca){
+  const eqFun = _acaoEquipe(u);
+  if (!eqFun) return '<div class="cs-empty">A pessoa não tem mais de uma função mapeada na CCO.</div>';
+  const atuais = _acaoAtuais(u), atN = new Set(atuais.map(_acaoNrm));
+  const nomes = Object.keys(eqFun).sort((a, b) => a.localeCompare(b, 'pt'));
+  if (!alvo || !eqFun[alvo]) alvo = nomes.find(f => !atN.has(_acaoNrm(f))) || nomes[0];
+  const linhas = _acaoCalc(eqFun, alvo, u.tem);
+  const ni = linhas.reduce((n, l) => n + l.inc.length, 0);
+  const ne = linhas.reduce((n, l) => n + l.exc.length, 0);
+  const tag = (lst, cor, fundo) => lst.length
+    ? lst.map(p => `<span class="acao-p" style="color:${cor};background:${fundo}">${esc(p)}</span>`).join('')
+    : '<span style="color:#8A9099">—</span>';
+  const opts = nomes.map(f => `<option value="${esc(f).replace(/"/g, '&quot;')}"${f === alvo ? ' selected' : ''}>`
+    + `${esc(f)}${atN.has(_acaoNrm(f)) ? '  (atual)' : ''}</option>`).join('');
+  const corpo = linhas.length ? linhas.map(l => `<tr><td><span class="h-sis">${esc(l.sis)}</span>`
+      + (l.sis === 'OPERA_OPERACIONAL' ? '<div style="color:#8A9099;font-size:10.5px">sem extrato</div>' : '')
+      + `</td><td>${tag(l.inc, '#2980B9', '#E3F1FB')}</td><td>${tag(l.exc, '#B33A3A', '#FDECEC')}</td>`
+      + `<td>${tag(l.man, '#1E7B43', '#DFF6DD')}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="color:#8A9099">Nada a mudar.</td></tr>';
+  return '<div class="cs-sec">Ação — simular troca de função</div>'
+    + `<div class="cs-fun-cap">Função atual: <b>${esc(atuais.join(', ') || 'não identificada')}</b>. `
+    + 'Funções da mesma equipe no Mapeamento CCO (centro de custo e gestor).</div>'
+    + `<label style="font-size:12px;color:#5A6376">Trocar para a função:</label>`
+    + `<select class="acao-sel" onchange="${onTroca}(this.value)">${opts}</select>`
+    + `<div style="font-size:12px;margin:8px 0 4px"><b>${ni}</b> a incluir · <b>${ne}</b> a excluir</div>`
+    + '<table class="acao-tb"><tr><th>Sistema</th><th>Incluir</th><th>Excluir</th><th>Manter</th></tr>'
+    + corpo + '</table>';
+}
+function csAcaoTroca(f){ _acaoAlvo = f; csRenderDrawerBody(); }
 
 function _csLinha(k, v){
   return `<div class="cs-row"><span class="cs-k">${esc(k)}</span>`

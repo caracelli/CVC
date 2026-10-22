@@ -243,6 +243,24 @@
             <matriz_propria>true</matriz_propria>
         </franqueado>
 
+        <!-- SIG SO PELA MATRIZ (Bruna, Aplicacao_21_10 + conversa de 22/10/2026).
+             "O SIG nao tem matriz a nao ser que seja CCO: para consulta e
+             pendencia olhamos somente o que tiver mapeado na matriz; para
+             transferidos e desligados olhamos o todo."
+             - Consulta/Pendencias: sai o espelho do SIG. CCO sem SIG previsto
+               na funcao e com conta SIG ativa = pendencia, exceto quando o
+               OPERA esta previsto e a conta so tem COM_INFORMATIVOS.
+               Para todos: login SHOP ativo, ou bloqueado com perfis alem de
+               COM_INFORMATIVOS de pessoa ativa = pendencia; pessoa ativa com
+               dois logins "vivos" (mesmo nome ou CPF) = pendencia.
+             - Transferidos/Desligados: conta bloqueada so com COM_INFORMATIVOS
+               = sem acesso; bloqueada com outros perfis = viva (pode ser so
+               bloqueio de senha) e sempre aparece.
+             false = comportamento anterior (espelho do SIG). -->
+        <sig>
+            <so_matriz>true</so_matriz>
+        </sig>
+
         <conta_servico>
             <prefixos_login>SIST</prefixos_login>
             <excluir_de_desligados>true</excluir_de_desligados>

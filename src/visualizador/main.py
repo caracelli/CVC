@@ -489,6 +489,34 @@ def _perfis_desconsiderados():
             [_nrm(x) for x in isen.split(",") if x.strip()])
 
 
+def _sig_so_matriz():
+    """<validacao><sig><so_matriz> do config (Bruna, 22/10/2026). Ausente =
+    False, o comportamento anterior."""
+    if not os.path.exists(CONFIG_PATH):
+        return False
+    try:
+        v = (ET.parse(CONFIG_PATH).getroot().findtext("validacao/sig/so_matriz") or "")
+    except Exception:
+        return False
+    return v.strip().lower() in ("true", "1", "sim", "s", "yes")
+
+
+def _sig_logins_sem_acesso(c):
+    """Logins do SIG que NAO contam como acesso nos Transferidos/Desligados:
+    todas as linhas bloqueadas e so' o perfil COM_INFORMATIVOS (Bruna,
+    22/10/2026: "status bloqueada + so' com perfil com informativos = a pessoa
+    nao tem acesso")."""
+    vivos, todos = set(), set()
+    for u, p, sit in c.execute(
+            "SELECT usuario, perfil, situacao FROM acessos_sistemas WHERE sistema='SIG'"):
+        if not u:
+            continue
+        todos.add(u)
+        if _nrm(sit) not in _CONTA_SEM_ACESSO or _nrm(p) != "COM_INFORMATIVOS":
+            vivos.add(u)
+    return todos - vivos
+
+
 def _ler_ocioso():
     """Segundos sem heartbeat ate o watchdog encerrar. 0 desliga.
 
@@ -1430,7 +1458,12 @@ def _sintetizar_historico(rid, it, anterior):
 _SQL_BI = """
 CREATE TABLE bi_divergencias AS
 SELECT
-  (v.matricula || '_' || v.sistema || '_' || COALESCE(v.perfil_esperado,'')) AS id,
+  (v.matricula || '_' || v.sistema || '_' || COALESCE(v.perfil_esperado,'')
+   -- SIG so' pela matriz (22/10/2026): SHOP e duplicidade sao por LOGIN e tem
+   -- perfil_esperado vazio — o codigo do motivo (que traz o login) desempata.
+   || CASE WHEN COALESCE(v.motivo_status,'') LIKE 'SIG_LOGIN_SHOP:%'
+             OR COALESCE(v.motivo_status,'') LIKE 'SIG_DUPLICIDADE:%'
+           THEN '_' || v.motivo_status ELSE '' END) AS id,
   v.status AS tipo, v.sistema AS sistema, v.matricula AS usuario,
   v.nome AS nome_usuario, v.matricula AS matricula,
   COALESCE(v.perfil_atual,'')    AS perfil_encontrado,
@@ -1448,6 +1481,26 @@ SELECT
   -- que entra e' o LIKE do motivo novo, que vem primeiro porque ele e' o que
   -- muda o DESFECHO da linha (o outro so' a descreve).
   CASE
+    -- SIG SO' PELA MATRIZ (Bruna, Aplicacao_21_10 e conversa de 22/10/2026)
+    WHEN COALESCE(v.motivo_status,'') LIKE 'SIG_LOGIN_SHOP:%' THEN
+      'Login SHOP no SIG (' || substr(v.motivo_status, 16) || '). Regra da area '
+      || '(22/10/2026): login SHOP ativo esta errado, e bloqueado com perfis alem '
+      || 'de COM_INFORMATIVOS conta como acesso vivo (pode ser so bloqueio de '
+      || 'senha). Os perfis da conta estao listados ao lado. Avaliar e revogar.'
+    WHEN COALESCE(v.motivo_status,'') LIKE 'SIG_DUPLICIDADE:%' THEN
+      'Duplicidade no SIG: a pessoa tem mais de um login vivo (mesmo nome ou '
+      || 'CPF): ' || replace(substr(v.motivo_status, 17), ',', ', ') || '. Regra '
+      || 'da area (22/10/2026): nao pode haver dois logins ativos para a mesma '
+      || 'pessoa; login bloqueado so com COM_INFORMATIVOS nao conta. A situacao '
+      || 'de cada login esta ao lado.'
+    WHEN COALESCE(v.motivo_status,'') = 'SIG_NAO_PREVISTO_OPERA_PREVISTO' THEN
+      'A funcao da pessoa na CCO nao preve SIG (preve o OPERA). Pela regra da '
+      || 'area (21/10/2026) so e permitido ter o SIG ativo com COM_INFORMATIVOS; '
+      || 'ela tem outros perfis, listados ao lado. Avaliar e revogar o excedente.'
+    WHEN COALESCE(v.motivo_status,'') = 'SIG_NAO_PREVISTO_NA_FUNCAO' THEN
+      'A funcao da pessoa na CCO nao preve SIG (nem OPERA), mas ela tem conta '
+      || 'SIG ativa com os perfis listados ao lado. Avaliar se se justifica; se '
+      || 'nao, revogar.'
     WHEN COALESCE(v.motivo_status,'') LIKE 'MAIS_DE_UM_PERFIL%' THEN
       'Usuario com mais de um perfil no MESMO sistema. A regra da area '
       || '(22/09/2026) e de um perfil por pessoa por sistema, entao a linha nao '
@@ -1585,9 +1638,13 @@ SELECT
   -- MAS vem preenchido quando existe conta BLOQUEADA/INATIVA: a conta esta la,
   -- so nao vale como acesso. Nesse caso motivo_status='CONTA_BLOQUEADA' explica
   -- o login na tela, senao a grid mostra um login e jura que nao ha acesso.
-  COALESCE((SELECT a.usuario FROM acessos_sistemas a
+  CASE WHEN COALESCE(v.motivo_status,'') LIKE 'SIG_LOGIN_SHOP:%'
+         THEN substr(v.motivo_status, 16)
+       WHEN COALESCE(v.motivo_status,'') LIKE 'SIG_DUPLICIDADE:%'
+         THEN replace(substr(v.motivo_status, 17), ',', ', ')
+  ELSE COALESCE((SELECT a.usuario FROM acessos_sistemas a
             WHERE a.matricula_vinculada = v.matricula AND a.sistema = v.sistema
-            LIMIT 1), '') AS login,
+            LIMIT 1), '') END AS login,
   -- FUNCAO da matriz CCO (vazia quando o esperado veio da matriz por cargo).
   -- Pedido da area, 17/09/2026: ler o esperado por funcao, nao por perfil solto.
   COALESCE(v.funcao,'') AS funcao
@@ -2842,6 +2899,50 @@ def _outras_funcoes_cco(c, users, cc_de):
             u["fo"] = fo
 
 
+def _equipes_cco_acao(c, users, cc_de):
+    """ABA "ACAO" DA CONSULTA (Bruna, Aplicacao_21_10, aprovado em 22/10/2026):
+    simular a troca de funcao — o analista escolhe uma das funcoes da equipe
+    e a tela mostra, por sistema, o que incluir, excluir e manter.
+
+    Devolve as EQUIPES da CCO uma vez so' ({id: {funcao: [[sis, perfil]]}}) e
+    marca em cada pessoa da CCO u["eq"] (id da equipe) e u["tem"] (os acessos
+    ATIVOS dela, [[sis, perfil]]). Repetir as funcoes por pessoa pesaria
+    megabytes no painel; a equipe e' a mesma para dezenas de pessoas.
+    So' entra quem tem mais de uma funcao na equipe ("quando o usuario tiver
+    mais de uma funcao/acesso mapeado")."""
+    cco = {}
+    for cc, g, f, sis, p in c.execute(
+            "SELECT cc, gestor, funcao, sistema, perfil FROM matriz_cco"):
+        s = _CCO_SIS.get(_nrm(sis))
+        if not s or not f or not p:
+            continue
+        lst = cco.setdefault((_nrm(cc), _nrm(g)), {}).setdefault(f.strip(), [])
+        if [s, p.strip()] not in lst:
+            lst.append([s, p.strip()])
+    eq, ids, alvo = {}, {}, {}
+    for usr, u in users.items():
+        k = (_nrm(cc_de.get(usr)), _nrm(u.get("gestor")))
+        if k in cco and len(cco[k]) > 1 and u.get("m"):
+            if k not in ids:
+                ids[k] = str(len(ids))
+                eq[ids[k]] = cco[k]
+            u["eq"] = ids[k]
+            alvo[u["m"]] = u
+    if not alvo:
+        return {}
+    tem = {}
+    for m, s, p, sit in c.execute(
+            "SELECT matricula_vinculada, sistema, perfil, situacao "
+            "FROM acessos_sistemas WHERE matricula_vinculada IS NOT NULL"):
+        if m in alvo and p and _nrm(sit) not in _CONTA_SEM_ACESSO:
+            lst = tem.setdefault(m, [])
+            if [s, p] not in lst:
+                lst.append([s, p])
+    for m, u in alvo.items():
+        u["tem"] = tem.get(m, [])
+    return eq
+
+
 def construir_db():
     """DB para o index.html. A parte cara (bi_divergencias + JOIN rh_ativos) e
     calculada 1x e cacheada; so o filtro de quarentena re-roda a cada request
@@ -3106,6 +3207,11 @@ def _montar_base():
         except Exception as e:
             # banco sem matriz_cco/funcao nao pode derrubar a tela
             print(f"  [cco] outras funcoes da equipe indisponiveis: {e!r}")
+        try:
+            _eq_acao = _equipes_cco_acao(c, users, cc_de)
+        except Exception as e:
+            print(f"  [cco] aba Acao indisponivel: {e!r}")
+            _eq_acao = {}
         maxdt = c.execute(
             "SELECT MAX(data_identificacao) FROM bi_divergencias "
             "WHERE data_identificacao <> ''").fetchone()[0] or ""
@@ -3118,7 +3224,9 @@ def _montar_base():
                 # Oracle ("cada perfil e' um acesso especifico"). Na validacao
                 # de 23/09/2026 a PRISCILA (90001455), perfeitamente aderente
                 # com os 4 perfis que a funcao dela preve, aparecia com um "⚠".
-                "multi_perfil_fora": _multi_perfil_fora()}
+                "multi_perfil_fora": _multi_perfil_fora(),
+                # equipes da CCO para a aba "Acao" (ver _equipes_cco_acao)
+                "eq": _eq_acao}
         # Data do ARQUIVO de RH ativos — nao e' a data do processamento. A area
         # pediu (25/08/2026) para saber de quando e' a base de ativos ao olhar
         # um movimento: sem isso nao da' para dizer se uma transferencia ja
@@ -3867,8 +3975,9 @@ def _transferidos_depara(c, matriculas):
         # o caso previsto acima, e some com o de/para da aba sem dizer nada.
         print(f"  [transf] aviso: falha checando a tabela transferidos ({e!r})")
         return {}
+    # Departamento saiu em 22/10/2026 (Bruna, Aplicacao_21_10: "Considerar
+    # apenas CENTRO de CUSTO, CARGO e GESTOR").
     campos = (("cargo", "cargo_anterior", "cargo_atual"),
-              ("departamento", "departamento_anterior", "departamento_atual"),
               ("centro de custo", "centro_custo_anterior", "centro_custo_atual"),
               ("gestor", "gestor_anterior", "gestor_atual"))
     out = {}
@@ -3973,6 +4082,26 @@ def listar_transferidos():
         except Exception as e:
             print(f"  [transf] divergencias indisponivel: {e!r}")
 
+        # SIG SO' PELA MATRIZ (22/10/2026): login de SIG bloqueado so' com
+        # COM_INFORMATIVOS nao e' acesso — sai da lista; o proprio perfil
+        # COM_INFORMATIVOS fica marcado como desconsiderado (fora do resumo).
+        if _sig_so_matriz():
+            try:
+                _mortos = _sig_logins_sem_acesso(c)
+            except Exception as e:
+                print(f"  [transf] logins do SIG indisponiveis: {e!r}")
+                _mortos = set()
+            for _m in list(por_mat):
+                _acs = [a for a in por_mat[_m]
+                        if not (a["sis"] == "SIG" and a["login"] in _mortos)]
+                for a in _acs:
+                    if a["sis"] == "SIG" and _nrm(a["perfil"]) == "COM_INFORMATIVOS":
+                        a["desconsiderado"] = True
+                if _acs:
+                    por_mat[_m] = _acs
+                else:
+                    del por_mat[_m]      # vira "Sem acesso" (ver abaixo)
+
         # Perfil desconsiderado (16/10/2026): o acesso continua na lista, mas
         # marcado — a tela o tira do resumo e o mostra como "desconsiderado"
         # no detalhe, em vez de "fora do padrao".
@@ -4063,10 +4192,16 @@ def listar_transferidos():
     for d in out:
         t = tratamentos.get(str(d["m"]))
         if t:
-            d["tratado"] = True
+            # STATUS DO APONTAMENTO (22/10/2026): so' "Resolvido" leva para
+            # Tratados; "Em andamento" fica em A Revisar com o selo. Tratativa
+            # anterior a regra (sem status) era resolucao — continua sendo.
+            st = t.get("status") or "Resolvido"
+            d["tratado"] = st == "Resolvido"
+            d["status_apont"] = st
             d["tratamento"] = {"ticket": t["ticket"], "ticket_url": t["ticket_url"],
                                "descricao": t["descricao"], "motivo": t["motivo"],
-                               "por": t["por"], "em": t["em"]}
+                               "por": t["por"], "em": t["em"], "status": st,
+                               "sistemas": t.get("sistemas") or {}}
     com_acesso = [d for d in out if not d.get("sem_acesso")]
     revisar = sum(1 for d in com_acesso if not d.get("tratado"))
     tratados = sum(1 for d in com_acesso if d.get("tratado"))
@@ -4154,13 +4289,19 @@ def _tratamentos_transferido_db():
         if not tem:
             return {}
         out = {}
+        cols = {r[1] for r in c.execute("PRAGMA table_info(tratamentos_transferido)")}
+        extra = ("status_apontamento" in cols and "status_sistemas" in cols)
         for r in c.execute(
                 "SELECT registro_id,ticket,ticket_url,descricao,motivo,"
-                "tratado_por,tratado_em FROM tratamentos_transferido"):
+                "tratado_por,tratado_em"
+                + (",status_apontamento,status_sistemas" if extra else "")
+                + " FROM tratamentos_transferido"):
             out[r["registro_id"]] = {
                 "ticket": r["ticket"] or "", "ticket_url": r["ticket_url"] or "",
                 "descricao": r["descricao"] or "", "motivo": r["motivo"] or "",
-                "por": r["tratado_por"] or "", "em": r["tratado_em"] or ""}
+                "por": r["tratado_por"] or "", "em": r["tratado_em"] or "",
+                "status": (r["status_apontamento"] if extra else "") or "",
+                "sistemas": _json_dict(r["status_sistemas"] if extra else "")}
         return out
     except Exception as e:
         # Mesmo raciocinio de _tratamentos_desligado_db: o {} faz a aba mostrar
@@ -4178,11 +4319,29 @@ def _tratamentos_transferido_mesclados(interacoes=None):
             "ticket": it.get("ticket") or "", "ticket_url": it.get("ticket_url") or "",
             "descricao": it.get("descricao") or "", "motivo": it.get("motivo") or "",
             "por": it.get("usuario") or "",
-            "em": (it.get("data_acao") or "").replace("T", " ")}
+            "em": (it.get("data_acao") or "").replace("T", " "),
+            "status": it.get("status_apontamento") or "",
+            "sistemas": it.get("status_sistemas") or {}}
     return out
 
 
-def tratar_transferido(registro_id, ticket, ticket_url="", descricao="", motivo=""):
+def _json_dict(txt):
+    try:
+        v = json.loads(txt or "{}")
+        return v if isinstance(v, dict) else {}
+    except Exception:
+        return {}
+
+
+# STATUS DO APONTAMENTO (Bruna, Aplicacao_21_10): "Em andamento / Pendente — ele
+# nasce o apontamento com esse status / Resolvido". Status por sistema: "mantido,
+# alterado, sem atuacao, excluido" para os 7 sistemas.
+STATUS_APONTAMENTO = ("Pendente", "Em andamento", "Resolvido")
+STATUS_SISTEMA = ("Mantido", "Alterado", "Sem atuação", "Excluído")
+
+
+def tratar_transferido(registro_id, ticket, ticket_url="", descricao="", motivo="",
+                       status_apontamento="", status_sistemas=None):
     """Grava interacao TRATAMENTO_TRANSFERIDO (mesmo padrao do desligado): registra
     a revisao de acesso pos-mudanca. Ticket OPCIONAL desde 05/08 — ver
     `_validar_tratativa`. registro_id = matricula."""
@@ -4207,8 +4366,12 @@ def tratar_transferido(registro_id, ticket, ticket_url="", descricao="", motivo=
         "descricao": str(descricao or "").strip(), "motivo": motivo,
         "nome": nome, "usuario": USUARIO,
         "data_acao": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "status_apontamento": (status_apontamento if status_apontamento in STATUS_APONTAMENTO
+                               else "Resolvido"),
+        "status_sistemas": {str(k): str(v) for k, v in (status_sistemas or {}).items()
+                            if str(v) in STATUS_SISTEMA},
     })
-    print(f"  [TRAT_TRANSF] {rid} ticket={tk} por {USUARIO}")
+    print(f"  [TRAT_TRANSF] {rid} ticket={tk} status={status_apontamento} por {USUARIO}")
     return 1
 
 
@@ -5603,8 +5766,11 @@ class H(BaseHTTPRequestHandler):
                 if erro:
                     self._send(400, erro, "application/json; charset=utf-8")
                     return
-                linhas = tratar_transferido(rid, ticket, payload.get("ticket_url"),
-                                            payload.get("descricao"), motivo)
+                ss = payload.get("status_sistemas")
+                linhas = tratar_transferido(
+                    rid, ticket, payload.get("ticket_url"), payload.get("descricao"),
+                    motivo, status_apontamento=str(payload.get("status") or "").strip(),
+                    status_sistemas=ss if isinstance(ss, dict) else {})
                 self._send(200, json.dumps(
                     {"ok": linhas > 0,
                      "erro": None if linhas > 0 else "falha ao tratar",

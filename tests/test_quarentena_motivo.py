@@ -32,11 +32,13 @@ class QuarentenaMotivo(unittest.TestCase):
     def setUp(self):
         self.html = INDEX.read_text(encoding="utf-8")
 
-    def test_as_tres_opcoes_da_area(self):
+    def test_as_opcoes_da_area(self):
+        """22/10/2026 (Aplicacao_21_10): "Remover a opcao Ferias/Cobertura de
+        ferias" — ficam as outras duas."""
         m = re.search(r"const QUAR_MOTIVOS = \[([^\]]*)\]", self.html)
         self.assertIsNotNone(m)
         self.assertEqual(re.findall(r"'([^']*)'", m.group(1)),
-                         ["Exceção", "Férias/Cobertura de férias", "Usuário sistêmico"])
+                         ["Exceção", "Usuário sistêmico"])
 
     def test_formulario_tem_a_lista_obrigatoria_e_o_detalhe(self):
         corpo = _funcao(self.html, "quarentenar")

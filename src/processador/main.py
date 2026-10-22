@@ -13,7 +13,7 @@ if not getattr(sys, "frozen", False):
 from infraestrutura.configuracao.leitor_config import LeitorConfig
 from infraestrutura.banco_dados.conexao import ConexaoBancoDados
 from infraestrutura.banco_dados.processamento_local import (
-    BatimentoLock, preparar_copia_local, publicar)
+    BatimentoLock, ProcessamentoCancelado, preparar_copia_local, publicar)
 from infraestrutura.leitores_arquivos import leitor_base
 from infraestrutura.ui_web import janela_processador as ui
 from aplicacao.casos_de_uso.importar_rh import ImportarRh
@@ -231,8 +231,9 @@ def _verificar_e_criar_lock(banco_path):
                 f"Processamento JA EM ANDAMENTO na rede ({quem or info}; ultimo sinal "
                 f"ha' {idade_min:.0f} min). Abortando para nao conflitar o banco. "
                 f"Espere a mensagem 'Processamento finalizado' de quem esta' rodando. "
-                f"Se tiver CERTEZA de que ninguem esta rodando, apague '{lock.name}' "
-                f"em {lock.parent} e rode novamente.")
+                f"Para CANCELAR o processamento em andamento, apague '{lock.name}' "
+                f"em {lock.parent}: ele para no proximo passo, sem alterar o banco "
+                f"da rede. Depois rode novamente.")
             return False, None, ""
         logger.warning(
             f"Lock de processamento sem sinal de vida ha' ~{idade_min:.0f} min "
@@ -309,6 +310,12 @@ def _executar(caminho_config: Path) -> int:
         return 1
     batimento = BatimentoLock(lock, lock_fixo).iniciar() if lock else None
 
+    def _passo(nome):
+        """CANCELAMENTO (20/10/2026): apagar o _processando.lock para o
+        Processador aqui, antes do proximo passo (ver BatimentoLock.conferir)."""
+        if batimento:
+            batimento.conferir(nome)
+
     # COPIA LOCAL (20/10/2026): em modo rede, processa numa copia do banco na
     # maquina e publica no fim (ver processamento_local). CVC_PROCESSAR_NA_REDE=1
     # volta ao comportamento anterior (gravar direto na rede).
@@ -323,9 +330,11 @@ def _executar(caminho_config: Path) -> int:
                    / f"{_inicio:%Y%m%d_%H%M%S}_{os.getpid()}")
     leitor_base.MOVIMENTOS.clear()
     try:
+        _passo("Copia do banco")
         if copia_local:
             banco_trabalho = preparar_copia_local(banco_rede, pasta_local)
 
+        _passo("Abertura do banco")
         conexao = ConexaoBancoDados(str(banco_trabalho))
         conexao.inicializar()
 
@@ -345,6 +354,7 @@ def _executar(caminho_config: Path) -> int:
         # (FRANQ-/PREST-<login>), entao o merge do RH opera em chaves disjuntas;
         # e a precedencia no matching e' explicita em VincularAcessosRh (CLT
         # primeiro), nao decorre desta ordem de importacao.
+        _passo("Diretorio AD")
         ImportarDiretorioAd(
             conexao=conexao,
             pasta=[str(app_raiz / p) for p in cfg.rh_diretorio_ad_caminhos],
@@ -354,6 +364,7 @@ def _executar(caminho_config: Path) -> int:
         ).executar()
 
         # Card 3 — Importação RH
+        _passo("Importacao RH")
         ImportarRh(
             conexao=conexao,
             pasta_ativos=str(app_raiz / cfg.rh_ativos_caminho),
@@ -365,12 +376,14 @@ def _executar(caminho_config: Path) -> int:
         ).executar()
 
         # Card 4 — Padronização (snapshot/histórico já gravado no Card 3, antes do merge)
+        _passo("Padronizacao RH")
         PadronizarRh(conexao).executar()
 
         # Card 5 — Matrizes (perfis esperados e estrutura organizacional).
         # Filtra matrizes pelos sistemas em escopo (ativo=true no config) —
         # sistemas ainda nao implementados nao geram falsa sensacao de
         # processamento no log.
+        _passo("Matrizes")
         ImportarMatrizes(
             conexao=conexao,
             pasta_perfis=str(app_raiz / cfg.matrizes_perfis_caminho),
@@ -393,6 +406,7 @@ def _executar(caminho_config: Path) -> int:
                 continue
             if _sis is Sistema.SIG or _sis not in CONFIGS_SISTEMAS:
                 continue
+            _passo(f"Importacao {_sis.value}")
             ImportarSistema(
                 conexao=conexao,
                 sistema=_sis,
@@ -404,6 +418,7 @@ def _executar(caminho_config: Path) -> int:
         # Card 12 — SIG (matricial + de-para). Condicional: roda so se houver
         # pasta de entrada configurada E ativo. Nao bloqueia o pipeline se faltar
         # arquivo (ImportarSig loga "nao em uso" e segue).
+        _passo("SIG")
         sig_cfg = cfg.sistemas.get("SIG")
         if sig_cfg and sig_cfg.ativo and sig_cfg.caminho_entrada:
             ImportarSig(
@@ -415,18 +430,22 @@ def _executar(caminho_config: Path) -> int:
             ).executar()
 
         # Card 7 — Vincular acessos ao RH por CPF
+        _passo("Vinculacao")
         VincularAcessosRh(conexao=conexao,
                           prefixos_conta_servico=cfg.conta_servico_prefixos).executar()
 
         # Card 8 — Analisar divergencias
+        _passo("Divergencias")
         AnalisarDivergencias(
             conexao=conexao,
             prefixos_conta_servico=cfg.conta_servico_prefixos,
+            sig_so_matriz=cfg.validacao_sig_so_matriz,
         ).executar()
 
         # Matriz do FRANQUEADO (cargo x tipo de loja): vive na mesma pasta das
         # outras matrizes e e' reconhecida pelo cabecalho. Falta do arquivo NAO
         # quebra o processamento — a regra so' fica inerte.
+        _passo("Validacao")
         regras_franq = []
         if cfg.validacao_franqueado_matriz and cfg.matrizes_perfis_caminho:
             try:
@@ -447,31 +466,38 @@ def _executar(caminho_config: Path) -> int:
             limiar_inclusao=cfg.validacao_limiar_inclusao,
             ancora_systur_sistemas=cfg.validacao_ancora_systur_sistemas,
             ancora_systur_isentos=cfg.validacao_ancora_systur_isentos,
+            sig_so_matriz=cfg.validacao_sig_so_matriz,
         ).executar()
 
         # Card 23 — revalidacao POS-TRANSFERENCIA. Depois do AnalisarDivergencias
         # (que grava a tabela `transferidos` com o de/para) e da validacao, para
         # usar o mesmo criterio de "esperado" de cada sistema.
+        _passo("Transferidos")
         RevalidarTransferidos(
             conexao=conexao,
             ancora_systur_sistemas=cfg.validacao_ancora_systur_sistemas,
-            ancora_systur_isentos=cfg.validacao_ancora_systur_isentos).executar()
+            ancora_systur_isentos=cfg.validacao_ancora_systur_isentos,
+            sig_so_matriz=cfg.validacao_sig_so_matriz).executar()
 
         # Ciclo de vida (Pendencia -> Resolvido -> Aderente) — idempotente/blindado.
         # Depois da validacao (validacao_acessos) e da dobra (resolucoes, acima).
+        _passo("Ciclo de vida")
         RegistrarCicloVida(conexao=conexao).executar()
 
         # Log de eventos por (matricula, sistema) — ciclos + REABERTURA. CDC
         # aditivo sobre validacao_acessos; alimenta o Historico por sistema.
         # Depois do ciclo de vida (usa seus dados ricos e a resolucao).
+        _passo("Eventos")
         RegistrarEventosAcesso(conexao=conexao).executar()
 
         # Projeta os marcos do ciclo (Pendencia/Resolvido/Aderente) na trilha
         # `historico` — uma linha por marco, idempotente, em ordem. Cobre
         # transicoes manuais (ticket) e do processador.
+        _passo("Historico")
         RegistrarCicloHistorico(conexao=conexao).executar()
 
         # Card 9 — Gerar saidas (Excel) — usa validações acima para a coluna acao
+        _passo("Saidas")
         GerarSaidas(
             conexao=conexao,
             pasta_saidas=str(app_raiz / cfg.saida_divergencias),
@@ -479,8 +505,10 @@ def _executar(caminho_config: Path) -> int:
 
         # Consolida o WAL no .db pra o Visualizador detectar a atualizacao
         # (ele decide recopiar o cache por tamanho/mtime do .db).
+        _passo("Fechamento do banco")
         conexao.checkpoint()
 
+        _passo("Publicacao na rede")
         if copia_local:
             publicar(banco_trabalho, banco_rede)
             publicado = True
@@ -490,6 +518,9 @@ def _executar(caminho_config: Path) -> int:
         logger.success(
             f"Processamento finalizado em {_dur:.0f}s ({_dur/60:.1f} min).")
         return 0
+    except ProcessamentoCancelado as e:
+        logger.error(f"Processamento CANCELADO: {e}.")
+        return 1
     finally:
         if not publicado:
             # caiu antes de publicar: o banco da rede ficou intacto. Os arquivos
@@ -507,12 +538,7 @@ def _executar(caminho_config: Path) -> int:
         if copia_local:
             shutil.rmtree(pasta_local, ignore_errors=True)
         if batimento:
-            batimento.parar()
-        if lock:
-            try:
-                lock.unlink()
-            except Exception:
-                pass
+            batimento.liberar()     # so' apaga o lock se ainda for desta execucao
 
 
 if __name__ == "__main__":

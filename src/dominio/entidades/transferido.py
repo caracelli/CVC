@@ -16,14 +16,13 @@ class Transferido:
 
     @property
     def precisa_revisao_acessos(self) -> bool:
-        """Precisa revisar os acessos quando MUDOU cargo, centro de custo,
-        departamento OU gestor (decisao da area, 29/07). Antes olhava so o
-        departamento; hoje qualquer um dos quatro dispara a revisao."""
+        """Precisa revisar os acessos quando MUDOU cargo, centro de custo OU
+        gestor. O departamento saiu em 22/10/2026 (Bruna, Aplicacao_21_10:
+        "Considerar apenas CENTRO de CUSTO, CARGO e GESTOR")."""
         atual = self.funcionario.cargo
         ant = self.cargo_anterior
         return (
-            atual.departamento != ant.departamento
-            or atual.centro_custo != ant.centro_custo
+            atual.centro_custo != ant.centro_custo
             or atual.codigo != ant.codigo
             or atual.descricao != ant.descricao
             or (self.funcionario.gestor or "") != (self.gestor_anterior or "")
@@ -39,8 +38,6 @@ class Transferido:
             m.append("cargo")
         if atual.centro_custo != ant.centro_custo:
             m.append("centro de custo")
-        if atual.departamento != ant.departamento:
-            m.append("departamento")
         if (self.funcionario.gestor or "") != (self.gestor_anterior or ""):
             m.append("gestor")
         return ", ".join(m)

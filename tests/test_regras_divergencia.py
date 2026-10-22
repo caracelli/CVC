@@ -98,11 +98,12 @@ class TestRegraAcessoTransferido(unittest.TestCase):
         return Transferido(funcionario=func, cargo_anterior=_cargo(dep=dep_antigo),
                            data_transferencia=date(2026, 1, 1))
 
-    def test_mudanca_de_departamento_gera_revisao(self):
+    def test_mudanca_so_de_departamento_nao_gera_revisao(self):
+        # 22/10/2026 (Bruna, Aplicacao_21_10): departamento NAO dispara mais a revisao —
+        # "considerar apenas CENTRO de CUSTO, CARGO e GESTOR".
         t = self._transf("30", dep_novo="Comercial", dep_antigo="TI")
         divs = self.regra.verificar([_acesso("u1", vinc="30")], [t])
-        self.assertEqual(len(divs), 1)
-        self.assertEqual(divs[0].tipo, TipoDivergencia.ACESSO_TRANSFERIDO)
+        self.assertEqual(divs, [])
 
     def test_mesmo_departamento_nao_gera(self):
         t = self._transf("30", dep_novo="TI", dep_antigo="TI")
@@ -168,7 +169,9 @@ class TestServicoAnaliseDivergencias(unittest.TestCase):
                   _ativo("30", cc="200", desc="GERENTE", dep="Comercial")]
         desligados = [_desligado("20")]
         transf = Transferido(funcionario=_ativo("30", cc="200", desc="GERENTE", dep="Comercial"),
-                             cargo_anterior=_cargo(cc="200", desc="GERENTE", dep="TI"),
+                             # centro de custo mudou (o departamento sozinho nao
+                             # dispara mais — 22/10/2026)
+                             cargo_anterior=_cargo(cc="100", desc="GERENTE", dep="TI"),
                              data_transferencia=date(2026, 1, 1))
         perfis = [PerfilEsperado(cargo_codigo="100", sistema=Sistema.SYSTUR,
                                  perfil="OK", cargo_descricao="ANALISTA")]
